@@ -1,0 +1,14 @@
+[Unit]
+Description=Open Cache Acceleration Software Shutdown Trigger
+After=umount.target
+Before=final.target
+JobTimeoutSec=604800
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/casctl stop
+TimeoutStopSec=604800
+
+[Install]
+WantedBy=final.target

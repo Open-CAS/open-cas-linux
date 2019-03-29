@@ -1,0 +1,142 @@
+#!/usr/bin/env python2
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+from __future__ import print_function
+import argparse
+import sys
+import re
+import opencas
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+# Start - load all the caches and add cores
+
+def start():
+    try:
+       config = opencas.cas_config.from_file('/etc/opencas/opencas.conf',
+                                           allow_incomplete=True)
+    except Exception as e:
+        eprint(e)
+        eprint('Unable to parse config file.')
+        exit(1)
+
+    for cache in config.caches.values():
+        try:
+            opencas.start_cache(cache, True)
+        except opencas.casadm.CasadmError as e:
+            eprint('Unable to load cache {0} ({1}). Reason:\n{2}'
+                    .format(cache.cache_id, cache.device, e.result.stderr))
+
+# Initial cache start
+
+def add_core_recursive(core, config):
+    with_error = False
+    if core.added:
+        return with_error
+    if core.marked:
+        eprint('Unable to add core {0} to cache {1}. Reason:\nRecursive core configuration!'
+            .format(core.device, core.cache_id))
+        exit(3)
+    core.marked = True
+    match = re.match('/dev/cas(\d)-(\d).*', core.device)
+    if match:
+        cache_id,core_id = match.groups()
+        with_error = add_core_recursive(config.caches[int(cache_id)].cores[int(core_id)], config)
+    try:
+        opencas.add_core(core, False)
+        core.added = True
+    except opencas.casadm.CasadmError as e:
+        eprint('Unable to add core {0} to cache {1}. Reason:\n{2}'
+            .format(core.device, core.cache_id, e.result.stderr))
+        with_error = True
+    return with_error
+
+def init(force):
+    exit_code = 0
+    try:
+        config = opencas.cas_config.from_file('/etc/opencas/opencas.conf')
+    except Exception as e:
+        eprint(e)
+        eprint('Unable to parse config file.')
+        exit(1)
+
+    if not force:
+        for cache in config.caches.values():
+            try:
+                status = opencas.check_cache_device(cache.device)
+                if status['Is cache'] == 'yes' and status['Cache dirty'] == 'yes':
+                    eprint('Unable to perform initial configuration.\n' \
+                           'One of cache devices contains dirty data.')
+                    exit(1)
+            except opencas.casadm.CasadmError as e:
+                eprint('Unable to check status of device {0}. Reason:\n{1}'
+                        .format(cache.device, e.result.stderr))
+                exit(e.result.exit_code)
+
+    for cache in config.caches.values():
+        try:
+            opencas.start_cache(cache, False, force)
+        except opencas.casadm.CasadmError as e:
+            eprint('Unable to start cache {0} ({1}). Reason:\n{2}'
+                    .format(cache.cache_id, cache.device, e.result.stderr))
+            exit_code = 2
+        try:
+            opencas.configure_cache(cache)
+        except opencas.casadm.CasadmError as e:
+            eprint('Unable to configure cache {0} ({1}). Reason:\n{2}'
+                    .format(cache.cache_id, cache.device, e.result.stderr))
+            exit_code = 2
+
+    for core in config.cores:
+        core.added = False
+        core.marked = False
+    for core in config.cores:
+        with_error = add_core_recursive(core, config)
+        if with_error:
+            exit_code = 2
+
+    exit(exit_code)
+
+# Stop - detach cores and stop caches
+def stop(flush):
+    try:
+        opencas.stop(flush)
+    except Exception as e:
+        eprint(e)
+
+# Command line arguments parsing
+
+class cas:
+    def __init__(self):
+        parser = argparse.ArgumentParser(prog = 'cas')
+        subparsers = parser.add_subparsers(title = 'actions')
+
+        parser_init = subparsers.add_parser('init', help = 'Setup initial configuration')
+        parser_init.set_defaults(command='init')
+        parser_init.add_argument ('--force', action='store_true', help = 'Force cache start')
+
+        parser_start = subparsers.add_parser('start', help = 'Start cache configuration')
+        parser_start.set_defaults(command='start')
+
+        parser_stop = subparsers.add_parser('stop', help = 'Stop cache configuration')
+        parser_stop.set_defaults(command='stop')
+        parser_stop.add_argument ('--flush', action='store_true', help = 'Flush data before stopping')
+
+        args = parser.parse_args(sys.argv[1:])
+        getattr(self, 'command_' + args.command)(args)
+
+    def command_init(self, args):
+        init(args.force)
+
+    def command_start(self, args):
+        start()
+
+    def command_stop(self, args):
+        stop(args.flush)
+
+if __name__ == '__main__':
+    cas()

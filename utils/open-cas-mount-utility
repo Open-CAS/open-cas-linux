@@ -1,0 +1,26 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+# Find all mount units, cut to remove list-units decorations
+logger "Open CAS Mount Utility checking for $1 FS label..."
+MOUNT_UNITS=`systemctl --plain list-units | grep \.mount | grep -v '\-\.mount' | awk '{print $1}'`
+
+for unit in $MOUNT_UNITS
+do
+	# Find BindsTo keyword, pry out FS label from the .device unit name
+	label=`systemctl show $unit | grep BindsTo | sed "s/.*label\-\(.*\)\.device/\1/;tx;d;:x"`
+	if [ "$label" == "" ]; then
+		continue
+	fi
+	label_unescaped=$(systemd-escape -u $(systemd-escape -u $label))
+	if [ "$label_unescaped" == "$1" ]; then
+		# If FS label matches restart unit
+		logger "Open CAS Mount Utility restarting $unit..."
+		systemctl restart $unit &> /dev/null
+		exit 0
+	fi
+done
+

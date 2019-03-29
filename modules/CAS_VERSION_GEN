@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+VER_FILE=CAS_VERSION
+
+which git > /dev/null 2>&1
+if [ $? -eq 0 ] && [ -e ../../../.git ]; then
+	echo "Generating ${VER_FILE} from git revision."
+	echo ""
+	VERSION=`git describe HEAD 2>/dev/null`
+
+	CAS_VERSION_MAIN=`echo ${VERSION} | cut  -d '.' -f 1 | awk '{print substr($0, 2)}'`
+	CAS_VERSION_MAJOR=`echo ${VERSION} | cut -d '.' -f 2 | awk '{print substr($0, 2)}'`
+	CAS_VERSION_MINOR=`echo ${VERSION} | cut -d '.' -f 3 | awk '{print substr($0, 2)}'`
+	CAS_BUILD_NO=`echo ${VERSION} | cut -d '.' -f 4 | cut -d '-' -f 1`
+	CAS_BUILD_FLAG=`echo ${VERSION} | cut -d '.' -f 4 | cut -s -d '-' -f 3`
+
+	rm -f ${VER_FILE}
+	touch ${VER_FILE}
+
+	echo "CAS_VERSION_MAIN=${CAS_VERSION_MAIN}" >> ${VER_FILE}
+	echo "CAS_VERSION_MAJOR=${CAS_VERSION_MAJOR}" >> ${VER_FILE}
+	echo "CAS_VERSION_MINOR=${CAS_VERSION_MINOR}" >> ${VER_FILE}
+	echo "CAS_BUILD_NO=${CAS_BUILD_NO}" >> ${VER_FILE}
+	echo "CAS_BUILD_FLAG=${CAS_BUILD_FLAG}" >> ${VER_FILE}
+elif [ -f ${VER_FILE} ]; then
+	echo "Using existing ${VER_FILE} version file."
+	echo ""
+else
+	echo "No ${VER_FILE} found. Preparing default version file."
+	echo ""
+
+	CAS_VERSION_MAIN=19
+	CAS_VERSION_MAJOR=3
+	CAS_VERSION_MINOR=0
+	CAS_BUILD_NO=0000`date +%m%d`
+	CAS_BUILD_FLAG=
+
+	touch ${VER_FILE}
+
+	echo "CAS_VERSION_MAIN=${CAS_VERSION_MAIN}" >> ${VER_FILE}
+	echo "CAS_VERSION_MAJOR=${CAS_VERSION_MAJOR}" >> ${VER_FILE}
+	echo "CAS_VERSION_MINOR=${CAS_VERSION_MINOR}" >> ${VER_FILE}
+	echo "CAS_BUILD_NO=${CAS_BUILD_NO}" >> ${VER_FILE}
+	echo "CAS_BUILD_FLAG=${CAS_BUILD_FLAG}" >> ${VER_FILE}
+fi
+
+cat ${VER_FILE}

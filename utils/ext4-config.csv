@@ -1,0 +1,25 @@
+IO class id,IO class name,Eviction priority,Allocation
+0,Unclassified,23,1
+1,Superblock,0,1
+2,GroupDesc,1,1
+3,BlockBitmap,2,1
+4,InodeBitmap,3,1
+5,Inode,4,1
+6,IndirectBlk,5,1
+7,Directory,6,1
+8,Journal,7,1
+9,Extent,8,1
+10,Xatrr,9,1
+11,<=4KiB,10,1
+12,<=16KiB,11,1
+13,<=64KiB,12,1
+14,<=256KiB,13,1
+15,<=1MiB,14,1
+16,<=4MiB,15,1
+17,<=16MiB,16,1
+18,<=64MiB,17,1
+19,<=256MiB,18,1
+20,<=1GiB,19,1
+21,>1GiB,20,1
+22,O_DIRECT,21,1
+23,Misc,22,1

@@ -1,0 +1,10 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+# systemd-shutdown plugin to stop all remaining Open CAS devices
+
+/usr/bin/echo "Open CAS cleanup handler" > /dev/kmsg
+/sbin/casctl stop

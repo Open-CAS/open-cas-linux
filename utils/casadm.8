@@ -1,0 +1,565 @@
+.TH casadm 8 __CAS_DATE__ v__CAS_VERSION__
+.SH NAME
+casadm \- create, and manage Open CAS instances
+
+.SH SYNOPSIS
+
+\fBcasadm\fR <command> [options...]
+
+.SH COPYRIGHT
+Copyright(c) 2012-2019 by the Intel Corporation.
+
+.SH DESCRIPTION
+Open Cache Acceleration Software (CAS) accelerates Linux applications by caching
+active (hot) data to a local flash device inside servers. Open CAS implements
+caching at the server level, utilizing local high-performance flash media as
+the cache drive media inside the application server as close as possible to
+the CPU, thus reducing storage latency as much as possible.
+.PP
+Open Cache Acceleration Software installs into the GNU/Linux operating system itself,
+as a kernel module. The nature of the integration provides a cache solution that is
+transparent to users and applications, and your existing storage infrastructure. No
+storage migration effort or application changes are required.
+.PP
+\fBCache device\fR is a faster drive (e.g. SSD-type) used for speeding-up core device.
+.br
+\fBCore device\fR is a slower drive (e.g. HDD-type) that will be accelerated by Open CAS.
+
+.SH MODES
+Open CAS caching software has several modes of operation:
+.TP
+.B Write-Through (wt)
+Write-Through is a basic caching mode where writes are done synchronously to
+the cache device and to the core device. Write-Through cache, which is also known
+as Read Cache, mainly improves performance of read IO operations.
+
+.TP
+.B Write-Back (wb)
+In Write-Back mode writes are initially written to the cache device only. Cached
+write operations that are not synchronized with core device are marked as dirty.
+The procedure of writing dirty data from cache device to core device is known as
+cleaning. Cleaning may be required if cache is full and eviction (replacement)
+policy needs to remove stale data to make space for incoming blocks. Open CAS
+provides mechanism which automatically cleans dirty data in background. This is
+cleaning (flushing) thread. User can also invoke manual cleaning procedure (see
+-E, --flush-cache and -F --flush-core options). Write-Back cache, also known as
+Write Cache, improves performance of both read and write IO operations.
+
+.TP
+.B Write-Around (wa)
+In Write-Around mode write operations are not cached. This means that write to
+block that does not exist in cache is written directly to the core device,
+bypassing the cache. If write operation is issued to the block which is already
+in cache (because of previous read operation) then write is send to the core device
+and cache block is updated in the cache device. Write-Around cache improves performance
+of workloads where write operation is done rarely and no further read accesses
+to that data are performed, so there is no point in caching it.
+
+.TP
+.B Pass-Through (pt)
+In Pass-Through mode all read and write operations are not cached and sent directly
+to the core device. Pass-Through mode may be used in case if user doesn't want to
+cache any workload, for example in case if there are some maintenance operations
+causing cache pollution.
+
+.SH COMMANDS
+.TP
+.B -S, --start-cache
+Start cache instance.
+
+.TP
+.B -T, --stop-cache
+Stop cache instance.
+
+.TP
+.B -X, --set-param
+Set runtime parameter for cache/core instance.
+
+.TP
+.B -G, --set-param
+Get runtime parameter for cache/core instance.
+
+.TP
+.B -Q, --set-cache-mode
+Switch caching mode of cache instance.
+
+.TP
+.B -A, --add-core
+Add core device to cache instance.
+
+.TP
+.B -R, --remove-core
+Remove core device from cache instance.
+
+.TP
+.B "   "--remove-detached
+Remove core device from core pool.
+
+.TP
+.B -L, --list-caches
+List all cache instances and core devices.
+
+.TP
+.B -P, --stats
+Print statistics of cache instance.
+
+.TP
+.B -Z, --reset-counters
+Reset statistics of given cache/core instance.
+
+.TP
+.B -F, --flush-cache
+Flush all dirty data from the caching device to core devices.
+
+.TP
+.B -E, --flush-core
+Flush dirty data of a given core from the caching device to this core device.
+
+.TP
+.B -C, --io-class {--load-config|--list}
+Manage IO classes.
+.br
+
+  1. \fB-C, --load-config\fR - load default configuration of IO classes.
+     \fBNOTE:\fR See /etc/opencas for example configuration file.
+
+  2. \fB-L, --list\fR - print current IO class configuration. Allowed output formats: table or CSV.
+
+.TP
+.B -N, --nvme
+Manage NVMe device.
+.br
+
+  1. \fB-F, --format\fR <MODE> {normal|atomic} - format NVMe device to one of supported modes.
+     \fBNOTE:\fR After formatting NVMe device platform reboot is required.
+
+.br
+Defines cache metadata mode.
+In normal mode NVMe namespace uses LBA of size 512 bytes. Cache data and metadata
+are written to disk in separate requests in the same way that it happens with
+standard SSD device.
+Atomic mode exploits extended NVMe metadata features. In this mode namespace
+uses 520 bytes LBA allowing to write cache data and metadata in a single
+request (atomically).
+
+.TP
+.B -H, --help
+Print help.
+
+.TP
+.B -V, --version
+Print Open CAS product version.
+
+.SH OPTIONS
+List of available options depends on current context of invocation. For each
+command there is a different list of available options:
+
+.BR
+
+.SH Options that are valid with --start-cache (-S) are:
+
+.TP
+.B -d, --cache-device <DEVICE>
+Path to caching device to be used e.g. SSD device (/dev/sdb).
+
+.TP
+.B -i, --cache-id <ID>
+Unique identifier of cache (if not provided the first available will be used) <1-16384>.
+
+.TP
+.B -l, --load
+If metadata exists on a device and this parameter is used, cache will be started based on information from metadata.
+If this parameter is not used, cache will be started with full initialization of new metadata.
+This option should be used if dirty data were not flushed on exit (if the cache was stopped with the -n, --no-data-flush option).
+
+\fBCAUTION:\fR
+.br
+\fB*\fR If the data between the cache device and core device is not in sync (e.g. changes between cache stop and load operations), starting
+cache with load option may cause data mismatch.
+
+.TP
+.B -f, --force
+Force to start a cache. By default cache will not be started if utility detects file system on cache device.
+This parameter ignores this situations, and starts a cache instance.
+
+.TP
+.B -c, --cache-mode {wt|wb|wa|pt}
+Cache mode to be used for a cache instance.
+
+Available modes are:
+.br
+1. \fBwt - Write-Through (default)\fR.
+.br
+2. \fBwb - Write-Back\fR.
+.br
+3. \fBwa - Write-Around\fR.
+.br
+4. \fBpt - Pass-Through\fR.
+
+.TP
+.B -x, --cache-line-size <NUMBER>
+Set cache line size for given cache instance, expressed in KiB. This
+can't be reconfigured runtime. Allowed values: {4,8,16,32,64}
+(default: 4)
+
+.SH Options that are valid with --stop-cache (-T) are:
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -n, --no-data-flush
+Do not flush dirty data on exit (may be \fBDANGEROUS\fR).
+If this option was used, the cache should be restarted with the -l, --load option.
+.br
+\fBNOTE:\fR If dirty data were not flushed, the contents of a core device
+MUST NOT be changed before restarting the cache. Otherwise there is
+a data mismatch risk.
+
+.SH Options that are valid with --set-param (-X) are:
+
+.TP
+.B -n, --name <NAME>
+Name of parameters namespace.
+
+Available namespaces are:
+.br
+\fBseq-cutoff\fR - Sequential cutoff parameters.
+\fBcleaning\fR - Cleaning policy parameters.
+\fBcleaning-alru\fR - Cleaning policy ALRU parameters.
+\fBcleaning-acp\fR - Cleaning policy ACP parameters.
+
+.SH Options that are valid with --set-param (-X) --name (-n) seq-cutoff are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -j, --core-id <ID>
+Identifier of core instance <0-4095> within given cache instance. If this option
+is not specified, parameter is set to all cores within given cache instance.
+
+.TP
+.B -t, --seq-threshold <NUMBER>
+Amount of sequential data in KiB after which request is handled in pass-through mode.
+
+.TP
+.B -p, --seq-policy {always|full|never}
+Sequential cutoff policy to be used with a given core instance(s).
+
+.SH Options that are valid with --set-param (-X) --name (-n) cleaning are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -p, --policy {nop|alru|acp}
+Cleaning policy type to be used with a given cache instance.
+
+Available policies:
+.br
+1. \fBnop\fR. No Operation (no periodical cleaning, clean on eviction only).
+.br
+2. \fBalru\fR. Approximately Least Recently Used (default).
+.br
+3. \fBacp\fR. Aggressive Cleaning Policy.
+
+.SH Options that are valid with --set-param (-X) --name (-n) cleaning-alru are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -w, --wake-up <NUMBER>
+Period of time between awakenings of flushing thread [s] (default: 20 s).
+
+.TP
+.B -s, --staleness-time <NUMBER>
+Time that has to pass from the last write operation before a dirty cache block can be scheduled to be flushed [s] (default: 120 s).
+
+.TP
+.B -b, --flush-max-buffers <NUMBER>
+Number of dirty cache blocks to be flushed in one cleaning cycle (default: 100).
+
+.TP
+.B -t, --activity-threshold <NUMBER>
+Cache idle time before flushing thread can start [ms] (default: 10000 ms).
+
+.SH Options that are valid with --set-param (-X) --name (-n) cleaning-acp are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -w, --wake-up <NUMBER>
+Period of time between awakenings of flushing thread [ms] (default: 10 ms).
+
+.TP
+.B -b, --flush-max-buffers <NUMBER>
+Number of dirty cache blocks to be flushed in one cleaning cycle (default: 128).
+
+.SH Options that are valid with --get-param (-G) are:
+
+.TP
+.B -n, --name <NAME>
+Name of parameters namespace.
+
+Available namespaces are:
+.br
+\fBseq-cutoff\fR - Sequential cutoff parameters.
+\fBcleaning\fR - Cleaning policy parameters.
+\fBcleaning-alru\fR - Cleaning policy ALRU parameters.
+\fBcleaning-acp\fR - Cleaning policy ACP parameters.
+
+.SH Options that are valid with --get-param (-G) --name (-n) seq-cutoff are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -j, --core-id <ID>
+Identifier of core instance <0-4095> within given cache instance.
+
+.TP
+.B -o, --output-format {table|csv}
+Defines output format for parameter list. It can be either \fBtable\fR (default) or \fBcsv\fR.
+
+.SH Options that are valid with --get-param (-G) --name (-n) cleaning are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -o, --output-format {table|csv}
+Defines output format for parameter list. It can be either \fBtable\fR (default) or \fBcsv\fR.
+
+.SH Options that are valid with --get-param (-G) --name (-n) cleaning-alru are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -o, --output-format {table|csv}
+Defines output format for parameter list. It can be either \fBtable\fR (default) or \fBcsv\fR.
+
+.SH Options that are valid with --get-param (-G) --name (-n) cleaning-acp are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -o, --output-format {table|csv}
+Defines output format for parameter list. It can be either \fBtable\fR (default) or \fBcsv\fR.
+
+.SH Options that are valid with --set-cache-mode (-Q) are:
+.TP
+.B -c, --cache-mode {wt|wb|wa|pt}
+Cache mode to be used with a given cache instance.
+
+Available modes:
+.br
+1. \fBwt - Write-Through\fR.
+.br
+2. \fBwb - Write-Back\fR.
+.br
+3. \fBwa - Write-Around\fR.
+.br
+4. \fBpt - Pass-Through\fR.
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -f, --flush-cache {yes|no}
+Flush all cache dirty data before switching to different mode. Option is required
+when switching from Write-Back mode.
+
+.SH Options that are valid with --add-core (-A) are:
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -d, --core-device <DEVICE>
+Path to core device e.g. HDD device.
+
+.TP
+.B -j, --core-id <ID>
+Identifier of core instance <0-4095> within given cache instance for new core to be created. This
+parameter is optional. If it is not supplied, first available core id within cache instance will
+be used for new core.
+
+.SH Options that are valid with --remove-core (-R) are:
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -j, --core-id <ID>
+Identifier of core instance <0-4095> within given cache instance.
+
+.TP
+.B -f, --force
+Force remove inactive core.
+
+.SH Options that are valid with --remove-detached are:
+.TP
+.B -d, --device <DEVICE>
+Path to core device to be removed from core pool.
+
+.SH Options that are valid with --list-caches (-L) are:
+.TP
+.B -o, --output-format {table|csv}
+Defines output format for list of all cache instances and core devices. It can be either \fBtable\fR (default) or \fBcsv\fR.
+
+.SH Options that are valid with --stats (-P) are:
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -j, --core-id <ID>
+Identifier of core instance <0-4095> within given cache instance. If this option is
+not given, aggregate statistics for whole cache instance are printed instead.
+
+.TP
+.B -d, --io-class-id <ID>
+Identifier of IO class <0-33>.
+
+.TP
+.B -f, --filter <FILTER-SPEC>
+Defines filters to be applied. This is comma separated (no
+white-spaces allowed) list from following set of available:
+
+.br
+1. \fBconf\fR - provides information on configuration.
+.br
+2. \fBusage\fR - occupancy, free, clean and dirty statistics are printed.
+.br
+3. \fBreq\fR - IO request level statistics are printed.
+.br
+4. \fBblk\fR - block level statistics are printed.
+.br
+5. \fBerr\fR - error statistics are printed.
+.br
+6. \fBall\fR - all of the above.
+.br
+
+Default for --filter option is \fBall\fR.
+
+.TP
+.B -o --output-format {table|csv}
+Defines output format for statistics. It can be either \fBtable\fR
+(default) or \fBcsv\fR.
+
+.SH Options that are valid with --reset-counters (-Z) are:
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -j, --core-id <ID>
+Identifier of core instance <0-4095> within given cache instance. If this option
+is not specified, statistics are reset for all cores within given cache instance.
+
+
+.SH Options that are valid with --flush-cache (-F) are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.SH Options that are valid with --flush-core (-E) are:
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -j, --core-id <ID>
+Identifier of core instance <0-4095> within given cache instance.
+
+.SH Options that are valid with --io-class --load-config (-C -C) are:
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -f, --file <FILE>
+Configuration file containing IO class definition.
+
+.SH Options that are valid with --io-class --list (-C -L) are:
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -o --output-format {table|csv}
+Defines output format for printed IO class configuration. It can be either
+\fBtable\fR (default) or \fBcsv\fR.
+
+.SH Options that are valid with --nvme --format (-N -F) are:
+
+.TP
+.B -d, --device <DEVICE>
+Path to NVMe device to be formatted (e.g. /dev/nvme0).
+
+.TP
+.B -f, --force
+Force to format NVMe device. By default device will not be formatted if utility
+detects on the device file system or presence of dirty data after cache dirty
+shutdown. This parameter formats NVMe namespace regardless to this situations.
+
+
+.SH Command --help (-H) does not accept any options.
+.BR
+
+.SH Options that are valid with --version (-V) are:
+
+.TP
+.B -o --output-format {table|csv}
+Defines output format. It can be either \fBtable\fR (default) or \fBcsv\fR.
+
+
+.SH ENVIRONMENT VARIABLES
+Following environment variables affect behavior of casadm administrative utility:
+.TP
+.B LANG
+If en_US.utf-8, en_US.UTF-8 is configured, tables displayed by -L/--list-caches,
+-P/--stats and -C -L/--io-class --list are formatted using Unicode table drawing
+characters. Otherwise only '+', '|' and '-' are used.
+
+.TP
+.B TERM
+If xterm or screen is used, colors are used for formatting tables. Otherwise,
+color is not used. Additionally colors are NOT used if standard output of
+casadm isn't a TTY (i.e. it's output is displayed via less(1), watch(1) or
+redirected to a file)
+
+.TP
+.B CASADM_COLORS
+If this variable is set, colors are used even if TERM isn't set to xterm/screen
+or when output is redirected to another program. It's convenient to do:
+CASADM_COLORS=true screen 'casadm -P -i 1'
+
+.TP
+.B CASADM_NO_LINE_BREAK
+If CASADM_NO_LINE_BREAK is set, casadm won't break lines for tables displayed
+by -L/--list-caches, -P/--stats and -C -L/--io-class --list
+
+
+.SH REPORTING BUGS
+Patches and issues may be submitted to the official repository at
+\fBhttps://open-cas.github.io\fR
+
+.SH SEE ALSO
+.TP
+casctl(8), opencas.conf(5)

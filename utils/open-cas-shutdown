@@ -1,0 +1,57 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+#
+# open-cas-shutdown      Stops Open CAS
+#
+# chkconfig: 235 05 95
+# description: Open Cache Acceleration Software Shutdown Trigger
+#
+# processname: open-cas-shutdown
+
+### BEGIN INIT INFO
+# Provides:             open-cas-shutdown
+# Required-Start:       $local_fs
+# Required-Stop:        $local_fs
+# Default-Start:        2 3 5
+# Default-Stop:         0 1 6
+# Short-Description:    Open Cache Acceleration Software Shutdown Trigger
+# Description:          Open Cache Acceleration Software Shutdown Trigger
+### END INIT INFO
+
+# Execution flow
+
+runfile=/var/lock/subsys/open-cas-shutdown
+
+function umount_cache_volumes()
+{
+    BLOCK_DEV_PREFIX=/dev/cas
+    INSTANCES=`ls ${BLOCK_DEV_PREFIX}* | egrep [1-9][0-9]*-[1-9][0-9]*`
+    for inst in $INSTANCES ; do
+        # Umount any mounted Open CAS devices first
+        if [[ `cat /etc/mtab | grep $inst | wc -l` -gt 0 ]] ; then
+            umount $inst &> /dev/null
+        fi
+    done
+}
+
+case "$1" in
+    start|restart|reload)
+        mkdir -p `dirname $runfile`
+        touch $runfile
+        exit 0
+        ;;
+    status)
+        exit 0
+        ;;
+    stop)
+        umount_cache_volumes
+        /sbin/cas stop
+        rm -f $runfile
+        exit $?
+        ;;
+    *)
+        exit 1
+esac

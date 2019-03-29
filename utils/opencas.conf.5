@@ -1,0 +1,61 @@
+.TH opencas.conf 5 __CAS_DATE__ v_CAS_VERSION__
+.SH NAME
+opencas.conf \- cas configuration file.
+
+
+.SH SYNOPSIS
+.B /etc/opencas/opencas.conf
+
+.SH COPYRIGHT
+Copyright(c) 2012-2019 by the Intel Corporation.
+
+.SH DESCRIPTION
+Contains configurations for cache and core devices to run cache on system startup. Constist of following sections:
+.RS 3
+.TP
+\fBversion\fR   First line has to be version tag.
+.TP
+\fB[caches]\fR  Caches configuration. Following columns are required:
+.RS 5
+.IP
+Cache ID <1-16384>
+.br
+Cache device <DEVICE>
+.br
+Cache mode {wt|wb|wa|pt}
+.br
+Extra fields (optional) ioclass_file=<file>,cleaning_policy=<alru,nop>
+.RE
+.TP
+\fB[cores]\fR   Cores configuration. Following columns are required:
+.RS 5
+.IP
+Cache ID <1-16384>
+.br
+Core ID <0-4095>
+.br
+Core device <DEVICE>
+.br
+.RE
+.TP
+\fBNOTES\fR
+.RS
+1) It is highly recommended to specify cache/core device using path that is constant across reboots - e.g. disk device links in /dev/disk/by-id/, preferably those using device WWN if available: /dev/disk/by-id/wwn-0x123456789abcdef0. Referencing devices via /dev/sd* may result in cache misconfiguration after system reboot due to change(s) in drive order.
+.TP
+2) To specify use of the IC Classification file, place ioclass_file=path/to/file.csv in caches configuration section under Extra fields (optional)
+
+
+.SH FILES
+.TP
+/etc/opencas/opencas.conf
+Contains configurations for cache and core devices to run cache on system startup or via cas tool.
+
+.SH REPORTING BUGS
+Patches and issues may be submitted to the official repository at
+\fBhttps://open-cas.github.io\fR
+
+
+.SH SEE ALSO
+.TP
+casctl(8), casadm(8)
+

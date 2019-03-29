@@ -1,0 +1,63 @@
+.TH casctl.8 __CAS_DATE__ v__CAS_VERSION__
+.SH NAME
+casctl \- whole-configuration-manager for Open CAS.
+
+
+.SH SYNOPSIS
+
+\fBcasctl\fR <command> [options...]
+
+.SH COPYRIGHT
+Copyright(c) 2012-2019 by the Intel Corporation.
+
+.SH COMMANDS
+.TP
+.B start
+Start all cache instances.
+
+.TP
+.B stop
+Stop all cache instances.
+
+.TP
+.B init
+Initial configuration of caches and core devices.
+
+.br
+.B CAUTION
+.br
+May be used if there is no metadata on cache device or if metatata exists, then only if it's all clean.
+
+.TP
+.B -h, --help
+
+
+.SH OPTIONS
+
+.TP
+.SH Command start does not accept any options.
+
+.TP
+.SH Options that are valid with stop are:
+
+.TP
+.B --flush
+Flush data before stopping.
+
+.TP
+.SH Options that are valid with init are:
+
+.TP
+.B --force
+Force cache start even if cache device contains partitions or metadata from previously running cache instances.
+
+.TP
+.SH Command --help (-h) does not accept any options.
+
+.SH REPORTING BUGS
+Patches and issues may be submitted to the official repository at
+\fBhttps://open-cas.github.io\fR
+
+.SH SEE ALSO
+.TP
+casadm(8), opencas.conf(5)

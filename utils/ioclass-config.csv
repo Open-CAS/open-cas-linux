@@ -1,0 +1,15 @@
+IO class id,IO class name,Eviction priority,Allocation
+0,unclassified,22,1
+1,metadata&done,0,1
+11,file_size:le:4096&done,9,1
+12,file_size:le:16384&done,10,1
+13,file_size:le:65536&done,11,1
+14,file_size:le:262144&done,12,1
+15,file_size:le:1048576&done,13,1
+16,file_size:le:4194304&done,14,1
+17,file_size:le:16777216&done,15,1
+18,file_size:le:67108864&done,16,1
+19,file_size:le:268435456&done,17,1
+20,file_size:le:1073741824&done,18,1
+21,file_size:gt:1073741824&done,19,1
+22,direct&done,20,1
