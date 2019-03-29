@@ -9,9 +9,8 @@ cache solution that is transparent to users and  applications, and your
 existing storage infrastructure. No storage migration effort or application
 changes are required.
 
-Open CAS is distributed on Dual BSD-2-Clause-Patent/GPLv2 license (see
-https://opensource.org/licenses/BSDplusPatent and
-https://opensource.org/licenses/GPL-2.0 for for full license texts).
+Open CAS is distributed on BSD-3-Clause license (see
+https://opensource.org/licenses/BSD-3-Clause for full license texts).
 
 Open CAS uses Safe string library (safeclib) that is MIT licensed.
 
