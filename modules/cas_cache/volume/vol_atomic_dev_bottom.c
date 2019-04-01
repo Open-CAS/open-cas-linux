@@ -973,7 +973,7 @@ unsigned int cas_atomic_get_max_io_size(ocf_volume_t volume)
 	if (!bd->bd_disk)
 		return 0;
 
-	return queue_max_sectors(bd->bd_disk->queue);
+	return queue_max_sectors(bd->bd_disk->queue) << SECTOR_SHIFT;
 }
 
 void cas_atomic_close_object(ocf_volume_t volume)
