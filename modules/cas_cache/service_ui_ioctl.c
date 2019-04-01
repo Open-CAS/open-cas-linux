@@ -131,10 +131,12 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		struct kcas_start_cache *cmd_info;
 		struct ocf_mngt_cache_config cfg;
 		struct ocf_mngt_cache_device_config device_cfg;
+		struct atomic_dev_params atomic_params = { 0 };
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_prepare_cache_cfg(&cfg, &device_cfg, cmd_info);
+		retval = cache_mng_prepare_cache_cfg(&cfg, &device_cfg,
+				&atomic_params, cmd_info);
 		if (retval)
 			RETURN_CMD_RESULT(cmd_info, arg, retval);
 

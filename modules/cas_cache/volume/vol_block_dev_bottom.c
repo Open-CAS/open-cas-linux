@@ -22,7 +22,7 @@
 #define CAS_DEBUG_PARAM(format, ...)
 #endif
 
-int block_dev_open_object(ocf_volume_t vol)
+int block_dev_open_object(ocf_volume_t vol, void *volume_params)
 {
 	struct bd_object *bdobj = bd_object(vol);
 	const struct ocf_volume_uuid *uuid = ocf_volume_get_uuid(vol);

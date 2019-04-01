@@ -986,26 +986,22 @@ void cas_atomic_close_object(ocf_volume_t volume)
 	block_dev_close_object(volume);
 }
 
-int cas_atomic_open_object(ocf_volume_t volume)
+int cas_atomic_open_object(ocf_volume_t volume, void *volume_params)
 {
 	int result;
-	uint8_t type;
 	struct bd_object *bdobj = NULL;
 
-	result = block_dev_open_object(volume);
+	if (!volume_params)
+		return -EINVAL;
+
+	result = block_dev_open_object(volume, volume_params);
 	if (result)
 		return result;
 
 	bdobj = bd_object(volume);
 
-	result = cas_blk_identify_type_by_bdev(bdobj->btm_bd,
-			&type, &bdobj->atomic_params);
-
-	if (type != ATOMIC_DEVICE_VOLUME) {
-		cas_atomic_close_object(volume);
-		result = -OCF_ERR_INVAL_VOLUME_TYPE;
-		goto end;
-	}
+	memcpy(&bdobj->atomic_params, volume_params,
+			sizeof(bdobj->atomic_params));
 
 	bdobj->workqueue = create_workqueue("CAS_AT_ZER");
 	if (!bdobj->workqueue) {

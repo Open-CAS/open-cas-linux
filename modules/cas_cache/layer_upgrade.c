@@ -810,8 +810,9 @@ static int _cas_upgrade_restore_conf_main(struct cas_properties *cache_props,
 	uint64_t cache_mode, cache_line_size;
 	uint64_t cache_type, version;
 	char *cache_path = NULL;
-	struct ocf_mngt_cache_config cfg;
-	struct ocf_mngt_cache_device_config device_cfg;
+	struct ocf_mngt_cache_config cfg = {};
+	struct ocf_mngt_cache_device_config device_cfg = {};
+	struct atomic_dev_params atomic_params = {};
 
 	CAS_DEBUG_TRACE();
 
@@ -853,9 +854,6 @@ static int _cas_upgrade_restore_conf_main(struct cas_properties *cache_props,
 	if (cache_mode >= ocf_cache_mode_max)
 		cache_mode = ocf_cache_mode_default;
 
-	memset(&cfg, 0, sizeof(cfg));
-	memset(&device_cfg, 0, sizeof(device_cfg));
-
 	cfg.id = *cache_id;
 	cfg.cache_mode = cache_mode;
 	/* cfg.eviction_policy = TODO */
@@ -875,6 +873,18 @@ static int _cas_upgrade_restore_conf_main(struct cas_properties *cache_props,
 	device_cfg.cache_line_size = cache_line_size;
 	device_cfg.perform_test = true;
 	device_cfg.force = false;
+
+	if (device_cfg.volume_type == ATOMIC_DEVICE_VOLUME) {
+		result = cas_blk_identify_type_atomic(device_cfg.uuid.data,
+			&device_cfg.volume_type, &atomic_params);
+		if (result)
+			goto error;
+		if (device_cfg.volume_type != ATOMIC_DEVICE_VOLUME) {
+			result = -OCF_ERR_INVAL_VOLUME_TYPE;
+			goto error;
+		}
+		device_cfg.volume_params = &atomic_params;
+	}
 
 	result = cache_mng_init_instance(&cfg, &device_cfg, NULL);
 
