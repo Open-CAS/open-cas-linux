@@ -1,0 +1,38 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+# The line below specified that line under it should be used as the test's short description when launching test via run_tests script.
+# The text should not be longer than 80 chars - if it is, the script will strip addititonal characters
+# DESCRIPTION Validate spelling in manpage
+
+# USE_IN_NIGHTLY
+
+# Standard beginning for every test - get the main tests directory and
+# link the cas_lib file for CAS API, then use "start_test $*" to pass params
+# and do other necessary checks and setup
+TESTS_DIR="$(dirname $0)/../"
+. $TESTS_DIR/cas_lib
+start_test $*
+
+FAIL=0
+
+PERSONAL_DICTIONARY=`pwd`/cas_ex.en.pws
+
+man --help | grep -- --no-hyphenation 2>&1 > /dev/null
+if [ $? -ne 0 ] ; then
+  warning "option --no-hyphenation not supported by man"
+  end_test $CAS_TEST_NOT_RUN
+fi
+
+run_cmd "man --no-hyphenation $CAS_MAN_PAGE | head -n -1 | aspell list --lang=en_US --add-extra-dicts=$PERSONAL_DICTIONARY"
+for N in $OUTPUT ; do
+  if [ -n $N ] ; then
+    FAIL=1
+    error "Misspelled word: $N"
+  fi
+done
+
+end_test $FAIL
