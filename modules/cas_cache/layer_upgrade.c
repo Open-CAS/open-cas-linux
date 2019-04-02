@@ -415,7 +415,7 @@ int _cas_upgrade_dump_io_class_visitor(ocf_cache_t cache,
 		uint32_t io_class_id, void *ctx)
 {
 	int result = 0;
-	struct ocf_io_class_info info;
+	struct ocf_io_class_info *info = NULL;
 	struct _cas_upgrade_dump_io_class_visit_ctx *io_class_visit_ctx =
 			(struct _cas_upgrade_dump_io_class_visit_ctx*) ctx;
 	char *key = NULL;
@@ -430,7 +430,13 @@ int _cas_upgrade_dump_io_class_visitor(ocf_cache_t cache,
 		return result;
 	}
 
-	result = ocf_cache_io_class_get_info(cache, io_class_id, &info);
+	info = kmalloc(sizeof(*info), GFP_KERNEL);
+	if (info == NULL) {
+		result = -OCF_ERR_NO_MEM;
+		goto error;
+	}
+
+	result = ocf_cache_io_class_get_info(cache, io_class_id, info);
 	if (result)
 		goto error;
 
@@ -443,7 +449,7 @@ int _cas_upgrade_dump_io_class_visitor(ocf_cache_t cache,
 		goto error;
 
 	result = cas_properties_add_string(cache_props, key,
-			info.name, CAS_PROPERTIES_CONST);
+			info->name, CAS_PROPERTIES_CONST);
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
 				"Error during adding io class name\n");
@@ -456,7 +462,7 @@ int _cas_upgrade_dump_io_class_visitor(ocf_cache_t cache,
 		goto error;
 
 	result = cas_properties_add_uint(cache_props, key,
-			info.min_size, CAS_PROPERTIES_CONST);
+			info->min_size, CAS_PROPERTIES_CONST);
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
 				"Error during adding io class min size\n");
@@ -482,7 +488,7 @@ int _cas_upgrade_dump_io_class_visitor(ocf_cache_t cache,
 		goto error;
 
 	result = cas_properties_add_uint(cache_props, key,
-			info.max_size, CAS_PROPERTIES_CONST);
+			info->max_size, CAS_PROPERTIES_CONST);
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
 				"Error during adding io class max size\n");
@@ -495,7 +501,7 @@ int _cas_upgrade_dump_io_class_visitor(ocf_cache_t cache,
 		goto error;
 
 	result = cas_properties_add_uint(cache_props, key,
-			info.priority, CAS_PROPERTIES_CONST);
+			info->priority, CAS_PROPERTIES_CONST);
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
 				"Error during adding io class priority\n");
@@ -508,7 +514,7 @@ int _cas_upgrade_dump_io_class_visitor(ocf_cache_t cache,
 		goto error;
 
 	result = cas_properties_add_uint(cache_props, key,
-			info.cache_mode, CAS_PROPERTIES_CONST);
+			info->cache_mode, CAS_PROPERTIES_CONST);
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
 				"Error during adding io class cache mode\n");
@@ -517,6 +523,7 @@ int _cas_upgrade_dump_io_class_visitor(ocf_cache_t cache,
 
 error:
 	kfree(key);
+	kfree(info);
 	io_class_visit_ctx->error = result;
 	return result;
 
