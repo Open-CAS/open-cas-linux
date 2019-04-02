@@ -1,0 +1,120 @@
+******************************************************************************
+
+Table of Contents:
+1) Running tests
+2) Framework files
+3) Test categories
+4) Adding test to BVT
+5) Writing tests [basics]
+6) Writing tests [advanced]
+7) Adding new functions to API
+
+******************************************************************************
+
+1) Running tests
+
+You can launch the tests in two ways:
+a) Manually running a single test, for example "basic/01"
+b) Launch a bunch of tests via the "./run_tests" script.
+
+Both of these have a nice help and detailed output so you should have no
+problems testing.
+
+******************************************************************************
+
+2) Framework files
+
+cas_config - holds default settings for the framework like default cache/core
+			device, mountpoint etc.
+cas_local_config - your local config file, it isn't included in the repository
+			so that you can override the default settings there
+cas_functions - holds all CAS API and system function wrappers used by tests
+cas_lib - the main entry point for tests; includes basic environment/test
+			functions and includes other library files for testing
+cas_options - containts options (required and optional) for all functions in
+			cas_functions so that we can check if the wrapper is called
+			correctly
+
+******************************************************************************
+
+3) Test categories:
+
+Tests are separated into several categories using folders. Feel free to add new
+tests to existing categories or create new ones - making a new folder is all
+you have to do. Right now, the "logs" and hidden (starting with '.') folders
+are not considered as categories.
+
+******************************************************************************
+
+4) Adding test to BVT:
+
+If you want to include any test in the BVT, add the following line in the
+beginning of the test (doesn't really matter where you do it): # USE_IN_BVT
+
+The BVT suite should last no longer than 5 minutes so that the building system
+launches all tests fast enough.
+
+******************************************************************************
+
+5) Writing tests [basics]
+
+When writing tests, you should follow the following rules:
+a) All tests should be located in the category folders.
+b) Most of the tests in basic category are good templates for tests, so usually
+			it's best just to copy the file and then edit it so that it fits
+			you.
+c) Make sure the test starts with the appropriate header (including DESCRIPTION,
+			including cas_lib and "start test $*") and ends with "end_test 0"
+d) Use as much of the API and configuration as possible (CACHE_DEVICE,
+			CORE_DEVICE, MOUNTPOINT etc.). Such things are cleared every test,
+			so even if something goes wrong, the framework should handle it.
+e) If you want to add new API, go to 7).
+f) If you want to use a function not included in the API, but you don't really
+			want it in the API, then use "run_cmd" function. Look up it's
+			description in cas_lib file.
+g) Stick to the naming convention - all params and variables are UPPERCASE,
+			while functions are lowercase.
+
+******************************************************************************
+
+6) Writing tests [advanced]
+
+The text in DESCRIPTION header shouldn't be longer than 80 characters -
+if it is, characters above 80th will be trimmed. This text is used when printing
+the results of tests - if the description is found, we print it - if not, we
+just use the test's name.
+
+******************************************************************************
+
+7) Adding new functions to API
+
+Add new functions to API whenever:
+a) It concerns CAS CLI
+b) It's a system function and involves repetitive steps which can be reused
+			using configuration
+c) You think it has to be there
+
+The steps to add new functions are as follows:
+a) Write the function's body with:
+	- "check_options $FUNCNAME" at the very beginning
+	- "clear_options" at the very end
+b) Launch all vital steps via "run_cmd", which checks if the command returned a
+			correct value. Look up it's description in cas_lib file. You can use
+			run_cmd any number of times, but the first fail will end the test.
+c) Export the function with "export -f [...]", just like all other functions.
+
+If the function should accept any parameters, then:
+a) Do NOT specify them as bash function params, use global variables instead
+			(see implemented functions for examples).
+b) The options should be UPPERCASE and end with "_OPTION" (CACHE_ID_OPTION, for
+			example)
+c) Go to cas_options:
+	- add your params to the ALL_OPTIONS variable (a new line will probably be
+			the best place)
+	- create a variable named [YOUR_FUNCTION'S_NAME_UPPERCASE]_REQUIRED_OPTIONS
+			(MAKE_PRIMARY_PARTITIONS_REQUIRED_OPTIONS, for example) and put your
+			required params there
+	- [optional] create a new entry under the required options section and put
+			all options there; this is not required, but helps to see which
+			options are needed and which are not
+d) Launch a test using the new function to test its correctness.

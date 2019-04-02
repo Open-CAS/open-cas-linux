@@ -1,0 +1,26 @@
+#!/bin/bash
+
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+# This is the local config file which may be used to override default settings.
+# If you want to use this file, rename it to "cas_local_config".
+
+# Default core and cache devices - note that we require whole devices, not partitions
+export CORE_DEVICE="/dev/sdd"
+export CACHE_DEVICE="/dev/sdf"
+
+# Default size of partition for cache/core device. This is used only for
+# the DEFAULT_* API functions
+export DEFAULT_CACHE_SIZE="3000M"
+export DEFAULT_CORE_SIZE="5000M"
+
+# All devices mounted using the test API will be mounted at ${MOUNTPOINT}-${CACHE_ID}-${CORE_ID}
+# Use this variable in your tests to use the mounted resource.
+export MOUNTPOINT="/mnt/cas"
+
+# TMP_DIR should be a directory where we can store additional data like test files, md5 sums etc.
+# We clean up this directory between the tests.
+export TMP_DIR="/var/tmp/.cas"

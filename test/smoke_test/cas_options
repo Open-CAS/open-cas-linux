@@ -1,0 +1,334 @@
+#!/bin/bash
+
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+# Whenever adding new options (required or optional), add them to the variable below.
+# Every option might be mentioned more than once - it doesn't really matter at this point
+export ALL_OPTIONS="
+    CACHE_ID_OPTION CORE_ID_OPTION NEGATIVE_TEST_OPTION SILENT_COMMAND_OPTION DONT_FAIL_ON_ERROR_OPTION
+    CACHE_DEVICE_OPTION
+    CACHE_LOAD_METADATA_OPTION CACHE_FORCE_OPTION
+    CACHE_DONT_FLUSH_DATA_OPTION
+    CORE_DEVICE_OPTION
+    NUMBER_OF_CACHE_PARTITIONS NUMBER_OF_CORE_PARTITIONS MAKE_FILE_SYSTEM
+    PARTITION_ID_OPTION PRIORITY_OPTION MIN_SIZE_OPTION MAX_SIZE_OPTION CLEANING_POLICY_OPTION
+    CACHE_ID_OPTION CORE_ID_OPTION MOUNTPOINT_ID_OPTION
+    TARGET_DEVICE_OPTION PARTITION_IDS_OPTION PARTITION_SIZE_OPTION PARTITION_ID_OPTION PARTITIONS_AMOUNT_OPTION
+    CLEAN_POL_NS_OPTION WAKE_UP_OPTION STALE_TIME_OPTION FLUSH_BUFFERS_OPTION ACTIVITY_THRESH_OPTION
+    TARGET_DEVICE_OPTION FILESYSTEM_TYPE
+    IO_CLASS_ID IO_CLASS_PRIORITY IO_CLASS_SIZE_MIN IO_CLASS_SIZE_MAX IO_CLASS_NAME IO_CLASS_CACHE_MODE
+    FORMAT_NVME_REQUIRED_OPTIONS CHECK_IS_NVME_ATOMIC TURN_OFF_NVME_DEVICE TURN_ON_NVME_DEVICE
+    DEVICE_ID_OPTION DEMANDED_STATE_OPTION
+    STAT_UNIT_OPTION STAT_NAME_OPTION
+    STORE_CONFIG_OPTION
+    CLEAN_POL_OPTION
+"
+
+# Specify ONLY required options here. The name of the variable should start with
+# uppercase function's name + "_REQUIRED_OPTIONS".
+
+export START_CACHE_REQUIRED_OPTIONS="CACHE_ID_OPTION CACHE_DEVICE_OPTION"
+export STOP_CACHE_REQUIRED_OPTIONS="CACHE_ID_OPTION"
+export ADD_CORE_REQUIRED_OPTIONS="CACHE_ID_OPTION CORE_DEVICE_OPTION"
+export TRY_ADD_CORE_REQUIRED_OPTIONS="CACHE_ID_OPTION CORE_ID_OPTION CORE_DEVICE_OPTION"
+export CHECK_DEVICE_SATE_REQUIRED_OPTIONS="DEVICE_ID_OPTION DEMANDED_STATE_OPTION"
+export REMOVE_CORE_REQUIRED_OPTIONS="CACHE_ID_OPTION CORE_ID_OPTION"
+export REMOVE_PARTITIONS_REQUIRED_OPTIONS="TARGET_DEVICE_OPTION"
+export FLUSH_CACHE_REQUIRED_OPTIONS="CACHE_ID_OPTION"
+export FLUSH_CORE_REQUIRED_OPTIONS="CACHE_ID_OPTION CORE_ID_OPTION"
+export SET_CLEANING_POLICY_REQUIRED_OPTIONS="CACHE_ID_OPTION CLEAN_POL_OPTION"
+export GET_CLEANING_POLICY_REQUIRED_OPTIONS="CACHE_ID_OPTION"
+export SET_FLUSH_PARAMS_REQUIRED_OPTIONS="CACHE_ID_OPTION CLEAN_POL_NS_OPTION"
+export GET_FLUSH_PARAMS_REQUIRED_OPTIONS="CACHE_ID_OPTION CLEAN_POL_NS_OPTION"
+export FORMAT_NVME_REQUIRED_OPTIONS="NVME_FORMAT_MODE_OPTION DEVICE_OPTION"
+export CHECK_IS_NVME_ATOMIC_REQUIRED_OPTIONS="DEVICE_OPTION"
+
+export CREATE_PARTITION_REQUIRED_OPTIONS="CACHE_ID_OPTION PARTITION_ID_OPTION PRIORITY_OPTION MIN_SIZE_OPTION MAX_SIZE_OPTION CLEANING_POLICY_OPTION"
+
+export MOUNT_CACHE_REQUIRED_OPTIONS="CACHE_ID_OPTION CORE_ID_OPTION"
+
+export MAKE_PRIMARY_PARTITIONS_REQUIRED_OPTIONS="TARGET_DEVICE_OPTION PARTITION_IDS_OPTION PARTITION_SIZE_OPTION"
+export MAKE_EXTENDED_PARTIION_REQUIRED_OPTIONS="TARGET_DEVICE_OPTION PARTITION_ID_OPTION PARTITION_SIZE_OPTION"
+export MAKE_LOGICAL_PARTIIONS_REQUIRED_OPTIONS="TARGET_DEVICE_OPTION PARTITIONS_AMOUNT_OPTION PARTITION_SIZE_OPTION"
+export MAKE_FILESYSTEM_REQUIRED_OPTIONS="TARGET_DEVICE_OPTION FILESYSTEM_TYPE"
+export TURN_OFF_DEVICE_REQUIRED_OPTIONS="CACHE_DEVICE_OPTION"
+export TURN_ON_DEVICE_REQUIRED_OPTIONS="CACHE_DEVICE_OPTION"
+export TURN_OFF_NVME_DEVICE_REQUIRED_OPTIONS="CACHE_DEVICE_OPTION"
+export TURN_ON_NVME_DEVICE_REQUIRED_OPTIONS="CACHE_DEVICE_OPTION"
+
+export START_DUAL_LEVEL_CACHE_REQUIRED_OPTIONS="CACHE_ID_OPTION CACHE_DEVICE_OPTION"
+
+export START_CACHE_REQUIRED_OPTIONS="CACHE_ID_OPTION CACHE_DEVICE_OPTION"
+
+export IO_CLASS_LIST_REQUIRED_OPTIONS="CACHE_ID_OPTION"
+export IO_CLASS_LOAD_REQUIRED_OPTIONS="CACHE_ID_OPTION CSV_FILE"
+export IO_CLASS_STATS_CSV_REQUIRED_OPTIONS="CACHE_ID_OPTION CSV_FILE"
+
+export IO_CLASS_EXT_ADD_REQUIRED_OPTIONS="CACHE_ID_OPTION IO_CLASS_ID IO_CLASS_PRIORITY IO_CLASS_SIZE_MIN IO_CLASS_SIZE_MAX IO_CLASS_NAME IO_CLASS_CACHE_MODE"
+export IO_CLASS_EXT_MODIFY_REQUIRED_OPTIONS="CACHE_ID_OPTION IO_CLASS_ID"
+export IO_CLASS_EXT_REMOVE_REQUIRED_OPTIONS="CACHE_ID_OPTION IO_CLASS_ID"
+
+export STATS_REQUIRED_OPTIONS="CACHE_ID_OPTION"
+export GET_STATS_VALUE_REQUIRED_OPTIONS="CACHE_ID_OPTION STAT_NAME_OPTION"
+
+# Clearing the variables below is not really needed, but it makes the whole
+# thing much more clear. Unlike the REQUIRED_OPTIONS, we specify all
+# possible parameters here for every function.
+# Please note that some options are shared between many functions, so
+# make sure the option is set to a correct value before invoking one
+# function after another.
+
+############################################################
+#           OPTIONS SHARED BETWEEN ALL FUNCTIONS           #
+############################################################
+NEGATIVE_TEST_OPTION=""
+SILENT_COMMAND_OPTION=""
+DONT_FAIL_ON_ERROR_OPTION=""
+############################################################
+#                     CLEAR CONFIG                         #
+############################################################
+STORE_CONFIG_OPTION=""
+############################################################
+#                     START CACHE                          #
+############################################################
+CACHE_ID_OPTION=""
+CACHE_DEVICE_OPTION=""
+# Optional
+CACHE_FORCE_OPTION=""
+CACHE_LOAD_METADATA_OPTION=""
+SEQ_CUTOFF_SIZE=""
+
+############################################################
+#                      STOP CACHE                          #
+############################################################
+CACHE_ID_OPTION=""
+# Optional
+CACHE_DONT_FLUSH_DATA_OPTION=""
+
+############################################################
+#                       ADD CORE                           #
+############################################################
+CACHE_ID_OPTION=""
+CORE_DEVICE_OPTION=""
+
+############################################################
+#                     REMOVE CORE                          #
+############################################################
+CACHE_ID_OPTION=""
+CORE_ID_OPTION=""
+
+############################################################
+#                   CHECK DEVICE STATE                     #
+############################################################
+DEVICE_ID_OPTION=""
+DEMANDED_STATE_OPTION=""
+
+############################################################
+#                     FORMAT NVME                          #
+############################################################
+NVME_FORMAT_MODE_OPTION=""
+DEVICE_OPTION=""
+NVME_FORMAT_FORCE_OPTION=""
+
+############################################################
+#               CHECK_IS_NVME_ATOMIC                       #
+############################################################
+DEVICE_OPTION=""
+
+############################################################
+#                         INIT                             #
+############################################################
+NUMBER_OF_CACHE_PARTITIONS=""
+NUMBER_OF_CORE_PARTITIONS=""
+MAKE_FILE_SYSTEM=""
+CACHE_FORCE_OPTION=""
+CACHE_MODE_OPTION=""
+CACHE_LOAD_METADATA_OPTION=""
+
+############################################################
+#                        ITERATION                         #
+############################################################
+NUMBER_OF_CACHE_PARTITIONS=""
+NUMBER_OF_CORE_PARTITIONS=""
+MAKE_FILE_SYSTEM=""
+CACHE_FORCE_OPTION=""
+CACHE_MODE_OPTION=""
+CACHE_LOAD_METADATA_OPTION=""
+
+############################################################
+#                        DEINIT                            #
+############################################################
+NUMBER_OF_CACHE_PARTITIONS=""
+NUMBER_OF_CORE_PARTITIONS=""
+
+############################################################
+#                     FLUSH CACHE                          #
+############################################################
+CACHE_ID_OPTION=""
+
+############################################################
+#                     FLUSH CORE                           #
+############################################################
+CACHE_ID_OPTION=""
+CORE_ID_OPTION=""
+
+############################################################
+#                      MOUNT CACHE                         #
+############################################################
+CACHE_ID_OPTION=""
+CORE_ID_OPTION=""
+
+############################################################
+#                MAKE PRIMARY PARTITIONS                   #
+############################################################
+TARGET_DEVICE_OPTION=""
+PARTITION_IDS_OPTION=""
+PARTITION_SIZE_OPTION=""
+
+############################################################
+#                MAKE EXTENDED PARTITION                   #
+############################################################
+TARGET_DEVICE_OPTION=""
+PARTITION_ID_OPTION=""
+PARTITION_SIZE_OPTION=""
+
+############################################################
+#                MAKE LOGICAL PARTITIONS                   #
+############################################################
+TARGET_DEVICE_OPTION=""
+PARTITION_SIZE_OPTION=""
+PARTITIONS_AMOUNT_OPTION=""
+
+############################################################
+#                     MAKE FILESYSTEM                      #
+############################################################
+TARGET_DEVICE_OPTION=""
+FILESYSTEM_TYPE=""
+
+############################################################
+#                      IO CLASS LIST                       #
+############################################################
+CACHE_ID_OPTION=""
+# Optional
+CSV_FILE=""
+
+############################################################
+#                      IO CLASS LOAD                       #
+############################################################
+CACHE_ID_OPTION=""
+CSV_FILE=""
+
+############################################################
+#                      IO CLASS EXT ADD                    #
+############################################################
+CACHE_ID_OPTION=""
+IO_CLASS_ID=""
+IO_CLASS_PRIORITY=""
+IO_CLASS_SIZE_MIN=""
+IO_CLASS_SIZE_MAX=""
+IO_CLASS_NAME=""
+IO_CLASS_CACHE_MODE=""
+
+############################################################
+#                      IO CLASS EXT MODIFY                 #
+############################################################
+CACHE_ID_OPTION=""
+IO_CLASS_ID=""
+#Optional
+IO_CLASS_PRIORITY=""
+IO_CLASS_SIZE_MIN=""
+IO_CLASS_SIZE_MAX=""
+IO_CLASS_NAME=""
+IO_CLASS_CACHE_MODE=""
+
+############################################################
+#                      IO CLASS EXT REMOVE                 #
+############################################################
+CACHE_ID_OPTION=""
+IO_CLASS_ID=""
+
+############################################################
+#                    IO CLASS STATS CSV                    #
+############################################################
+CACHE_ID_OPTION=""
+CSV_FILE=""
+
+############################################################
+#                         STATS                            #
+############################################################
+CACHE_ID_OPTION=""
+
+############################################################
+#                     GET_STATS_VALUE                      #
+############################################################
+DEVICE_ID_OPTION=""
+STAT_NAME_OPTION=""
+#Optional
+STAT_UNIT_OPTION=""
+CORE_ID_OPTION=""
+IO_CLASS_ID=""
+
+############################################################
+#                   SET_CLEANING_POLICY                    #
+############################################################
+DEVICE_ID_OPTION=""
+CLEAN_POLICY_OPTION=""
+
+############################################################
+#                   GET_CLEANING_POLICY                    #
+############################################################
+DEVICE_ID_OPTION=""
+
+############################################################
+#                   SET_FLUSH_PARAMS                       #
+############################################################
+DEVICE_ID_OPTION=""
+CLEAN_POLICY_NS_OPTION=""
+#Optional
+WAKE_UP_OPTION=""
+STALE_TIME_OPTION=""
+FLUSH_BUFFERS_OPTION=""
+ACTIVITY_THRESH_OPTION=""
+
+############################################################
+#                   SET_FLUSH_PARAMS                       #
+############################################################
+DEVICE_ID_OPTION=""
+CLEAN_POLICY_NS_OPTION=""
+
+############################################################
+#                        FUNCTIONS                         #
+############################################################
+
+# This function is what exports and sets all the options above.
+# All options should be automatically cleared after using them in API.
+clear_options() {
+    for OPTION in $ALL_OPTIONS ; do
+        export $OPTION=""
+    done
+}
+
+# This should be used in all API/system functions to check if all required
+# options are set. It doesn't check the syntax at all - only if option is set.
+check_options() {
+    FUNCTION_NAME=$(echo $1 | tr [:lower:] [:upper:])
+    OPTIONS_NAME="${FUNCTION_NAME}_REQUIRED_OPTIONS"
+    OPTIONS_TO_CHECK="${!OPTIONS_NAME}"
+
+    for OPTION in $OPTIONS_TO_CHECK ; do
+        if [ -z "${!OPTION}" ] ; then
+            echo -n "Required option $OPTION is not set "
+            echo_red "[ERROR]"
+            end_test 1
+        fi
+    done
+}
+
+export -f clear_options
+export -f check_options
+
+export CAS_OPTIONS_LOADED="1"
+
+echo "--- Open CAS options library loaded ---"
