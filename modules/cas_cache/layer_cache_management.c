@@ -905,10 +905,10 @@ static int cache_mng_initialize_core_objects(ocf_cache_t cache)
 
 int cache_mng_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
+		struct atomic_dev_params *atomic_params,
 		struct kcas_start_cache *cmd)
 {
 	int init_cache, result;
-	struct atomic_dev_params atomic_params = { 0 };
 	struct block_device *bdev;
 	int part_count;
 	char holder[] = "CAS START\n";
@@ -965,12 +965,15 @@ int cache_mng_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 		return -KCAS_ERR_CONTAINS_PART;
 
 	result = cas_blk_identify_type_atomic(device_cfg->uuid.data,
-			&device_cfg->volume_type, &atomic_params);
+			&device_cfg->volume_type, atomic_params);
 	if (result)
 		return result;
 
+	if (device_cfg->volume_type == ATOMIC_DEVICE_VOLUME)
+		device_cfg->volume_params = atomic_params;
+
 	cmd->metadata_mode_optimal =
-			block_dev_is_metadata_mode_optimal(&atomic_params,
+			block_dev_is_metadata_mode_optimal(atomic_params,
 					device_cfg->volume_type);
 
 	return 0;

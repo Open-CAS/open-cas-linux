@@ -8,7 +8,7 @@
 
 #include "../cas_cache.h"
 
-int block_dev_open_object(ocf_volume_t vol);
+int block_dev_open_object(ocf_volume_t vol, void *volume_params);
 
 void block_dev_close_object(ocf_volume_t vol);
 
