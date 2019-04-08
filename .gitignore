@@ -1,0 +1,15 @@
+.*
+!\.gitignore
+*.bak
+*.log
+*.o
+*.d
+*.so
+*.ko
+*.ko.*
+*.obj
+*.a
+Module.symvers
+Module.markers
+*.mod.c
+modules.order
