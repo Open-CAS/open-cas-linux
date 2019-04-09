@@ -742,12 +742,12 @@ rd_unlock:
 	return result;
 }
 
-int cache_mng_reset_core_stats(ocf_cache_id_t cache_id,
+int cache_mng_reset_stats(ocf_cache_id_t cache_id,
 		ocf_core_id_t core_id)
 {
 	ocf_cache_t cache;
 	ocf_core_t core;
-	int result;
+	int result = 0;
 
 	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
 	if (result)
@@ -759,16 +759,20 @@ int cache_mng_reset_core_stats(ocf_cache_id_t cache_id,
 		return result;
 	}
 
-	result = ocf_core_get(cache, core_id, &core);
-	if (result)
-		goto out;
+	if (core_id != OCF_CORE_ID_INVALID) {
+		result = ocf_core_get(cache, core_id, &core);
+		if (result)
+			goto out;
 
-	ocf_core_stats_initialize(core);
+		ocf_core_stats_initialize(core);
+	} else {
+		ocf_core_stats_initialize_all(cache);
+	}
 
 out:
 	ocf_mngt_cache_unlock(cache);
 	ocf_mngt_cache_put(cache);
-	return 0;
+	return result;
 }
 
 static inline void io_class_info2cfg(ocf_part_id_t part_id,
