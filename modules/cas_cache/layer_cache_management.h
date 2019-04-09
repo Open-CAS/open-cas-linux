@@ -25,7 +25,7 @@ int cache_mng_add_core_to_cache(struct ocf_mngt_core_config *cfg,
 
 int cache_mng_remove_core_from_cache(struct kcas_remove_core *cmd);
 
-int cache_mng_reset_core_stats(ocf_cache_id_t cache_id,
+int cache_mng_reset_stats(ocf_cache_id_t cache_id,
 		ocf_core_id_t core_id);
 
 int cache_mng_set_partitions(struct kcas_io_classes *cfg);

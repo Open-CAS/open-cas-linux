@@ -197,7 +197,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_reset_core_stats(cmd_info->cache_id,
+		retval = cache_mng_reset_stats(cmd_info->cache_id,
 				cmd_info->core_id);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
