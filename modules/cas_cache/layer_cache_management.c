@@ -521,7 +521,7 @@ int cache_mng_add_core_to_cache(struct ocf_mngt_core_config *cfg,
 	ocf_cache_t cache;
 	ocf_core_t core;
 	ocf_core_id_t core_id;
-	int result;
+	int result, remove_core_result;
 
 	result = ocf_mngt_cache_get_by_id(cas_ctx, cfg->cache_id, &cache);
 	if (cfg->try_add && (result == -OCF_ERR_CACHE_NOT_EXIST)) {
@@ -593,7 +593,7 @@ error_after_create_exported_object:
 
 error_after_add_core:
 	init_completion(&remove_context.compl);
-	remove_context.result = &result;
+	remove_context.result = &remove_core_result;
 	ocf_mngt_cache_remove_core(core, _cache_mng_remove_core_complete,
 			&remove_context);
 	wait_for_completion(&remove_context.compl);
