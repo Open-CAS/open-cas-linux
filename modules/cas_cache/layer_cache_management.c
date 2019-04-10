@@ -1555,6 +1555,8 @@ int cache_mng_exit_instance(ocf_cache_id_t id, int flush)
 
 	/* Stop cache device */
 	status = _cache_mng_cache_stop_sync(cache);
+	if (status && status != -OCF_ERR_WRITE_CACHE)
+		goto unlock;
 
 	if (!status && flush_status)
 		status = -KCAS_ERR_STOPPED_DIRTY;
