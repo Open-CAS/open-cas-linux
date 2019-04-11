@@ -410,7 +410,7 @@ inline const char *eviction_policy_to_name(uint8_t policy)
 
 inline const char *cache_mode_to_name(uint8_t cache_mode)
 {
-	return val_to_short_name(cache_mode, cache_mode_names, "Unknown mode");
+	return val_to_short_name(cache_mode, cache_mode_names, "Unknown");
 }
 
 static inline const char *cache_mode_to_name_long(uint8_t cache_mode)
@@ -2642,7 +2642,7 @@ int list_caches(unsigned int list_format)
 
 		char status_buf[CACHE_STATE_LENGHT];
 		const char *tmp_status;
-		char mode_string[10];
+		char mode_string[12];
 		float cache_flush_prog;
 		float core_flush_prog;
 
