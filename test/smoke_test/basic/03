@@ -1,0 +1,69 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+# The line below specified that line under it should be used as the test's short description when launching test via run_tests script.
+# The text should not be longer than 80 chars - if it is, the script will strip addititonal characters
+# DESCRIPTION Create two caches and try to insert invalid cores to them
+
+# The line below says that this test should be included in BVT - it will be launched, when we use "./run_tests -b"
+
+# USE_IN_NIGHTLY
+
+# Standard beginning for every test - get the main tests directory and
+# link the cas_lib file for CAS API, then use "start_test $*" to pass params
+# and do other necessary checks and setup
+TESTS_DIR="$(dirname $0)/../"
+. $TESTS_DIR/cas_lib
+start_test $*
+
+# This is where the real test starts
+
+# Use CACHE_DEVICE and CORE_DEVICE provided by configuration file and remove partitions from those devices
+TARGET_DEVICE_OPTION="$CACHE_DEVICE" remove_partitions
+TARGET_DEVICE_OPTION="$CORE_DEVICE" remove_partitions
+
+# Create 2 primary partitions on CACHE_DEVICE, each of 2000M size
+TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION="2000M" PARTITION_IDS_OPTION="1 2" make_primary_partitions
+# Create 2 primary partitions on CORE_DEVICE, each of 4000M size
+TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="4000M" PARTITION_IDS_OPTION="1 2" make_primary_partitions
+
+# Start cache on CACHE_DEVICE1 (/dev/sdd1, for example) with ID=1 and add a core device using CORE_DEVICE1 (/dev/sde1, for example)
+CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
+
+# Start cache on CACHE_DEVICE2 (/dev/sdd2, for example) with ID=2 and add a core device using CORE_DEVICE1 (/dev/sde2, for example)
+CACHE_ID_OPTION="2" CACHE_DEVICE_OPTION="${CACHE_DEVICE}2" start_cache
+CACHE_ID_OPTION="2" CORE_DEVICE_OPTION="${CORE_DEVICE}2" add_core
+
+# Try to add already taken CORE device and a non-existing core to cache 1
+NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
+NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}2" add_core
+NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}3" add_core
+
+# Try to add already taken CORE device and a non-existing core to cache 2
+NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="2" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
+NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="2" CORE_DEVICE_OPTION="${CORE_DEVICE}2" add_core
+NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="2" CORE_DEVICE_OPTION="${CORE_DEVICE}3" add_core
+
+# Remove the core device from cache
+CACHE_ID_OPTION="1" CORE_ID_OPTION="1" remove_core
+# Try to do it again - this should fail
+NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="1" CORE_ID_OPTION="1" remove_core
+# Clean up after the test
+CACHE_ID_OPTION="1" stop_cache
+
+# Remove the core device from cache
+CACHE_ID_OPTION="2" CORE_ID_OPTION="1" remove_core
+# Try to do it again - this should fail
+NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="2" CORE_ID_OPTION="1" remove_core
+# Clean up after the test
+CACHE_ID_OPTION="2" stop_cache
+
+# Always return 0 at the end of the test - if at any point something has failed
+# in the API functions, test will end and return a proper result.
+# If you need to check other things during the test and end the test earlier, you
+# should end the test using "end_test $retval" function
+end_test 0

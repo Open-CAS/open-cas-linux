@@ -1,0 +1,124 @@
+#!/bin/bash
+
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+# Open CAS Linux Tests configuration
+#
+# You may override those params either using the CLI or creating a special file cas_local_config
+# Default core and cache devices - note that we require whole devices, not partitions.
+# Those are now empty to prevent from using default values by mistake, which could lead to
+# destroying partitions and data. If you want to setup those, use cas_local_config
+export CORE_DEVICE=""
+export CACHE_DEVICE=""
+
+# Default size of partition for cache/core device. This is used only for the DEFAULT_* API functions
+export DEFAULT_CACHE_SIZE="3000M"
+export DEFAULT_CORE_SIZE="5000M"
+
+# Available cache mode
+export CACHE_MODES="wt wb wa"
+
+# CLI app's name
+export CAS="casadm"
+# Config file path
+export CAS_CONFIG_PATH="/etc/opencas/opencas.conf"
+# Manpage name
+export CAS_MAN_PAGE="8 casadm"
+# Device name
+export DEVICE_NAME="/dev/cas"
+# All devices mounted using the test API will be mounted at ${MOUNTPOINT}-${CACHE_ID}-${CORE_ID}
+# Use this variable in your tests to use the mounted resource.
+export MOUNTPOINT="/mnt/cas"
+# TMP_DIR should be a directory where we can store additional data like test files, md5 sums etc.
+# We clean up this directory between the tests
+export TMP_DIR="/var/tmp/.cas"
+# Applications which are usually required by the tests
+export REQUIRED_APPS="iostat vdbench aspell mkfs.xfs fio"
+
+export CAS_CONFIGURATION_LOADED="1"
+
+export CAS_TEST_NOT_RUN="37"
+
+check_config() {
+    if [ -z "$CAS_CONFIG_CHECKED" ] ; then
+        echo "--- Your configuration ---"
+
+        if [ -n "$CACHE_DEVICE" ] ; then
+            echo "Cache device: $CACHE_DEVICE"
+        else
+            error "Error: cache device not defined!"
+            exit 1
+        fi
+
+        if [ -n "$CORE_DEVICE" ] ; then
+            echo "Core device: $CORE_DEVICE"
+        else
+            error "Error: core device not defined!"
+            exit 1
+        fi
+
+        if [ -n "$MOUNTPOINT" ] ; then
+            echo "Mount point: $MOUNTPOINT"
+        else
+            error "Error: mount point not defined!"
+            exit 1
+        fi
+
+        if [ -n "$TMP_DIR" ] ; then
+            echo "Temporary directory : $TMP_DIR"
+        else
+            error "Error: temporary directory not defined!"
+            exit 1
+        fi
+
+        # Check if core and cache devices are free for us or not
+        if [ -z $IGNORE_WARNINGS ] && [ -n "$(ls ${CORE_DEVICE}[0-9]* 2> /dev/null)" ] ; then
+            warning "The core device $CORE_DEVICE is partitioned! Some tests may remove partitions from this device"
+            warning "Use --ignore | -i flag to force using this core device"
+            exit 1
+        fi
+        if [ -z $IGNORE_WARNINGS ] && [ -n "$(ls ${CACHE_DEVICE}[0-9]* 2> /dev/null)" ] ; then
+            warning "The cache device $CACHE_DEVICE is partitioned!"
+            warning "Use --ignore | -i flag to force using this cache device"
+            exit 1
+        fi
+
+        for DEVICE_TO_UMOUNT in $(mount | grep $CACHE_DEVICE | awk '{print $1}') ; do
+            umount $DEVICE_TO_UMOUNT
+        done
+
+        for DEVICE_TO_UMOUNT in $(mount | grep $CORE_DEVICE | awk '{print $1}') ; do
+            umount $DEVICE_TO_UMOUNT
+        done
+
+        if [ -n "$(mount | grep $CACHE_DEVICE)" ] ; then
+            error "The cache device $CACHE_DEVICE or one of its partitions is mounted!"
+            exit 1
+        fi
+        if [ -n "$(mount | grep $CORE_DEVICE)" ] ; then
+            error "The core device $CORE_DEVICE or one of its partitions is mounted!"
+            exit 1
+        fi
+
+        for APP in $REQUIRED_APPS ; do
+            hash $APP 2> /dev/null
+                if [ $? -ne 0 ] ; then
+                    warning "Many tests use program called $APP and it looks like it's not installed here."
+                    if [ -z $IGNORE_WARNINGS ] ; then
+                        warning "Use --ignore | -i flag to ignore lack of $APP"
+                        exit 1
+                    fi
+                fi
+        done
+
+        if [ ! -d $TMP_DIR ] ; then
+            mkdir $TMP_DIR
+        fi
+        echo "--- Open CAS configuration loaded correctly ---"
+        export CAS_CONFIG_CHECKED="1"
+    fi
+}
+
+export -f check_config
