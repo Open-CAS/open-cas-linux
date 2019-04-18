@@ -294,7 +294,7 @@ static void _cas_ctx_metadata_updater_stop(ocf_metadata_updater_t mu)
 /*
  *
  */
-static int _cas_ctx_logger_printf(ocf_logger_t logger, ocf_logger_lvl_t lvl,
+static int _cas_ctx_logger_print(ocf_logger_t logger, ocf_logger_lvl_t lvl,
 		const char *fmt, va_list args)
 {
 	static const char* level[] =  {
@@ -325,7 +325,7 @@ static int _cas_ctx_logger_printf(ocf_logger_t logger, ocf_logger_lvl_t lvl,
 /*
  *
  */
-static int _cas_ctx_logger_printf_rl(ocf_logger_t logger, const char *func_name)
+static int _cas_ctx_logger_print_rl(ocf_logger_t logger, const char *func_name)
 {
 	static DEFINE_RATELIMIT_STATE(cas_log_rl, CAS_LOG_RATELIMIT,
 			CAS_LOG_BURST_LIMIT);
@@ -374,8 +374,8 @@ static const struct ocf_ctx_config ctx_cfg = {
 		},
 
 		.logger = {
-			.printf = _cas_ctx_logger_printf,
-			.printf_rl = _cas_ctx_logger_printf_rl,
+			.print = _cas_ctx_logger_print,
+			.print_rl = _cas_ctx_logger_print_rl,
 			.dump_stack = _cas_ctx_logger_dump_stack,
 		},
 	},
