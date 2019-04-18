@@ -55,6 +55,16 @@ static inline void env_vfree(const void *ptr)
 	cas_vfree(ptr);
 }
 
+static inline void *env_secure_alloc(size_t size)
+{
+	return env_vmalloc(size);
+}
+
+static inline void env_secure_free(const void *ptr, size_t size)
+{
+	env_vfree(ptr);
+}
+
 /* *** ALLOCATOR *** */
 
 typedef struct _env_allocator env_allocator;
