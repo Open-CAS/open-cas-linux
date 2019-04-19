@@ -543,6 +543,8 @@ void _blockdev_set_exported_object_flush_fua(ocf_core_t core)
 	struct request_queue *core_q, *exp_q, *cache_q;
 	bool flush, fua;
 
+	BUG_ON(!cache_vol);
+
 	bd_core_vol = bd_object(core_vol);
 	bd_cache_vol = bd_object(cache_vol);
 
@@ -624,6 +626,8 @@ static int _blockdev_set_geometry(struct casdsk_disk *dsk, void *private)
 	cache = ocf_core_get_cache(core);
 	core_vol = ocf_core_get_volume(core);
 	cache_vol = ocf_cache_get_volume(cache);
+	BUG_ON(!cache_vol);
+
 	bd_cache_vol = bd_object(cache_vol);
 	path = ocf_volume_get_uuid(core_vol)->data;
 

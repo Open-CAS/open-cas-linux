@@ -1232,9 +1232,15 @@ int cache_mng_init_instance(struct ocf_mngt_cache_config *cfg,
 	}
 
 	if (cmd) {
-		ocf_volume_t cache_obj = ocf_cache_get_volume(cache);
-		struct bd_object *bd_cache_obj = bd_object(cache_obj);
-		struct block_device *bdev = bd_cache_obj->btm_bd;
+		ocf_volume_t cache_obj;
+		struct bd_object *bd_cache_obj;
+		struct block_device *bdev;
+
+		cache_obj = ocf_cache_get_volume(cache);
+		BUG_ON(!cache_obj);
+
+		bd_cache_obj = bd_object(cache_obj);
+		bdev = bd_cache_obj->btm_bd;
 
 		/* If we deal with whole device, reread partitions */
 		if (bdev->bd_contains == bdev)
@@ -1641,6 +1647,7 @@ int cache_mng_get_info(struct kcas_cache_info *info)
 
 	if (info->info.attached) {
 		uuid = ocf_cache_get_uuid(cache);
+		BUG_ON(!uuid);
 		strlcpy(info->cache_path_name, uuid->data,
 				min(sizeof(info->cache_path_name), uuid->size));
 
