@@ -209,6 +209,17 @@ static cas_cls_eval_t _cas_cls_numeric_test_u(
 	return cas_cls_eval_no;
 }
 
+#ifdef WLTH_SUPPORT
+/* Write lifetime hint condition test */
+static cas_cls_eval_t _cas_cls_wlth_test(struct cas_classifier *cls,
+			      struct cas_cls_condition *c, struct cas_cls_io *io,
+			      ocf_part_id_t part_id)
+{
+	return _cas_cls_numeric_test_u(c, io->bio->bi_write_hint);
+}
+#endif
+
+
 /* Io class test function */
 static cas_cls_eval_t _cas_cls_io_class_test(struct cas_classifier *cls,
 		struct cas_cls_condition *c, struct cas_cls_io *io,
@@ -417,6 +428,10 @@ static struct cas_cls_condition_handler _handlers[] = {
 			_cas_cls_generic_dtr },
 	{ "directory", _cas_cls_directory_test, _cas_cls_directory_ctr,
 			_cas_cls_directory_dtr },
+#ifdef WLTH_SUPPORT
+	{ "wlth", _cas_cls_wlth_test, _cas_cls_numeric_ctr,
+			_cas_cls_generic_dtr},
+#endif
 	{ NULL }
 };
 
