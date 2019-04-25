@@ -83,6 +83,10 @@
 	#define BIO_OP_STATUS(bio) bio->bi_error
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+#define WLTH_SUPPORT
+#endif
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	#define BIO_ENDIO(BIO, BYTES_DONE, ERROR) \
 			({ BIO_OP_STATUS(BIO) = ERROR; bio_endio(BIO); })
