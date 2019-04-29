@@ -271,6 +271,11 @@ static int _cas_ctx_cleaner_init(ocf_cleaner_t c)
 	return cas_create_cleaner_thread(c);
 }
 
+static void _cas_ctx_cleaner_kick(ocf_cleaner_t c)
+{
+	return cas_kick_cleaner_thread(c);
+}
+
 static void _cas_ctx_cleaner_stop(ocf_cleaner_t c)
 {
 	return cas_stop_cleaner_thread(c);
@@ -364,6 +369,7 @@ static const struct ocf_ctx_config ctx_cfg = {
 
 		.cleaner = {
 			.init = _cas_ctx_cleaner_init,
+			.kick = _cas_ctx_cleaner_kick,
 			.stop = _cas_ctx_cleaner_stop,
 		},
 

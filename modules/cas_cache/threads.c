@@ -89,11 +89,27 @@ static int _cas_cleaner_thread(void *data)
 	ocf_cleaner_set_cmpl(c, _cas_cleaner_complete);
 
 	do {
+		if (atomic_read(&info->stop))
+			break;
+
+		atomic_set(&info->kicked, 0);
 		init_completion(&info->sync_compl);
 		ocf_cleaner_run(c, cache_priv->io_queues[smp_processor_id()]);
 		wait_for_completion(&info->sync_compl);
-	} while (0 == wait_event_interruptible_timeout(info->wq,
-			atomic_read(&info->stop), msecs_to_jiffies(ms)));
+
+		/*
+		 * In case of nop cleaning policy we don't want to perform cleaning
+		 * until cleaner_kick() is called.
+		 */
+		if (ms == OCF_CLEANER_DISABLE) {
+			wait_event_interruptible(info->wq, atomic_read(&info->kicked) ||
+					atomic_read(&info->stop));
+		} else {
+			wait_event_interruptible_timeout(info->wq,
+					atomic_read(&info->kicked) || atomic_read(&info->stop),
+					msecs_to_jiffies(ms));
+		}
+	} while (true);
 
 	complete_and_exit(&info->compl, 0);
 
@@ -239,6 +255,13 @@ int cas_create_cleaner_thread(ocf_cleaner_t c)
 	}
 
 	return result;
+}
+
+void cas_kick_cleaner_thread(ocf_cleaner_t c)
+{
+	struct cas_thread_info *info = ocf_cleaner_get_priv(c);
+	atomic_set(&info->kicked, 1);
+	wake_up(&info->wq);
 }
 
 void cas_stop_cleaner_thread(ocf_cleaner_t c)
