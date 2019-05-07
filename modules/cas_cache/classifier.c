@@ -591,6 +591,7 @@ static int _cas_cls_parse_conditions(struct cas_classifier *cls,
 static struct cas_classifier* cas_get_classifier(ocf_cache_t cache)
 {
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+
 	ENV_BUG_ON(!cache_priv);
 	return cache_priv->classifier;
 }
@@ -599,6 +600,7 @@ static void cas_set_classifier(ocf_cache_t cache,
 		struct cas_classifier* cls)
 {
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+
 	ENV_BUG_ON(!cache_priv);
 	cache_priv->classifier = cls;
 }
@@ -826,7 +828,7 @@ void cas_cls_deinit(ocf_cache_t cache)
 }
 
 /* Initialize classifier context */
-static struct cas_classifier *_cas_cls_init(ocf_cache_t cache)
+static struct cas_classifier *_cas_cls_init(void)
 {
 	struct cas_classifier *cls;
 
@@ -860,7 +862,7 @@ int cas_cls_init(ocf_cache_t cache)
 	unsigned result = 0;
 	unsigned i;
 
-	cls = _cas_cls_init(cache);
+	cls = _cas_cls_init();
 	if (IS_ERR(cls))
 		return PTR_ERR(cls);
 	cas_set_classifier(cache, cls);
