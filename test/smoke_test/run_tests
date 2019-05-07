@@ -318,7 +318,7 @@ sum_up_and_exit() {
 
     echo "More details in $LOGS_FOLDER"
     export_results_to_html
-    if [ $PASSED == $TESTS ] ; then
+    if [ $(($PASSED + $NOT_RUN)) == $TESTS ] ; then
         exit 0
     else
         exit 1

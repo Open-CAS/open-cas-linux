@@ -1,0 +1,126 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+# The line below specified that line under it should be used as the test's short description when launching test via run_tests script.
+# The text should not be longer than 80 chars - if it is, the script will strip addititonal characters
+# DESCRIPTION IO Class - verification of correct classificiation of wlth-marked io
+
+# Standard beginning for every test - get the main tests directory and
+# link the cas_lib file for CAS API, then use "start_test $*" to pass params
+# and do other necessary checks and setup.
+
+# The line below says that this test should be included in BVT - it will be launched, when we use "./run_tests -b"
+# USE_IN_BVT
+# USE_IN_NIGHTLY
+
+TESTS_DIR="$(dirname $0)/../"
+. $TESTS_DIR/cas_lib
+. $TESTS_DIR/io_class/cas_lib_io_class
+
+L_TEST_STATUS=0
+
+start_test $*
+
+# Check if current kernel supports write hints
+KERNEL_VER_OPTION="4" KERNEL_MAJOR_OPTION="13" check_kernel_ver
+if [ "$?" -ne 0 ] ; then
+	end_test $CAS_TEST_NOT_RUN
+fi
+
+# Check if fio supports write hints
+FIO_MAJOR_OPTION="3" FIO_MINOR_OPTION="13" check_fio_ver
+if [ "$?" -ne 0 ] ; then
+	end_test $CAS_TEST_NOT_RUN
+fi
+
+test_log_start
+
+# Use CACHE_DEVICE and CORE_DEVICE provided by configuration file and remove partitions from those devices
+TARGET_DEVICE_OPTION="$CACHE_DEVICE" remove_partitions
+TARGET_DEVICE_OPTION="$CORE_DEVICE" remove_partitions
+
+# Create 200M primary partition on CACHE_DEVICE
+TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION="200M" PARTITION_IDS_OPTION="1" make_primary_partitions
+# Create 400M primary partition on CORE_DEVICE
+TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="400M" PARTITION_IDS_OPTION="1" make_primary_partitions
+
+# Start cache
+CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+
+# Add core
+CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
+
+# Prepare IO class config with wlth specified
+io_class_config_wlth
+
+# Load config
+CACHE_ID_OPTION="1" CSV_FILE=$(io_class_config_file) io_class_load
+
+# Run fio with all possible write hints specified (each of them has different
+# io size)
+run_cmd fio --filename=/dev/cas1-1 --rw=write --direct=1 \
+--name=wh_none --size=4096 --ioengine=libaio --write_hint=none --iodepth=1 --numjobs=1 \
+--name=wh_short --size=8192 --ioengine=libaio --write_hint=short --iodepth=1 --numjobs=1 \
+--name=wh_medium --size=12288 --ioengine=libaio --write_hint=medium --iodepth=1 --numjobs=1 \
+--name=wh_long --size=16384 --ioengine=libaio --write_hint=long --iodepth=1 --numjobs=1 \
+--name=wh_extreme --size=20480 --ioengine=libaio --write_hint=extreme --iodepth=1 --numjobs=1
+
+echo "Verification if io was correctly WLTH-marked and classified..."
+
+# Verify if each if the wlth io class has expected written blocks count
+CACHE_ID_OPTION="1" STAT_NAME_OPTION="Blocks writes" IO_CLASS_ID="0" get_stats_value
+if [ $OUTPUT -ne 0 ] ; then
+	error "Incorrect block writes count (IO Class id 0)!"
+	L_TEST_STATUS=1
+fi
+
+# WLTH_NOT_SET
+CACHE_ID_OPTION="1" STAT_NAME_OPTION="Blocks writes" IO_CLASS_ID="1" get_stats_value
+if [ $OUTPUT -ne 0 ] ; then
+	error "Incorrect block writes count (IO Class id 1)!"
+	L_TEST_STATUS=1
+fi
+
+# WLTH_NONE
+CACHE_ID_OPTION="1" STAT_NAME_OPTION="Blocks writes" IO_CLASS_ID="2" get_stats_value
+if [ $OUTPUT -ne 1 ] ; then
+	error "Incorrect block writes count (IO Class id 2)!"
+	L_TEST_STATUS=1
+fi
+
+# WLTH_SHORT
+CACHE_ID_OPTION="1" STAT_NAME_OPTION="Blocks writes" IO_CLASS_ID="3" get_stats_value
+if [ $OUTPUT -ne 2 ] ; then
+	error "Incorrect block writes count (IO Class id 3)!"
+	L_TEST_STATUS=1
+fi
+
+# WLTH_MEDIUM
+CACHE_ID_OPTION="1" STAT_NAME_OPTION="Blocks writes" IO_CLASS_ID="4" get_stats_value
+if [ $OUTPUT -ne 3 ] ; then
+	error "Incorrect block writes count (IO Class id 4)!"
+	L_TEST_STATUS=1
+fi
+
+# WLTH_LONG
+CACHE_ID_OPTION="1" STAT_NAME_OPTION="Blocks writes" IO_CLASS_ID="5" get_stats_value
+if [ $OUTPUT -ne 4 ] ; then
+	error "Incorrect block writes count (IO Class id 5)!"
+	L_TEST_STATUS=1
+fi
+
+# WLTH_EXTREME
+CACHE_ID_OPTION="1" STAT_NAME_OPTION="Blocks writes" IO_CLASS_ID="6" get_stats_value
+if [ $OUTPUT -ne 5 ] ; then
+	error "Incorrect block writes count (IO Class id 6)!"
+	L_TEST_STATUS=1
+fi
+
+# Stop cache
+CACHE_ID_OPTION="1" stop_cache
+
+test_log_stop
+end_test $L_TEST_STATUS
