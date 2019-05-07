@@ -58,6 +58,7 @@ struct cas_classifier;
 
 struct cache_priv {
 	struct cas_classifier *classifier;
+	atomic_t flush_interrupt_enabled;
 	ocf_queue_t mngt_queue;
 	ocf_queue_t io_queues[];
 };
