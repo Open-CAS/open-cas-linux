@@ -544,6 +544,9 @@ enum kcas_error {
 	/** NVMe is formatted to unsupported format */
 	KCAS_ERR_NVME_BAD_FORMAT,
 
+	/** Specified LBA format is not supported by the NVMe device */
+	KCAS_ERR_UNSUPPORTED_LBA_FORMAT,
+
 	/** Device contains partitions */
 	KCAS_ERR_CONTAINS_PART,
 
