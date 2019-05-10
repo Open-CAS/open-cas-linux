@@ -1628,7 +1628,7 @@ static int handle_nvme_format()
 	}
 
 	if (!cas_capabilites.nvme_format) {
-		cas_printf(LOG_ERR, "Command is not supported\n");
+		cas_printf(LOG_ERR, "Command is not supported by current kernel\n");
 		return FAILURE;
 	}
 

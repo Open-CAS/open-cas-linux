@@ -274,7 +274,7 @@ static int _cas_nvme_preformat_check(struct block_device *bdev, int force)
 	} else if (probe_ctx.error == -EBUSY) {
 		ret = -OCF_ERR_NOT_OPEN_EXC;
 	} else if (probe_ctx.error) {
-		/* Some error occurred, we do not have sure about clean cache */
+		/* Some error occurred, we are not sure whether cache is clean or not */
 		ret = -KCAS_ERR_FORMAT_FAILED;
 	} else {
 		/* Check if cache was closed in proper way */
@@ -352,7 +352,7 @@ static int _cas_nvme_format_namespace_by_path(const char *device_path,
 	}
 
 	if (best_lbaf < 0) {
-		ret = -KCAS_ERR_FORMAT_FAILED;
+		ret = -KCAS_ERR_UNSUPPORTED_LBA_FORMAT;
 		goto out2;
 	}
 
@@ -509,7 +509,7 @@ static int _cas_nvme_format_character_device(const char *device_path,
 	}
 
 	if (best_lbaf < 0) {
-		ret = -KCAS_ERR_FORMAT_FAILED;
+		ret = -KCAS_ERR_UNSUPPORTED_LBA_FORMAT;
 		goto cleanup;
 	}
 

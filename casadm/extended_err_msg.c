@@ -184,6 +184,10 @@ struct {
 		"NVMe is formatted to unsupported format"
 	},
 	{
+		KCAS_ERR_UNSUPPORTED_LBA_FORMAT,
+		"Specified LBA format is not supported by the NVMe device"
+	},
+	{
 		KCAS_ERR_CONTAINS_PART,
 		"Device contains partitions.\nIf you want to continue, "
 		"please use --force option.\nWarning: all data will be lost!"
