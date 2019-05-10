@@ -53,15 +53,17 @@ static void _cache_mng_cache_flush_complete(ocf_cache_t cache, void *priv,
 
 static int _cache_mng_cache_flush_sync(ocf_cache_t cache, bool interruption)
 {
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	struct _cache_mng_sync_context context;
 	int result;
 
 	init_completion(&context.compl);
 	context.result = &result;
 
-	ocf_mngt_cache_flush(cache, interruption,
-			_cache_mng_cache_flush_complete, &context);
+	atomic_set(&cache_priv->flush_interrupt_enabled, 0);
+	ocf_mngt_cache_flush(cache, _cache_mng_cache_flush_complete, &context);
 	wait_for_completion(&context.compl);
+	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
 
 	return result;
 }
@@ -77,15 +79,18 @@ static void _cache_mng_core_flush_complete(ocf_core_t core, void *priv,
 
 static int _cache_mng_core_flush_sync(ocf_core_t core, bool interruption)
 {
+	ocf_cache_t cache = ocf_core_get_cache(core);
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	struct _cache_mng_sync_context context;
 	int result;
 
 	init_completion(&context.compl);
 	context.result = &result;
 
-	ocf_mngt_core_flush(core, interruption,
-			_cache_mng_core_flush_complete, &context);
+	atomic_set(&cache_priv->flush_interrupt_enabled, 0);
+	ocf_mngt_core_flush(core, _cache_mng_core_flush_complete, &context);
 	wait_for_completion(&context.compl);
+	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
 
 	return result;
 }
@@ -1061,13 +1066,35 @@ static void _cache_mng_attach_complete(ocf_cache_t cache, void *priv, int error)
 	complete(&context->compl);
 }
 
+static int _cache_mng_cache_priv_init(ocf_cache_t cache)
+{
+	struct cache_priv *cache_priv;
+	uint32_t cpus_no = num_online_cpus();
+
+	cache_priv = vmalloc(sizeof(*cache_priv) +
+			cpus_no * sizeof(*cache_priv->io_queues));
+	if (!cache_priv)
+		return -OCF_ERR_NO_MEM;
+
+	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
+
+	ocf_cache_set_priv(cache, cache_priv);
+
+	return 0;
+}
+
+static void _cache_mng_cache_priv_deinit(ocf_cache_t cache)
+{
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+
+	vfree(cache_priv);
+}
+
 static int _cache_mng_start(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
 		struct kcas_start_cache *cmd, ocf_cache_t *cache)
 {
 	struct _cache_mng_attach_context context;
-	struct cache_priv *cache_priv;
-	uint32_t cpus_no = num_online_cpus();
 	ocf_cache_t tmp_cache;
 	int result;
 
@@ -1075,14 +1102,9 @@ static int _cache_mng_start(struct ocf_mngt_cache_config *cfg,
 	if (result)
 		return result;
 
-	cache_priv = vmalloc(sizeof(*cache_priv) +
-			cpus_no * sizeof(*cache_priv->io_queues));
-	if (!cache_priv) {
-		result = -OCF_ERR_NO_MEM;
+	result = _cache_mng_cache_priv_init(tmp_cache);
+	if (result)
 		goto err_priv;
-	}
-
-	ocf_cache_set_priv(tmp_cache, cache_priv);
 
 	result = cas_cls_init(tmp_cache);
 	if (result)
@@ -1116,7 +1138,7 @@ err_attach:
 err_queues:
 	cas_cls_deinit(tmp_cache);
 err_classifier:
-	vfree(cache_priv);
+	_cache_mng_cache_priv_deinit(tmp_cache);
 err_priv:
 	_cache_mng_cache_stop_sync(tmp_cache);
 	ocf_mngt_cache_unlock(tmp_cache);
@@ -1141,8 +1163,6 @@ static int _cache_mng_load(struct ocf_mngt_cache_config *cfg,
 		struct kcas_start_cache *cmd, ocf_cache_t *cache)
 {
 	struct _cache_mng_load_context context;
-	struct cache_priv *cache_priv;
-	uint32_t cpus_no = num_online_cpus();
 	ocf_cache_t tmp_cache;
 	int result;
 
@@ -1150,15 +1170,9 @@ static int _cache_mng_load(struct ocf_mngt_cache_config *cfg,
 	if (result)
 		return result;
 
-
-	cache_priv = vmalloc(sizeof(*cache_priv) +
-			cpus_no * sizeof(*cache_priv->io_queues));
-	if (!cache_priv) {
-		result = -OCF_ERR_NO_MEM;
+	result = _cache_mng_cache_priv_init(tmp_cache);
+	if (result)
 		goto err_priv;
-	}
-
-	ocf_cache_set_priv(tmp_cache, cache_priv);
 
 	result = _cache_mng_start_queues(tmp_cache);
 	if (result)
@@ -1199,7 +1213,7 @@ err_load:
 				&cmd->min_free_ram);
 	}
 err_queues:
-	vfree(cache_priv);
+	_cache_mng_cache_priv_deinit(tmp_cache);
 err_priv:
 	_cache_mng_cache_stop_sync(tmp_cache);
 	ocf_mngt_cache_unlock(tmp_cache);
@@ -1610,14 +1624,18 @@ int cache_mng_list_caches(struct kcas_cache_list *list)
 
 int cache_mng_interrupt_flushing(ocf_cache_id_t id)
 {
-	int result;
 	ocf_cache_t cache;
+	struct cache_priv *cache_priv;
+	int result;
 
 	result = ocf_mngt_cache_get_by_id(cas_ctx, id, &cache);
 	if (result)
 		return result;
 
-	ocf_mngt_cache_flush_interrupt(cache);
+	cache_priv = ocf_cache_get_priv(cache);
+
+	if (atomic_read(&cache_priv->flush_interrupt_enabled))
+		ocf_mngt_cache_flush_interrupt(cache);
 
 	ocf_mngt_cache_put(cache);
 
