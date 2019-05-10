@@ -426,8 +426,6 @@ int cas_initialize_context(void)
 		goto err_block_dev;
 	}
 
-	ocf_mngt_core_pool_init(cas_ctx);
-
 	return 0;
 
 err_block_dev:
@@ -444,7 +442,6 @@ err_ctx:
 
 int cas_cleanup_context(void)
 {
-	ocf_mngt_core_pool_deinit(cas_ctx);
 	block_dev_deinit();
 	atomic_dev_deinit();
 	cas_garbage_collector_deinit();
