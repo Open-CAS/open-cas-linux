@@ -271,6 +271,11 @@ static int _cas_ctx_cleaner_init(ocf_cleaner_t c)
 	return cas_create_cleaner_thread(c);
 }
 
+static void _cas_ctx_cleaner_kick(ocf_cleaner_t c)
+{
+	return cas_kick_cleaner_thread(c);
+}
+
 static void _cas_ctx_cleaner_stop(ocf_cleaner_t c)
 {
 	return cas_stop_cleaner_thread(c);
@@ -364,6 +369,7 @@ static const struct ocf_ctx_config ctx_cfg = {
 
 		.cleaner = {
 			.init = _cas_ctx_cleaner_init,
+			.kick = _cas_ctx_cleaner_kick,
 			.stop = _cas_ctx_cleaner_stop,
 		},
 
@@ -426,8 +432,6 @@ int cas_initialize_context(void)
 		goto err_block_dev;
 	}
 
-	ocf_mngt_core_pool_init(cas_ctx);
-
 	return 0;
 
 err_block_dev:
@@ -444,7 +448,6 @@ err_ctx:
 
 int cas_cleanup_context(void)
 {
-	ocf_mngt_core_pool_deinit(cas_ctx);
 	block_dev_deinit();
 	atomic_dev_deinit();
 	cas_garbage_collector_deinit();
