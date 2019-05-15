@@ -27,7 +27,7 @@ struct cas_mpool *cas_mpool_create(uint32_t hdr_size, uint32_t size, int flags,
 		result = snprintf(name, sizeof(name), "%s_%u", name_perfix,
 				(1 << i));
 		if (result < 0 || result >= sizeof(name))
-			goto cas_multi_allocator_create_ERROR;
+			goto err;
 
 		mpool->allocator[i] = env_allocator_create(
 				hdr_size + (size * (1 << i)), name);

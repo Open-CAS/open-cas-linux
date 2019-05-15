@@ -19,6 +19,42 @@ struct _cache_mng_sync_context {
 	int *result;
 };
 
+static void _cache_mng_lock_complete(ocf_cache_t cache, void *priv, int error)
+{
+	struct _cache_mng_sync_context *context = priv;
+
+	*context->result = error;
+	complete(&context->compl);
+}
+
+static int _cache_mng_lock_sync(ocf_cache_t cache)
+{
+	struct _cache_mng_sync_context context;
+	int result;
+
+	init_completion(&context.compl);
+	context.result = &result;
+
+	ocf_mngt_cache_lock(cache, _cache_mng_lock_complete, &context);
+	wait_for_completion(&context.compl);
+
+	return result;
+}
+
+static int _cache_mng_read_lock_sync(ocf_cache_t cache)
+{
+	struct _cache_mng_sync_context context;
+	int result;
+
+	init_completion(&context.compl);
+	context.result = &result;
+
+	ocf_mngt_cache_read_lock(cache, _cache_mng_lock_complete, &context);
+	wait_for_completion(&context.compl);
+
+	return result;
+}
+
 static void _cache_mng_save_sync_complete(ocf_cache_t cache, void *priv,
 		int error)
 {
@@ -128,7 +164,7 @@ int cache_mng_flush_object(ocf_cache_id_t cache_id, ocf_core_id_t core_id)
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_lock(cache);
+	result = _cache_mng_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -155,7 +191,7 @@ int cache_mng_flush_device(ocf_cache_id_t id)
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_lock(cache);
+	result = _cache_mng_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -177,7 +213,7 @@ int cache_mng_set_cleaning_policy(ocf_cache_id_t cache_id, uint32_t type)
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_lock(cache);
+	result = _cache_mng_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -205,7 +241,7 @@ int cache_mng_get_cleaning_policy(ocf_cache_id_t cache_id, uint32_t *type)
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_read_lock(cache);
+	result = _cache_mng_read_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -231,7 +267,7 @@ int cache_mng_set_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_lock(cache);
+	result = _cache_mng_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -260,7 +296,7 @@ int cache_mng_get_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_read_lock(cache);
+	result = _cache_mng_read_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -548,7 +584,7 @@ int cache_mng_add_core_to_cache(struct ocf_mngt_core_config *cfg,
 		return result;
 	}
 
-	result = ocf_mngt_cache_lock(cache);
+	result = _cache_mng_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -679,7 +715,7 @@ int cache_mng_remove_core_from_cache(struct kcas_remove_core *cmd)
 	if (!cmd->force_no_flush) {
 		/* First check state and  flush data (if requested by user)
 		   under read lock */
-		result = ocf_mngt_cache_read_lock(cache);
+		result = _cache_mng_read_lock_sync(cache);
 		if (result)
 			goto put;
 
@@ -696,7 +732,7 @@ int cache_mng_remove_core_from_cache(struct kcas_remove_core *cmd)
 	}
 
 	/* Acquire write lock */
-	result = ocf_mngt_cache_lock(cache);
+	result = _cache_mng_lock_sync(cache);
 	if (result)
 		goto put;
 
@@ -758,7 +794,7 @@ int cache_mng_reset_stats(ocf_cache_id_t cache_id,
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_lock(cache);
+	result = _cache_mng_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -828,7 +864,7 @@ int cache_mng_set_partitions(struct kcas_io_classes *cfg)
 			goto out_cls;
 	}
 
-	result = ocf_mngt_cache_lock(cache);
+	result = _cache_mng_lock_sync(cache);
 	if (result)
 		goto out_cls;
 
@@ -1296,7 +1332,7 @@ int cache_mng_set_seq_cutoff_threshold(ocf_cache_id_t cache_id, ocf_core_id_t co
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_lock(cache);
+	result = _cache_mng_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -1345,7 +1381,7 @@ int cache_mng_set_seq_cutoff_policy(ocf_cache_id_t id, ocf_core_id_t core_id,
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_lock(cache);
+	result = _cache_mng_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -1393,7 +1429,7 @@ int cache_mng_get_seq_cutoff_threshold(ocf_cache_id_t cache_id,
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_read_lock(cache);
+	result = _cache_mng_read_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -1433,7 +1469,7 @@ int cache_mng_get_seq_cutoff_policy(ocf_cache_id_t id, ocf_core_id_t core_id,
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_read_lock(cache);
+	result = _cache_mng_read_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -1470,7 +1506,7 @@ int cache_mng_set_cache_mode(ocf_cache_id_t id, ocf_cache_mode_t mode,
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_lock(cache);
+	result = _cache_mng_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -1522,7 +1558,7 @@ int cache_mng_exit_instance(ocf_cache_id_t id, int flush)
 
 	cache_priv = ocf_cache_get_priv(cache);
 
-	status = ocf_mngt_cache_read_lock(cache);
+	status = _cache_mng_read_lock_sync(cache);
 	if (status)
 		goto put;
 	/*
@@ -1550,7 +1586,7 @@ int cache_mng_exit_instance(ocf_cache_id_t id, int flush)
 	ocf_mngt_cache_read_unlock(cache);
 
 	/* get cache write lock */
-	status = ocf_mngt_cache_lock(cache);
+	status = _cache_mng_lock_sync(cache);
 	if (status)
 		goto put;
 
@@ -1656,7 +1692,7 @@ int cache_mng_get_info(struct kcas_cache_info *info)
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_read_lock(cache);
+	result = _cache_mng_read_lock_sync(cache);
 	if (result)
 		goto put;
 
@@ -1713,7 +1749,7 @@ int cache_mng_get_io_class_info(struct kcas_io_class *part)
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_read_lock(cache);
+	result = _cache_mng_read_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -1751,7 +1787,7 @@ int cache_mng_get_core_info(struct kcas_core_info *info)
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_read_lock(cache);
+	result = _cache_mng_read_lock_sync(cache);
 	if(result)
 		goto put;
 
