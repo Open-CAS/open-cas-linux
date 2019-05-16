@@ -497,16 +497,26 @@ static inline void cas_copy_queue_limits(struct request_queue *exp_q,
 	if (printk_ratelimit()) \
 		printk(__VA_ARGS__)
 
+#ifdef CAS_CENTOS76
+#define CAS_PART_ROUND_STATS(q, cpu, part) part_round_stats(q, cpu, part)
+#define CAS_PART_INC_IN_FLIGHT(q, part, rw) part_inc_in_flight(q, part, rw)
+#define CAS_PART_DEC_IN_FLIGHT(q, part, rw) part_dec_in_flight(q, part, rw)
+#else
+#define CAS_PART_ROUND_STATS(q, cpu, part) part_round_stats(cpu, part)
+#define CAS_PART_INC_IN_FLIGHT(q, part, rw) part_inc_in_flight(part, rw)
+#define CAS_PART_DEC_IN_FLIGHT(q, part, rw) part_dec_in_flight(part, rw)
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 static inline void cas_generic_start_io_acct(struct request_queue *q,
 		int rw, unsigned long sectors, struct hd_struct *part)
 {
 	int cpu = part_stat_lock();
 
-	part_round_stats(cpu, part);
+	CAS_PART_ROUND_STATS(q, cpu, part);
 	part_stat_inc(cpu, part, ios[rw]);
 	part_stat_add(cpu, part, sectors[rw], sectors);
-	part_inc_in_flight(part, rw);
+	CAS_PART_INC_IN_FLIGHT(q, part, rw);
 
 	part_stat_unlock();
 }
@@ -518,8 +528,8 @@ static inline void cas_generic_end_io_acct(struct request_queue *q,
 	int cpu = part_stat_lock();
 
 	part_stat_add(cpu, part, ticks[rw], duration);
-	part_round_stats(cpu, part);
-	part_dec_in_flight(part, rw);
+	CAS_PART_ROUND_STATS(q, cpu, part);
+	CAS_PART_DEC_IN_FLIGHT(q, part, rw);
 
 	part_stat_unlock();
 }

@@ -47,6 +47,12 @@ EXTRA_CFLAGS += -DCAS_SLES$(SLES_VERSION)
 INCDIR = ""
 endif
 
+CENTOS ?= $(shell cat /etc/centos-release 2>/dev/null)
+ifneq ($(CENTOS),)
+CENTOS_VERSION := $(shell echo "$(CENTOS)" | cut -d '.' -f 1-2 | tr -dc '0-9')
+EXTRA_CFLAGS += -DCAS_CENTOS$(CENTOS_VERSION)
+endif
+
 ifeq ($(call check_header,$(INCDIR)/uapi/nvme.h), 1)
 EXTRA_CFLAGS += -DCAS_UAPI_NVME_IOCTL
 EXTRA_CFLAGS += -DCAS_UAPI_NVME
