@@ -38,6 +38,8 @@
 #include <linux/nmi.h>
 #include <linux/ratelimit.h>
 
+#include "generated_defines.h"
+
 #ifdef CONFIG_SLAB
 #include <linux/slab_def.h>
 #endif

@@ -47,7 +47,7 @@ default: $(VERSION_FILE) sync
 
 clean:
 	cd $(KERNEL_DIR) && make M=$(PWD) clean
-
+	rm $(PWD)/generated_defines.h
 distclean: clean distsync
 
 install:
