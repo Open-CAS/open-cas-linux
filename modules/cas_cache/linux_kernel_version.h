@@ -505,10 +505,10 @@ static inline void cas_generic_start_io_acct(struct request_queue *q,
 {
 	int cpu = part_stat_lock();
 
-	part_round_stats(cpu, part);
+	CAS_PART_ROUND_STATS(q, cpu, part);
 	part_stat_inc(cpu, part, ios[rw]);
 	part_stat_add(cpu, part, sectors[rw], sectors);
-	part_inc_in_flight(part, rw);
+	CAS_PART_INC_IN_FLIGHT(q, part, rw);
 
 	part_stat_unlock();
 }
@@ -520,8 +520,8 @@ static inline void cas_generic_end_io_acct(struct request_queue *q,
 	int cpu = part_stat_lock();
 
 	part_stat_add(cpu, part, ticks[rw], duration);
-	part_round_stats(cpu, part);
-	part_dec_in_flight(part, rw);
+	CAS_PART_ROUND_STATS(q, cpu, part);
+	CAS_PART_DEC_IN_FLIGHT(q, part, rw);
 
 	part_stat_unlock();
 }

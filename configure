@@ -66,3 +66,41 @@ kernel_not_supp_fail() {
 }
 
 rm -f $DEFINE_FILE
+
+compile_module "part_round_stats(1, 1)" "linux/genhd.h"
+if [ $? -eq 0 ]; then
+	add_define "CAS_PART_ROUND_STATS(q, cpu, part) part_round_stats(cpu, part)"
+else
+	compile_module "part_round_stats(NULL, 1, 1)" "linux/genhd.h"
+	if [ $? -eq 0 ]; then
+		add_define "CAS_PART_ROUND_STATS(q, cpu, part)\\"\
+			"\tpart_round_stats(q, cpu, part)"
+	fi
+fi
+
+
+compile_module "part_inc_in_flight(1, 1)" "linux/genhd.h"
+if [ $? -eq 0 ]; then
+	add_define "CAS_PART_INC_IN_FLIGHT(q, cpu, part)\\"\
+		"\tpart_inc_in_flight(cpu, part)"
+else
+	compile_module "part_inc_in_flight(NULL, 1, 1)" "linux/genhd.h"
+	if [ $? -eq 0 ]; then
+		add_define "CAS_PART_INC_IN_FLIGHT(q, cpu, part)\\"\
+			"\tpart_inc_in_flight(q, cpu, part)"
+	fi
+fi
+
+
+compile_module "part_dec_in_flight(1, 1)" "linux/genhd.h"
+if [ $? -eq 0 ]; then
+	add_define "CAS_PART_DEC_IN_FLIGHT(q, cpu, part)\\"\
+		"\tpart_dec_in_flight(cpu, part)"
+else
+	compile_module "part_dec_in_flight(NULL, 1, 1)" "linux/genhd.h"
+	if [ $? -eq 0 ]; then
+		add_define "CAS_PART_DEC_IN_FLIGHT(q, cpu, part)\\"\
+			"\tpart_dec_in_flight(q, cpu, part)"
+	fi
+fi
+
