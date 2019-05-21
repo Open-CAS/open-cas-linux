@@ -11,8 +11,7 @@
 #endif
 
 #define STR_PREP(x) #x
-#define PR_STR(x) STR_PREP(x)
-#define FMT_VERSION(x) "0" PR_STR(x)
+#define FMT_VERSION(x) STR_PREP(x)
 
 #ifdef CAS_BUILD_FLAG
 #define CAS_VERSION_FLAG "-"CAS_BUILD_FLAG
