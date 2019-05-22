@@ -74,6 +74,6 @@ void cas_ctx_data_free(ctx_data_t *ctx_data);
 void cas_ctx_data_secure_erase(ctx_data_t *ctx_data);
 
 int cas_initialize_context(void);
-int cas_cleanup_context(void);
+void cas_cleanup_context(void);
 
 #endif /* __CONTEXT_H__ */
