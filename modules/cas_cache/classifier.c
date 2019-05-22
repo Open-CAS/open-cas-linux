@@ -315,7 +315,7 @@ static struct dentry *_cas_cls_dir_get_inode_dentry(struct inode *inode)
 		spin_lock(&iter->d_lock);
 		if (!d_unhashed(iter))
 			d = iter;
-		spin_unlock(&d->d_lock);
+		spin_unlock(&iter->d_lock);
 		if (d)
 			break;
 	}
