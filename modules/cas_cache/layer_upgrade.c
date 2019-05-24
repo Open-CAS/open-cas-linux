@@ -959,11 +959,11 @@ static int _cas_upgrade_restore_conf_core(struct cas_properties *cache_props,
 		cfg.try_add = 0;
 		cfg.volume_type = BLOCK_DEVICE_VOLUME;
 		cfg.core_id = core_id_int;
-		cfg.cache_id = ocf_cache_get_id(cache);
 		cfg.uuid.data = core_path;
 		cfg.uuid.size = strnlen(core_path, MAX_STR_LEN) + 1;
 
-		result = cache_mng_add_core_to_cache(&cfg, NULL);
+		result = cache_mng_add_core_to_cache(&cfg,
+				ocf_cache_get_id(cache), NULL);
 		if (result)
 			goto error;
 	}
