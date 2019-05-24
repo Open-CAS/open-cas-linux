@@ -368,7 +368,8 @@ int cache_mng_cache_check_device(struct kcas_cache_check_device *cmd_info)
 	char holder[] = "CAS CHECK CACHE DEVICE\n";
 	int result;
 
-	bdev = OPEN_BDEV_EXCLUSIVE(cmd_info->path_name, FMODE_READ, holder);
+	bdev = blkdev_get_by_path(cmd_info->path_name, (FMODE_EXCL|FMODE_READ),
+			holder);
 	if (IS_ERR(bdev)) {
 		return (PTR_ERR(bdev) == -EBUSY) ?
 				-OCF_ERR_NOT_OPEN_EXC :
@@ -392,7 +393,7 @@ int cache_mng_cache_check_device(struct kcas_cache_check_device *cmd_info)
 
 	cas_blk_close_volume(volume);
 out_bdev:
-	CLOSE_BDEV_EXCLUSIVE(bdev, FMODE_READ);
+	blkdev_put(bdev, (FMODE_EXCL|FMODE_READ));
 	return result;
 }
 
@@ -455,7 +456,7 @@ int cache_mng_update_core_uuid(ocf_cache_t cache, ocf_core_id_t id, ocf_uuid_t u
 	bdvol = bd_object(vol);
 
 	/* lookup block device object for device pointed by uuid */
-	bdev =  LOOKUP_BDEV(uuid->data);
+	bdev =  CAS_LOOKUP_BDEV(uuid->data);
 	if (IS_ERR(bdev)) {
 		printk(KERN_ERR "failed to lookup bdev%s\n", (char*)uuid->data);
 		return -ENODEV;
@@ -958,7 +959,8 @@ int cache_mng_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 		return -OCF_ERR_INVAL;
 	}
 
-	bdev = OPEN_BDEV_EXCLUSIVE(device_cfg->uuid.data, FMODE_READ, holder);
+	bdev = blkdev_get_by_path(device_cfg->uuid.data, (FMODE_EXCL|FMODE_READ),
+			holder);
 	if (IS_ERR(bdev)) {
 		return (PTR_ERR(bdev) == -EBUSY) ?
 				-OCF_ERR_NOT_OPEN_EXC :
@@ -967,7 +969,7 @@ int cache_mng_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 
 	is_part = (bdev->bd_contains != bdev);
 	part_count = cas_blk_get_part_count(bdev);
-	CLOSE_BDEV_EXCLUSIVE(bdev, FMODE_READ);
+	blkdev_put(bdev, (FMODE_EXCL|FMODE_READ));
 
 	if (!is_part && part_count > 1 && !device_cfg->force)
 		return -KCAS_ERR_CONTAINS_PART;

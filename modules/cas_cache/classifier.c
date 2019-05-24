@@ -209,7 +209,7 @@ static cas_cls_eval_t _cas_cls_numeric_test_u(
 	return cas_cls_eval_no;
 }
 
-#ifdef WLTH_SUPPORT
+#ifdef CAS_WLTH_SUPPORT
 /* Write lifetime hint condition test */
 static cas_cls_eval_t _cas_cls_wlth_test(struct cas_classifier *cls,
 			      struct cas_cls_condition *c, struct cas_cls_io *io,
@@ -300,9 +300,9 @@ static void _cas_cls_directory_resolve_work(struct work_struct *work)
 static struct dentry *_cas_cls_dir_get_inode_dentry(struct inode *inode)
 {
 	struct dentry *d = NULL, *iter;
-	ALIAS_NODE_TYPE *pos; /* alias list current element */
+	CAS_ALIAS_NODE_TYPE *pos; /* alias list current element */
 
-	if (DENTRY_LIST_EMPTY(&inode->i_dentry))
+	if (CAS_DENTRY_LIST_EMPTY(&inode->i_dentry))
 		return NULL;
 
 	spin_lock(&inode->i_lock);
@@ -310,8 +310,8 @@ static struct dentry *_cas_cls_dir_get_inode_dentry(struct inode *inode)
 	if (S_ISDIR(inode->i_mode))
 		goto unlock;
 
-	INODE_FOR_EACH_DENTRY(pos, &inode->i_dentry) {
-		iter = ALIAS_NODE_TO_DENTRY(pos);
+	CAS_INODE_FOR_EACH_DENTRY(pos, &inode->i_dentry) {
+		iter = CAS_ALIAS_NODE_TO_DENTRY(pos);
 		spin_lock(&iter->d_lock);
 		if (!d_unhashed(iter))
 			d = iter;
@@ -428,7 +428,7 @@ static struct cas_cls_condition_handler _handlers[] = {
 			_cas_cls_generic_dtr },
 	{ "directory", _cas_cls_directory_test, _cas_cls_directory_ctr,
 			_cas_cls_directory_dtr },
-#ifdef WLTH_SUPPORT
+#ifdef CAS_WLTH_SUPPORT
 	{ "wlth", _cas_cls_wlth_test, _cas_cls_numeric_ctr,
 			_cas_cls_generic_dtr},
 #endif
@@ -929,7 +929,7 @@ static void _cas_cls_get_bio_context(struct bio *bio,
 		return;
 	ctx->bio = bio;
 
-	if (!SEGMENT_BVEC(bio_iovec(bio)))
+	if (!CAS_SEGMENT_BVEC(bio_iovec(bio)))
 		return;
 
 	page = bio_page(bio);

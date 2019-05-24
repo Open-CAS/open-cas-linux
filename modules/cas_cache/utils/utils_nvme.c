@@ -316,7 +316,7 @@ static int _cas_nvme_format_namespace_by_path(const char *device_path,
 		goto out1;
 	}
 
-	bdev = OPEN_BDEV_EXCLUSIVE(device_path,
+	bdev = blkdev_get_by_path(device_path,
 			FMODE_READ | FMODE_WRITE | FMODE_EXCL, holder);
 	if (IS_ERR(bdev)) {
 		if (PTR_ERR(bdev) == -EBUSY)
@@ -378,7 +378,7 @@ static int _cas_nvme_format_namespace_by_path(const char *device_path,
 
 	ret = ioctl_by_bdev(bdev, BLKRRPART, (unsigned long)NULL);
 out2:
-	CLOSE_BDEV_EXCLUSIVE(bdev, FMODE_READ | FMODE_WRITE | FMODE_EXCL);
+	blkdev_put(bdev, FMODE_READ | FMODE_WRITE | FMODE_EXCL);
 out1:
 	kfree(id);
 	kfree(ns);

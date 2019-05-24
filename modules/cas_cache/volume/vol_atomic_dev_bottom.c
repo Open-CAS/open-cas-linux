@@ -434,7 +434,7 @@ static void cas_atomic_end_atom(struct cas_atomic_io *atom, int error)
 	ocf_io_put(io);
 }
 
-static DECLARE_BLOCK_CALLBACK(cas_atomic_fire_atom, struct bio *bio,
+static CAS_DECLARE_BLOCK_CALLBACK(cas_atomic_fire_atom, struct bio *bio,
 		unsigned int bytes, int error)
 {
 	int err;
@@ -443,12 +443,12 @@ static DECLARE_BLOCK_CALLBACK(cas_atomic_fire_atom, struct bio *bio,
 
 	BUG_ON(!bio);
 	BUG_ON(!bio->bi_private);
-	err = BLOCK_CALLBACK_ERROR(bio, error);
+	err = CAS_BLOCK_CALLBACK_ERROR(bio, error);
 	atom = bio->bi_private;
 	BUG_ON(!atom->master);
 	bdobj = bd_object(atom->volume);
 
-	CAS_DEBUG_PARAM("BIO result = %d", BLOCK_CALLBACK_ERROR(bio, error));
+	CAS_DEBUG_PARAM("BIO result = %d", CAS_BLOCK_CALLBACK_ERROR(bio, error));
 
 	if (err != 0)
 		goto out;
@@ -504,7 +504,7 @@ static void _cas_atomic_setup_cmd(
 
 	cmd->rw.opcode = (dir == OCF_WRITE) ? nvme_cmd_write : nvme_cmd_read;
 	cmd->rw.nsid = cpu_to_le32(ns_id);
-	cmd->rw.slba = cpu_to_le64(BIO_BISECTOR(bio));
+	cmd->rw.slba = cpu_to_le64(CAS_BIO_BISECTOR(bio));
 	cmd->rw.length = cpu_to_le16((bytes / SECTOR_SIZE) - 1);
 	cmd->rw.control = cpu_to_le16(NVME_RW_LR);
 
@@ -562,11 +562,11 @@ static void cas_atomic_fire_atom(int dir, struct ocf_io *io,
 
 	/* Setup BIO */
 	bio->bi_bdev = bdev;
-	BIO_BISECTOR(bio) = atom->addr / SECTOR_SIZE;
+	CAS_BIO_BISECTOR(bio) = atom->addr / SECTOR_SIZE;
 	bio->bi_next = NULL;
 	bio->bi_private = atom;
-	BIO_OP_FLAGS(bio) |= io->flags;
-	bio->bi_end_io = REFER_BLOCK_CALLBACK(cas_atomic_fire_atom);
+	CAS_BIO_OP_FLAGS(bio) |= io->flags;
+	bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_atomic_fire_atom);
 
 	/* Add pages to the BIO */
 	bvec = atom->data->vec;
@@ -726,8 +726,8 @@ static int cas_atomic_submit_discard_bio(struct cas_atomic_io *atom)
 	}
 
 	nvm_discard->cattr = cpu_to_le32(0);
-	nvm_discard->nlb = cpu_to_le32(BIO_BISIZE(atom->bio) >> SECTOR_SHIFT);
-	nvm_discard->slba = cpu_to_le64(BIO_BISECTOR(atom->bio));
+	nvm_discard->nlb = cpu_to_le32(CAS_BIO_BISIZE(atom->bio) >> SECTOR_SHIFT);
+	nvm_discard->slba = cpu_to_le64(CAS_BIO_BISECTOR(atom->bio));
 
 	cmd->dsm.opcode = nvme_cmd_dsm;
 	cmd->dsm.nsid = cpu_to_le32(ns_id);
@@ -739,8 +739,8 @@ static int cas_atomic_submit_discard_bio(struct cas_atomic_io *atom)
 	offset = offset_in_page(nvm_discard);
 	blk_add_request_payload(req, page, offset, sizeof(*nvm_discard));
 
-	req->__sector = BIO_BISECTOR(atom->bio);
-	req->__data_len = BIO_BISIZE(atom->bio);
+	req->__sector = CAS_BIO_BISECTOR(atom->bio);
+	req->__data_len = CAS_BIO_BISIZE(atom->bio);
 	req->ioprio = bio_prio(atom->bio);
 
 	req->timeout = ADMIN_TIMEOUT;
@@ -782,7 +782,7 @@ static int cas_atomic_special_req_prepare(struct cas_atomic_io *atom,
 		return -ENOMEM;
 	}
 
-	atom->bio->bi_end_io = REFER_BLOCK_CALLBACK(cas_atomic_fire_atom);
+	atom->bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_atomic_fire_atom);
 	atom->bio->bi_bdev = bdev;
 	atom->bio->bi_private = atom;
 
@@ -826,9 +826,9 @@ void cas_atomic_submit_discard(struct ocf_io *io)
 
 	/* Set up specific field */
 	atom->discard = true;
-	BIO_OP_FLAGS(atom->bio) = CAS_BIO_DISCARD;
-	BIO_BISECTOR(atom->bio) = io->addr / SECTOR_SIZE;
-	BIO_BISIZE(atom->bio) = io->bytes;
+	CAS_BIO_OP_FLAGS(atom->bio) = CAS_BIO_DISCARD;
+	CAS_BIO_BISECTOR(atom->bio) = io->addr / SECTOR_SIZE;
+	CAS_BIO_BISIZE(atom->bio) = io->bytes;
 
 	atom->request = cas_blk_make_request(q, atom->bio, GFP_NOIO);
 	if (IS_ERR(atom->request)) {
@@ -872,7 +872,7 @@ void cas_atomic_submit_flush(struct ocf_io *io)
 		return;
 	}
 
-	if (!CHECK_QUEUE_FLUSH(q)) {
+	if (!CAS_CHECK_QUEUE_FLUSH(q)) {
 		/* This block device does not support flush */
 		atomic_sub(blkio->dirty, &bdobj->potentially_dirty);
 		io->end(io, 0);

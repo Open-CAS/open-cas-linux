@@ -47,8 +47,8 @@ default: $(VERSION_FILE) sync
 
 clean:
 	cd $(KERNEL_DIR) && make M=$(PWD) clean
-	rm $(PWD)/generated_defines.h
 distclean: clean distsync
+	rm $(PWD)/generated_defines.h
 
 install:
 	@echo "Installing Open-CAS modules"

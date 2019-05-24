@@ -5,7 +5,7 @@
 
 #include "cas_cache.h"
 
-#define BLK_RQ_POS(rq) (BIO_BISECTOR((rq)->bio))
+#define BLK_RQ_POS(rq) (CAS_BIO_BISECTOR((rq)->bio))
 #define BLK_RQ_BYTES(rq) blk_rq_bytes(rq)
 
 extern u32 use_io_scheduler;
@@ -24,7 +24,7 @@ static inline bool _blockdev_can_handle_rq(struct request *rq)
 {
 	int error = 0;
 
-	if (unlikely(!is_rq_type_fs(rq)))
+	if (unlikely(!cas_is_rq_type_fs(rq)))
 		error = __LINE__;
 
 	if (unlikely(rq->next_rq))
@@ -104,7 +104,7 @@ void block_dev_complete_bio_fast(struct ocf_io *io, int error)
 
 	_blockdev_end_io_acct(bio, data->start_time);
 
-	BIO_ENDIO(bio, BIO_BISIZE(bio), error);
+	CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), error);
 	ocf_io_put(io);
 	cas_free_blk_data(data);
 }
@@ -113,7 +113,7 @@ void block_dev_complete_bio_discard(struct ocf_io *io, int error)
 {
 	struct bio *bio = io->priv1;
 
-	BIO_ENDIO(bio, BIO_BISIZE(bio), error);
+	CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), error);
 	ocf_io_put(io);
 }
 
@@ -161,7 +161,7 @@ bool _blockdev_is_request_barier(struct request *rq)
 	struct bio *i_bio = rq->bio;
 
 	for_each_bio(i_bio) {
-		if (CHECK_BARRIER(i_bio))
+		if (CAS_CHECK_BARRIER(i_bio))
 			return true;
 	}
 	return false;
@@ -186,13 +186,13 @@ static int _blockdev_alloc_many_requests(ocf_core_t core,
 	bio = rq->bio;
 	for_each_bio(bio) {
 		/* Setup BIO flags */
-		if (CAS_IS_WRITE_FLUSH_FUA(BIO_OP_FLAGS(bio))) {
+		if (CAS_IS_WRITE_FLUSH_FUA(CAS_BIO_OP_FLAGS(bio))) {
 			/* FLUSH and FUA */
-			flags = OCF_WRITE_FLUSH_FUA;
-		} else if (CAS_IS_WRITE_FUA(BIO_OP_FLAGS(bio))) {
+			flags = CAS_WRITE_FLUSH_FUA;
+		} else if (CAS_IS_WRITE_FUA(CAS_BIO_OP_FLAGS(bio))) {
 			/* FUA */
-			flags = OCF_WRITE_FUA;
-		} else if (CAS_IS_WRITE_FLUSH(BIO_OP_FLAGS(bio))) {
+			flags = CAS_WRITE_FUA;
+		} else if (CAS_IS_WRITE_FLUSH(CAS_BIO_OP_FLAGS(bio))) {
 			/* FLUSH - It shall be handled in request handler */
 			error = -EINVAL;
 			break;
@@ -220,8 +220,8 @@ static int _blockdev_alloc_many_requests(ocf_core_t core,
 
 		data->io = sub_io;
 
-		ocf_io_configure(sub_io, BIO_BISECTOR(bio) << SECTOR_SHIFT,
-				BIO_BISIZE(bio), (bio_data_dir(bio) == READ) ?
+		ocf_io_configure(sub_io, CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
+				CAS_BIO_BISIZE(bio), (bio_data_dir(bio) == READ) ?
 						OCF_READ : OCF_WRITE,
 				cas_cls_classify(cache, bio), flags);
 
@@ -294,7 +294,7 @@ static int _blkdev_handle_flush_request(struct request *rq, ocf_core_t core)
 	if (!io)
 		return -ENOMEM;
 
-	ocf_io_configure(io, 0, 0, OCF_WRITE, 0, OCF_WRITE_FLUSH);
+	ocf_io_configure(io, 0, 0, OCF_WRITE, 0, CAS_WRITE_FLUSH);
 
 	ocf_io_set_queue(io, cache_priv->io_queues[smp_processor_id()]);
 	ocf_io_set_cmpl(io, rq, NULL, block_dev_complete_flush);
@@ -359,8 +359,8 @@ static uint32_t _blkdev_scan_request(ocf_cache_t cache, struct request *rq,
 		 * request, and prevent nvme driver from splitting requests.
 		 * For large requests, nvme splitting causes stack overrun.
 		 */
-		if (!_bvec_is_mergeable(SEGMENT_BVEC(bvec_prev),
-				SEGMENT_BVEC(bvec))) {
+		if (!_bvec_is_mergeable(CAS_SEGMENT_BVEC(bvec_prev),
+				CAS_SEGMENT_BVEC(bvec))) {
 			*single_io = false;
 			continue;
 		}
@@ -404,13 +404,13 @@ static int _blkdev_handle_request(struct request *rq, ocf_core_t core)
 		return -ENOTSUPP;
 	}
 
-	if ((rq->cmd_flags & REQ_FUA) && RQ_IS_FLUSH(rq)) {
+	if ((rq->cmd_flags & REQ_FUA) && CAS_RQ_IS_FLUSH(rq)) {
 		/* FLUSH and FUA */
-		master_flags = OCF_WRITE_FLUSH_FUA;
+		master_flags = CAS_WRITE_FLUSH_FUA;
 	} else if (rq->cmd_flags & REQ_FUA) {
 		/* FUA */
-		master_flags = OCF_WRITE_FUA;
-	} else if (RQ_IS_FLUSH(rq)) {
+		master_flags = CAS_WRITE_FUA;
+	} else if (CAS_RQ_IS_FLUSH(rq)) {
 		/* FLUSH */
 		return _blkdev_handle_flush_request(rq, core);
 	}
@@ -422,7 +422,7 @@ static int _blkdev_handle_request(struct request *rq, ocf_core_t core)
 	}
 
 	ocf_io_configure(io, BLK_RQ_POS(rq) << SECTOR_SHIFT, BLK_RQ_BYTES(rq),
-			(RQ_DATA_DIR(rq) == RQ_DATA_DIR_WR) ?
+			(rq_data_dir(rq) == CAS_RQ_DATA_DIR_WR) ?
 					OCF_WRITE : OCF_READ,
 			cas_cls_classify(cache, rq->bio), master_flags);
 
@@ -506,10 +506,10 @@ static int _blkdev_handle_request(struct request *rq, ocf_core_t core)
 
 static inline int _blkdev_can_hndl_bio(struct bio *bio)
 {
-	if (CHECK_BARRIER(bio)) {
+	if (CAS_CHECK_BARRIER(bio)) {
 		CAS_PRINT_RL(KERN_WARNING
 			"special bio was sent, not supported!\n");
-		BIO_ENDIO(bio, BIO_BISIZE(bio), -EOPNOTSUPP);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -EOPNOTSUPP);
 		return -ENOTSUPP;
 	}
 
@@ -518,13 +518,13 @@ static inline int _blkdev_can_hndl_bio(struct bio *bio)
 
 static inline bool _blkdev_is_flush_fua_bio(struct bio *bio)
 {
-	if (CAS_IS_WRITE_FLUSH_FUA(BIO_OP_FLAGS(bio))) {
+	if (CAS_IS_WRITE_FLUSH_FUA(CAS_BIO_OP_FLAGS(bio))) {
 		/* FLUSH and FUA */
 		return true;
-	} else if (CAS_IS_WRITE_FUA(BIO_OP_FLAGS(bio))) {
+	} else if (CAS_IS_WRITE_FUA(CAS_BIO_OP_FLAGS(bio))) {
 		/* FUA */
 		return true;
-	} else if (CAS_IS_WRITE_FLUSH(BIO_OP_FLAGS(bio))) {
+	} else if (CAS_IS_WRITE_FLUSH(CAS_BIO_OP_FLAGS(bio))) {
 		/* FLUSH */
 		return true;
 
@@ -552,8 +552,8 @@ void _blockdev_set_exported_object_flush_fua(ocf_core_t core)
 	exp_q = casdisk_functions.casdsk_exp_obj_get_queue(bd_core_vol->dsk);
 	cache_q = casdisk_functions.casdsk_disk_get_queue(bd_cache_vol->dsk);
 
-	flush = (CHECK_QUEUE_FLUSH(core_q) || CHECK_QUEUE_FLUSH(cache_q));
-	fua = (CHECK_QUEUE_FUA(core_q) || CHECK_QUEUE_FUA(cache_q));
+	flush = (CAS_CHECK_QUEUE_FLUSH(core_q) || CAS_CHECK_QUEUE_FLUSH(cache_q));
+	fua = (CAS_CHECK_QUEUE_FUA(core_q) || CAS_CHECK_QUEUE_FUA(cache_q));
 
 	cas_set_queue_flush_fua(exp_q, flush, fua);
 #endif
@@ -658,7 +658,7 @@ static int _blockdev_set_geometry(struct casdsk_disk *dsk, void *private)
 	blk_queue_stack_limits(exp_q, core_q);
 
 	/* We don't want to receive splitted requests*/
-	SET_QUEUE_CHUNK_SECTORS(exp_q, 0);
+	CAS_SET_QUEUE_CHUNK_SECTORS(exp_q, 0);
 
 	_blockdev_set_exported_object_flush_fua(core);
 
@@ -712,11 +712,11 @@ static void _blockdev_make_request_discard(struct casdsk_disk *dsk,
 	if (!io) {
 		CAS_PRINT_RL(KERN_CRIT
 			"Out of memory. Ending IO processing.\n");
-		BIO_ENDIO(bio, BIO_BISIZE(bio), -ENOMEM);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -ENOMEM);
 		return;
 	}
 
-	ocf_io_configure(io, BIO_BISECTOR(bio) << SECTOR_SHIFT, BIO_BISIZE(bio),
+	ocf_io_configure(io, CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT, CAS_BIO_BISIZE(bio),
 			0, 0, 0);
 
 	ocf_io_set_queue(io, cache_priv->io_queues[smp_processor_id()]);
@@ -754,18 +754,18 @@ static int _blockdev_make_request_fast(struct casdsk_disk *dsk,
 		return CASDSK_BIO_HANDLED;
 	}
 
-	if (unlikely(BIO_BISIZE(bio) == 0)) {
+	if (unlikely(CAS_BIO_BISIZE(bio) == 0)) {
 		CAS_PRINT_RL(KERN_ERR
 			"Not able to handle empty BIO, flags = "
-			BIO_OP_FLAGS_FORMAT "\n",  BIO_OP_FLAGS(bio));
-		BIO_ENDIO(bio, BIO_BISIZE(bio), -EINVAL);
+			CAS_BIO_OP_FLAGS_FORMAT "\n",  CAS_BIO_OP_FLAGS(bio));
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -EINVAL);
 		return CASDSK_BIO_HANDLED;
 	}
 
 	data = cas_alloc_blk_data(bio_segments(bio), GFP_ATOMIC);
 	if (!data) {
 		CAS_PRINT_RL(KERN_CRIT "BIO data vector allocation error\n");
-		BIO_ENDIO(bio, BIO_BISIZE(bio), -ENOMEM);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -ENOMEM);
 		return CASDSK_BIO_HANDLED;
 	}
 
@@ -778,11 +778,11 @@ static int _blockdev_make_request_fast(struct casdsk_disk *dsk,
 	if (!io) {
 		printk(KERN_CRIT "Out of memory. Ending IO processing.\n");
 		cas_free_blk_data(data);
-		BIO_ENDIO(bio, BIO_BISIZE(bio), -ENOMEM);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -ENOMEM);
 		return CASDSK_BIO_HANDLED;
 	}
 
-	ocf_io_configure(io, BIO_BISECTOR(bio) << SECTOR_SHIFT, BIO_BISIZE(bio),
+	ocf_io_configure(io, CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT, CAS_BIO_BISIZE(bio),
 			(bio_data_dir(bio) == READ) ? OCF_READ : OCF_WRITE,
 			cas_cls_classify(cache, bio), 0);
 
@@ -790,7 +790,7 @@ static int _blockdev_make_request_fast(struct casdsk_disk *dsk,
 	if (ret < 0) {
 		ocf_io_put(io);
 		cas_free_blk_data(data);
-		BIO_ENDIO(bio, BIO_BISIZE(bio), -EINVAL);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -EINVAL);
 		return CASDSK_BIO_HANDLED;
 	}
 

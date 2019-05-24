@@ -3,7 +3,6 @@
 *.bak
 *.log
 *.o
-*.d
 *.so
 *.ko
 *.ko.*
