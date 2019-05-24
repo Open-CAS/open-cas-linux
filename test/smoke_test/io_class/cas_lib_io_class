@@ -1,0 +1,134 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+OCF_IO_CLASS_CONFIG_PATH="config.csv"
+
+#
+# Get path of config file
+#
+io_class_config_file () {
+    echo "${TESTS_DIR}/io_class/${OCF_IO_CLASS_CONFIG_PATH}"
+}
+
+#
+# Initialze config file for io class configuration
+#
+io_class_config_init () {
+    local L_CONFIG=$(io_class_config_file)
+
+    echo "IO class id,IO class name,Eviction priority,Allocation" > $L_CONFIG
+}
+
+#
+# Add specified IO class configuration
+#
+#param1 - IO class id
+#param2 - IO class name
+#param3 - IO class priority
+#param4 - IO class allocation
+io_class_config_add () {
+    local L_CONFIG=$(io_class_config_file)
+    local L_ID=$1
+    local L_NAME=$2
+    local L_PRIO=$3
+    local L_ALLOC=$4
+
+    echo "${L_ID},${L_NAME},${L_PRIO},${L_ALLOC}" >> $L_CONFIG
+}
+
+#
+# Create none IO Class configuration. This kind of configuration is present
+# at the CAS cache startup
+#
+io_class_config_none () {
+    io_class_config_init
+    io_class_config_add 0 "unclassified" 255 1
+}
+
+#
+# Create IO Class configuration with WLTH
+#
+io_class_config_wlth () {
+    io_class_config_init
+    io_class_config_add 0 "unclassified" 255 1
+    io_class_config_add 1 "wlth:eq:0" 6 1
+    io_class_config_add 2 "wlth:eq:1" 5 1
+    io_class_config_add 3 "wlth:eq:2" 4 1
+    io_class_config_add 4 "wlth:eq:3" 3 1
+    io_class_config_add 5 "wlth:eq:4" 2 1
+    io_class_config_add 6 "wlth:eq:5" 1 1
+}
+
+#
+# Compare CAS cache IO configuration class with configuration from a file
+#
+# Parameters:
+# CACHE_ID_OPTION - Cache ID
+# CONFIG_FILE - Input file with configuration to be compared
+#
+# return status:
+# 0 - the cache IO class configuration and file configuration is the same
+# 1 - the configuration is different
+io_class_cmp () {
+    local L_CSV_FILE=${CSV_FILE}
+    local L_IO_CLASS_CONFIG_CACHE=""
+
+    if [[ "" == ${CACHE_ID_OPTION} ]]
+    then
+        test_log_trace "Cache ID option is missing"
+        return 1
+    fi
+
+    if [ "" == "${L_CSV_FILE}" ]
+    then
+        test_log_trace "Configuration file to be compared is missing"
+        return 1
+    fi
+    local CACHE_ID_TMP=$CACHE_ID_OPTION
+
+    OUT_FILE="out.csv"
+    CSV_FILE=$OUT_FILE io_class_list
+    unset CSV_FILE
+    CACHE_ID_OPTION=$CACHE_ID_TMP io_class_list
+    L_IO_CLASS_CONFIG_CACHE=${RUN_CMD_OUTPUT} # Collect output result
+
+    #
+    # Remove CLI output decoration
+    #
+    L_IO_CLASS_CONFIG_CACHE=$(echo "${L_IO_CLASS_CONFIG_CACHE}" | grep -v '==')
+    L_IO_CLASS_CONFIG_CACHE=$(echo "${L_IO_CLASS_CONFIG_CACHE}" | sed '1!s/[\+\|\-]//g')
+    L_IO_CLASS_CONFIG_CACHE=$(echo "${L_IO_CLASS_CONFIG_CACHE}" | tr -s ' ')
+    L_IO_CLASS_CONFIG_CACHE=$(echo "${L_IO_CLASS_CONFIG_CACHE}" | sed 's/^\ //')
+    L_IO_CLASS_CONFIG_CACHE=$(echo "${L_IO_CLASS_CONFIG_CACHE}" | sed 's/\ $//')
+    L_IO_CLASS_CONFIG_CACHE=$(echo "${L_IO_CLASS_CONFIG_CACHE}" | grep -v '^$')
+    L_IO_CLASS_CONFIG_CACHE=$(echo "${L_IO_CLASS_CONFIG_CACHE}" | sed '1s/ | /,/g')
+    L_IO_CLASS_CONFIG_CACHE=$(echo "${L_IO_CLASS_CONFIG_CACHE}" | sed '1s/^| //')
+    L_IO_CLASS_CONFIG_CACHE=$(echo "${L_IO_CLASS_CONFIG_CACHE}" | sed '1s/ |$//')
+    L_IO_CLASS_CONFIG_CACHE=$(echo "${L_IO_CLASS_CONFIG_CACHE}" | sed '1!s/\ /,/g')
+    L_IO_CLASS_CONFIG_CACHE=$(echo "${L_IO_CLASS_CONFIG_CACHE}" | sed 's/YES/1/g')
+    L_IO_CLASS_CONFIG_CACHE=$(echo "${L_IO_CLASS_CONFIG_CACHE}" | sed 's/NO/0/g')
+    L_IO_CLASS_CONFIG_CACHE=$(echo "${L_IO_CLASS_CONFIG_CACHE}" | sed 's/Pinned//g')
+
+    #
+    # Compare output file with input file
+    #
+    diff $OUT_FILE $L_CSV_FILE
+    if [ $? -ne 0 ]
+    then
+        test_log_trace "Exported IO class configuration file mismatch"
+        return 1
+    fi
+
+    echo "${L_IO_CLASS_CONFIG_CACHE}" > ${OUT_FILE}
+    diff $OUT_FILE $L_CSV_FILE
+    if [ $? -ne 0 ]
+    then
+        test_log_trace "CLI IO class configuration file mismatch"
+        return 1
+    fi
+
+    return 0
+}

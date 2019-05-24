@@ -24,6 +24,8 @@ export ALL_OPTIONS="
     STAT_UNIT_OPTION STAT_NAME_OPTION
     STORE_CONFIG_OPTION
     CLEAN_POL_OPTION
+    KERNEL_VER_OPTION KERNEL_MAJOR_OPTION
+    FIO_MAJOR_OPTION FIO_MINOR_OPTION
 "
 
 # Specify ONLY required options here. The name of the variable should start with
@@ -72,6 +74,9 @@ export IO_CLASS_EXT_REMOVE_REQUIRED_OPTIONS="CACHE_ID_OPTION IO_CLASS_ID"
 
 export STATS_REQUIRED_OPTIONS="CACHE_ID_OPTION"
 export GET_STATS_VALUE_REQUIRED_OPTIONS="CACHE_ID_OPTION STAT_NAME_OPTION"
+
+export CHECK_KERNEL_VER_REQUIRED_OPTIONS="KERNEL_VER_OPTION KERNEL_MAJOR_OPTION"
+export CHECK_FIO_VER_REQUIRED_OPTIONS="FIO_MAJOR_OPTION FIO_MINOR_OPTION"
 
 # Clearing the variables below is not really needed, but it makes the whole
 # thing much more clear. Unlike the REQUIRED_OPTIONS, we specify all
@@ -297,6 +302,18 @@ ACTIVITY_THRESH_OPTION=""
 ############################################################
 DEVICE_ID_OPTION=""
 CLEAN_POLICY_NS_OPTION=""
+
+############################################################
+#                  CHECK KERNEL VER                        #
+############################################################
+KERNEL_VER_OPTION=""
+KERNEL_MAJOR_OPTION=""
+
+############################################################
+#                  CHECK FIO VER                        #
+############################################################
+FIO_MAJOR_OPTION=""
+FIO_MINOR_OPTION=""
 
 ############################################################
 #                        FUNCTIONS                         #
