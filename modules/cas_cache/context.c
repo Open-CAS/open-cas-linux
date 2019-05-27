@@ -394,7 +394,7 @@ int cas_initialize_context(void)
 	struct blk_data data;
 	int ret;
 
-	ret = ocf_ctx_init(&cas_ctx, &ctx_cfg);
+	ret = ocf_ctx_create(&cas_ctx, &ctx_cfg);
 	if (ret < 0)
 		return ret;
 
@@ -441,12 +441,12 @@ err_rpool:
 err_mpool:
 	ocf_mpool_destroy(cas_bvec_pool);
 err_ctx:
-	ocf_ctx_exit(cas_ctx);
+	ocf_ctx_put(cas_ctx);
 
 	return ret;
 }
 
-int cas_cleanup_context(void)
+void cas_cleanup_context(void)
 {
 	block_dev_deinit();
 	atomic_dev_deinit();
@@ -454,7 +454,7 @@ int cas_cleanup_context(void)
 	ocf_mpool_destroy(cas_bvec_pool);
 	cas_rpool_destroy(cas_bvec_pages_rpool, _cas_free_page_rpool, NULL);
 
-	return ocf_ctx_exit(cas_ctx);
+	ocf_ctx_put(cas_ctx);
 }
 
 /* *** CONTEXT DATA HELPER FUNCTION *** */

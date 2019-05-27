@@ -21,7 +21,7 @@ int cache_mng_get_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
                 uint32_t param_id, uint32_t *param_value);
 
 int cache_mng_add_core_to_cache(struct ocf_mngt_core_config *cfg,
-		struct kcas_insert_core *cmd_info);
+		ocf_cache_id_t cache_id, struct kcas_insert_core *cmd_info);
 
 int cache_mng_remove_core_from_cache(struct kcas_remove_core *cmd);
 

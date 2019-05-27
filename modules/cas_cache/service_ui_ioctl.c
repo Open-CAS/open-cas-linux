@@ -177,7 +177,8 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		if (retval)
 			RETURN_CMD_RESULT(cmd_info, arg, retval);
 
-		retval = cache_mng_add_core_to_cache(&cfg, cmd_info);
+		retval = cache_mng_add_core_to_cache(&cfg, cmd_info->cache_id,
+				cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}

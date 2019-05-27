@@ -408,7 +408,6 @@ int cache_mng_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 	cfg->uuid.data = cmd_info->core_path_name;
 	cfg->uuid.size = strnlen(cmd_info->core_path_name, MAX_STR_LEN) + 1;
 	cfg->core_id = cmd_info->core_id;
-	cfg->cache_id = cmd_info->cache_id;
 	cfg->try_add = cmd_info->try_add;
 
 	if (cas_upgrade_is_in_upgrade()) {
@@ -519,7 +518,7 @@ static void _cache_mng_add_core_complete(ocf_cache_t cache,
 static void _cache_mng_remove_core_complete(void *priv, int error);
 
 int cache_mng_add_core_to_cache(struct ocf_mngt_core_config *cfg,
-		struct kcas_insert_core *cmd_info)
+		ocf_cache_id_t cache_id, struct kcas_insert_core *cmd_info)
 {
 	struct _cache_mng_add_core_context add_context;
 	struct _cache_mng_sync_context remove_context;
@@ -528,7 +527,7 @@ int cache_mng_add_core_to_cache(struct ocf_mngt_core_config *cfg,
 	ocf_core_id_t core_id;
 	int result, remove_core_result;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cfg->cache_id, &cache);
+	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
 	if (cfg->try_add && (result == -OCF_ERR_CACHE_NOT_EXIST)) {
 		result = ocf_mngt_core_pool_add(cas_ctx, &cfg->uuid,
 				cfg->volume_type);
