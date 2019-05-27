@@ -13,3 +13,6 @@ Module.symvers
 Module.markers
 *.mod.c
 modules.order
+__pycache__/
+*.py[cod]
+*$py.class

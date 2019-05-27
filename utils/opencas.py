@@ -1,4 +1,3 @@
-#!/usr/bin/env python2
 #
 # Copyright(c) 2012-2019 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
@@ -223,7 +222,7 @@ class cas_config(object):
             type(self).check_cache_id_valid(self.cache_id)
             self.check_recursive()
             self.check_cache_mode_valid(self.cache_mode)
-            for param_name, param_value in self.params.iteritems():
+            for param_name, param_value in self.params.items():
                 self.validate_parameter(param_name, param_value)
 
             if not allow_incomplete:
@@ -289,7 +288,7 @@ class cas_config(object):
             ret = '{0}\t{1}\t{2}'.format(self.cache_id, self.device, self.cache_mode)
             if len(self.params) > 0:
                 i = 0
-                for param, value in self.params.iteritems():
+                for param, value in self.params.items():
                     if i > 0:
                         ret += ','
                     else:
@@ -408,14 +407,14 @@ class cas_config(object):
                 raise cas_config.AlreadyConfiguredException(
                                 'Cache already configured')
 
-        for cache_id, cache in self.caches.iteritems():
+        for cache_id, cache in self.caches.items():
             if cache_id != new_cache_config.cache_id:
                 if (os.path.realpath(new_cache_config.device)
                         == os.path.realpath(cache.device)):
                     raise cas_config.ConflictingConfigException(
                             'This cache device is already configured as a cache')
 
-            for _, core in cache.cores.iteritems():
+            for _, core in cache.cores.items():
                 if (os.path.realpath(core.device)
                         == os.path.realpath(new_cache_config.device)):
                     raise cas_config.ConflictingConfigException(
@@ -433,13 +432,13 @@ class cas_config(object):
             raise KeyError('Cache id {0} doesn\'t exist'.format(new_core_config.cache_id))
 
         try:
-            for cache_id, cache in self.caches.iteritems():
+            for cache_id, cache in self.caches.items():
                 if (os.path.realpath(cache.device)
                         == os.path.realpath(new_core_config.device)):
                     raise cas_config.ConflictingConfigException(
                             'Core device already configured as a cache')
 
-                for core_id, core in cache.cores.iteritems():
+                for core_id, core in cache.cores.items():
                     if (cache_id == new_core_config.cache_id
                             and core_id == new_core_config.core_id):
                         if (os.path.realpath(core.device)
@@ -478,7 +477,7 @@ class cas_config(object):
                 conf.write('# This config was automatically generated\n')
 
                 conf.write('[caches]\n')
-                for _, cache in self.caches.iteritems():
+                for _, cache in self.caches.items():
                     conf.write(cache.to_line())
 
                 conf.write('\n[cores]\n')
