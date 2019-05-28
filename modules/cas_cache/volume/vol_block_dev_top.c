@@ -4,6 +4,7 @@
 */
 
 #include "cas_cache.h"
+#include "utils/cas_err.h"
 
 #define BLK_RQ_POS(rq) (CAS_BIO_BISECTOR((rq)->bio))
 #define BLK_RQ_BYTES(rq) blk_rq_bytes(rq)
@@ -12,12 +13,12 @@ extern u32 use_io_scheduler;
 
 static inline void __blockdev_end_request_all(struct request *rq, int error)
 {
-	 __blk_end_request_all(rq, error);
+	__blk_end_request_all(rq, map_cas_err_to_generic(error));
 }
 
 static inline void _blockdev_end_request_all(struct request *rq, int error)
 {
-	 blk_end_request_all(rq, error);
+	blk_end_request_all(rq, map_cas_err_to_generic(error));
 }
 
 static inline bool _blockdev_can_handle_rq(struct request *rq)
