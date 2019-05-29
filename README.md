@@ -1,3 +1,5 @@
+# Open CAS Linux
+
 Open CAS  accelerates Linux applications by caching active (hot) data to
 a local flash device inside servers. Open CAS implements caching at the
 server level, utilizing local high-performance flash media as the cache drive
@@ -14,3 +16,7 @@ https://opensource.org/licenses/BSD-3-Clause for full license texts).
 
 Open CAS uses Safe string library (safeclib) that is MIT licensed.
 
+## Security
+
+To report a potential security vulnerability please follow the instructions
+[here.](https://open-cas.github.io/contributing.html#reporting-a-potential-security-vulnerability)
