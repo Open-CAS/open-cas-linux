@@ -198,7 +198,7 @@ static void cas_bd_io_end(struct ocf_io *io, int error)
 /*
  *
  */
-DECLARE_BLOCK_CALLBACK(cas_bd_io_end, struct bio *bio,
+CAS_DECLARE_BLOCK_CALLBACK(cas_bd_io_end, struct bio *bio,
 		unsigned int bytes_done, int error)
 {
 	struct ocf_io *io;
@@ -208,11 +208,11 @@ DECLARE_BLOCK_CALLBACK(cas_bd_io_end, struct bio *bio,
 
 	BUG_ON(!bio);
 	BUG_ON(!bio->bi_private);
-	BLOCK_CALLBACK_INIT(bio);
+	CAS_BLOCK_CALLBACK_INIT(bio);
 	io = bio->bi_private;
 	bdobj = bd_object(io->volume);
 	BUG_ON(!bdobj);
-	err = BLOCK_CALLBACK_ERROR(bio, error);
+	err = CAS_BLOCK_CALLBACK_ERROR(bio, error);
 	bdio = cas_io_to_blkio(io);
 	BUG_ON(!bdio);
 
@@ -235,13 +235,13 @@ DECLARE_BLOCK_CALLBACK(cas_bd_io_end, struct bio *bio,
 		}
 	}
 out:
-	if (err == -EOPNOTSUPP && (BIO_OP_FLAGS(bio) & CAS_BIO_DISCARD))
+	if (err == -EOPNOTSUPP && (CAS_BIO_OP_FLAGS(bio) & CAS_BIO_DISCARD))
 		err = 0;
 
 	cas_bd_io_end(io, err);
 
 	bio_put(bio);
-	BLOCK_CALLBACK_RETURN();
+	CAS_BLOCK_CALLBACK_RETURN();
 }
 
 static void block_dev_submit_flush(struct ocf_io *io)
@@ -274,7 +274,7 @@ static void block_dev_submit_flush(struct ocf_io *io)
 		goto out;
 	}
 
-	if (!CHECK_QUEUE_FLUSH(q)) {
+	if (!CAS_CHECK_QUEUE_FLUSH(q)) {
 		/* This block device does not support flush, call back */
 		atomic_sub(blkio->dirty, &bdobj->potentially_dirty);
 		goto out;
@@ -289,12 +289,12 @@ static void block_dev_submit_flush(struct ocf_io *io)
 
 	blkio->dir = io->dir;
 
-	bio->bi_end_io = REFER_BLOCK_CALLBACK(cas_bd_io_end);
+	bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_bd_io_end);
 	CAS_BIO_SET_DEV(bio, bdev);
 	bio->bi_private = io;
 
 	atomic_inc(&blkio->rq_remaning);
-	cas_submit_bio(OCF_WRITE_FLUSH, bio);
+	cas_submit_bio(CAS_WRITE_FLUSH, bio);
 
 out:
 	cas_bd_io_end(io, blkio->error);
@@ -374,11 +374,11 @@ void block_dev_submit_discard(struct ocf_io *io)
 		}
 
 		CAS_BIO_SET_DEV(bio, bd);
-		BIO_BISECTOR(bio) = start;
-		BIO_BISIZE(bio) = bio_sects << SECTOR_SHIFT;
+		CAS_BIO_BISECTOR(bio) = start;
+		CAS_BIO_BISIZE(bio) = bio_sects << SECTOR_SHIFT;
 		bio->bi_next = NULL;
 		bio->bi_private = io;
-		bio->bi_end_io = REFER_BLOCK_CALLBACK(cas_bd_io_end);
+		bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_bd_io_end);
 
 		atomic_inc(&blkio->rq_remaning);
 		cas_submit_bio(CAS_BIO_DISCARD, bio);
@@ -479,12 +479,11 @@ static void block_dev_submit_io(struct ocf_io *io)
 
 		/* Setup BIO */
 		CAS_BIO_SET_DEV(bio, bdobj->btm_bd);
-		BIO_BISECTOR(bio) = addr / SECTOR_SIZE;
+		CAS_BIO_BISECTOR(bio) = addr / SECTOR_SIZE;
 		bio->bi_next = NULL;
 		bio->bi_private = io;
-		BIO_OP_FLAGS(bio) |= io->flags;
-		BIO_SET_RW_FLAGS(bio);
-		bio->bi_end_io = REFER_BLOCK_CALLBACK(cas_bd_io_end);
+		CAS_BIO_OP_FLAGS(bio) |= io->flags;
+		bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_bd_io_end);
 
 		/* Add pages */
 		while (cas_io_iter_is_next(iter) && bytes) {
@@ -588,7 +587,7 @@ int block_dev_try_get_io_class(struct bio *bio, int *io_class)
 {
 	struct ocf_io *io;
 
-	if (bio->bi_end_io != REFER_BLOCK_CALLBACK(cas_bd_io_end))
+	if (bio->bi_end_io != CAS_REFER_BLOCK_CALLBACK(cas_bd_io_end))
 		return -1;
 
 	io = bio->bi_private;

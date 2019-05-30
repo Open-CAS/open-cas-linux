@@ -11,10 +11,10 @@
 
 static inline bool cas_blk_is_flush_io(unsigned long flags)
 {
-	if ((flags & OCF_WRITE_FLUSH) == OCF_WRITE_FLUSH)
+	if ((flags & CAS_WRITE_FLUSH) == CAS_WRITE_FLUSH)
 		return true;
 
-	if ((flags & OCF_WRITE_FLUSH_FUA) == OCF_WRITE_FLUSH_FUA)
+	if ((flags & CAS_WRITE_FLUSH_FUA) == CAS_WRITE_FLUSH_FUA)
 		return true;
 
 	return false;

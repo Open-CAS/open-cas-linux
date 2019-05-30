@@ -31,7 +31,7 @@ static int _cas_io_queue_thread(void *data)
 	info = ocf_queue_get_priv(q);
 	BUG_ON(!info);
 
-	DAEMONIZE(info->thread->comm);
+	CAS_DAEMONIZE(info->thread->comm);
 
 	complete(&info->compl);
 
@@ -81,7 +81,7 @@ static int _cas_cleaner_thread(void *data)
 	info = ocf_cleaner_get_priv(c);
 	BUG_ON(!info);
 
-	DAEMONIZE(info->thread->comm);
+	CAS_DAEMONIZE(info->thread->comm);
 
 	complete(&info->compl);
 
@@ -127,7 +127,7 @@ static int _cas_metadata_updater_thread(void *data)
 	info = ocf_metadata_updater_get_priv(mu);
 	BUG_ON(!info);
 
-	DAEMONIZE(info->thread->comm);
+	CAS_DAEMONIZE(info->thread->comm);
 
 	complete(&info->compl);
 

@@ -358,12 +358,12 @@ static inline int _cas_detect_blk_type(const char *path, uint8_t *type,
 	struct block_device *bdev;
 	char holder[] = "CAS DETECT\n";
 
-	bdev = OPEN_BDEV_EXCLUSIVE(path, FMODE_READ, holder);
+	bdev = blkdev_get_by_path(path, (FMODE_EXCL|FMODE_READ), holder);
 	if (IS_ERR(bdev))
 		return -OCF_ERR_NOT_OPEN_EXC;
 
 	ret = cas_blk_identify_type_by_bdev(bdev, type, atomic_params);
-	CLOSE_BDEV_EXCLUSIVE(bdev, FMODE_READ);
+	blkdev_put(bdev, (FMODE_EXCL|FMODE_READ));
 	return ret;
 }
 
@@ -437,9 +437,9 @@ int _cas_blk_identify_type(const char *path, uint8_t *type,
 	if (IS_ERR(file))
 		return -OCF_ERR_INVAL_VOLUME_TYPE;
 
-	if (S_ISBLK(FILE_INODE(file)->i_mode))
+	if (S_ISBLK(CAS_FILE_INODE(file)->i_mode))
 		*type = BLOCK_DEVICE_VOLUME;
-	else if (S_ISCHR(FILE_INODE(file)->i_mode))
+	else if (S_ISCHR(CAS_FILE_INODE(file)->i_mode))
 		*type = NVME_CONTROLLER;
 	else
 		result = -OCF_ERR_INVAL_VOLUME_TYPE;

@@ -120,25 +120,25 @@ static inline void _casdsk_exp_obj_handle_bio_att(struct casdsk_disk *dsk,
 		dsk->exp_obj->mk_rq_fn(q, bio);
 }
 
-DECLARE_BLOCK_CALLBACK(_casdsk_exp_obj_bio_pt_io, struct bio *bio,
+CAS_DECLARE_BLOCK_CALLBACK(_casdsk_exp_obj_bio_pt_io, struct bio *bio,
 		unsigned int bytes_done, int error)
 {
 	struct casdsk_exp_obj_pt_io_ctx *io;
 
 	BUG_ON(!bio);
-	BLOCK_CALLBACK_INIT(bio);
+	CAS_BLOCK_CALLBACK_INIT(bio);
 
 	io = bio->bi_private;
 	BUG_ON(!io);
-	BIO_ENDIO(io->bio, BIO_BISIZE(io->bio),
-			BLOCK_CALLBACK_ERROR(bio, error));
+	CAS_BIO_ENDIO(io->bio, CAS_BIO_BISIZE(io->bio),
+			CAS_BLOCK_CALLBACK_ERROR(bio, error));
 
 	if (atomic_dec_return(&io->dsk->exp_obj->pt_ios) < 0)
 		BUG();
 
 	bio_put(bio);
 	kmem_cache_free(casdsk_module->pt_io_ctx_cache, io);
-	BLOCK_CALLBACK_RETURN();
+	CAS_BLOCK_CALLBACK_RETURN();
 }
 
 static inline void _casdsk_exp_obj_handle_bio_pt(struct casdsk_disk *dsk,
@@ -150,14 +150,14 @@ static inline void _casdsk_exp_obj_handle_bio_pt(struct casdsk_disk *dsk,
 
 	io = kmem_cache_zalloc(casdsk_module->pt_io_ctx_cache, GFP_ATOMIC);
 	if (!io) {
-		BIO_ENDIO(bio, BIO_BISIZE(bio), -ENOMEM);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -ENOMEM);
 		return;
 	}
 
 	cloned_bio = cas_bio_clone(bio, GFP_ATOMIC);
 	if (!cloned_bio) {
 		kmem_cache_free(casdsk_module->pt_io_ctx_cache, io);
-		BIO_ENDIO(bio, BIO_BISIZE(bio), -ENOMEM);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -ENOMEM);
 		return;
 	}
 
@@ -168,8 +168,8 @@ static inline void _casdsk_exp_obj_handle_bio_pt(struct casdsk_disk *dsk,
 
 	CAS_BIO_SET_DEV(cloned_bio, casdsk_disk_get_blkdev(dsk));
 	cloned_bio->bi_private = io;
-	cloned_bio->bi_end_io = REFER_BLOCK_CALLBACK(_casdsk_exp_obj_bio_pt_io);
-	cas_submit_bio(BIO_OP_FLAGS(cloned_bio), cloned_bio);
+	cloned_bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(_casdsk_exp_obj_bio_pt_io);
+	cas_submit_bio(CAS_BIO_OP_FLAGS(cloned_bio), cloned_bio);
 }
 
 static inline void _casdsk_exp_obj_handle_bio(struct casdsk_disk *dsk,
@@ -181,7 +181,7 @@ static inline void _casdsk_exp_obj_handle_bio(struct casdsk_disk *dsk,
 	else if (casdsk_disk_is_pt(dsk))
 		_casdsk_exp_obj_handle_bio_pt(dsk, q, bio);
 	else if (casdsk_disk_is_shutdown(dsk))
-		BIO_ENDIO(bio, BIO_BISIZE(bio), -EIO);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -EIO);
 	else
 		BUG();
 }

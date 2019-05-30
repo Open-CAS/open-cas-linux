@@ -338,7 +338,7 @@ static int _cas_ctx_logger_print_rl(ocf_logger_t logger, const char *func_name)
 	if (!func_name)
 		return -EINVAL;
 
-	return CAS_RATELIMIT(&cas_log_rl, func_name);
+	return ___ratelimit(&cas_log_rl, func_name);
 }
 
 /*
