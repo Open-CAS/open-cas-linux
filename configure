@@ -7,7 +7,7 @@
 SCRIPTPATH=`dirname $0`
 SCRIPTPATH=`realpath $SCRIPTPATH`
 
-CONFIG_FILES=`ls $SCRIPTPATH/configure.d/*.conf`
+CONFIG_FILES=`ls $SCRIPTPATH/configure.d/*.conf | sort`
 
 rm -f $SCRIPTPATH/modules/generated_defines.h
 
