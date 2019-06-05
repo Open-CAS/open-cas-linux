@@ -14,147 +14,147 @@ extern u32 unaligned_io;
 extern u32 seq_cut_off_mb;
 extern u32 use_io_scheduler;
 
-struct _cache_mng_sync_context {
+struct _cache_mngt_sync_context {
 	struct completion compl;
 	int *result;
 };
 
-static void _cache_mng_lock_complete(ocf_cache_t cache, void *priv, int error)
+static void _cache_mngt_lock_complete(ocf_cache_t cache, void *priv, int error)
 {
-	struct _cache_mng_sync_context *context = priv;
+	struct _cache_mngt_sync_context *context = priv;
 
 	*context->result = error;
 	complete(&context->compl);
 }
 
-static int _cache_mng_lock_sync(ocf_cache_t cache)
+static int _cache_mngt_lock_sync(ocf_cache_t cache)
 {
-	struct _cache_mng_sync_context context;
+	struct _cache_mngt_sync_context context;
 	int result;
 
 	init_completion(&context.compl);
 	context.result = &result;
 
-	ocf_mngt_cache_lock(cache, _cache_mng_lock_complete, &context);
+	ocf_mngt_cache_lock(cache, _cache_mngt_lock_complete, &context);
 	wait_for_completion(&context.compl);
 
 	return result;
 }
 
-static int _cache_mng_read_lock_sync(ocf_cache_t cache)
+static int _cache_mngt_read_lock_sync(ocf_cache_t cache)
 {
-	struct _cache_mng_sync_context context;
+	struct _cache_mngt_sync_context context;
 	int result;
 
 	init_completion(&context.compl);
 	context.result = &result;
 
-	ocf_mngt_cache_read_lock(cache, _cache_mng_lock_complete, &context);
+	ocf_mngt_cache_read_lock(cache, _cache_mngt_lock_complete, &context);
 	wait_for_completion(&context.compl);
 
 	return result;
 }
 
-static void _cache_mng_save_sync_complete(ocf_cache_t cache, void *priv,
+static void _cache_mngt_save_sync_complete(ocf_cache_t cache, void *priv,
 		int error)
 {
-	struct _cache_mng_sync_context *context = priv;
+	struct _cache_mngt_sync_context *context = priv;
 
 	*context->result = error;
 	complete(&context->compl);
 }
 
-static int _cache_mng_save_sync(ocf_cache_t cache)
+static int _cache_mngt_save_sync(ocf_cache_t cache)
 {
-	struct _cache_mng_sync_context context;
+	struct _cache_mngt_sync_context context;
 	int result;
 
 	init_completion(&context.compl);
 	context.result = &result;
 
-	ocf_mngt_cache_save(cache, _cache_mng_save_sync_complete, &context);
+	ocf_mngt_cache_save(cache, _cache_mngt_save_sync_complete, &context);
 	wait_for_completion(&context.compl);
 
 	return result;
 }
 
-static void _cache_mng_cache_flush_complete(ocf_cache_t cache, void *priv,
+static void _cache_mngt_cache_flush_complete(ocf_cache_t cache, void *priv,
 		int error)
 {
-	struct _cache_mng_sync_context *context = priv;
+	struct _cache_mngt_sync_context *context = priv;
 
 	*context->result = error;
 	complete(&context->compl);
 }
 
-static int _cache_mng_cache_flush_sync(ocf_cache_t cache, bool interruption)
+static int _cache_mngt_cache_flush_sync(ocf_cache_t cache, bool interruption)
 {
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
-	struct _cache_mng_sync_context context;
+	struct _cache_mngt_sync_context context;
 	int result;
 
 	init_completion(&context.compl);
 	context.result = &result;
 
 	atomic_set(&cache_priv->flush_interrupt_enabled, 0);
-	ocf_mngt_cache_flush(cache, _cache_mng_cache_flush_complete, &context);
+	ocf_mngt_cache_flush(cache, _cache_mngt_cache_flush_complete, &context);
 	wait_for_completion(&context.compl);
 	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
 
 	return result;
 }
 
-static void _cache_mng_core_flush_complete(ocf_core_t core, void *priv,
+static void _cache_mngt_core_flush_complete(ocf_core_t core, void *priv,
 		int error)
 {
-	struct _cache_mng_sync_context *context = priv;
+	struct _cache_mngt_sync_context *context = priv;
 
 	*context->result = error;
 	complete(&context->compl);
 }
 
-static int _cache_mng_core_flush_sync(ocf_core_t core, bool interruption)
+static int _cache_mngt_core_flush_sync(ocf_core_t core, bool interruption)
 {
 	ocf_cache_t cache = ocf_core_get_cache(core);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
-	struct _cache_mng_sync_context context;
+	struct _cache_mngt_sync_context context;
 	int result;
 
 	init_completion(&context.compl);
 	context.result = &result;
 
 	atomic_set(&cache_priv->flush_interrupt_enabled, 0);
-	ocf_mngt_core_flush(core, _cache_mng_core_flush_complete, &context);
+	ocf_mngt_core_flush(core, _cache_mngt_core_flush_complete, &context);
 	wait_for_completion(&context.compl);
 	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
 
 	return result;
 }
 
-static void _cache_mng_cache_stop_complete(ocf_cache_t cache, void *priv,
+static void _cache_mngt_cache_stop_complete(ocf_cache_t cache, void *priv,
 		int error)
 {
-	struct _cache_mng_sync_context *context = priv;
+	struct _cache_mngt_sync_context *context = priv;
 
 	*context->result = error;
 	complete(&context->compl);
 }
 
-static int _cache_mng_cache_stop_sync(ocf_cache_t cache)
+static int _cache_mngt_cache_stop_sync(ocf_cache_t cache)
 {
-	struct _cache_mng_sync_context context;
+	struct _cache_mngt_sync_context context;
 	int result;
 
 	init_completion(&context.compl);
 	context.result = &result;
 
-	ocf_mngt_cache_stop(cache, _cache_mng_cache_stop_complete, &context);
+	ocf_mngt_cache_stop(cache, _cache_mngt_cache_stop_complete, &context);
 	wait_for_completion(&context.compl);
 
 	return result;
 }
 
-int cache_mng_flush_object(ocf_cache_id_t cache_id, ocf_core_id_t core_id)
+int cache_mngt_flush_object(ocf_cache_id_t cache_id, ocf_core_id_t core_id)
 {
 	ocf_cache_t cache;
 	ocf_core_t core;
@@ -164,7 +164,7 @@ int cache_mng_flush_object(ocf_cache_id_t cache_id, ocf_core_id_t core_id)
 	if (result)
 		return result;
 
-	result = _cache_mng_lock_sync(cache);
+	result = _cache_mngt_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -174,7 +174,7 @@ int cache_mng_flush_object(ocf_cache_id_t cache_id, ocf_core_id_t core_id)
 	if (result)
 		goto out;
 
-	result = _cache_mng_core_flush_sync(core, true);
+	result = _cache_mngt_core_flush_sync(core, true);
 
 out:
 	ocf_mngt_cache_unlock(cache);
@@ -182,7 +182,7 @@ out:
 	return result;
 }
 
-int cache_mng_flush_device(ocf_cache_id_t id)
+int cache_mngt_flush_device(ocf_cache_id_t id)
 {
 	int result;
 	ocf_cache_t cache;
@@ -191,20 +191,20 @@ int cache_mng_flush_device(ocf_cache_id_t id)
 	if (result)
 		return result;
 
-	result = _cache_mng_lock_sync(cache);
+	result = _cache_mngt_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
 	}
 
-	result = _cache_mng_cache_flush_sync(cache, true);
+	result = _cache_mngt_cache_flush_sync(cache, true);
 
 	ocf_mngt_cache_unlock(cache);
 	ocf_mngt_cache_put(cache);
 	return result;
 }
 
-int cache_mng_set_cleaning_policy(ocf_cache_id_t cache_id, uint32_t type)
+int cache_mngt_set_cleaning_policy(ocf_cache_id_t cache_id, uint32_t type)
 {
 	ocf_cache_t cache;
 	int result;
@@ -213,7 +213,7 @@ int cache_mng_set_cleaning_policy(ocf_cache_id_t cache_id, uint32_t type)
 	if (result)
 		return result;
 
-	result = _cache_mng_lock_sync(cache);
+	result = _cache_mngt_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -223,7 +223,7 @@ int cache_mng_set_cleaning_policy(ocf_cache_id_t cache_id, uint32_t type)
 	if (result)
 		goto out;
 
-	result = _cache_mng_save_sync(cache);
+	result = _cache_mngt_save_sync(cache);
 
 out:
 	ocf_mngt_cache_unlock(cache);
@@ -231,7 +231,7 @@ out:
 	return result;
 }
 
-int cache_mng_get_cleaning_policy(ocf_cache_id_t cache_id, uint32_t *type)
+int cache_mngt_get_cleaning_policy(ocf_cache_id_t cache_id, uint32_t *type)
 {
 	ocf_cleaning_t tmp_type;
 	ocf_cache_t cache;
@@ -241,7 +241,7 @@ int cache_mng_get_cleaning_policy(ocf_cache_id_t cache_id, uint32_t *type)
 	if (result)
 		return result;
 
-	result = _cache_mng_read_lock_sync(cache);
+	result = _cache_mngt_read_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -257,7 +257,7 @@ int cache_mng_get_cleaning_policy(ocf_cache_id_t cache_id, uint32_t *type)
 	return result;
 }
 
-int cache_mng_set_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
+int cache_mngt_set_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
 		uint32_t param_id, uint32_t param_value)
 {
 	ocf_cache_t cache;
@@ -267,7 +267,7 @@ int cache_mng_set_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
 	if (result)
 		return result;
 
-	result = _cache_mng_lock_sync(cache);
+	result = _cache_mngt_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -278,7 +278,7 @@ int cache_mng_set_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
 	if (result)
 		goto out;
 
-	result = _cache_mng_save_sync(cache);
+	result = _cache_mngt_save_sync(cache);
 
 out:
 	ocf_mngt_cache_unlock(cache);
@@ -286,7 +286,7 @@ out:
 	return result;
 }
 
-int cache_mng_get_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
+int cache_mngt_get_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
 		uint32_t param_id, uint32_t *param_value)
 {
 	ocf_cache_t cache;
@@ -296,7 +296,7 @@ int cache_mng_get_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
 	if (result)
 		return result;
 
-	result = _cache_mng_read_lock_sync(cache);
+	result = _cache_mngt_read_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -316,7 +316,7 @@ struct get_paths_ctx {
 	int position;
 };
 
-int _cache_mng_core_pool_get_paths_visitor(ocf_uuid_t uuid, void *ctx)
+int _cache_mngt_core_pool_get_paths_visitor(ocf_uuid_t uuid, void *ctx)
 {
 	struct get_paths_ctx *visitor_ctx = ctx;
 
@@ -334,7 +334,7 @@ int _cache_mng_core_pool_get_paths_visitor(ocf_uuid_t uuid, void *ctx)
 	return 0;
 }
 
-int cache_mng_core_pool_get_paths(struct kcas_core_pool_path *cmd_info)
+int cache_mngt_core_pool_get_paths(struct kcas_core_pool_path *cmd_info)
 {
 	struct get_paths_ctx visitor_ctx = {0};
 	int result;
@@ -343,14 +343,14 @@ int cache_mng_core_pool_get_paths(struct kcas_core_pool_path *cmd_info)
 	visitor_ctx.max_count = cmd_info->core_pool_count;
 
 	result = ocf_mngt_core_pool_visit(cas_ctx,
-			_cache_mng_core_pool_get_paths_visitor,
+			_cache_mngt_core_pool_get_paths_visitor,
 			&visitor_ctx);
 
 	cmd_info->core_pool_count = visitor_ctx.position;
 	return result;
 }
 
-int cache_mng_core_pool_remove(struct kcas_core_pool_remove *cmd_info)
+int cache_mngt_core_pool_remove(struct kcas_core_pool_remove *cmd_info)
 {
 	struct ocf_volume_uuid uuid;
 	ocf_volume_t vol;
@@ -370,16 +370,16 @@ int cache_mng_core_pool_remove(struct kcas_core_pool_remove *cmd_info)
 	return 0;
 }
 
-struct cache_mng_metadata_probe_context {
+struct cache_mngt_metadata_probe_context {
 	struct completion compl;
 	struct kcas_cache_check_device *cmd_info;
 	int *result;
 };
 
-static void cache_mng_metadata_probe_end(void *priv, int error,
+static void cache_mngt_metadata_probe_end(void *priv, int error,
 		struct ocf_metadata_probe_status *status)
 {
-	struct cache_mng_metadata_probe_context *context = priv;
+	struct cache_mngt_metadata_probe_context *context = priv;
 	struct kcas_cache_check_device *cmd_info = context->cmd_info;
 
 	*context->result = error;
@@ -396,9 +396,9 @@ static void cache_mng_metadata_probe_end(void *priv, int error,
 	complete(&context->compl);
 }
 
-int cache_mng_cache_check_device(struct kcas_cache_check_device *cmd_info)
+int cache_mngt_cache_check_device(struct kcas_cache_check_device *cmd_info)
 {
-	struct cache_mng_metadata_probe_context context;
+	struct cache_mngt_metadata_probe_context context;
 	struct block_device *bdev;
 	ocf_volume_t volume;
 	char holder[] = "CAS CHECK CACHE DEVICE\n";
@@ -423,7 +423,7 @@ int cache_mng_cache_check_device(struct kcas_cache_check_device *cmd_info)
 	context.cmd_info = cmd_info;
 	context.result = &result;
 
-	ocf_metadata_probe(cas_ctx, volume, cache_mng_metadata_probe_end,
+	ocf_metadata_probe(cas_ctx, volume, cache_mngt_metadata_probe_end,
 			&context);
 	wait_for_completion(&context.compl);
 
@@ -433,7 +433,7 @@ out_bdev:
 	return result;
 }
 
-int cache_mng_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
+int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 		struct kcas_insert_core *cmd_info)
 {
 	int result;
@@ -468,7 +468,7 @@ int cache_mng_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 	return result;
 }
 
-int cache_mng_update_core_uuid(ocf_cache_t cache, ocf_core_id_t id, ocf_uuid_t uuid)
+int cache_mngt_update_core_uuid(ocf_cache_t cache, ocf_core_id_t id, ocf_uuid_t uuid)
 {
 	ocf_core_t core;
 	ocf_volume_t vol;
@@ -512,10 +512,10 @@ int cache_mng_update_core_uuid(ocf_cache_t cache, ocf_core_id_t id, ocf_uuid_t u
 	if (result)
 		return result;
 
-	return _cache_mng_save_sync(cache);
+	return _cache_mngt_save_sync(cache);
 }
 
-static void _cache_mng_log_core_device_path(ocf_core_t core)
+static void _cache_mngt_log_core_device_path(ocf_core_t core)
 {
 	ocf_cache_t cache = ocf_core_get_cache(core);
 	const ocf_uuid_t core_uuid = (const ocf_uuid_t)ocf_core_get_uuid(core);
@@ -525,14 +525,14 @@ static void _cache_mng_log_core_device_path(ocf_core_t core)
 			ocf_core_get_name(core), ocf_cache_get_name(cache));
 }
 
-static int _cache_mng_log_core_device_path_visitor(ocf_core_t core, void *cntx)
+static int _cache_mngt_log_core_device_path_visitor(ocf_core_t core, void *cntx)
 {
-	_cache_mng_log_core_device_path(core);
+	_cache_mngt_log_core_device_path(core);
 
 	return 0;
 }
 
-struct _cache_mng_add_core_context {
+struct _cache_mngt_add_core_context {
 	struct completion compl;
 	ocf_core_t *core;
 	int *result;
@@ -542,23 +542,23 @@ struct _cache_mng_add_core_context {
  * Function for adding a CORE object to the cache instance. *
  ************************************************************/
 
-static void _cache_mng_add_core_complete(ocf_cache_t cache,
+static void _cache_mngt_add_core_complete(ocf_cache_t cache,
 		ocf_core_t core, void *priv, int error)
 {
-	struct _cache_mng_add_core_context *context = priv;
+	struct _cache_mngt_add_core_context *context = priv;
 
 	*context->core = core;
 	*context->result = error;
 	complete(&context->compl);
 }
 
-static void _cache_mng_remove_core_complete(void *priv, int error);
+static void _cache_mngt_remove_core_complete(void *priv, int error);
 
-int cache_mng_add_core_to_cache(struct ocf_mngt_core_config *cfg,
+int cache_mngt_add_core_to_cache(struct ocf_mngt_core_config *cfg,
 		ocf_cache_id_t cache_id, struct kcas_insert_core *cmd_info)
 {
-	struct _cache_mng_add_core_context add_context;
-	struct _cache_mng_sync_context remove_context;
+	struct _cache_mngt_add_core_context add_context;
+	struct _cache_mngt_sync_context remove_context;
 	ocf_cache_t cache;
 	ocf_core_t core;
 	ocf_core_id_t core_id;
@@ -584,14 +584,14 @@ int cache_mng_add_core_to_cache(struct ocf_mngt_core_config *cfg,
 		return result;
 	}
 
-	result = _cache_mng_lock_sync(cache);
+	result = _cache_mngt_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
 	}
 
 	if (cmd_info && cmd_info->update_path) {
-		result = cache_mng_update_core_uuid(cache, cfg->core_id, &cfg->uuid);
+		result = cache_mngt_update_core_uuid(cache, cfg->core_id, &cfg->uuid);
 		ocf_mngt_cache_unlock(cache);
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -603,7 +603,7 @@ int cache_mng_add_core_to_cache(struct ocf_mngt_core_config *cfg,
 	add_context.core = &core;
 	add_context.result = &result;
 
-	ocf_mngt_cache_add_core(cache, cfg, _cache_mng_add_core_complete,
+	ocf_mngt_cache_add_core(cache, cfg, _cache_mngt_add_core_complete,
 			&add_context);
 	wait_for_completion(&add_context.compl);
 	if (result)
@@ -625,7 +625,7 @@ int cache_mng_add_core_to_cache(struct ocf_mngt_core_config *cfg,
 	if (cmd_info)
 		cmd_info->core_id = core_id;
 
-	_cache_mng_log_core_device_path(core);
+	_cache_mngt_log_core_device_path(core);
 
 	return 0;
 
@@ -635,7 +635,7 @@ error_after_create_exported_object:
 error_after_add_core:
 	init_completion(&remove_context.compl);
 	remove_context.result = &remove_core_result;
-	ocf_mngt_cache_remove_core(core, _cache_mng_remove_core_complete,
+	ocf_mngt_cache_remove_core(core, _cache_mngt_remove_core_complete,
 			&remove_context);
 	wait_for_completion(&remove_context.compl);
 
@@ -647,7 +647,7 @@ error_affter_lock:
 }
 
 /* Flush cache and destroy exported object */
-int _cache_mng_remove_core_prepare(ocf_cache_t cache, ocf_core_t core,
+int _cache_mngt_remove_core_prepare(ocf_cache_t cache, ocf_core_t core,
 		struct kcas_remove_core *cmd, bool destroy)
 {
 	int result = 0;
@@ -673,7 +673,7 @@ int _cache_mng_remove_core_prepare(ocf_cache_t cache, ocf_core_t core,
 	if (!cmd->force_no_flush) {
 		if (core_active) {
 			/* Flush core */
-			flush_result = _cache_mng_core_flush_sync(core,
+			flush_result = _cache_mngt_core_flush_sync(core,
 					flush_interruptible);
 		} else {
 			printk(KERN_WARNING OCF_PREFIX_SHORT
@@ -693,17 +693,17 @@ int _cache_mng_remove_core_prepare(ocf_cache_t cache, ocf_core_t core,
  * Function for removing a CORE object from the cache instance
  ****************************************************************/
 
-static void _cache_mng_remove_core_complete(void *priv, int error)
+static void _cache_mngt_remove_core_complete(void *priv, int error)
 {
-	struct _cache_mng_sync_context *context = priv;
+	struct _cache_mngt_sync_context *context = priv;
 
 	*context->result = error;
 	complete(&context->compl);
 }
 
-int cache_mng_remove_core_from_cache(struct kcas_remove_core *cmd)
+int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 {
-	struct _cache_mng_sync_context context;
+	struct _cache_mngt_sync_context context;
 	int result, flush_result = 0;
 	ocf_cache_t cache;
 	ocf_core_t core;
@@ -715,7 +715,7 @@ int cache_mng_remove_core_from_cache(struct kcas_remove_core *cmd)
 	if (!cmd->force_no_flush) {
 		/* First check state and  flush data (if requested by user)
 		   under read lock */
-		result = _cache_mng_read_lock_sync(cache);
+		result = _cache_mngt_read_lock_sync(cache);
 		if (result)
 			goto put;
 
@@ -723,7 +723,7 @@ int cache_mng_remove_core_from_cache(struct kcas_remove_core *cmd)
 		if (result < 0)
 			goto rd_unlock;
 
-		result = _cache_mng_remove_core_prepare(cache, core, cmd,
+		result = _cache_mngt_remove_core_prepare(cache, core, cmd,
 				false);
 		if (result)
 			goto rd_unlock;
@@ -732,7 +732,7 @@ int cache_mng_remove_core_from_cache(struct kcas_remove_core *cmd)
 	}
 
 	/* Acquire write lock */
-	result = _cache_mng_lock_sync(cache);
+	result = _cache_mngt_lock_sync(cache);
 	if (result)
 		goto put;
 
@@ -747,7 +747,7 @@ int cache_mng_remove_core_from_cache(struct kcas_remove_core *cmd)
 	 * destroyed, instead of trying rolling this back we rather detach core
 	 * and then inform user about error.
 	 */
-	result = _cache_mng_remove_core_prepare(cache, core, cmd, true);
+	result = _cache_mngt_remove_core_prepare(cache, core, cmd, true);
 	if (result == -KCAS_ERR_REMOVED_DIRTY) {
 		flush_result = result;
 		result = 0;
@@ -760,10 +760,10 @@ int cache_mng_remove_core_from_cache(struct kcas_remove_core *cmd)
 
 	if (cmd->detach || flush_result) {
 		ocf_mngt_cache_detach_core(core,
-				_cache_mng_remove_core_complete, &context);
+				_cache_mngt_remove_core_complete, &context);
 	} else {
 		ocf_mngt_cache_remove_core(core,
-				_cache_mng_remove_core_complete, &context);
+				_cache_mngt_remove_core_complete, &context);
 	}
 
 	wait_for_completion(&context.compl);
@@ -783,7 +783,7 @@ rd_unlock:
 	return result;
 }
 
-int cache_mng_reset_stats(ocf_cache_id_t cache_id,
+int cache_mngt_reset_stats(ocf_cache_id_t cache_id,
 		ocf_core_id_t core_id)
 {
 	ocf_cache_t cache;
@@ -794,7 +794,7 @@ int cache_mng_reset_stats(ocf_cache_id_t cache_id,
 	if (result)
 		return result;
 
-	result = _cache_mng_lock_sync(cache);
+	result = _cache_mngt_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -827,7 +827,7 @@ static inline void io_class_info2cfg(ocf_part_id_t part_id,
 	cfg->max_size = info->max_size;
 }
 
-int cache_mng_set_partitions(struct kcas_io_classes *cfg)
+int cache_mngt_set_partitions(struct kcas_io_classes *cfg)
 {
 	ocf_cache_t cache;
 	struct ocf_mngt_io_classes_config *io_class_cfg;
@@ -864,7 +864,7 @@ int cache_mng_set_partitions(struct kcas_io_classes *cfg)
 			goto out_cls;
 	}
 
-	result = _cache_mng_lock_sync(cache);
+	result = _cache_mngt_lock_sync(cache);
 	if (result)
 		goto out_cls;
 
@@ -874,7 +874,7 @@ int cache_mng_set_partitions(struct kcas_io_classes *cfg)
 	if(result)
 		goto out_configure;
 
-	result = _cache_mng_save_sync(cache);
+	result = _cache_mngt_save_sync(cache);
 	if (result)
 		goto out_configure;
 
@@ -894,7 +894,7 @@ out_get:
 	return result;
 }
 
-static int _cache_mng_create_exported_object(ocf_core_t core, void *cntx)
+static int _cache_mngt_create_exported_object(ocf_core_t core, void *cntx)
 {
 	int result;
 	ocf_cache_t cache = ocf_core_get_cache(core);
@@ -919,7 +919,7 @@ static int _cache_mng_create_exported_object(ocf_core_t core, void *cntx)
 	return result;
 }
 
-static int _cache_mng_destroy_exported_object(ocf_core_t core, void *cntx)
+static int _cache_mngt_destroy_exported_object(ocf_core_t core, void *cntx)
 {
 	if (block_dev_destroy_exported_object(core)) {
 		ocf_cache_t cache = ocf_core_get_cache(core);
@@ -933,22 +933,22 @@ static int _cache_mng_destroy_exported_object(ocf_core_t core, void *cntx)
 	return 0;
 }
 
-static int cache_mng_initialize_core_objects(ocf_cache_t cache)
+static int cache_mngt_initialize_core_objects(ocf_cache_t cache)
 {
 	int result;
 
-	result = ocf_core_visit(cache, _cache_mng_create_exported_object, NULL,
+	result = ocf_core_visit(cache, _cache_mngt_create_exported_object, NULL,
 			true);
 	if (result) {
 		/* Need to cleanup */
-		ocf_core_visit(cache, _cache_mng_destroy_exported_object, NULL,
+		ocf_core_visit(cache, _cache_mngt_destroy_exported_object, NULL,
 				true);
 	}
 
 	return result;
 }
 
-int cache_mng_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
+int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
 		struct atomic_dev_params *atomic_params,
 		struct kcas_start_cache *cmd)
@@ -1025,7 +1025,7 @@ int cache_mng_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	return 0;
 }
 
-static void _cache_mng_log_cache_device_path(ocf_cache_t cache,
+static void _cache_mngt_log_cache_device_path(ocf_cache_t cache,
 		struct ocf_mngt_cache_device_config *device_cfg)
 {
 	printk(KERN_INFO OCF_PREFIX_SHORT "Adding device %s as cache %s\n",
@@ -1049,7 +1049,7 @@ const struct ocf_queue_ops queue_ops = {
 	.stop = _cas_queue_stop,
 };
 
-static int _cache_mng_start_queues(ocf_cache_t cache)
+static int _cache_mngt_start_queues(ocf_cache_t cache)
 {
 	uint32_t cpus_no = num_online_cpus();
 	struct cache_priv *cache_priv;
@@ -1090,20 +1090,20 @@ err:
 	return result;
 }
 
-struct _cache_mng_attach_context {
+struct _cache_mngt_attach_context {
 	struct completion compl;
 	int *result;
 };
 
-static void _cache_mng_attach_complete(ocf_cache_t cache, void *priv, int error)
+static void _cache_mngt_attach_complete(ocf_cache_t cache, void *priv, int error)
 {
-	struct _cache_mng_attach_context *context = priv;
+	struct _cache_mngt_attach_context *context = priv;
 
 	*context->result = error;
 	complete(&context->compl);
 }
 
-static int _cache_mng_cache_priv_init(ocf_cache_t cache)
+static int _cache_mngt_cache_priv_init(ocf_cache_t cache)
 {
 	struct cache_priv *cache_priv;
 	uint32_t cpus_no = num_online_cpus();
@@ -1120,18 +1120,18 @@ static int _cache_mng_cache_priv_init(ocf_cache_t cache)
 	return 0;
 }
 
-static void _cache_mng_cache_priv_deinit(ocf_cache_t cache)
+static void _cache_mngt_cache_priv_deinit(ocf_cache_t cache)
 {
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 
 	vfree(cache_priv);
 }
 
-static int _cache_mng_start(struct ocf_mngt_cache_config *cfg,
+static int _cache_mngt_start(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
 		struct kcas_start_cache *cmd, ocf_cache_t *cache)
 {
-	struct _cache_mng_attach_context context;
+	struct _cache_mngt_attach_context context;
 	ocf_cache_t tmp_cache;
 	int result;
 
@@ -1139,7 +1139,7 @@ static int _cache_mng_start(struct ocf_mngt_cache_config *cfg,
 	if (result)
 		return result;
 
-	result = _cache_mng_cache_priv_init(tmp_cache);
+	result = _cache_mngt_cache_priv_init(tmp_cache);
 	if (result)
 		goto err_priv;
 
@@ -1147,7 +1147,7 @@ static int _cache_mng_start(struct ocf_mngt_cache_config *cfg,
 	if (result)
 		goto err_classifier;
 
-	result = _cache_mng_start_queues(tmp_cache);
+	result = _cache_mngt_start_queues(tmp_cache);
 	if (result)
 		goto err_queues;
 
@@ -1155,13 +1155,13 @@ static int _cache_mng_start(struct ocf_mngt_cache_config *cfg,
 	context.result = &result;
 
 	ocf_mngt_cache_attach(tmp_cache, device_cfg,
-			_cache_mng_attach_complete, &context);
+			_cache_mngt_attach_complete, &context);
 
 	wait_for_completion(&context.compl);
 	if (result)
 		goto err_attach;
 
-	_cache_mng_log_cache_device_path(tmp_cache, device_cfg);
+	_cache_mngt_log_cache_device_path(tmp_cache, device_cfg);
 
 	*cache = tmp_cache;
 
@@ -1175,31 +1175,31 @@ err_attach:
 err_queues:
 	cas_cls_deinit(tmp_cache);
 err_classifier:
-	_cache_mng_cache_priv_deinit(tmp_cache);
+	_cache_mngt_cache_priv_deinit(tmp_cache);
 err_priv:
-	_cache_mng_cache_stop_sync(tmp_cache);
+	_cache_mngt_cache_stop_sync(tmp_cache);
 	ocf_mngt_cache_unlock(tmp_cache);
 	return result;
 }
 
-struct _cache_mng_load_context {
+struct _cache_mngt_load_context {
 	struct completion compl;
 	int *result;
 };
 
-static void _cache_mng_load_complete(ocf_cache_t cache, void *priv, int error)
+static void _cache_mngt_load_complete(ocf_cache_t cache, void *priv, int error)
 {
-	struct _cache_mng_load_context *context = priv;
+	struct _cache_mngt_load_context *context = priv;
 
 	*context->result = error;
 	complete(&context->compl);
 }
 
-static int _cache_mng_load(struct ocf_mngt_cache_config *cfg,
+static int _cache_mngt_load(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
 		struct kcas_start_cache *cmd, ocf_cache_t *cache)
 {
-	struct _cache_mng_load_context context;
+	struct _cache_mngt_load_context context;
 	ocf_cache_t tmp_cache;
 	int result;
 
@@ -1207,11 +1207,11 @@ static int _cache_mng_load(struct ocf_mngt_cache_config *cfg,
 	if (result)
 		return result;
 
-	result = _cache_mng_cache_priv_init(tmp_cache);
+	result = _cache_mngt_cache_priv_init(tmp_cache);
 	if (result)
 		goto err_priv;
 
-	result = _cache_mng_start_queues(tmp_cache);
+	result = _cache_mngt_start_queues(tmp_cache);
 	if (result)
 		goto err_queues;
 
@@ -1219,23 +1219,23 @@ static int _cache_mng_load(struct ocf_mngt_cache_config *cfg,
 	context.result = &result;
 
 	ocf_mngt_cache_load(tmp_cache, device_cfg,
-			_cache_mng_load_complete, &context);
+			_cache_mngt_load_complete, &context);
 
 	wait_for_completion(&context.compl);
 	if (result)
 		goto err_load;
 
-	_cache_mng_log_cache_device_path(tmp_cache, device_cfg);
+	_cache_mngt_log_cache_device_path(tmp_cache, device_cfg);
 
 	result = cas_cls_init(tmp_cache);
 	if (result)
 		goto err_load;
 
-	result = cache_mng_initialize_core_objects(tmp_cache);
+	result = cache_mngt_initialize_core_objects(tmp_cache);
 	if (result)
 		goto err_core_obj;
 
-	ocf_core_visit(tmp_cache, _cache_mng_log_core_device_path_visitor,
+	ocf_core_visit(tmp_cache, _cache_mngt_log_core_device_path_visitor,
 			NULL, false);
 
 	*cache = tmp_cache;
@@ -1250,14 +1250,14 @@ err_load:
 				&cmd->min_free_ram);
 	}
 err_queues:
-	_cache_mng_cache_priv_deinit(tmp_cache);
+	_cache_mngt_cache_priv_deinit(tmp_cache);
 err_priv:
-	_cache_mng_cache_stop_sync(tmp_cache);
+	_cache_mngt_cache_stop_sync(tmp_cache);
 	ocf_mngt_cache_unlock(tmp_cache);
 	return result;
 }
 
-int cache_mng_init_instance(struct ocf_mngt_cache_config *cfg,
+int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
 		struct kcas_start_cache *cmd)
 {
@@ -1273,9 +1273,9 @@ int cache_mng_init_instance(struct ocf_mngt_cache_config *cfg,
 	 * in configuration.
 	 */
 	if (!load)
-		result = _cache_mng_start(cfg, device_cfg, cmd, &cache);
+		result = _cache_mngt_start(cfg, device_cfg, cmd, &cache);
 	else
-		result = _cache_mng_load(cfg, device_cfg, cmd, &cache);
+		result = _cache_mngt_load(cfg, device_cfg, cmd, &cache);
 
 	if (result) {
 		module_put(THIS_MODULE);
@@ -1321,7 +1321,7 @@ int cache_mng_init_instance(struct ocf_mngt_cache_config *cfg,
  * nonzero exit code means failure
  */
 
-int cache_mng_set_seq_cutoff_threshold(ocf_cache_id_t cache_id, ocf_core_id_t core_id,
+int cache_mngt_set_seq_cutoff_threshold(ocf_cache_id_t cache_id, ocf_core_id_t core_id,
 		uint32_t thresh)
 {
 	ocf_cache_t cache;
@@ -1332,7 +1332,7 @@ int cache_mng_set_seq_cutoff_threshold(ocf_cache_id_t cache_id, ocf_core_id_t co
 	if (result)
 		return result;
 
-	result = _cache_mng_lock_sync(cache);
+	result = _cache_mngt_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -1351,7 +1351,7 @@ int cache_mng_set_seq_cutoff_threshold(ocf_cache_id_t cache_id, ocf_core_id_t co
 	if (result)
 		goto out;
 
-	result = _cache_mng_save_sync(cache);
+	result = _cache_mngt_save_sync(cache);
 
 out:
 	ocf_mngt_cache_unlock(cache);
@@ -1370,7 +1370,7 @@ out:
  * nonzero exit code means failure
  */
 
-int cache_mng_set_seq_cutoff_policy(ocf_cache_id_t id, ocf_core_id_t core_id,
+int cache_mngt_set_seq_cutoff_policy(ocf_cache_id_t id, ocf_core_id_t core_id,
 		ocf_seq_cutoff_policy policy)
 {
 	ocf_cache_t cache;
@@ -1381,7 +1381,7 @@ int cache_mng_set_seq_cutoff_policy(ocf_cache_id_t id, ocf_core_id_t core_id,
 	if (result)
 		return result;
 
-	result = _cache_mng_lock_sync(cache);
+	result = _cache_mngt_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -1399,7 +1399,7 @@ int cache_mng_set_seq_cutoff_policy(ocf_cache_id_t id, ocf_core_id_t core_id,
 	if (result)
 		goto out;
 
-	result = _cache_mng_save_sync(cache);
+	result = _cache_mngt_save_sync(cache);
 
 out:
 	ocf_mngt_cache_unlock(cache);
@@ -1418,7 +1418,7 @@ out:
  * nonzero exit code means failure
  */
 
-int cache_mng_get_seq_cutoff_threshold(ocf_cache_id_t cache_id,
+int cache_mngt_get_seq_cutoff_threshold(ocf_cache_id_t cache_id,
 		ocf_core_id_t core_id, uint32_t *thresh)
 {
 	ocf_cache_t cache;
@@ -1429,7 +1429,7 @@ int cache_mng_get_seq_cutoff_threshold(ocf_cache_id_t cache_id,
 	if (result)
 		return result;
 
-	result = _cache_mng_read_lock_sync(cache);
+	result = _cache_mngt_read_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -1458,7 +1458,7 @@ out:
  * nonzero exit code means failure
  */
 
-int cache_mng_get_seq_cutoff_policy(ocf_cache_id_t id, ocf_core_id_t core_id,
+int cache_mngt_get_seq_cutoff_policy(ocf_cache_id_t id, ocf_core_id_t core_id,
 		ocf_seq_cutoff_policy *policy)
 {
 	ocf_cache_t cache;
@@ -1469,7 +1469,7 @@ int cache_mng_get_seq_cutoff_policy(ocf_cache_id_t id, ocf_core_id_t core_id,
 	if (result)
 		return result;
 
-	result = _cache_mng_read_lock_sync(cache);
+	result = _cache_mngt_read_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -1495,7 +1495,7 @@ out:
  *            all remaining dirty data before entering new mode?
  */
 
-int cache_mng_set_cache_mode(ocf_cache_id_t id, ocf_cache_mode_t mode,
+int cache_mngt_set_cache_mode(ocf_cache_id_t id, ocf_cache_mode_t mode,
 		uint8_t flush)
 {
 	ocf_cache_mode_t old_mode;
@@ -1506,7 +1506,7 @@ int cache_mng_set_cache_mode(ocf_cache_id_t id, ocf_cache_mode_t mode,
 	if (result)
 		return result;
 
-	result = _cache_mng_lock_sync(cache);
+	result = _cache_mngt_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -1519,14 +1519,14 @@ int cache_mng_set_cache_mode(ocf_cache_id_t id, ocf_cache_mode_t mode,
 		goto out;
 
 	if (flush) {
-		result = _cache_mng_cache_flush_sync(cache, true);
+		result = _cache_mngt_cache_flush_sync(cache, true);
 		if (result) {
 			ocf_mngt_cache_set_mode(cache, old_mode);
 			goto out;
 		}
 	}
 
-	result = _cache_mng_save_sync(cache);
+	result = _cache_mngt_save_sync(cache);
 	if (result)
 		ocf_mngt_cache_set_mode(cache, old_mode);
 
@@ -1545,7 +1545,7 @@ out:
  * @param[in] allow_interruption shall we allow interruption of dirty
  *		data flushing
  */
-int cache_mng_exit_instance(ocf_cache_id_t id, int flush)
+int cache_mngt_exit_instance(ocf_cache_id_t id, int flush)
 {
 	ocf_cache_t cache;
 	struct cache_priv *cache_priv;
@@ -1558,7 +1558,7 @@ int cache_mng_exit_instance(ocf_cache_id_t id, int flush)
 
 	cache_priv = ocf_cache_get_priv(cache);
 
-	status = _cache_mng_read_lock_sync(cache);
+	status = _cache_mngt_read_lock_sync(cache);
 	if (status)
 		goto put;
 	/*
@@ -1571,7 +1571,7 @@ int cache_mng_exit_instance(ocf_cache_id_t id, int flush)
 	 * exported object. The second flush should be much faster.
 	 */
 	if (flush) {
-		status = _cache_mng_cache_flush_sync(cache, true);
+		status = _cache_mngt_cache_flush_sync(cache, true);
 		switch (status) {
 		case -OCF_ERR_CACHE_IN_INCOMPLETE_STATE:
 		case -OCF_ERR_FLUSHING_INTERRUPTED:
@@ -1586,7 +1586,7 @@ int cache_mng_exit_instance(ocf_cache_id_t id, int flush)
 	ocf_mngt_cache_read_unlock(cache);
 
 	/* get cache write lock */
-	status = _cache_mng_lock_sync(cache);
+	status = _cache_mngt_lock_sync(cache);
 	if (status)
 		goto put;
 
@@ -1607,15 +1607,15 @@ int cache_mng_exit_instance(ocf_cache_id_t id, int flush)
 		 * We are being switched to upgrade in flight mode -
 		 * wait for finishing pending core requests
 		 */
-		cache_mng_wait_for_rq_finish(cache);
+		cache_mngt_wait_for_rq_finish(cache);
 	}
 
 	/* Flush cache again. This time we don't allow interruption. */
 	if (flush)
-		flush_status = _cache_mng_cache_flush_sync(cache, false);
+		flush_status = _cache_mngt_cache_flush_sync(cache, false);
 
 	/* Stop cache device */
-	status = _cache_mng_cache_stop_sync(cache);
+	status = _cache_mngt_cache_stop_sync(cache);
 	if (status && status != -OCF_ERR_WRITE_CACHE)
 		goto unlock;
 
@@ -1636,7 +1636,7 @@ put:
 	return status;
 }
 
-static int cache_mng_list_caches_visitor(ocf_cache_t cache, void *cntx)
+static int cache_mngt_list_caches_visitor(ocf_cache_t cache, void *cntx)
 {
 	ocf_cache_id_t id = ocf_cache_get_id(cache);
 	struct kcas_cache_list *list = cntx;
@@ -1653,13 +1653,13 @@ static int cache_mng_list_caches_visitor(ocf_cache_t cache, void *cntx)
 	return 0;
 }
 
-int cache_mng_list_caches(struct kcas_cache_list *list)
+int cache_mngt_list_caches(struct kcas_cache_list *list)
 {
 	list->in_out_num = 0;
-	return ocf_mngt_cache_visit(cas_ctx, cache_mng_list_caches_visitor, list);
+	return ocf_mngt_cache_visit(cas_ctx, cache_mngt_list_caches_visitor, list);
 }
 
-int cache_mng_interrupt_flushing(ocf_cache_id_t id)
+int cache_mngt_interrupt_flushing(ocf_cache_id_t id)
 {
 	ocf_cache_t cache;
 	struct cache_priv *cache_priv;
@@ -1680,7 +1680,7 @@ int cache_mng_interrupt_flushing(ocf_cache_id_t id)
 
 }
 
-int cache_mng_get_info(struct kcas_cache_info *info)
+int cache_mngt_get_info(struct kcas_cache_info *info)
 {
 	uint32_t i, j;
 	int result;
@@ -1692,7 +1692,7 @@ int cache_mng_get_info(struct kcas_cache_info *info)
 	if (result)
 		return result;
 
-	result = _cache_mng_read_lock_sync(cache);
+	result = _cache_mngt_read_lock_sync(cache);
 	if (result)
 		goto put;
 
@@ -1736,7 +1736,7 @@ put:
 	return result;
 }
 
-int cache_mng_get_io_class_info(struct kcas_io_class *part)
+int cache_mngt_get_io_class_info(struct kcas_io_class *part)
 {
 	int result;
 	ocf_cache_id_t cache_id = part->cache_id;
@@ -1749,7 +1749,7 @@ int cache_mng_get_io_class_info(struct kcas_io_class *part)
 	if (result)
 		return result;
 
-	result = _cache_mng_read_lock_sync(cache);
+	result = _cache_mngt_read_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -1776,7 +1776,7 @@ end:
 	return result;
 }
 
-int cache_mng_get_core_info(struct kcas_core_info *info)
+int cache_mngt_get_core_info(struct kcas_core_info *info)
 {
 	ocf_cache_t cache;
 	ocf_core_t core;
@@ -1787,7 +1787,7 @@ int cache_mng_get_core_info(struct kcas_core_info *info)
 	if (result)
 		return result;
 
-	result = _cache_mng_read_lock_sync(cache);
+	result = _cache_mngt_read_lock_sync(cache);
 	if(result)
 		goto put;
 
@@ -1815,7 +1815,7 @@ put:
 	return result;
 }
 
-static int cache_mng_wait_for_rq_finish_visitor(ocf_core_t core, void *cntx)
+static int cache_mngt_wait_for_rq_finish_visitor(ocf_core_t core, void *cntx)
 {
 	ocf_volume_t obj = ocf_core_get_volume(core);
 	struct bd_object *bdobj = bd_object(obj);
@@ -1826,69 +1826,69 @@ static int cache_mng_wait_for_rq_finish_visitor(ocf_core_t core, void *cntx)
 	return 0;
 }
 
-void cache_mng_wait_for_rq_finish(ocf_cache_t cache)
+void cache_mngt_wait_for_rq_finish(ocf_cache_t cache)
 {
-	ocf_core_visit(cache, cache_mng_wait_for_rq_finish_visitor, NULL, true);
+	ocf_core_visit(cache, cache_mngt_wait_for_rq_finish_visitor, NULL, true);
 }
 
-int cache_mng_set_core_params(struct kcas_set_core_param *info)
+int cache_mngt_set_core_params(struct kcas_set_core_param *info)
 {
 	switch (info->param_id) {
 	case core_param_seq_cutoff_threshold:
-		return cache_mng_set_seq_cutoff_threshold(info->cache_id,
+		return cache_mngt_set_seq_cutoff_threshold(info->cache_id,
 				info->core_id, info->param_value);
 	case core_param_seq_cutoff_policy:
-		return cache_mng_set_seq_cutoff_policy(info->cache_id,
+		return cache_mngt_set_seq_cutoff_policy(info->cache_id,
 				info->core_id, info->param_value);
 	default:
 		return -EINVAL;
 	}
 }
 
-int cache_mng_get_core_params(struct kcas_get_core_param *info)
+int cache_mngt_get_core_params(struct kcas_get_core_param *info)
 {
 	switch (info->param_id) {
 	case core_param_seq_cutoff_threshold:
-		return cache_mng_get_seq_cutoff_threshold(info->cache_id,
+		return cache_mngt_get_seq_cutoff_threshold(info->cache_id,
 				info->core_id, &info->param_value);
 	case core_param_seq_cutoff_policy:
-		return cache_mng_get_seq_cutoff_policy(info->cache_id,
+		return cache_mngt_get_seq_cutoff_policy(info->cache_id,
 				info->core_id, &info->param_value);
 	default:
 		return -EINVAL;
 	}
 }
 
-int cache_mng_set_cache_params(struct kcas_set_cache_param *info)
+int cache_mngt_set_cache_params(struct kcas_set_cache_param *info)
 {
 	switch (info->param_id) {
 	case cache_param_cleaning_policy_type:
-		return cache_mng_set_cleaning_policy(info->cache_id,
+		return cache_mngt_set_cleaning_policy(info->cache_id,
 				info->param_value);
 
 	case cache_param_cleaning_alru_wake_up_time:
-		return cache_mng_set_cleaning_param(info->cache_id,
+		return cache_mngt_set_cleaning_param(info->cache_id,
 				ocf_cleaning_alru, ocf_alru_wake_up_time,
 				info->param_value);
 	case cache_param_cleaning_alru_stale_buffer_time:
-		return cache_mng_set_cleaning_param(info->cache_id,
+		return cache_mngt_set_cleaning_param(info->cache_id,
 				ocf_cleaning_alru, ocf_alru_stale_buffer_time,
 				info->param_value);
 	case cache_param_cleaning_alru_flush_max_buffers:
-		return cache_mng_set_cleaning_param(info->cache_id,
+		return cache_mngt_set_cleaning_param(info->cache_id,
 				ocf_cleaning_alru, ocf_alru_flush_max_buffers,
 				info->param_value);
 	case cache_param_cleaning_alru_activity_threshold:
-		return cache_mng_set_cleaning_param(info->cache_id,
+		return cache_mngt_set_cleaning_param(info->cache_id,
 				ocf_cleaning_alru, ocf_alru_activity_threshold,
 				info->param_value);
 
 	case cache_param_cleaning_acp_wake_up_time:
-		return cache_mng_set_cleaning_param(info->cache_id,
+		return cache_mngt_set_cleaning_param(info->cache_id,
 				ocf_cleaning_acp, ocf_acp_wake_up_time,
 				info->param_value);
 	case cache_param_cleaning_acp_flush_max_buffers:
-		return cache_mng_set_cleaning_param(info->cache_id,
+		return cache_mngt_set_cleaning_param(info->cache_id,
 				ocf_cleaning_acp, ocf_acp_flush_max_buffers,
 				info->param_value);
 	default:
@@ -1896,36 +1896,36 @@ int cache_mng_set_cache_params(struct kcas_set_cache_param *info)
 	}
 }
 
-int cache_mng_get_cache_params(struct kcas_get_cache_param *info)
+int cache_mngt_get_cache_params(struct kcas_get_cache_param *info)
 {
 	switch (info->param_id) {
 	case cache_param_cleaning_policy_type:
-		return cache_mng_get_cleaning_policy(info->cache_id,
+		return cache_mngt_get_cleaning_policy(info->cache_id,
 				&info->param_value);
 
 	case cache_param_cleaning_alru_wake_up_time:
-		return cache_mng_get_cleaning_param(info->cache_id,
+		return cache_mngt_get_cleaning_param(info->cache_id,
 				ocf_cleaning_alru, ocf_alru_wake_up_time,
 				&info->param_value);
 	case cache_param_cleaning_alru_stale_buffer_time:
-		return cache_mng_get_cleaning_param(info->cache_id,
+		return cache_mngt_get_cleaning_param(info->cache_id,
 				ocf_cleaning_alru, ocf_alru_stale_buffer_time,
 				&info->param_value);
 	case cache_param_cleaning_alru_flush_max_buffers:
-		return cache_mng_get_cleaning_param(info->cache_id,
+		return cache_mngt_get_cleaning_param(info->cache_id,
 				ocf_cleaning_alru, ocf_alru_flush_max_buffers,
 				&info->param_value);
 	case cache_param_cleaning_alru_activity_threshold:
-		return cache_mng_get_cleaning_param(info->cache_id,
+		return cache_mngt_get_cleaning_param(info->cache_id,
 				ocf_cleaning_alru, ocf_alru_activity_threshold,
 				&info->param_value);
 
 	case cache_param_cleaning_acp_wake_up_time:
-		return cache_mng_get_cleaning_param(info->cache_id,
+		return cache_mngt_get_cleaning_param(info->cache_id,
 				ocf_cleaning_acp, ocf_acp_wake_up_time,
 				&info->param_value);
 	case cache_param_cleaning_acp_flush_max_buffers:
-		return cache_mng_get_cleaning_param(info->cache_id,
+		return cache_mngt_get_cleaning_param(info->cache_id,
 				ocf_cleaning_acp, ocf_acp_flush_max_buffers,
 				&info->param_value);
 	default:

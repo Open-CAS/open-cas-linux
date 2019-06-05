@@ -321,18 +321,18 @@ static int _cas_upgrade_dump_cache_conf_flush(ocf_cache_t cache,
 
 	CAS_DEBUG_TRACE();
 
-	result |= cache_mng_get_cleaning_policy(cache_id, &cleaning_type);
-	result |= cache_mng_get_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_get_cleaning_policy(cache_id, &cleaning_type);
+	result |= cache_mngt_get_cleaning_param(cache_id, ocf_cleaning_alru,
 			ocf_alru_wake_up_time, &alru_thread_wakeup_time);
-	result |= cache_mng_get_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_get_cleaning_param(cache_id, ocf_cleaning_alru,
 			ocf_alru_stale_buffer_time, &alru_stale_buffer_time);
-	result |= cache_mng_get_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_get_cleaning_param(cache_id, ocf_cleaning_alru,
 			ocf_alru_flush_max_buffers, &alru_flush_max_buffers);
-	result |= cache_mng_get_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_get_cleaning_param(cache_id, ocf_cleaning_alru,
 			ocf_alru_activity_threshold, &alru_activity_threshold);
-	result |= cache_mng_get_cleaning_param(cache_id, ocf_cleaning_acp,
+	result |= cache_mngt_get_cleaning_param(cache_id, ocf_cleaning_acp,
 			ocf_acp_wake_up_time, &acp_thread_wakeup_time);
-	result |= cache_mng_get_cleaning_param(cache_id, ocf_cleaning_acp,
+	result |= cache_mngt_get_cleaning_param(cache_id, ocf_cleaning_acp,
 			ocf_acp_flush_max_buffers, &acp_flush_max_buffers);
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
@@ -749,11 +749,11 @@ int _cas_upgrade_set_pt_and_flush_visitor_cache(ocf_cache_t cache, void *cntx)
 	int *result = (int*) cntx;
 	int cache_id = ocf_cache_get_id(cache);
 
-	*result = cache_mng_set_cache_mode(cache_id, ocf_cache_mode_pt, false);
+	*result = cache_mngt_set_cache_mode(cache_id, ocf_cache_mode_pt, false);
 	if (*result)
 		return *result;
 
-	*result = cache_mng_flush_device(cache_id);
+	*result = cache_mngt_flush_device(cache_id);
 	if (*result)
 		return *result;
 
@@ -778,7 +778,7 @@ static int _cas_upgrade_set_pt_and_flush(void)
 
 int _cas_upgrade_stop_devices_visitor_wait(ocf_cache_t cache, void *cntx)
 {
-	cache_mng_wait_for_rq_finish(cache);
+	cache_mngt_wait_for_rq_finish(cache);
 
 	return 0;
 }
@@ -787,7 +787,7 @@ int _cas_upgrade_stop_devices_visitor_exit(ocf_cache_t cache, void *cntx)
 {
 	int *result = (int*) cntx;
 
-	*result = cache_mng_exit_instance(ocf_cache_get_id(cache), true);
+	*result = cache_mngt_exit_instance(ocf_cache_get_id(cache), true);
 
 	return *result;
 }
@@ -893,7 +893,7 @@ static int _cas_upgrade_restore_conf_main(struct cas_properties *cache_props,
 		device_cfg.volume_params = &atomic_params;
 	}
 
-	result = cache_mng_init_instance(&cfg, &device_cfg, NULL);
+	result = cache_mngt_init_instance(&cfg, &device_cfg, NULL);
 
 error:
 	kfree(cache_path);
@@ -962,7 +962,7 @@ static int _cas_upgrade_restore_conf_core(struct cas_properties *cache_props,
 		cfg.uuid.data = core_path;
 		cfg.uuid.size = strnlen(core_path, MAX_STR_LEN) + 1;
 
-		result = cache_mng_add_core_to_cache(&cfg,
+		result = cache_mngt_add_core_to_cache(&cfg,
 				ocf_cache_get_id(cache), NULL);
 		if (result)
 			goto error;
@@ -1063,18 +1063,18 @@ static int _cas_upgrade_restore_conf_flush(struct cas_properties *cache_props,
 	if (result)
 		return result;
 
-	result |= cache_mng_set_cleaning_policy(cache_id, cleaning_type);
-	result |= cache_mng_set_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_set_cleaning_policy(cache_id, cleaning_type);
+	result |= cache_mngt_set_cleaning_param(cache_id, ocf_cleaning_alru,
 			ocf_alru_wake_up_time, alru_thread_wakeup_time);
-	result |= cache_mng_set_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_set_cleaning_param(cache_id, ocf_cleaning_alru,
 			ocf_alru_stale_buffer_time, alru_stale_buffer_time);
-	result |= cache_mng_set_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_set_cleaning_param(cache_id, ocf_cleaning_alru,
 			ocf_alru_flush_max_buffers, alru_flush_max_buffers);
-	result |= cache_mng_set_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_set_cleaning_param(cache_id, ocf_cleaning_alru,
 			ocf_alru_activity_threshold, alru_activity_threshold);
-	result |= cache_mng_set_cleaning_param(cache_id, ocf_cleaning_acp,
+	result |= cache_mngt_set_cleaning_param(cache_id, ocf_cleaning_acp,
 			ocf_acp_wake_up_time, acp_thread_wakeup_time);
-	result |= cache_mng_set_cleaning_param(cache_id, ocf_cleaning_acp,
+	result |= cache_mngt_set_cleaning_param(cache_id, ocf_cleaning_acp,
 			ocf_acp_flush_max_buffers, acp_flush_max_buffers);
 
 	return result;
@@ -1181,7 +1181,7 @@ static int _cas_upgrade_restore_conf_io_class(
 		cfg->info[part_id].min_size = (uint32_t)min_size;
 	}
 
-	result = cache_mng_set_partitions(cfg);
+	result = cache_mngt_set_partitions(cfg);
 
 error_after_alloc_buffers:
 	kfree(key);
@@ -1256,7 +1256,7 @@ static int _cas_upgrade_restore_cache_mode(struct cas_properties *cache_props)
 		goto error;
 
 	if (ocf_cache_get_mode(cache) != cache_mode) {
-		result = cache_mng_set_cache_mode(ocf_cache_get_id(cache),
+		result = cache_mngt_set_cache_mode(ocf_cache_get_id(cache),
 				cache_mode, false);
 		if (result)
 			goto error;
