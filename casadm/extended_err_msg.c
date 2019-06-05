@@ -73,6 +73,9 @@ struct {
 		OCF_ERR_IO_CLASS_NOT_EXIST,
 		"No such IO class ID in the cache"
 	},
+	{	OCF_ERR_IO,
+		"I/O error"
+	},
 	{
 		OCF_ERR_WRITE_CACHE,
 		"Error while writing to cache device"
@@ -112,6 +115,22 @@ struct {
 	{
 		OCF_ERR_NOT_OPEN_EXC,
 		"Cannot open device exclusively"
+	},
+	{
+		OCF_ERR_AGAIN,
+		"Try again"
+	},
+	{
+		OCF_ERR_NOT_SUPP,
+		"Operation not supported"
+	},
+	{
+		OCF_ERR_METADATA_VER,
+		"Metadata version mismatch"
+	},
+	{
+		OCF_ERR_NO_METADATA,
+		"No metadata found on device"
 	},
 
 	/* CAS kernel error mappings*/
