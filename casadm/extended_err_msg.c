@@ -50,10 +50,6 @@ struct {
 		"Failed to insert cache"
 	},
 	{
-		OCF_ERR_CACHE_IN_USE,
-		"At least one cas device is still in use"
-	},
-	{
 		OCF_ERR_CACHE_NOT_EXIST,
 		"Cache ID does not exist"
 	},

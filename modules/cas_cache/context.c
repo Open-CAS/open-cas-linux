@@ -8,9 +8,10 @@
 #include "utils/utils_rpool.h"
 #include "utils/utils_data.h"
 #include "utils/utils_gc.h"
+#include "utils/utils_mpool.h"
 #include "threads.h"
 
-struct ocf_mpool *cas_bvec_pool;
+struct cas_mpool *cas_bvec_pool;
 
 struct cas_reserve_pool *cas_bvec_pages_rpool;
 
@@ -86,7 +87,7 @@ ctx_data_t *__cas_ctx_data_alloc(uint32_t pages, bool zalloc)
 	struct page *page = NULL;
 	int cpu;
 
-	data = ocf_mpool_new(cas_bvec_pool, pages);
+	data = cas_mpool_new(cas_bvec_pool, pages);
 
 	if (!data) {
 		CAS_PRINT_RL(KERN_ERR "Couldn't allocate BIO vector.\n");
@@ -132,7 +133,7 @@ ctx_data_t *__cas_ctx_data_alloc(uint32_t pages, bool zalloc)
 			}
 		}
 
-		ocf_mpool_del(cas_bvec_pool, data, pages);
+		cas_mpool_del(cas_bvec_pool, data, pages);
 		data = NULL;
 	} else {
 		/* Initialize iterator */
@@ -174,7 +175,7 @@ void cas_ctx_data_free(ctx_data_t *ctx_data)
 			__free_page(page);
 	}
 
-	ocf_mpool_del(cas_bvec_pool, data, data->size);
+	cas_mpool_del(cas_bvec_pool, data, data->size);
 }
 
 static int _cas_ctx_data_mlock(ctx_data_t *ctx_data)
@@ -398,8 +399,8 @@ int cas_initialize_context(void)
 	if (ret < 0)
 		return ret;
 
-	cas_bvec_pool = ocf_mpool_create(NULL, sizeof(data),
-			sizeof(data.vec[0]), GFP_NOIO, 7, "cas_biovec");
+	cas_bvec_pool = cas_mpool_create(sizeof(data), sizeof(data.vec[0]),
+			GFP_NOIO, 7, "cas_biovec");
 
 	if (!cas_bvec_pool) {
 		printk(KERN_ERR "Cannot create BIO vector memory pool\n");
@@ -439,7 +440,7 @@ err_block_dev:
 err_rpool:
 	cas_rpool_destroy(cas_bvec_pages_rpool, _cas_free_page_rpool, NULL);
 err_mpool:
-	ocf_mpool_destroy(cas_bvec_pool);
+	cas_mpool_destroy(cas_bvec_pool);
 err_ctx:
 	ocf_ctx_put(cas_ctx);
 
@@ -451,7 +452,7 @@ void cas_cleanup_context(void)
 	block_dev_deinit();
 	atomic_dev_deinit();
 	cas_garbage_collector_deinit();
-	ocf_mpool_destroy(cas_bvec_pool);
+	cas_mpool_destroy(cas_bvec_pool);
 	cas_rpool_destroy(cas_bvec_pages_rpool, _cas_free_page_rpool, NULL);
 
 	ocf_ctx_put(cas_ctx);
@@ -464,7 +465,7 @@ void cas_cleanup_context(void)
  */
 struct blk_data *cas_alloc_blk_data(uint32_t size, gfp_t flags)
 {
-	struct blk_data *data = ocf_mpool_new_f(cas_bvec_pool, size, flags);
+	struct blk_data *data = cas_mpool_new_f(cas_bvec_pool, size, flags);
 
 	if (data)
 		data->size = size;
@@ -480,6 +481,6 @@ void cas_free_blk_data(struct blk_data *data)
 	if (!data)
 		return;
 
-	ocf_mpool_del(cas_bvec_pool, data, data->size);
+	cas_mpool_del(cas_bvec_pool, data, data->size);
 }
 
