@@ -65,12 +65,12 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_prepare_cache_cfg(&cfg, &device_cfg,
+		retval = cache_mngt_prepare_cache_cfg(&cfg, &device_cfg,
 				&atomic_params, cmd_info);
 		if (retval)
 			RETURN_CMD_RESULT(cmd_info, arg, retval);
 
-		retval = cache_mng_init_instance(&cfg, &device_cfg, cmd_info);
+		retval = cache_mngt_init_instance(&cfg, &device_cfg, cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -80,7 +80,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_exit_instance(cmd_info->cache_id,
+		retval = cache_mngt_exit_instance(cmd_info->cache_id,
 				cmd_info->flush_data);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
@@ -91,7 +91,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_set_cache_mode(cmd_info->cache_id,
+		retval = cache_mngt_set_cache_mode(cmd_info->cache_id,
 				cmd_info->caching_mode, cmd_info->flush_data);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
@@ -103,11 +103,11 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_prepare_core_cfg(&cfg, cmd_info);
+		retval = cache_mngt_prepare_core_cfg(&cfg, cmd_info);
 		if (retval)
 			RETURN_CMD_RESULT(cmd_info, arg, retval);
 
-		retval = cache_mng_add_core_to_cache(&cfg, cmd_info->cache_id,
+		retval = cache_mngt_add_core_to_cache(&cfg, cmd_info->cache_id,
 				cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
@@ -118,7 +118,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_remove_core_from_cache(cmd_info);
+		retval = cache_mngt_remove_core_from_cache(cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -128,7 +128,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_reset_stats(cmd_info->cache_id,
+		retval = cache_mngt_reset_stats(cmd_info->cache_id,
 				cmd_info->core_id);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
@@ -139,7 +139,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_flush_device(cmd_info->cache_id);
+		retval = cache_mngt_flush_device(cmd_info->cache_id);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -149,7 +149,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_interrupt_flushing(cmd_info->cache_id);
+		retval = cache_mngt_interrupt_flushing(cmd_info->cache_id);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -159,7 +159,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_flush_object(cmd_info->cache_id,
+		retval = cache_mngt_flush_object(cmd_info->cache_id,
 				cmd_info->core_id);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
@@ -170,7 +170,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_get_info(cmd_info);
+		retval = cache_mngt_get_info(cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -180,7 +180,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_get_core_info(cmd_info);
+		retval = cache_mngt_get_core_info(cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -190,7 +190,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_get_io_class_info(cmd_info);
+		retval = cache_mngt_get_io_class_info(cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 
@@ -203,7 +203,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		 * ocf_io_class_info structs past the end of kcas_io_classes */
 		_GET_CMD_INFO(cmd_info, arg, KCAS_IO_CLASSES_SIZE);
 
-		retval = cache_mng_set_partitions(cmd_info);
+		retval = cache_mngt_set_partitions(cmd_info);
 
 		/* return just sizeof(struct kcas_io_classes) bytes of data */
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
@@ -224,7 +224,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_list_caches(cmd_info);
+		retval = cache_mngt_list_caches(cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval > 0 ? 0 : retval);
 	}
@@ -282,7 +282,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_core_pool_get_paths(cmd_info);
+		retval = cache_mngt_core_pool_get_paths(cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -291,7 +291,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_core_pool_remove(cmd_info);
+		retval = cache_mngt_core_pool_remove(cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -300,7 +300,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_cache_check_device(cmd_info);
+		retval = cache_mngt_cache_check_device(cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -309,7 +309,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_set_core_params(cmd_info);
+		retval = cache_mngt_set_core_params(cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -318,7 +318,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_get_core_params(cmd_info);
+		retval = cache_mngt_get_core_params(cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -327,7 +327,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_set_cache_params(cmd_info);
+		retval = cache_mngt_set_cache_params(cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -336,7 +336,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mng_get_cache_params(cmd_info);
+		retval = cache_mngt_get_cache_params(cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
