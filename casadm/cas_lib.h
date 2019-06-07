@@ -125,15 +125,15 @@ int start_cache(ocf_cache_id_t cache_id, unsigned int cache_init,
 int stop_cache(ocf_cache_id_t cache_id, int flush);
 
 #ifdef WI_AVAILABLE
-#define CAS_CLI_HELP_START_CACHE_MODES "wt|wb|wa|pt|wi"
-#define CAS_CLI_HELP_SET_CACHE_MODES "wt|wb|wa|pt|wi"
-#define CAS_CLI_HELP_SET_CACHE_MODES_FULL "Write-Through, Write-Back, Write-Around, Pass-Through, Write-Invalidate"
-#define CAS_CLI_HELP_START_CACHE_MODES_FULL "Write-Through, Write-Back, Write-Around, Pass-Through, Write-Invalidate"
+#define CAS_CLI_HELP_START_CACHE_MODES "wt|wb|wa|pt|wi|wo"
+#define CAS_CLI_HELP_SET_CACHE_MODES "wt|wb|wa|pt|wi|wo"
+#define CAS_CLI_HELP_SET_CACHE_MODES_FULL "Write-Through, Write-Back, Write-Around, Pass-Through, Write-Invalidate, Write-Only"
+#define CAS_CLI_HELP_START_CACHE_MODES_FULL "Write-Through, Write-Back, Write-Around, Pass-Through, Write-Invalidate, Write-Only"
 #else
-#define CAS_CLI_HELP_START_CACHE_MODES "wt|wb|wa|pt"
-#define CAS_CLI_HELP_SET_CACHE_MODES "wt|wb|wa|pt"
-#define CAS_CLI_HELP_START_CACHE_MODES_FULL "Write-Through, Write-Back, Write-Around, Pass-Through"
-#define CAS_CLI_HELP_SET_CACHE_MODES_FULL "Write-Through, Write-Back, Write-Around, Pass-Through"
+#define CAS_CLI_HELP_START_CACHE_MODES "wt|wb|wa|pt|wo"
+#define CAS_CLI_HELP_SET_CACHE_MODES "wt|wb|wa|pt|wo"
+#define CAS_CLI_HELP_START_CACHE_MODES_FULL "Write-Through, Write-Back, Write-Around, Pass-Through, Write-Only"
+#define CAS_CLI_HELP_SET_CACHE_MODES_FULL "Write-Through, Write-Back, Write-Around, Pass-Through, Write-Only"
 #endif
 
 /**

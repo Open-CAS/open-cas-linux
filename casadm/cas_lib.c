@@ -254,6 +254,7 @@ static struct name_to_val_mapping cache_mode_names[] = {
 #ifdef WI_AVAILABLE
 	{ .short_name = "wi", .long_name = "Write-Invalidate", .value = ocf_cache_mode_wi },
 #endif
+	{ .short_name = "wo", .long_name = "Write-Only", .value = ocf_cache_mode_wo },
 	{ NULL }
 };
 
@@ -1062,6 +1063,7 @@ int set_cache_mode(unsigned int cache_mode, unsigned int cache_id, int flush)
 	int fd = 0;
 	int orig_mode;
 	struct kcas_set_cache_state cmd;
+	bool flush_param_required;
 
 	fd = open_ctrl_device();
 	if (fd == -1)
@@ -1073,9 +1075,13 @@ int set_cache_mode(unsigned int cache_mode, unsigned int cache_id, int flush)
 		return FAILURE;
 	}
 
-	/* if flushing mode is undefined, set it to default (but only if original mode is write back mode) */
+	/* If flushing mode is undefined, set it to default unless we're transitioning
+	 * out of lazy write cache mode (like WB or WO), in which case user must explicitly
+	 * state his preference */
+	flush_param_required = ocf_mngt_cache_mode_has_lazy_write(orig_mode) &&
+			!ocf_mngt_cache_mode_has_lazy_write(cache_mode);
 	if (-1 == flush) {
-		if (ocf_cache_mode_wb == orig_mode) {
+		if (flush_param_required) {
 			cas_printf(LOG_ERR, "Error: Required parameter (‘--flush-cache’) was not specified.\n");
 			close(fd);
 			return FAILURE;
@@ -1084,14 +1090,15 @@ int set_cache_mode(unsigned int cache_mode, unsigned int cache_id, int flush)
 		}
 	}
 
-	if (ocf_cache_mode_wb == orig_mode) {
+	if (flush_param_required) {
 		if (1 == flush) {
 			cas_printf(LOG_INFO, "CAS is currently flushing dirty data to primary storage devices.\n");
 		} else {
-			cas_printf(LOG_INFO, "CAS is currently migrating from Write-Back to %s mode.\n"
+			cas_printf(LOG_INFO, "CAS is currently migrating from %s to %s mode.\n"
 				"Dirty data are being flushed to primary storage device in background.\n"
 				"Please find flushing progress via list caches command (‘casadm -L’) or\n"
 				"via statistics command (‘casadm -P’).\n",
+				cache_mode_to_name_long(orig_mode),
 				cache_mode_to_name_long(cache_mode));
 		}
 	}

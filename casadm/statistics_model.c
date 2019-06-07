@@ -911,9 +911,8 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		return FAILURE;
 	print_kv_pair(outfile, "Inactive Core Devices", "%d", inactive_cores);
 
-	print_kv_pair(outfile, "Write Policy", "%s%s",
-		      (flush_progress && cache_info->info.cache_mode != ocf_cache_mode_wb)
-		      ? "wb->" : "", cache_mode_to_name(cache_info->info.cache_mode));
+	print_kv_pair(outfile, "Write Policy", "%s",
+		      cache_mode_to_name(cache_info->info.cache_mode));
 	print_kv_pair(outfile, "Eviction Policy", "%s",
 		      eviction_policy_to_name(cache_info->info.eviction_policy));
 	print_kv_pair(outfile, "Cleaning Policy", "%s",

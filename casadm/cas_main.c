@@ -900,7 +900,7 @@ int handle_get_param()
 static cli_option set_state_cache_mode_options[] = {
 	{'c', "cache-mode", "Cache mode. Available cache modes: {"CAS_CLI_HELP_SET_CACHE_MODES"}", 1, "NAME", CLI_OPTION_REQUIRED},
 	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
-	{'f', "flush-cache", "Flush all dirty data from cache before switching to new mode. Option is required when switching from Write-Back mode", 1, "yes|no",0},
+	{'f', "flush-cache", "Flush all dirty data from cache before switching to new mode. Option is required when switching from Write-Back or Write-Only mode", 1, "yes|no",0},
 	{0},
 };
 
