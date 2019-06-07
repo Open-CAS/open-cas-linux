@@ -3,6 +3,8 @@
 # Copyright(c) 2012-2019 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
+which dirname 2>&1 > /dev/null || { echo >&2 "Eror: missing 'dirname' utility"; exit 1; }
+which realpath 2>&1 > /dev/null || { echo >&2 "Eror: missing 'realpath' utility"; exit 1; }
 
 SCRIPTPATH=`dirname $0`
 SCRIPTPATH=`realpath $SCRIPTPATH`
