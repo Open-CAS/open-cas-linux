@@ -1171,6 +1171,7 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 
 	if (create_pipe_pair(intermediate_file)) {
 		cas_printf(LOG_ERR,"Failed to create unidirectional pipe.\n");
+		close(ctrl_fd);
 		return FAILURE;
 	}
 
