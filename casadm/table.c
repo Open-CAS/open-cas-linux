@@ -95,7 +95,6 @@ char *table_get(struct table *t,int y, int x)
 	static const char * empty="";
 	if (y >= t->height || x >= t->width) {
 		assert(0);
-		abort();
 		return (char*)empty;
 	}
 
