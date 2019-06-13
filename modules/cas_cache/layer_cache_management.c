@@ -384,7 +384,7 @@ static void cache_mngt_metadata_probe_end(void *priv, int error,
 
 	*context->result = error;
 
-	if (error == -ENODATA || error == -EBADF) {
+	if (error == -OCF_ERR_NO_METADATA || error == -OCF_ERR_METADATA_VER) {
 		cmd_info->is_cache_device = false;
 		*context->result = 0;
 	} else if (error == 0) {
