@@ -694,7 +694,7 @@ void cas_cls_rule_apply(ocf_cache_t cache,
 	if (old)
 		CAS_CLS_DEBUG_MSG("Removed rule for class %d\n", part_id);
 	if (new)
-		CAS_CLS_DEBUG_MSG("New rule for for class  %d\n", part_id);
+		CAS_CLS_DEBUG_MSG("New rule for class  %d\n", part_id);
 
 	return;
 }

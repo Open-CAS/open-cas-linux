@@ -1171,15 +1171,9 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 
 	if (create_pipe_pair(intermediate_file)) {
 		cas_printf(LOG_ERR,"Failed to create unidirectional pipe.\n");
+		close(ctrl_fd);
 		return FAILURE;
 	}
-
-	/* Select file to which statistics shall be printed and
-	 *
-	 */
-	FILE *outfile;
-
-	outfile = stdout;
 
 	/**
 	 * printing in statistics will be performed in separate
@@ -1188,7 +1182,7 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 	 */
 	struct stats_printout_ctx printout_ctx;
 	printout_ctx.intermediate = intermediate_file[0];
-	printout_ctx.out = outfile;
+	printout_ctx.out = stdout;
 	printout_ctx.type = (OUTPUT_FORMAT_CSV == output_format ? CSV : TEXT);
 	pthread_t thread;
 	pthread_create(&thread, 0, stats_printout, &printout_ctx);
@@ -1301,8 +1295,5 @@ cleanup:
 
 	fclose(intermediate_file[0]);
 
-	if (outfile != stdout) {
-		fclose(outfile);
-	}
 	return ret;
 }
