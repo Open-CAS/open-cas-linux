@@ -6,7 +6,7 @@
 
 # The line below specified that line under it should be used as the test's short description when launching test via run_tests script.
 # The text should not be longer than 80 chars - if it is, the script will strip addititonal characters
-# DESCRIPTION WB data integrity ext3/ext4/xfs after clean shutdown, no flush
+# DESCRIPTION WO data integrity ext3/ext4/xfs after clean shutdown, no flush
 
 # USE_IN_NIGHTLY
 # USE_IN_BVT
@@ -17,7 +17,7 @@ TESTS_DIR="$(dirname $0)/../"
 . $TESTS_DIR/cas_lib
 start_test $*
 
-CACHE_MODE="wb"
+CACHE_MODE="wo"
 
 # This is where the real test starts
 

@@ -359,7 +359,7 @@ iteration() {
     fi
     if [ -n "$CACHE_MODE_OPTION" ] ; then
         if [ "$CACHE_MODE_OPTION" == "all" ] ; then
-            L_CACHE_MODE_OPTION="wa wb wt pt"
+            L_CACHE_MODE_OPTION="wa wb wt pt wo"
         else
             L_CACHE_MODE_OPTION="$CACHE_MODE_OPTION"
         fi
