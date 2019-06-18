@@ -1,0 +1,74 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+# DESCRIPTION Corrupt metadata on cache with random data and try to load this cache.
+
+# The line below says that this test should be included in BVT - it will be launched, when we use "./run_tests -b"
+# USE_IN_BVT
+# USE_IN_NIGHTLY
+
+# Standard beginning for every test - get the main tests directory and
+# link the cas_lib file for CAS API, then use "start_test $*" to pass params
+# and do other necessary checks and setup
+TESTS_DIR="$(dirname $0)/../"
+. $TESTS_DIR/cas_lib
+start_test $*
+
+# This is where the real test starts
+
+test_log_start
+
+# Use CACHE_DEVICE and CORE_DEVICE provided by configuration file and remove partitions from those devices
+TARGET_DEVICE_OPTION="$CACHE_DEVICE" remove_partitions
+TARGET_DEVICE_OPTION="$CORE_DEVICE" remove_partitions
+
+# Create 1 primary partition on CACHE_DEVICE, 2000MB
+TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION="2000M" PARTITION_IDS_OPTION="1" make_primary_partitions
+# Create 1 primary partition on CORE_DEVICE, 4000M
+TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="4000M" PARTITION_IDS_OPTION="1" make_primary_partitions
+
+METADATA_SECTIONS_NAMES=("Super block config" "Super block runtime" "Reserved" "Cleaning" "Eviction" "Collision" "List info" "Hash" "Core config" "Core runtime" "Core UUID")
+
+for SECTION in "${METADATA_SECTIONS_NAMES[@]}"
+do
+	if [ "$SECTION" == "Reserved" ]
+	then
+		continue
+	fi
+
+	# Start cache on CACHE_DEVICE to repair it and also to make log.
+	CACHE_ID_OPTION="1" CACHE_FORCE_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+
+	# Stop cache.
+	CACHE_ID_OPTION="1" stop_cache
+
+	# Resolve offset of metadata section.
+	METADATA_SECTION_OFFSET=`dmesg | grep "${SECTION} offset" | tac | sed '1!d' | sed -e 's/.*[^0-9]\([0-9]\+\)[^0-9]*$/\1/' `
+
+	if [ -z ${METADATA_SECTION_OFFSET} ]
+	then
+		test_log_trace "Couldn't read ${SECTION} offset"
+		end_test 1
+	fi
+
+	# Corrupt metadata. (here you can add your data corruption method)
+	# Random corrupt - corrupt 64K bytes at start of each section
+	test_log_trace "Corrupting 64K bytes in ${SECTION}"
+
+	# Corrupt cache metadata
+	run_cmd "dd if=/dev/urandom of="${CACHE_DEVICE}1" bs=1 count=64K conv=notrunc seek=${METADATA_SECTION_OFFSET}K "
+
+	# Start again with load option, this should fail, metadata is corrupted.
+	NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="1" CACHE_LOAD_METADATA_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+done
+
+test_log_stop
+
+# Always return 0 at the end of the test - if at any point something has failed
+# in the API functions, test will end and return a proper result.
+# If you need to check other things during the test and end the test earlier, you
+# should end the test using "end_test $retval" function
+end_test 0
