@@ -20,7 +20,7 @@ VERSION_FILE=$(PWD)/CAS_VERSION
 OCFDIR=$(PWD)/../ocf
 KERNEL_DIR ?= "/lib/modules/$(shell uname -r)/build"
 PWD=$(shell pwd)
-KERNEL_VERSION := $(shell uname -r)
+KERNEL_VERSION := $(cd $KERNEL_DIR; make kernelversion)
 MODULES_DIR=/lib/modules/$(KERNEL_VERSION)/extra
 
 DISK_MODULE = cas_disk

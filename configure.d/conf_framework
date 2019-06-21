@@ -8,7 +8,8 @@ SCRIPTPATH=`dirname $0`
 SCRIPTPATH=`realpath $SCRIPTPATH`
 MODULE_FILE=$SCRIPTPATH/test_mod.c
 OBJ_MOD=$SCRIPTPATH/test_mod.o
-KERN_VER=`uname -r`
+KERNEL_DIR="${KERNEL_DIR:-/lib/modules/$(uname -r)/build/}"
+KERNEL_VER="$(cd $KERNEL_DIR; make kernelversion)"
 NPROC=`nproc`
 DEFINE_FILE=$SCRIPTPATH/../modules/generated_defines.h
 
@@ -43,7 +44,7 @@ compile_module(){
 	EOF
 	#######################################
 
-	make -C $SCRIPTPATH &> /dev/null
+	make -C $SCRIPTPATH KERNEL_DIR=${KERNEL_DIR} &> /dev/null
 
 	local ret=$?
 	if [ $ret -eq 0 ]; then
