@@ -1,0 +1,58 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+# The line below specified that line under it should be used as the test's short description when launching test via run_tests script.
+# The text should not be longer than 80 chars - if it is, the script will strip addititonal characters
+# DESCRIPTION Check data integrity for every cache mode and cache line size
+
+# Standard beginning for every test - get the main tests directory and
+# link the cas_lib file for CAS API, then use "start_test $*" to pass params
+# and do other necessary checks and setup
+TESTS_DIR="$(dirname $0)/../"
+. $TESTS_DIR/cas_lib
+start_test $*
+
+# This is where the real test starts
+which fio &> /dev/null
+if [ $? -ne 0 ] ; then
+	error "Fio not installed!"
+	end_test $CAS_TEST_NOT_RUN
+fi
+
+# Use CACHE_DEVICE provided by configuration file and remove partitions from this device
+TARGET_DEVICE_OPTION="$CACHE_DEVICE" remove_partitions
+TARGET_DEVICE_OPTION="$CORE_DEVICE" remove_partitions
+
+# Create one primary partition (ID=1) of size 2000M on CACHE_DEVICE
+TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION="2000M" PARTITION_IDS_OPTION="1" make_primary_partitions
+TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="10000M" PARTITION_IDS_OPTION="1" make_primary_partitions
+
+IO_ENGINES="sync psync vsync pvsync pvsync2 libaio posixaio mmap"
+CACHE_MODES="wb pt wa wt wo"
+CACHE_LINE_SIZES="4 8 16 32 64"
+
+for mode in $CACHE_MODES; do
+	for line_size in $CACHE_LINE_SIZES; do
+		CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" \
+						CACHE_MODE_OPTION="$mode" CACHE_LINE_SIZE="$line_size" start_cache
+		CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
+
+		for engine in $IO_ENGINES; do
+			run_cmd "fio --ioengine=${engine} --direct=1 --name=test \
+				--filename=${DEVICE_NAME}1-1 --bs=4k --iodepth=64 \
+				--readwrite=randrw --verify=crc32 --runtime=300 --time_based \
+				--size=10G"
+		done
+		CACHE_ID_OPTION="1" stop_cache
+	done
+done
+
+
+# Always return 0 at the end of the test - if at any point something has failed
+# in the API functions, test will end and return a proper result.
+# If you need to check other things during the test and end the test earlier, you
+# should end the test using "end_test $retval" function
+end_test 0
