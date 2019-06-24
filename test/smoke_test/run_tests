@@ -376,8 +376,6 @@ case $TEST_MODE in
         exit 1
 esac
 
-export LOGS_FOLDER="${LOGS_FOLDER}/${TEST_MODE}_$(date +%Y-%m-%d_%H:%M:%S)/"
-
 echo "--- Starting test mode $TEST_MODE ---"
 echo ""
 
