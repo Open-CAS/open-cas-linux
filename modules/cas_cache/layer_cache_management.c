@@ -713,7 +713,7 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 		return result;
 
 	if (!cmd->force_no_flush) {
-		/* First check state and  flush data (if requested by user)
+		/* First check state and flush data (if requested by user)
 		   under read lock */
 		result = _cache_mngt_read_lock_sync(cache);
 		if (result)
@@ -765,6 +765,9 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 		ocf_mngt_cache_remove_core(core,
 				_cache_mngt_remove_core_complete, &context);
 	}
+
+	if (!cmd->force_no_flush && !flush_result)
+		BUG_ON(ocf_mngt_core_is_dirty(core));
 
 	wait_for_completion(&context.compl);
 
@@ -1613,6 +1616,9 @@ int cache_mngt_exit_instance(ocf_cache_id_t id, int flush)
 	/* Flush cache again. This time we don't allow interruption. */
 	if (flush)
 		flush_status = _cache_mngt_cache_flush_sync(cache, false);
+
+	if (flush && !flush_status)
+		BUG_ON(ocf_mngt_cache_is_dirty(cache));
 
 	/* Stop cache device */
 	status = _cache_mngt_cache_stop_sync(cache);
