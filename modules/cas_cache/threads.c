@@ -6,7 +6,7 @@
 #include "threads.h"
 #include "cas_cache.h"
 
-#define MAX_THREAD_NAME_SIZE 16
+#define MAX_THREAD_NAME_SIZE 48
 
 struct cas_thread_info {
 	atomic_t stop;
