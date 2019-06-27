@@ -21,6 +21,7 @@
 #include "cas_lib_utils.h"
 #include "safeclib/safe_str_lib.h"
 #include <cas_ioctl_codes.h>
+#include <cas_version.h>
 #include "upgrade.h"
 #include "statistics_view.h"
 
@@ -1711,7 +1712,7 @@ static int handle_version(void)
 	}
 
 	fprintf(intermediate_file[1], TAG(TABLE_ROW) OCF_LOGO " CLI Utility,");
-	fprintf(intermediate_file[1], "%s\n", buff);
+	fprintf(intermediate_file[1], "%s\n", CAS_VERSION);
 
 	int format = TEXT;
 	if (OUTPUT_FORMAT_CSV == command_args_values.output_format) {
