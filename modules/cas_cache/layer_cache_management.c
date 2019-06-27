@@ -436,6 +436,7 @@ out_bdev:
 int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 		struct kcas_insert_core *cmd_info)
 {
+	struct block_device *bdev;
 	int result;
 
 	if (strnlen(cmd_info->core_path_name, MAX_STR_LEN) >= MAX_STR_LEN)
@@ -451,6 +452,11 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 		cfg->volume_type = BLOCK_DEVICE_VOLUME;
 		return 0;
 	}
+
+	bdev = lookup_bdev(cfg->uuid.data);
+	if (IS_ERR(bdev))
+		return -OCF_ERR_INVAL_VOLUME_TYPE;
+	bdput(bdev);
 
 	if (cmd_info->update_path)
 		return 0;
