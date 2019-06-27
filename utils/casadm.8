@@ -65,8 +65,7 @@ causing cache pollution.
 .TP
 .B Write-Only (wo)
 In Write-Only mode write operations are handled exactly like in Write-Back mode. Read
-operations do not promote data to cache. Reads are typically serviced by the core
-device, unless corresponding cache lines are dirty.
+operations do not promote data to cache.
 
 
 .SH COMMANDS
@@ -190,7 +189,7 @@ Force to start a cache. By default cache will not be started if utility detects 
 This parameter ignores this situations, and starts a cache instance.
 
 .TP
-.B -c, --cache-mode {wt|wb|wa|pt}
+.B -c, --cache-mode {wt|wb|wa|pt|wo}
 Cache mode to be used for a cache instance.
 
 Available modes are:
@@ -202,6 +201,8 @@ Available modes are:
 3. \fBwa - Write-Around\fR.
 .br
 4. \fBpt - Pass-Through\fR.
+.br
+5. \fBwo - Write-Only\fR.
 
 .TP
 .B -x, --cache-line-size <NUMBER>
@@ -380,6 +381,8 @@ Available modes:
 3. \fBwa - Write-Around\fR.
 .br
 4. \fBpt - Pass-Through\fR.
+.br
+5. \fBwo - Write-Only\fR.
 
 .TP
 .B -i, --cache-id <ID>
