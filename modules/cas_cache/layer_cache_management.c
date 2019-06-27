@@ -1136,6 +1136,8 @@ static int _cache_mngt_start(struct ocf_mngt_cache_config *cfg,
 {
 	struct _cache_mngt_attach_context context;
 	ocf_cache_t tmp_cache;
+	ocf_queue_t mngt_queue = NULL;
+	struct cache_priv *cache_priv;
 	int result;
 
 	result = ocf_mngt_cache_start(cas_ctx, &tmp_cache, cfg);
@@ -1143,16 +1145,22 @@ static int _cache_mngt_start(struct ocf_mngt_cache_config *cfg,
 		return result;
 
 	result = _cache_mngt_cache_priv_init(tmp_cache);
-	if (result)
-		goto err_priv;
+	BUG_ON(result);
+
+	/* Currently we can't recover without queues setup. OCF doesn't
+	 * support stopping cache when management queue isn't started. */
+
+	result = _cache_mngt_start_queues(tmp_cache);
+	BUG_ON(result);
+
+	/* Ditto */
+
+	cache_priv = ocf_cache_get_priv(tmp_cache);
+	mngt_queue = cache_priv->mngt_queue;
 
 	result = cas_cls_init(tmp_cache);
 	if (result)
 		goto err_classifier;
-
-	result = _cache_mngt_start_queues(tmp_cache);
-	if (result)
-		goto err_queues;
 
 	init_completion(&context.compl);
 	context.result = &result;
@@ -1175,12 +1183,12 @@ err_attach:
 		ocf_mngt_get_ram_needed(tmp_cache, device_cfg,
 				&cmd->min_free_ram);
 	}
-err_queues:
 	cas_cls_deinit(tmp_cache);
 err_classifier:
 	_cache_mngt_cache_priv_deinit(tmp_cache);
-err_priv:
 	_cache_mngt_cache_stop_sync(tmp_cache);
+	if (mngt_queue)
+		ocf_queue_put(mngt_queue);
 	ocf_mngt_cache_unlock(tmp_cache);
 	return result;
 }
@@ -1204,6 +1212,8 @@ static int _cache_mngt_load(struct ocf_mngt_cache_config *cfg,
 {
 	struct _cache_mngt_load_context context;
 	ocf_cache_t tmp_cache;
+	ocf_queue_t mngt_queue = NULL;
+	struct cache_priv *cache_priv;
 	int result;
 
 	result = ocf_mngt_cache_start(cas_ctx, &tmp_cache, cfg);
@@ -1211,12 +1221,18 @@ static int _cache_mngt_load(struct ocf_mngt_cache_config *cfg,
 		return result;
 
 	result = _cache_mngt_cache_priv_init(tmp_cache);
-	if (result)
-		goto err_priv;
+	BUG_ON(result);
+
+	/* Currently we can't recover without queues setup. OCF doesn't
+	 * support stopping cache when management queue isn't started. */
 
 	result = _cache_mngt_start_queues(tmp_cache);
-	if (result)
-		goto err_queues;
+	BUG_ON(result);
+
+	/* Ditto */
+
+	cache_priv = ocf_cache_get_priv(tmp_cache);
+	mngt_queue = cache_priv->mngt_queue;
 
 	init_completion(&context.compl);
 	context.result = &result;
@@ -1252,10 +1268,10 @@ err_load:
 		ocf_mngt_get_ram_needed(tmp_cache, device_cfg,
 				&cmd->min_free_ram);
 	}
-err_queues:
 	_cache_mngt_cache_priv_deinit(tmp_cache);
-err_priv:
 	_cache_mngt_cache_stop_sync(tmp_cache);
+	if (mngt_queue)
+		ocf_queue_put(mngt_queue);
 	ocf_mngt_cache_unlock(tmp_cache);
 	return result;
 }
