@@ -412,9 +412,7 @@ int cas_blk_open_volume_by_bdev(ocf_volume_t *vol,
 	bdobj->btm_bd = bdev;
 	bdobj->opened_by_bdev = true;
 
-	ocf_volume_open(*vol, &atomic_params);
-
-	return 0;
+	return ocf_volume_open(*vol, &atomic_params);
 
 err:
 	return ret;
