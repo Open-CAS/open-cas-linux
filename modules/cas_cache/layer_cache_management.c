@@ -1831,8 +1831,10 @@ int cache_mngt_get_core_info(struct kcas_core_info *info)
 
 	uuid = ocf_core_get_uuid(core);
 
-	strlcpy(info->core_path_name, uuid->data,
-			min(sizeof(info->core_path_name), uuid->size));
+	if (uuid->data) {
+		strlcpy(info->core_path_name, uuid->data,
+				min(sizeof(info->core_path_name), uuid->size));
+	}
 
 	info->state = ocf_core_get_state(core);
 
