@@ -453,7 +453,7 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 		return 0;
 	}
 
-	bdev = lookup_bdev(cfg->uuid.data);
+	bdev = CAS_LOOKUP_BDEV(cfg->uuid.data);
 	if (IS_ERR(bdev))
 		return -OCF_ERR_INVAL_VOLUME_TYPE;
 	bdput(bdev);
