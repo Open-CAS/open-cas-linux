@@ -1,0 +1,82 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+# The line below specified that line under it should be used as the test's short description when launching test via run_tests script.
+# The text should not be longer than 80 chars - if it is, the script will strip addititonal characters
+# DESCRIPTION Start cache device, add sequentially core devices and check if cache is running
+
+# The line below says that this test should be included in NIGHTLY - it will be launched, when we use "./run_tests -n"
+# USE_IN_BVT
+# USE_IN_NIGHTLY
+
+# Standard beginning for every test - get the main tests directory and
+# link the cas_lib file for CAS API, then use "start_test $*" to pass params
+# and do other necessary checks and setup
+TESTS_DIR="$(dirname $0)/../"
+. $TESTS_DIR/cas_lib
+start_test $*
+
+# This is where the real test starts
+
+# Use CACHE_DEVICE and CORE_DEVICE provided by configuration file and remove partitions from those devices
+TARGET_DEVICE_OPTION="$CACHE_DEVICE" remove_partitions
+TARGET_DEVICE_OPTION="$CORE_DEVICE" remove_partitions
+
+# Create primary partition 2000M size on CACHE_DEVICE
+TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION="2000M" PARTITION_IDS_OPTION="1" make_primary_partitions
+# Create primary partition 4000M size on CORE_DEVICE
+TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="4000M" PARTITION_IDS_OPTION="1 2 3" make_primary_partitions
+
+# Prepare cache on CACHE_DEVICE1 (/dev/sdd1, e.g.) and add core device using CORE_DEVICE1, CORE_DEVICE2 and CORE_DEVICE3 (/dev/sde1, /dev/sde2, /dev/sde3, e.g)
+CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
+CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}2" add_core
+CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}3" add_core
+
+DEVICE_ID_OPTION=${CACHE_DEVICE}1 DEMANDED_STATE_OPTION="Running" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}1-1" DEMANDED_STATE_OPTION="Active" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}1-2" DEMANDED_STATE_OPTION="Active" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}1-3" DEMANDED_STATE_OPTION="Active" check_device_state
+
+# Stop prepared setup
+CACHE_ID_OPTION="1" stop_cache
+# Hide part of core devices to protect them before be automatically loading
+TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="4000M" PARTITION_IDS_OPTION="1 2" make_primary_partitions
+sleep 1
+# Load cache, then add cores and check if chache is running
+# Try to load cache device, check its state and cores state
+CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" CACHE_LOAD_METADATA_OPTION="y" start_cache
+DEVICE_ID_OPTION=${CACHE_DEVICE}1 DEMANDED_STATE_OPTION="Incomplete" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}1-1" DEMANDED_STATE_OPTION="Active" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}1-2" DEMANDED_STATE_OPTION="Active" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}1-3" DEMANDED_STATE_OPTION="Inactive" check_device_state
+
+# Prepare partition for core device to be added
+CACHE_ID_OPTION="1" CACHE_DONT_FLUSH_DATA_OPTION="1" stop_cache
+TARGET_DEVICE_OPTION="$CORE_DEVICE" remove_partitions
+TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="4000M" PARTITION_IDS_OPTION="1 2 3" make_primary_partitions
+sleep 1
+CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" CORE_ID_OPTION="1" try_add_core
+CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}2" CORE_ID_OPTION="2" try_add_core
+CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}3" CORE_ID_OPTION="3" try_add_core
+DEVICE_ID_OPTION="${CORE_DEVICE}1" DEMANDED_STATE_OPTION="Detached" check_device_state
+DEVICE_ID_OPTION="${CORE_DEVICE}2" DEMANDED_STATE_OPTION="Detached" check_device_state
+DEVICE_ID_OPTION="${CORE_DEVICE}3" DEMANDED_STATE_OPTION="Detached" check_device_state
+
+CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" CACHE_LOAD_METADATA_OPTION="y" start_cache
+
+DEVICE_ID_OPTION=${CACHE_DEVICE}1 DEMANDED_STATE_OPTION="Running" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}1-1" DEMANDED_STATE_OPTION="Active" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}1-2" DEMANDED_STATE_OPTION="Active" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}1-3" DEMANDED_STATE_OPTION="Active" check_device_state
+# Clean up after test
+CACHE_ID_OPTION="1" stop_cache
+
+# Always return 0 at the end of the test - if at any point something has failed
+# in the API functions, test will end and return a proper result.
+# If you need to check other things during the test and end the test earlier, you
+# should end the test using "end_test $retval" function
+end_test 0

@@ -1,0 +1,169 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+# The line below specified that line under it should be used as the test's short description when launching test via run_tests script.
+# The text should not be longer than 80 chars - if it is, the script will strip addititonal characters
+# DESCRIPTION Verify cache and core read and write stats in WT in PT mode
+
+# The line below says that this test should be included in BVT - it will be launched, when we use "./run_tests -b"
+# USE_IN_NIGHTLY
+
+# Standard beginning for every test - get the main tests directory and
+# link the cas_lib file for CAS API, then use "start_test $*" to pass params
+# and do other necessary checks and setup.
+TESTS_DIR="$(dirname $0)/../"
+. $TESTS_DIR/cas_lib
+start_test $*
+
+CACHE_DEVICE_SIZE=1G
+CORE_DEVICE_SIZE=10G
+TEST_DEVICE=${DEVICE_NAME}1-1
+TEST_BS=4k
+TEST_COUNT=32768
+TEST_COUNT_HALF=16384
+
+#param device
+get_stat_sectors_read() {
+    L_DEVICE=$(basename $1)
+    L_STAT=$(cat /proc/diskstats | grep $L_DEVICE | awk '{ print $6 }')
+    echo $L_STAT
+}
+
+#param device
+get_stat_sectors_written() {
+    L_DEVICE=$(basename $1)
+    L_STAT=$(cat /proc/diskstats | grep $L_DEVICE | awk '{ print $10 }')
+    echo $L_STAT
+}
+
+cache_suspend_init() {
+    # Use CACHE_DEVICE and CORE_DEVICE provided by configuration file and remove partitions from those devices
+    TARGET_DEVICE_OPTION="$CACHE_DEVICE" remove_partitions
+    TARGET_DEVICE_OPTION="$CORE_DEVICE" remove_partitions
+
+    # Create 1 primary partitions on CACHE_DEVICE
+    TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION=$CACHE_DEVICE_SIZE PARTITION_IDS_OPTION="1" make_primary_partitions
+
+    # Create 1 primary partitions on CORE_DEVICE
+    TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION=$CORE_DEVICE_SIZE PARTITION_IDS_OPTION="1" make_primary_partitions
+
+    run_cmd dd if=/dev/zero of="${CORE_DEVICE}1" bs=1M count=1 oflag=direct
+
+    # Start cache on CACHE_DEVICE1
+    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+
+    # Add a core device using CORE_DEVICE1
+    CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
+}
+
+cache_suspend_deinit() {
+    # Remove the core device from cache
+    CACHE_ID_OPTION="1" CORE_ID_OPTION="1" remove_core
+
+    # Clean up after the test
+    CACHE_ID_OPTION="1" stop_cache
+}
+
+cache_suspend_test() {
+    local L_CACHE_READS_BEFORE=
+    local L_CACHE_READS_AFTER=
+    local L_CACHE_WRITES_BEFORE=
+    local L_CACHE_WRITES_AFTER=
+    local L_CORE_READS_BEFORE=
+    local L_CORE_READS_AFTER=
+    local L_CACHE_READS=
+    local L_CORE_READS=
+    local L_SIZE_WRITTEN=
+    local L_SIZE_READ=
+
+    test_log_trace "Block size is ${TEST_BS}"
+    test_log_trace "Count is ${TEST_COUNT}"
+
+    # Write
+    test_log_trace "Write into CAS ${TEST_COUNT}"
+    dd if=/dev/urandom of=${TEST_DEVICE} bs=${TEST_BS} count=${TEST_COUNT} oflag=direct
+    # Sync
+    sync && echo 3 > /proc/sys/vm/drop_caches
+
+    # Suspend the cache
+    test_log_trace "Suspend Cache"
+    CACHE_ID_OPTION="1" CACHE_MODE_OPTION="pt" set_cache_mode
+
+    # Write
+    test_log_trace "Overwrite half ${TEST_COUNT_HALF}"
+    dd if=/dev/urandom of=${TEST_DEVICE} bs=${TEST_BS} count=${TEST_COUNT_HALF} oflag=direct
+    # Sync
+    sync && echo 3 > /proc/sys/vm/drop_caches
+
+    # Resume the cache
+    test_log_trace "Resume Cache"
+    CACHE_ID_OPTION="1" CACHE_MODE_OPTION="wt" set_cache_mode
+
+    # Get statistics before
+    L_CACHE_READS_BEFORE=$(get_stat_sectors_read ${CACHE_DEVICE}1)
+    L_CORE_READS_BEFORE=$(get_stat_sectors_read ${CORE_DEVICE}1)
+
+    # Read from
+    test_log_trace "Read from CAS"
+    dd if=${TEST_DEVICE} of=/dev/null bs=${TEST_BS} count=${TEST_COUNT} iflag=direct
+    # Sync
+    sync && echo 3 > /proc/sys/vm/drop_caches
+
+    # Get statistics after
+    L_CACHE_READS_AFTER=$(get_stat_sectors_read ${CACHE_DEVICE}1)
+    L_CORE_READS_AFTER=$(get_stat_sectors_read ${CORE_DEVICE}1)
+
+    test_log_trace "Cache reads before : $L_CACHE_READS_BEFORE"
+    test_log_trace "Cache reads after  : $L_CACHE_READS_AFTER"
+
+    test_log_trace "Core reads before : $L_CORE_READS_BEFORE"
+    test_log_trace "Core reads after  : $L_CORE_READS_AFTER"
+
+    let L_CACHE_READS=${L_CACHE_READS_AFTER}-${L_CACHE_READS_BEFORE}
+    test_log_trace "Cache reads : ${L_CACHE_READS}"
+
+    let L_CORE_READS=${L_CORE_READS_AFTER}-${L_CORE_READS_BEFORE}
+    test_log_trace "Core reads : ${L_CORE_READS}"
+
+    let L_SIZE_WRITTEN=$(get_bytes $TEST_BS)*$(get_bytes $TEST_COUNT)
+    test_log_trace "Size written : $L_SIZE_WRITTEN"
+
+    let L_SIZE_READ=${L_CORE_READS}+${L_CACHE_READS}
+    let L_SIZE_READ=${L_SIZE_READ}*512
+    test_log_trace "Size read : $L_SIZE_READ"
+
+    if [ "$L_SIZE_READ" != "$L_SIZE_WRITTEN" ]
+    then
+        test_log_trace "Mismatch between written size and read size"
+        return 1
+    fi
+
+    return 0
+}
+
+#
+# START TEST
+#
+
+test_log_start
+
+run_cmd cache_suspend_init
+
+run_cmd cache_suspend_test
+
+run_cmd cache_suspend_deinit
+
+test_log_stop
+
+#
+# END TEST
+#
+
+# Always return 0 at the end of the test - if at any point something has failed
+# in the API functions, test will end and return a proper result.
+# If you need to check other things during the test and end the test earlier, you
+# should end the test using "end_test $retval" function
+end_test 0

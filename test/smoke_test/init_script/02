@@ -1,0 +1,73 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+# The line below specified that line under it should be used as the test's short description when launching test via run_tests script.
+# The text should not be longer than 80 chars - if it is, the script will strip addititonal characters
+# DESCRIPTION Test some corner cases for casctl script
+
+# The line below says that this test should be included in BVT - it will be launched, when we use "./run_tests -b"
+
+# USE_IN_NIGHTLY
+
+# Standard beginning for every test - get the main tests directory and
+# link the cas_lib file for CAS API, then use "start_test $*" to pass params
+# and do other necessary checks and setup
+TESTS_DIR="$(dirname $0)/../"
+. $TESTS_DIR/cas_lib
+start_test $*
+
+# This is where the real test starts
+
+TARGET_DEVICE_OPTION="$CACHE_DEVICE" remove_partitions
+TARGET_DEVICE_OPTION="$CORE_DEVICE" remove_partitions
+
+TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION="2000M" PARTITION_IDS_OPTION="1" make_primary_partitions
+TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="4000M" PARTITION_IDS_OPTION="1 2" make_primary_partitions
+
+clear_config
+
+TARGET_DEVICE_OPTION="$CORE_DEVICE" remove_partitions
+TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="4000M" PARTITION_IDS_OPTION="1 2 3" make_primary_partitions
+
+cat > $CAS_CONFIG_PATH <<- EOM
+${CAS_CONFIG_VERSION_TAG}
+[caches]
+16384	${CACHE_DEVICE}1	WB	cleaning_policy=acp
+[cores]
+16384	4095	${CORE_DEVICE}1
+16384	4094	${CORE_DEVICE}2
+16384	0	${CORE_DEVICE}3
+EOM
+
+run_cmd "casctl init"
+
+DEVICE_ID_OPTION=${CACHE_DEVICE}1 DEMANDED_STATE_OPTION="Running" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}16384-0" DEMANDED_STATE_OPTION="Active" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}16384-4095" DEMANDED_STATE_OPTION="Active" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}16384-4094" DEMANDED_STATE_OPTION="Active" check_device_state
+
+run_cmd "casadm -G -n cleaning -i 16384 | grep "acp" &>/dev/null"
+
+run_cmd "casctl stop"
+
+check_no_cache_running
+
+run_cmd "casctl start"
+
+DEVICE_ID_OPTION=${CACHE_DEVICE}1 DEMANDED_STATE_OPTION="Running" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}16384-0" DEMANDED_STATE_OPTION="Active" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}16384-4095" DEMANDED_STATE_OPTION="Active" check_device_state
+DEVICE_ID_OPTION="${DEVICE_NAME}16384-4094" DEMANDED_STATE_OPTION="Active" check_device_state
+
+run_cmd "casctl stop"
+
+check_no_cache_running
+
+# Always return 0 at the end of the test - if at any point something has failed
+# in the API functions, test will end and return a proper result.
+# If you need to check other things during the test and end the test earlier, you
+# should end the test using "end_test $retval" function
+end_test 0

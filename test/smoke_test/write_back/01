@@ -1,0 +1,133 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+# The line below specified that line under it should be used as the test's short description when launching test via run_tests script.
+# The text should not be longer than 80 chars - if it is, the script will strip addititonal characters
+# DESCRIPTION Copy file greater then cache
+
+# The line below says that this test should be included in BVT - it will be launched, when we use "./run_tests -b"
+
+# USE_IN_NIGHTLY
+
+# Standard beginning for every test - get the main tests directory and
+# link the cas_lib file for CAS API, then use "start_test $*" to pass params
+# and do other necessary checks and setup.
+TESTS_DIR="$(dirname $0)/../"
+. $TESTS_DIR/cas_lib
+start_test $*
+
+CACHE_DEVICE_SIZE=500M
+CORE_DEVICE_SIZE=20G
+TEST_DEVICE=${DEVICE_NAME}1-1
+TEST_FILE=/tmp/cas.testfile
+
+wb_init() {
+    # Use CACHE_DEVICE and CORE_DEVICE provided by configuration file and remove partitions from those devices
+    TARGET_DEVICE_OPTION="$CACHE_DEVICE" remove_partitions
+    TARGET_DEVICE_OPTION="$CORE_DEVICE" remove_partitions
+
+    # Create 1 primary partitions on CACHE_DEVICE
+    TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION=$CACHE_DEVICE_SIZE PARTITION_IDS_OPTION="1" make_primary_partitions
+
+    # Create 1 primary partitions on CORE_DEVICE
+    TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION=$CORE_DEVICE_SIZE PARTITION_IDS_OPTION="1" make_primary_partitions
+
+    # Make ext3 file system
+    TARGET_DEVICE_OPTION="${CORE_DEVICE}1" FILESYSTEM_TYPE="ext3" make_filesystem
+
+    # Start cache on CACHE_DEVICE1
+    CACHE_MODE_OPTION="wb" CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+
+    # Add a core device using CORE_DEVICE1
+    CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
+
+    #Mount file system
+    CACHE_ID_OPTION="1" CORE_ID_OPTION="1" mount_cache
+}
+
+wb_deinit() {
+    run_cmd "umount ${MOUNTPOINT}-1-1"
+
+    # Remove the core device from cache
+    CACHE_ID_OPTION="1" CORE_ID_OPTION="1" remove_core
+
+    # Clean up after the test
+    CACHE_ID_OPTION="1" stop_cache
+}
+
+wb_test() {
+        local L_TEST_FILE_CACHE
+        local L_MD5_1
+        local L_MD5_2
+
+        test_log_trace "Prepare test file =${TEST_FILE}"
+        dd if=/dev/urandom of=${TEST_FILE} bs=10M count=$(get_pages 3G 10M)
+
+        L_MD5_1=$(md5sum -b $TEST_FILE | awk '{ print $1 }')
+        test_log_trace "MD5 check sum of ${TEST_FILE} : $L_MD5_1"
+
+        # Copy test file into core file system
+        cp ${TEST_FILE} ${MOUNTPOINT}-1-1
+        if [ $? != 0 ]
+        then
+            test_log_trace "Cannot copy file into core filesystem"
+            return 1
+        fi
+        test_log_trace "Copy ${TEST_FILE} to ${MOUNTPOINT}-1-1"
+
+        # Perform sync
+        test_log_trace "Sync"
+        sync && echo 1 > /proc/sys/vm/drop_caches
+
+        # Get check sum of copied file
+        L_TEST_FILE_CACHE=$(basename $TEST_FILE)
+        L_MD5_2=$(md5sum -b "${MOUNTPOINT}-1-1/${L_TEST_FILE_CACHE}" | awk '{ print $1 }')
+        if [ $? != 0 ]
+        then
+            test_log_trace "Cannot calculate checksum of file on core filesystem"
+            return 1
+        fi
+        test_log_trace "MD5 check sum of ${MOUNTPOINT}-1-1/${L_TEST_FILE_CACHE} : $L_MD5_2"
+
+        if [ "$L_MD5_1" != "$L_MD5_2" ]
+        then
+            test_log_trace "MD5 sum ERROR"
+            return 1
+        fi
+
+        # Perform sync
+        test_log_trace "Sync"
+        sync && echo 1 > /proc/sys/vm/drop_caches
+
+        # remove test file
+        rm -f $TEST_FILE
+
+        return 0
+}
+
+#
+# START TEST
+#
+
+test_log_start
+
+run_cmd wb_init
+
+run_cmd wb_test
+
+run_cmd wb_deinit
+
+test_log_stop
+
+#
+# END TEST
+#
+
+# Always return 0 at the end of the test - if at any point something has failed
+# in the API functions, test will end and return a proper result.
+# If you need to check other things during the test and end the test earlier, you
+# should end the test using "end_test $retval" function
+end_test 0
