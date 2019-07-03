@@ -328,12 +328,12 @@ void print_help(const app *app_values, const cli_command *commands)
 	if (app_values->man != NULL) {
 		cas_printf(LOG_INFO,
 			   "For more information, please refer to manual, Admin Guide (man %s)\n"
-			   "or go to support page <http://www.intel.com/support/go/cas>.\n",
+			   "or go to support page <https://open-cas.github.io>.\n",
 			   app_values->man);
 	} else {
 		cas_printf(LOG_INFO,
 			   "For more information, please refer to manual, Admin Guide\n"
-			   "or go to support page <http://www.intel.com/support/go/cas>.\n");
+			   "or go to support page <https://open-cas.github.io>.\n");
 	}
 }
 
