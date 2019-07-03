@@ -13,7 +13,13 @@ CONFIG_FILES=`ls $SCRIPTPATH/configure.d/*.conf | sort`
 
 rm -f $SCRIPTPATH/modules/generated_defines.h
 
+files_count=`echo $CONFIG_FILES | wc -w`
+progress=0
+
 for file in $CONFIG_FILES; do
+	progress=$((progress+1))
+	echo -ne "Configuring OpenCAS: $progress/$files_count\033[0K\r"
 	/bin/bash $file
 done
+echo -ne "        \033[0K\r"
 
