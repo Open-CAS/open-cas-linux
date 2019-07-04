@@ -972,6 +972,8 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 		return -OCF_ERR_INVAL;
 
 	memset(cfg, 0, sizeof(*cfg));
+	memset(device_cfg, 0, sizeof(*device_cfg));
+	memset(atomic_params, 0, sizeof(*atomic_params));
 
 	cfg->id = cmd->cache_id;
 	cfg->cache_mode = cmd->caching_mode;
@@ -997,8 +999,9 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	init_cache = cmd->init_cache;
 
 	switch (init_cache) {
-	case CACHE_INIT_NEW:
 	case CACHE_INIT_LOAD:
+		device_cfg->open_cores = true;
+	case CACHE_INIT_NEW:
 		break;
 	default:
 		return -OCF_ERR_INVAL;
