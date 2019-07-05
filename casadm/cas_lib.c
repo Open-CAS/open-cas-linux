@@ -868,6 +868,33 @@ static void check_cache_scheduler(const char *cache_device, const char *elv_name
 	}
 }
 
+static int check_preexisting_metadata_status(const char *cache_device,
+		int force, int load)
+{
+	struct kcas_cache_check_device cmd_info;
+	int result;
+
+	if (force)
+		return SUCCESS;
+
+	result = _check_cache_device(cache_device, &cmd_info);
+	if (result) {
+		result = cmd_info.ext_err_code ? : KCAS_ERR_SYSTEM;
+		print_err(result);
+		if (result == OCF_ERR_METADATA_VER)
+			cas_printf(LOG_ERR, "Please use --force option.\n");
+		return FAILURE;
+	}
+
+	if (cmd_info.is_cache_device && !load) {
+		cas_printf(LOG_ERR, "Preexisting metadata detected on device %s. "
+				"Please use --load or --force option.\n", cache_device);
+		return FAILURE;
+	}
+
+	return SUCCESS;
+}
+
 int start_cache(ocf_cache_id_t cache_id, unsigned int cache_init,
 		const char *cache_device, ocf_cache_mode_t cache_mode,
 		ocf_eviction_t eviction_policy_type,
@@ -887,6 +914,9 @@ int start_cache(ocf_cache_id_t cache_id, unsigned int cache_init,
 		return FAILURE;
 	}
 	close(fd);
+
+	if (check_preexisting_metadata_status(cache_device, force, cache_init))
+		return FAILURE;
 
 	if (cache_init == CACHE_INIT_NEW)
 		print_slow_atomic_cache_start_info(cache_device);

@@ -384,9 +384,11 @@ static void cache_mngt_metadata_probe_end(void *priv, int error,
 
 	*context->result = error;
 
-	if (error == -OCF_ERR_NO_METADATA || error == -OCF_ERR_METADATA_VER) {
+	if (error == -OCF_ERR_NO_METADATA) {
 		cmd_info->is_cache_device = false;
 		*context->result = 0;
+	} if (error == -OCF_ERR_METADATA_VER) {
+		cmd_info->is_cache_device = true;
 	} else if (error == 0) {
 		cmd_info->is_cache_device = true;
 		cmd_info->clean_shutdown = status->clean_shutdown;
