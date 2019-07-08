@@ -42,7 +42,8 @@ do
     echo "------Start CAS Linux in $mode mode"
 
 # This is where the real test starts
-    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}"1 CACHE_MODE_OPTION="$mode" start_cache
+    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}"1 CACHE_MODE_OPTION="$mode"
+        CACHE_FORCE_OPTION="yes" start_cache
 
     CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}"1 add_core
     sleep 2
@@ -73,7 +74,8 @@ do
     echo "------Start CAS Linux in $mode mode"
 
 # This is where the real test starts
-    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}"1 CACHE_MODE_OPTION="$mode" start_cache
+    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}"1 CACHE_MODE_OPTION="$mode"
+        CACHE_FORCE_OPTION="yes" start_cache
 
     CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}"1 add_core
     sleep 2
