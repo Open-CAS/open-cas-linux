@@ -132,6 +132,12 @@ struct {
 		OCF_ERR_NO_METADATA,
 		"No metadata found on device"
 	},
+	{
+		OCF_ERR_METADATA_FOUND,
+		"Old metadata found on device.\nPlease start cache using "
+		"--load or --force option.\n"
+
+	},
 
 	/* CAS kernel error mappings*/
 	{
