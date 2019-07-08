@@ -151,7 +151,7 @@ get_stats_value() {
         CORE_ID_OPTION="--core-id $CORE_ID_OPTION"
     fi
 
-	if [ "$IO_CLASS_ID" = "all" ]; then
+    if [ "$IO_CLASS_ID" = "all" ]; then
         PART_ID_OPTION="--io-class-id"
     elif [ -n "$IO_CLASS_ID" ] ; then
         PART_ID_OPTION="--io-class-id $IO_CLASS_ID"
@@ -177,7 +177,7 @@ get_stats_value() {
     for (( i=0; i<$STATS_VALUES_OFFSET; i++ ))
     do
         echo "${STATS_ARRAY[$i]}" | grep -i "$STAT_NAME_OPTION" | grep -v "%" \
-			| grep -i "$STAT_UNIT_OPTION" &> /dev/null
+            | grep -i "$STAT_UNIT_OPTION" &> /dev/null
         if [ $? -eq 0 ]; then
             local value_id=$(( STATS_VALUES_OFFSET + i ))
             OUTPUT="${STATS_ARRAY[$value_id]}"
@@ -413,6 +413,8 @@ iteration() {
                         if [ "$load_metadata" == "on" ] ; then
                             CACHE_LOAD_METADATA_OPTION="$load_metadata"
                             echo "Load metadata option: on"
+                        else
+                            L_MAKE_PARTITIONS=1
                         fi
 
                         MAKE_PARTITIONS=${L_MAKE_PARTITIONS}
@@ -791,7 +793,7 @@ remove_caches() {
 
     if [ -n "$CACHE_IDS_TO_REMOVE" ] || [ -n "$CORE_DEVICES_TO_REMOVE" ] ; then
         warning "Had to remove some caches in cleanup - \
-			either the test failed or it doesn't clean up after itself!"
+            either the test failed or it doesn't clean up after itself!"
     fi
     clear_options
 }
@@ -884,19 +886,19 @@ check_fio_ver() {
 
     fio_ver="$(fio -v)"
     if [ -z $fio_ver ] ; then
-	echo_yellow "Fio is not installed, skipping test!"
-	return 1
+    echo_yellow "Fio is not installed, skipping test!"
+    return 1
     fi
 
     major=`echo $fio_ver | cut -d '.' -f 1 | cut -d '-' -f 2`
     minor=`echo $fio_ver | cut -d '.' -f 2`
     if [[ $major -lt $FIO_MAJOR_OPTION ]] ; then
-	echo_yellow "Invalid fio version, skipping test!"
-	return 1
+    echo_yellow "Invalid fio version, skipping test!"
+    return 1
     elif [[ $major -eq $FIO_MAJOR_OPTION ]] && \
-	    [[ $minor -lt $FIO_MINOR_OPTION ]] ; then
-	echo_yellow "Invalid fio minor revision, skipping test!"
-	return 1
+        [[ $minor -lt $FIO_MINOR_OPTION ]] ; then
+    echo_yellow "Invalid fio minor revision, skipping test!"
+    return 1
     fi
 
     clear_options
@@ -910,12 +912,12 @@ check_kernel_ver() {
     kernel_version=`echo ${kernel_ver} | cut  -d '.' -f 1`
     major=`echo ${kernel_ver} | cut  -d '.' -f 2`
     if [[ $kernel_version -lt $KERNEL_VER_OPTION ]] ; then
-	echo_yellow "Invalid kernel version, skipping test!"
-	return 1
+    echo_yellow "Invalid kernel version, skipping test!"
+    return 1
     elif [[ $kernel_version -eq $KERNEL_VER_OPTION ]] && \
-		[[ $major -lt $KERNEL_MAJOR_OPTION ]] ; then
-	echo_yellow "Invalid kernel major revision, skipping test!"
-	return 1
+        [[ $major -lt $KERNEL_MAJOR_OPTION ]] ; then
+    echo_yellow "Invalid kernel major revision, skipping test!"
+    return 1
     fi
 
     clear_options

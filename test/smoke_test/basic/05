@@ -31,7 +31,7 @@ TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION="2000M" PARTITION_IDS
 # Try to start positive caches in loop and later stop them - if any of those operations fails, it
 # means the cache ID is invalid
 for ID in $POSITIVE_IDS ; do
-    CACHE_ID_OPTION="$ID" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+    CACHE_ID_OPTION="$ID" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" CACHE_FORCE_OPTION="yes" start_cache
     CACHE_ID_OPTION="$ID" stop_cache
 done
 
@@ -40,7 +40,8 @@ done
 # ID, because the framework will treat it as an undefined option and will fail the test
 # automatically.
 for ID in $NEGATIVE_IDS ; do
-    NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="$ID" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+    NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="$ID"
+        CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" CACHE_FORCE_OPTION="yes" start_cache
 done
 
 # Always return 0 at the end of the test - if at any point something has failed
