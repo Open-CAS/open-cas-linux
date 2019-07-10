@@ -60,4 +60,11 @@ kernel_not_supp_fail() {
        exit 1
 }
 
+conf_run() {
+    case "$1" in
+        "check") check ;;
+        "apply") apply $2 ;;
+    esac
+}
+
 IFS='?'
