@@ -1565,13 +1565,11 @@ out:
 }
 
 /**
- * @brief routine implements --remove-cache command.
- * @param[in] device caching device to be removed
+ * @brief routine implements --stop-cache command.
+ * @param[in] cache_id caching device id to be removed
  * @param[in] flush Boolean: shall we flush dirty data before removing cache.
  *		if yes, flushing may still be interrupted by user (in which case
  *		device won't be actually removed and error will be returned)
- * @param[in] allow_interruption shall we allow interruption of dirty
- *		data flushing
  */
 int cache_mngt_exit_instance(ocf_cache_id_t id, int flush)
 {
