@@ -19,35 +19,55 @@ SCRIPTPATH=`realpath $SCRIPTPATH`
 CONFIG_FILES=`ls $SCRIPTPATH/configure.d/*.conf | sort`
 FILES_COUNT=`echo $CONFIG_FILES | wc -w`
 
+CONFIG_FILE="config.out"
+
 generate_config() {
-    rm -f config.out
-    progress=0
-    for file in $CONFIG_FILES; do
-        progress=$((progress+1))
-        echo -ne "Generating configuration: $progress/$FILES_COUNT\033[0K\r"
-        CONF="$(/bin/bash $file "check")"
-        echo "$(basename $file) $CONF" >> config.out
-    done
-    echo ""
+	rm -f ${CONFIG_FILE}
+	touch ${CONFIG_FILE}
+	declare -a pid_list
+	progress=0
+
+	# Compile each test module in backgorund
+	echo "Preparing configuration"
+		for file in $CONFIG_FILES; do
+			progress=$((progress+1))
+			# $1 - Action to be performed
+			# $2 - File with stored configuration
+			# $3 - Name of called script (since script is running as subprocess
+			#		it has to be passed explicitly
+			source $file "check" "${SCRIPTPATH}/${CONFIG_FILE}" "$file" &
+			pid_list+=($!)
+	done
+
+	# Wait for all compilation processes to finish
+	for i in "${pid_list[@]}"; do
+		wait $i &> /dev/null
+	done
+
+	grep "X" ${SCRIPTPATH}/${CONFIG_FILE} &> /dev/null
+	if [ $? -eq 0 ] ; then
+		echo "ERROR! Following steps failed while preparing config:"
+		grep "X" ${SCRIPTPATH}/${CONFIG_FILE} | cut -f1 -d ' '
+		exit 1
+	fi
 }
 
 generate_header() {
-    rm -f $SCRIPTPATH/modules/generated_defines.h
-    progress=0
-    for file in $CONFIG_FILES; do
-        progress=$((progress+1))
-        echo -ne "Configuring OpenCAS: $progress/$FILES_COUNT\033[0K\r"
-        CONF=$(cat config.out | awk -v file=$(basename $file) '{ if ($1 == file) print $2 }')
-        /bin/bash $file "apply" "$CONF"
-    done
-    echo ""
+	rm -f $SCRIPTPATH/modules/generated_defines.h
+	progress=0
+	for file in $CONFIG_FILES; do
+		progress=$((progress+1))
+		echo -ne "Configuring OpenCAS: $progress/$FILES_COUNT\033[0K\r"
+		CONF=$(cat ${CONFIG_FILE} | awk -v file=$(basename $file) '{ if ($1 == file) print $2 }')
+		/bin/bash $file "apply" "$CONF" "$file"
+	done
+	echo ""
 }
 
 if [ -z "$1" ]; then
-    generate_config
-    CONFIG_FILE="config.out"
+	generate_config
 else
-    CONFIG_FILE="$1"
+	CONFIG_FILE="$1"
 fi
 
 generate_header
