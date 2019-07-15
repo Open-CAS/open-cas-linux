@@ -9,7 +9,7 @@ SCRIPTPATH=`realpath $SCRIPTPATH`
 KERNEL_DIR="${KERNEL_DIR:-/lib/modules/$(uname -r)/build/}"
 KERNEL_VER="$(cd $KERNEL_DIR; make kernelversion)"
 NPROC=`nproc`
-DEFINE_FILE=$SCRIPTPATH/../modules/generated_defines.h
+DEFINE_FILE=$SCRIPTPATH/modules/generated_defines.h
 
 
 add_define() {
