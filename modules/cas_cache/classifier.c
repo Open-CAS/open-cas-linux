@@ -445,6 +445,38 @@ static void _cas_cls_directory_dtr(struct cas_classifier *cls,
 	kfree(ctx);
 }
 
+/* File extension test function */
+static cas_cls_eval_t _cas_cls_extension_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	struct cas_cls_string *ctx;
+	struct inode *inode;
+	struct dentry *dentry;
+	char *extension;
+
+	ctx = c->context;
+	inode = io->inode;
+
+	if (!inode)
+		return cas_cls_eval_no;
+
+	/* I/O target inode dentry */
+	dentry = _cas_cls_dir_get_inode_dentry(inode);
+	if (!dentry)
+		return cas_cls_eval_no;
+
+	extension = strrchr(dentry->d_name.name, '.');
+	if (!extension)
+		return cas_cls_eval_no;
+
+	/* First character of @extension is '.', which we don't want to compare */
+	if (strcmp(ctx->string, extension + 1) == 0)
+		return cas_cls_eval_yes;
+
+	return cas_cls_eval_no;
+}
+
 /* Array of condition handlers */
 static struct cas_cls_condition_handler _handlers[] = {
 	{ "done", _cas_cls_done_test, _cas_cls_generic_ctr },
@@ -456,6 +488,8 @@ static struct cas_cls_condition_handler _handlers[] = {
 			_cas_cls_generic_dtr },
 	{ "directory", _cas_cls_directory_test, _cas_cls_directory_ctr,
 			_cas_cls_directory_dtr },
+	{ "extension", _cas_cls_extension_test, _cas_cls_string_ctr,
+			_cas_cls_generic_dtr },
 #ifdef CAS_WLTH_SUPPORT
 	{ "wlth", _cas_cls_wlth_test, _cas_cls_numeric_ctr,
 			_cas_cls_generic_dtr},
