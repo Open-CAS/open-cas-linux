@@ -3,23 +3,83 @@
 # Copyright(c) 2012-2019 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
-which dirname 2>&1 > /dev/null || { echo >&2 "Eror: missing 'dirname' utility"; exit 1; }
-which realpath 2>&1 > /dev/null || { echo >&2 "Eror: missing 'realpath' utility"; exit 1; }
+
+check_util() {
+    which $1 2>&1 > /dev/null || { echo >&2 "Error: missing '$1' utility"; exit 1; }
+}
+
+check_util dirname
+check_util realpath
+check_util basename
+check_util awk
 
 SCRIPTPATH=`dirname $0`
 SCRIPTPATH=`realpath $SCRIPTPATH`
 
 CONFIG_FILES=`ls $SCRIPTPATH/configure.d/*.conf | sort`
+FILES_COUNT=`echo $CONFIG_FILES | wc -w`
 
-rm -f $SCRIPTPATH/modules/generated_defines.h
+CONFIG_FILE=$SCRIPTPATH/"config.out"
 
-files_count=`echo $CONFIG_FILES | wc -w`
-progress=0
+generate_config() {
+	rm -f ${CONFIG_FILE}
+	touch ${CONFIG_FILE}
+	declare -a pid_list
+	progress=0
 
-for file in $CONFIG_FILES; do
-	progress=$((progress+1))
-	echo -ne "Configuring OpenCAS: $progress/$files_count\033[0K\r"
-	/bin/bash $file
-done
-echo -ne "        \033[0K\r"
+	# Compile each test module in background
+	echo "Preparing configuration"
+		for file in $CONFIG_FILES; do
+			progress=$((progress+1))
+			# $1 - Action to be performed
+			# $2 - File with stored configuration
+			# $3 - Name of called script (since script is running as subprocess
+			#		it has to be passed explicitly)
+			source $file "check" "$CONFIG_FILE" "$file" &
+			pid_list+=($!)
+	done
 
+	# Wait for all compilation processes to finish
+	wait
+
+	grep "X" ${CONFIG_FILE} &> /dev/null
+	if [ $? -eq 0 ] ; then
+		echo "ERROR! Following steps failed while preparing config:"
+		grep "X" ${CONFIG_FILE} | cut -f1 -d ' '
+		exit 1
+	fi
+}
+
+generate_header() {
+	rm -f $SCRIPTPATH/modules/generated_defines.h
+	# Configs starting with '1_' have to be put as first in header
+	FIRST=$(echo $CONFIG_FILES | tr ' ' '\n' | grep '1_')
+	SECOND=$(echo $CONFIG_FILES | tr ' ' '\n' | grep '2_')
+
+	echo "Configuring OpenCAS"
+	for file in $FIRST; do
+		CONF=$(cat ${CONFIG_FILE} | grep $(basename $file) | cut -d' ' -f2)
+		source $file "apply" "$CONF" "$file" &
+	done
+
+	wait
+
+	for file in $SECOND; do
+		CONF=$(cat ${CONFIG_FILE} | grep $(basename $file) | cut -d' ' -f2)
+		source $file "apply" "$CONF" "$file" &
+	done
+
+	wait
+}
+
+if [ -z "$1" ]; then
+	generate_config
+else
+	CONFIG_FILE=$(realpath $1)
+	if [ $? -ne 0 ] ; then
+		echo "Invaild path to config file!"
+		exit 1
+	fi
+fi
+
+generate_header

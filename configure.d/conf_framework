@@ -6,12 +6,10 @@
 
 SCRIPTPATH=`dirname $0`
 SCRIPTPATH=`realpath $SCRIPTPATH`
-MODULE_FILE=$SCRIPTPATH/test_mod.c
-OBJ_MOD=$SCRIPTPATH/test_mod.o
 KERNEL_DIR="${KERNEL_DIR:-/lib/modules/$(uname -r)/build/}"
 KERNEL_VER="$(cd $KERNEL_DIR; make kernelversion)"
 NPROC=`nproc`
-DEFINE_FILE=$SCRIPTPATH/../modules/generated_defines.h
+DEFINE_FILE=$SCRIPTPATH/modules/generated_defines.h
 
 
 add_define() {
@@ -23,41 +21,58 @@ add_function() {
 }
 
 compile_module(){
-	if [ $# -gt 1 ]
+	if [ $# -gt 2 ]
 	then
-		INCLUDE="#include <$2>"
+		INCLUDE="#include <$3>"
 	else
 		INCLUDE=""
 	fi
 
+	config_file=$1
+	test_module_dir=$SCRIPTPATH/configure.d/${config_file}_dir
+	test_module_file=$test_module_dir/test_mod.c
+	test_module_obj=$test_module_dir/test_mod.o
+
+	mkdir -p $test_module_dir
+	cp -f $SCRIPTPATH/configure.d/Makefile $test_module_dir
+
 	############# TEST MODULE #############
-	cat > $MODULE_FILE <<- EOF
+	cat > $test_module_file <<- EOF
 	#include <linux/module.h>
 	#include <linux/kernel.h>
 	$INCLUDE
 
 	int init_module(void) {
-		$1;
+		$2;
 		return 0;
 	}
 	void cleanup_module(void) {};
 	EOF
 	#######################################
 
-	make -C $SCRIPTPATH KERNEL_DIR=${KERNEL_DIR} &> /dev/null
+	make -C $test_module_dir KERNEL_DIR=${KERNEL_DIR} &> /dev/null
 
 	local ret=$?
-	if [ $ret -eq 0 ]; then
-		make -C $SCRIPTPATH clean &> /dev/null
-	fi
+
+	rm -Rf $test_module_dir
 
 	return $ret
 }
 
 kernel_not_supp_fail() {
-       echo "Current kernel is not supported!"
-       rm $DEFINE_FILE
-       exit 1
+	echo "Current kernel is not supported!"
+	rm $DEFINE_FILE
+	exit 1
+}
+
+# $1 - name of function to be called
+# $2 - path to file with valid configs
+# $3 - name of processed template file
+conf_run() {
+	case "$1" in
+		"check") check $2 $3;;
+		"apply") apply $2 ;;
+	esac
 }
 
 IFS='?'
