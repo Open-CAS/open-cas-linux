@@ -108,7 +108,7 @@ static struct cas_atomic_io *cas_atomic_alloc(int dir, struct ocf_io *io, bool w
 
 	/* Get number of IOs to be issued */
 	uint32_t ios_count;
-	ocf_cache_t cache = ocf_volume_get_cache(io->volume);
+	ocf_cache_t cache = ocf_volume_get_cache(ocf_io_get_volume(io));
 
 	uint64_t addr = io->addr;
 	uint32_t i, bytes = io->bytes;
@@ -161,7 +161,7 @@ static struct cas_atomic_io *cas_atomic_alloc(int dir, struct ocf_io *io, bool w
 		this->bytes = min(bytes, max_io_size);
 		this->dir = dir;
 		this->flags = io->flags;
-		this->volume = io->volume;
+		this->volume = ocf_io_get_volume(io);
 
 		CAS_DEBUG_PARAM("Sub-atomic IO (%u), Addr = %llu, bytes = %u",
 				i, this->addr, this->bytes);
@@ -326,7 +326,7 @@ static int cas_atomic_wr_prepare(struct ocf_io *io,
 	uint64_t addr = atom->addr;
 	uint32_t bytes = atom->bytes;
 
-	cache = ocf_volume_get_cache(io->volume);
+	cache = ocf_volume_get_cache(ocf_io_get_volume(io));
 
 	/* Initialize iterators */
 	cas_io_iter_init(&dst, atom->data->vec, atom->bvec_size);
@@ -765,7 +765,7 @@ static int cas_atomic_submit_discard_bio(struct cas_atomic_io *atom)
 static int cas_atomic_special_req_prepare(struct cas_atomic_io *atom,
 	struct ocf_io *io)
 {
-	struct bd_object *bdobj = bd_object(io->volume);
+	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
 	struct block_device *bdev = bdobj->btm_bd;
 
 	CAS_DEBUG_TRACE();
@@ -773,7 +773,7 @@ static int cas_atomic_special_req_prepare(struct cas_atomic_io *atom,
 	atom->count = 1;
 	atom->cmpl_fn = io->end;
 	atom->cmpl_context = io;
-	atom->volume = io->volume;
+	atom->volume = ocf_io_get_volume(io);
 	atom->flags = io->flags;
 	atomic_set(&atom->req_remaining, 1);
 
@@ -792,7 +792,7 @@ static int cas_atomic_special_req_prepare(struct cas_atomic_io *atom,
 
 void cas_atomic_submit_discard(struct ocf_io *io)
 {
-	struct bd_object *bdobj = bd_object(io->volume);
+	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
 	struct block_device *bdev = bdobj->btm_bd;
 	struct request_queue *q = bdev_get_queue(bdev);
 	int result = 0;
@@ -849,7 +849,7 @@ out:
 void cas_atomic_submit_flush(struct ocf_io *io)
 {
 #ifdef CAS_FLUSH_SUPPORTED
-	struct bd_object *bdobj = bd_object(io->volume);
+	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
 	struct block_device *bdev = bdobj->btm_bd;
 	struct request_queue *q = bdev_get_queue(bdev);
 	int result = 0;
@@ -1049,7 +1049,7 @@ static void _cas_atomic_write_zeroes_end(struct cas_atomic_write_zero_ctx *ctx,
 static void _cas_atomic_write_zeroes_step_cmpl(struct ocf_io *io, int error)
 {
 	struct cas_atomic_write_zero_ctx *ctx = io->priv1;
-	struct bd_object *bdobj = bd_object(io->volume);
+	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
 	const unsigned bytes_processed = (io->addr - ctx->original_io->addr)
 			+ io->bytes;
 	const unsigned bytes_left = ctx->original_io->bytes - bytes_processed;
@@ -1097,7 +1097,9 @@ void cas_atomic_submit_write_zeroes(struct ocf_io *io)
 		goto error;
 	}
 
-	ctx->sub_io = ocf_volume_new_io(io->volume);
+	ctx->sub_io = ocf_volume_new_io(ocf_io_get_volume(io), io->io_queue,
+			io->addr, min(io->bytes, ctx->step_size),
+			OCF_WRITE, 0, 0);
 	if (!ctx->sub_io) {
 		result = -ENOMEM;
 		goto error_after_ctx;
@@ -1112,9 +1114,6 @@ void cas_atomic_submit_write_zeroes(struct ocf_io *io)
 	ocf_io_get(io);
 
 	/* set up sub-io */
-	ocf_io_configure(ctx->sub_io, io->addr,
-		min(io->bytes, ctx->step_size),
-		OCF_WRITE, 0, 0);
 	ocf_io_set_cmpl(ctx->sub_io, ctx, NULL, _cas_atomic_write_zeroes_step_cmpl);
 
 	cas_atomic_fire_io(ctx->sub_io, NULL, true);
