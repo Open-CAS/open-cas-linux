@@ -79,6 +79,7 @@ int static cas_casdisk_lookup_funtions(void)
 	cas_lookup_symbol(casdsk_disk_dettach);
 	cas_lookup_symbol(casdsk_exp_obj_destroy);
 	cas_lookup_symbol(casdsk_exp_obj_create);
+	cas_lookup_symbol(casdsk_exp_obj_free);
 	cas_lookup_symbol(casdsk_disk_get_queue);
 	cas_lookup_symbol(casdsk_store_config);
 	cas_lookup_symbol(casdsk_disk_get_blkdev);

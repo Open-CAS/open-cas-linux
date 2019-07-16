@@ -421,6 +421,7 @@ void casdsk_exp_obj_free(struct casdsk_disk *dsk)
 	kobject_put(&exp_obj->kobj);
 	dsk->exp_obj = NULL;
 }
+EXPORT_SYMBOL(casdsk_exp_obj_free);
 
 static void __casdsk_exp_obj_release(struct casdsk_exp_obj *exp_obj)
 {
