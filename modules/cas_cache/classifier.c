@@ -477,6 +477,16 @@ static cas_cls_eval_t _cas_cls_extension_test(
 	return cas_cls_eval_no;
 }
 
+/* LBA test function */
+static cas_cls_eval_t _cas_cls_lba_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	uint64_t lba = CAS_BIO_BISECTOR(io->bio);
+
+	return _cas_cls_numeric_test_u(c, lba);
+}
+
 /* Array of condition handlers */
 static struct cas_cls_condition_handler _handlers[] = {
 	{ "done", _cas_cls_done_test, _cas_cls_generic_ctr },
@@ -490,6 +500,7 @@ static struct cas_cls_condition_handler _handlers[] = {
 			_cas_cls_directory_dtr },
 	{ "extension", _cas_cls_extension_test, _cas_cls_string_ctr,
 			_cas_cls_generic_dtr },
+	{ "lba", _cas_cls_lba_test, _cas_cls_numeric_ctr, _cas_cls_generic_dtr },
 #ifdef CAS_WLTH_SUPPORT
 	{ "wlth", _cas_cls_wlth_test, _cas_cls_numeric_ctr,
 			_cas_cls_generic_dtr},
