@@ -884,6 +884,17 @@ int block_dev_activate_exported_object(ocf_core_t core)
 	return ret;
 }
 
+static int _block_dev_activate_exported_object(ocf_core_t core, void *cntx)
+{
+	return block_dev_activate_exported_object(core);
+}
+
+int block_dev_activate_all_exported_objects(ocf_cache_t cache)
+{
+	return ocf_core_visit(cache, _block_dev_activate_exported_object, NULL,
+			true);
+}
+
 int block_dev_create_exported_object(ocf_core_t core)
 {
 	ocf_volume_t obj = ocf_core_get_volume(core);
@@ -913,6 +924,17 @@ int block_dev_create_exported_object(ocf_core_t core)
 		bvol->expobj_valid = true;
 
 	return result;
+}
+
+static int _block_dev_create_exported_object_visitor(ocf_core_t core, void *cntx)
+{
+	return block_dev_create_exported_object(core);
+}
+
+int block_dev_create_all_exported_objects(ocf_cache_t cache)
+{
+	return ocf_core_visit(cache, _block_dev_create_exported_object_visitor, NULL,
+			true);
 }
 
 int block_dev_destroy_exported_object(ocf_core_t core)
@@ -1014,5 +1036,21 @@ int block_dev_destroy_all_exported_objects(ocf_cache_t cache)
 
 	ocf_core_visit(cache, _block_dev_stop_exported_object, NULL, true);
 
+	block_dev_free_all_exported_objects(cache);
 	return 0;
+}
+
+static int _block_dev_free_exported_object(ocf_core_t core, void *cntx)
+{
+	struct bd_object *bvol = bd_object(
+			ocf_core_get_volume(core));
+
+	casdisk_functions.casdsk_exp_obj_free(bvol->dsk);
+	return 0;
+}
+
+int block_dev_free_all_exported_objects(ocf_cache_t cache)
+{
+	return ocf_core_visit(cache, _block_dev_free_exported_object, NULL,
+			true);
 }

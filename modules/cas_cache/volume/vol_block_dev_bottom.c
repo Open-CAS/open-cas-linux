@@ -29,7 +29,7 @@ int block_dev_open_object(ocf_volume_t vol, void *volume_params)
 	struct casdsk_disk *dsk;
 
 	if (bdobj->opened_by_bdev) {
-		/* Bdev has beed set manually, so there is nothing to do. */
+		/* Bdev has been set manually, so there is nothing to do. */
 		return 0;
 	}
 

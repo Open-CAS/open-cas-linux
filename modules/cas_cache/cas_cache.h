@@ -72,6 +72,7 @@ struct casdsk_functions_mapper {
 	int (*casdsk_exp_obj_destroy)(struct casdsk_disk *dsk);
 	int (*casdsk_exp_obj_create)(struct casdsk_disk *dsk, const char *dev_name,
 		struct module *owner, struct casdsk_exp_obj_ops *ops);
+	void(*casdsk_exp_obj_free)(struct casdsk_disk *dsk);
 	struct request_queue *(*casdsk_disk_get_queue)(struct casdsk_disk *dsk);
 	void (*casdsk_store_config)(size_t n_blobs, struct casdsk_props_conf *blobs);
 	struct block_device *(*casdsk_disk_get_blkdev)(struct casdsk_disk *dsk);

@@ -1565,13 +1565,11 @@ out:
 }
 
 /**
- * @brief routine implements --remove-cache command.
- * @param[in] device caching device to be removed
+ * @brief routine implements --stop-cache command.
+ * @param[in] cache_id caching device id to be removed
  * @param[in] flush Boolean: shall we flush dirty data before removing cache.
  *		if yes, flushing may still be interrupted by user (in which case
  *		device won't be actually removed and error will be returned)
- * @param[in] allow_interruption shall we allow interruption of dirty
- *		data flushing
  */
 int cache_mngt_exit_instance(ocf_cache_id_t id, int flush)
 {
@@ -1648,7 +1646,7 @@ int cache_mngt_exit_instance(ocf_cache_id_t id, int flush)
 	/* Stop cache device */
 	status = _cache_mngt_cache_stop_sync(cache);
 	if (status && status != -OCF_ERR_WRITE_CACHE)
-		goto unlock;
+		goto restore_exp_obj;
 
 	if (!status && flush_status)
 		status = -KCAS_ERR_STOPPED_DIRTY;
@@ -1660,6 +1658,24 @@ int cache_mngt_exit_instance(ocf_cache_id_t id, int flush)
 	ocf_queue_put(cache_priv->mngt_queue);
 	vfree(cache_priv);
 
+	ocf_mngt_cache_unlock(cache);
+	ocf_mngt_cache_put(cache);
+
+	return status;
+
+restore_exp_obj:
+	if (block_dev_create_all_exported_objects(cache)) {
+		/* Print error msg but do not change return err code to inform user why
+		* stop failed originally. */
+		printk(KERN_WARNING
+			"Failed to restore (create) all exported objects!\n");
+		goto unlock;
+	}
+	if (block_dev_activate_all_exported_objects(cache)) {
+		block_dev_destroy_all_exported_objects(cache);
+		printk(KERN_WARNING
+			"Failed to restore (activate) all exported objects!\n");
+	}
 unlock:
 	ocf_mngt_cache_unlock(cache);
 put:

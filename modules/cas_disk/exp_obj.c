@@ -421,6 +421,7 @@ void casdsk_exp_obj_free(struct casdsk_disk *dsk)
 	kobject_put(&exp_obj->kobj);
 	dsk->exp_obj = NULL;
 }
+EXPORT_SYMBOL(casdsk_exp_obj_free);
 
 static void __casdsk_exp_obj_release(struct casdsk_exp_obj *exp_obj)
 {
@@ -723,7 +724,10 @@ int casdsk_exp_obj_destroy(struct casdsk_disk *dsk)
 	struct casdsk_exp_obj *exp_obj;
 
 	BUG_ON(!dsk);
-	BUG_ON(!dsk->exp_obj);
+
+	if (!dsk->exp_obj)
+		return -ENODEV;
+
 	BUG_ON(!dsk->exp_obj->locked_bd);
 
 	CASDSK_DEBUG_DISK_TRACE(dsk);
