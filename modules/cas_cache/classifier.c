@@ -487,6 +487,18 @@ static cas_cls_eval_t _cas_cls_lba_test(
 	return _cas_cls_numeric_test_u(c, lba);
 }
 
+/* PID test function */
+static cas_cls_eval_t _cas_cls_pid_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	/* 'current' is kernel macro that allows to access control block of
+	   currently executing task */
+	struct task_struct *ti = current;
+
+	return _cas_cls_numeric_test_u(c, ti->pid);
+}
+
 /* Array of condition handlers */
 static struct cas_cls_condition_handler _handlers[] = {
 	{ "done", _cas_cls_done_test, _cas_cls_generic_ctr },
@@ -501,6 +513,7 @@ static struct cas_cls_condition_handler _handlers[] = {
 	{ "extension", _cas_cls_extension_test, _cas_cls_string_ctr,
 			_cas_cls_generic_dtr },
 	{ "lba", _cas_cls_lba_test, _cas_cls_numeric_ctr, _cas_cls_generic_dtr },
+	{ "pid", _cas_cls_pid_test, _cas_cls_numeric_ctr, _cas_cls_generic_dtr },
 #ifdef CAS_WLTH_SUPPORT
 	{ "wlth", _cas_cls_wlth_test, _cas_cls_numeric_ctr,
 			_cas_cls_generic_dtr},
