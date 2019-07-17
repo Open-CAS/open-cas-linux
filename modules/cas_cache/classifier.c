@@ -185,6 +185,34 @@ error:
 	return result;
 }
 
+/* String condition constructor. @data is expected to contain string
+ * to be matched. */
+static int _cas_cls_string_ctr(struct cas_classifier *cls,
+		struct cas_cls_condition *c, char *data)
+{
+	struct cas_cls_string *ctx;
+
+	if (!data || strlen(data) == 0) {
+		CAS_CLS_MSG(KERN_ERR, "Missing string specifier\n");
+		return -EINVAL;
+	}
+
+	if (strlen(data) > MAX_STRING_SPECIFIER_LEN) {
+		CAS_CLS_MSG(KERN_ERR, "String specifier to long: %s\n", data);
+		return -EINVAL;
+	}
+
+	ctx = kmalloc(sizeof(*ctx), GFP_KERNEL);
+	if (!ctx)
+		return -ENOMEM;
+
+	strcpy(ctx->string, data);
+
+	c->context = ctx;
+
+	return 0;
+}
+
 /* Unsigned int numeric test function */
 static cas_cls_eval_t _cas_cls_numeric_test_u(
 		struct cas_cls_condition *c, uint64_t val)
