@@ -499,6 +499,27 @@ static cas_cls_eval_t _cas_cls_pid_test(
 	return _cas_cls_numeric_test_u(c, ti->pid);
 }
 
+/* Process name test function */
+static cas_cls_eval_t _cas_cls_process_name_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	struct cas_cls_string *ctx;
+	/* 'current' is kernel macro that allows to access control block of
+	   currently executing task */
+	struct task_struct *ti = current;
+	char comm[TASK_COMM_LEN];
+
+	ctx = c->context;
+
+	get_task_comm(comm, ti);
+
+	if (strcmp(ctx->string, comm) == 0)
+		return cas_cls_eval_yes;
+
+	return cas_cls_eval_no;
+}
+
 /* Array of condition handlers */
 static struct cas_cls_condition_handler _handlers[] = {
 	{ "done", _cas_cls_done_test, _cas_cls_generic_ctr },
@@ -514,6 +535,8 @@ static struct cas_cls_condition_handler _handlers[] = {
 			_cas_cls_generic_dtr },
 	{ "lba", _cas_cls_lba_test, _cas_cls_numeric_ctr, _cas_cls_generic_dtr },
 	{ "pid", _cas_cls_pid_test, _cas_cls_numeric_ctr, _cas_cls_generic_dtr },
+	{ "process_name", _cas_cls_process_name_test, _cas_cls_string_ctr,
+					_cas_cls_generic_dtr },
 #ifdef CAS_WLTH_SUPPORT
 	{ "wlth", _cas_cls_wlth_test, _cas_cls_numeric_ctr,
 			_cas_cls_generic_dtr},
