@@ -23,7 +23,11 @@ add_function() {
 compile_module(){
 	if [ $# -gt 2 ]
 	then
-		INCLUDE="#include <$3>"
+		i=3
+		while [ "$i" -le "$#" ]; do
+			INCLUDE+=$(echo -e "\n#include <${!i}>\\n")
+			i=$((i + 1))
+		done
 	else
 		INCLUDE=""
 	fi
