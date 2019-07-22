@@ -77,7 +77,7 @@ static int _casdsk_exp_obj_prep_rq_fn(struct request_queue *q, struct request *r
 	if (likely(dsk->exp_obj->ops && dsk->exp_obj->ops->prep_rq_fn))
 		return dsk->exp_obj->ops->prep_rq_fn(dsk, q, rq, dsk->private);
 	else
-		return BLKPREP_OK;
+		return CAS_BLKPREP_OK;
 }
 
 static void _casdsk_exp_obj_request_fn(struct request_queue *q)

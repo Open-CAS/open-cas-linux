@@ -29,6 +29,7 @@ static inline bool _blockdev_can_handle_rq(struct request *rq)
 		error = __LINE__;
 
 	if (unlikely(rq->next_rq))
+	if (unlikely(CAS_BIDI_RQ(rq)))
 		error = __LINE__;
 
 	if (error != 0) {
@@ -686,7 +687,7 @@ static int _blockdev_prep_rq_fn(struct casdsk_disk *dsk, struct request_queue *q
 
 	atomic64_inc(&bvol->pending_rqs);
 
-	return BLKPREP_OK;
+	return CAS_BLKPREP_OK;
 }
 
 static int _blockdev_prepare_queue(struct casdsk_disk *dsk,
