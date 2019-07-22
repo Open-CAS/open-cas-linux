@@ -520,6 +520,31 @@ static cas_cls_eval_t _cas_cls_process_name_test(
 	return cas_cls_eval_no;
 }
 
+/* File offset test function */
+static cas_cls_eval_t _cas_cls_file_offset_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	struct inode *inode;
+	struct dentry *dentry;
+	uint64_t offset;
+
+	inode = io->inode;
+
+	if (!inode)
+		return cas_cls_eval_no;
+
+	/* I/O target inode dentry */
+	dentry = _cas_cls_dir_get_inode_dentry(inode);
+	if (!dentry)
+		return cas_cls_eval_no;
+
+	offset = PAGE_SIZE * io->page->index +
+		io->bio->bi_io_vec->bv_offset;
+
+	return _cas_cls_numeric_test_u(c, offset);
+}
+
 /* Array of condition handlers */
 static struct cas_cls_condition_handler _handlers[] = {
 	{ "done", _cas_cls_done_test, _cas_cls_generic_ctr },
@@ -536,6 +561,8 @@ static struct cas_cls_condition_handler _handlers[] = {
 	{ "lba", _cas_cls_lba_test, _cas_cls_numeric_ctr, _cas_cls_generic_dtr },
 	{ "pid", _cas_cls_pid_test, _cas_cls_numeric_ctr, _cas_cls_generic_dtr },
 	{ "process_name", _cas_cls_process_name_test, _cas_cls_string_ctr,
+					_cas_cls_generic_dtr },
+	{ "file_offset", _cas_cls_file_offset_test, _cas_cls_numeric_ctr,
 					_cas_cls_generic_dtr },
 #ifdef CAS_WLTH_SUPPORT
 	{ "wlth", _cas_cls_wlth_test, _cas_cls_numeric_ctr,
