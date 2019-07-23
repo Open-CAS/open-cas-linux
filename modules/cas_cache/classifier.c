@@ -545,6 +545,14 @@ static cas_cls_eval_t _cas_cls_file_offset_test(
 	return _cas_cls_numeric_test_u(c, offset);
 }
 
+/* Request size test function */
+static cas_cls_eval_t _cas_cls_request_size_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	return _cas_cls_numeric_test_u(c, CAS_BIO_BISIZE(io->bio));
+}
+
 /* Array of condition handlers */
 static struct cas_cls_condition_handler _handlers[] = {
 	{ "done", _cas_cls_done_test, _cas_cls_generic_ctr },
@@ -563,6 +571,8 @@ static struct cas_cls_condition_handler _handlers[] = {
 	{ "process_name", _cas_cls_process_name_test, _cas_cls_string_ctr,
 					_cas_cls_generic_dtr },
 	{ "file_offset", _cas_cls_file_offset_test, _cas_cls_numeric_ctr,
+					_cas_cls_generic_dtr },
+	{ "request_size", _cas_cls_request_size_test, _cas_cls_numeric_ctr,
 					_cas_cls_generic_dtr },
 #ifdef CAS_WLTH_SUPPORT
 	{ "wlth", _cas_cls_wlth_test, _cas_cls_numeric_ctr,
