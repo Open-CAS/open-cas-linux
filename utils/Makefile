@@ -29,7 +29,7 @@ endef
 endif
 
 # Just a placeholder when running make from parent dir without install/uninstall arg
-default: ;
+all: ;
 
 install:
 	@echo "Installing Open-CAS utils"
