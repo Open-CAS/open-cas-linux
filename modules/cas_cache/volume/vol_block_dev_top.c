@@ -212,7 +212,13 @@ static int _blockdev_alloc_many_requests(ocf_core_t core,
 
 		data->master_io_req = master;
 
-		sub_io = ocf_core_new_io(core);
+		sub_io = ocf_core_new_io(core,
+				cache_priv->io_queues[smp_processor_id()],
+				CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
+				CAS_BIO_BISIZE(bio), (bio_data_dir(bio) == READ) ?
+						OCF_READ : OCF_WRITE,
+				cas_cls_classify(cache, bio), flags);
+
 		if (!sub_io) {
 			cas_free_blk_data(data);
 			error = -ENOMEM;
@@ -221,11 +227,6 @@ static int _blockdev_alloc_many_requests(ocf_core_t core,
 
 		data->io = sub_io;
 
-		ocf_io_configure(sub_io, CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
-				CAS_BIO_BISIZE(bio), (bio_data_dir(bio) == READ) ?
-						OCF_READ : OCF_WRITE,
-				cas_cls_classify(cache, bio), flags);
-
 		error = ocf_io_set_data(sub_io, data, 0);
 		if (error) {
 			ocf_io_put(sub_io);
@@ -233,7 +234,6 @@ static int _blockdev_alloc_many_requests(ocf_core_t core,
 			break;
 		}
 
-		ocf_io_set_queue(sub_io, cache_priv->io_queues[smp_processor_id()]);
 		ocf_io_set_cmpl(sub_io, NULL, NULL, block_dev_complete_sub_rq);
 
 		list_add_tail(&data->list, list);
@@ -291,13 +291,11 @@ static int _blkdev_handle_flush_request(struct request *rq, ocf_core_t core)
 	ocf_cache_t cache = ocf_core_get_cache(core);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 
-	io = ocf_core_new_io(core);
+	io = ocf_core_new_io(core, cache_priv->io_queues[smp_processor_id()],
+			0, 0, OCF_WRITE, 0, CAS_WRITE_FLUSH);
 	if (!io)
 		return -ENOMEM;
 
-	ocf_io_configure(io, 0, 0, OCF_WRITE, 0, CAS_WRITE_FLUSH);
-
-	ocf_io_set_queue(io, cache_priv->io_queues[smp_processor_id()]);
 	ocf_io_set_cmpl(io, rq, NULL, block_dev_complete_flush);
 
 	ocf_core_submit_flush(io);
@@ -416,16 +414,16 @@ static int _blkdev_handle_request(struct request *rq, ocf_core_t core)
 		return _blkdev_handle_flush_request(rq, core);
 	}
 
-	io = ocf_core_new_io(core);
+	io = ocf_core_new_io(core, cache_priv->io_queues[smp_processor_id()],
+			BLK_RQ_POS(rq) << SECTOR_SHIFT, BLK_RQ_BYTES(rq),
+			(rq_data_dir(rq) == CAS_RQ_DATA_DIR_WR) ?
+					OCF_WRITE : OCF_READ,
+			cas_cls_classify(cache, rq->bio), master_flags);
 	if (!io) {
 		CAS_PRINT_RL(KERN_CRIT "Out of memory. Ending IO processing.\n");
 		return -ENOMEM;
 	}
 
-	ocf_io_configure(io, BLK_RQ_POS(rq) << SECTOR_SHIFT, BLK_RQ_BYTES(rq),
-			(rq_data_dir(rq) == CAS_RQ_DATA_DIR_WR) ?
-					OCF_WRITE : OCF_READ,
-			cas_cls_classify(cache, rq->bio), master_flags);
 
 	size = _blkdev_scan_request(cache, rq, io, &single_io);
 
@@ -455,7 +453,6 @@ static int _blkdev_handle_request(struct request *rq, ocf_core_t core)
 			return -EINVAL;
 		}
 
-		ocf_io_set_queue(io, cache_priv->io_queues[smp_processor_id()]);
 		ocf_io_set_cmpl(io, NULL, NULL, block_dev_complete_rq);
 
 		ocf_core_submit_io(io);
@@ -709,7 +706,10 @@ static void _blockdev_make_request_discard(struct casdsk_disk *dsk,
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	struct ocf_io *io;
 
-	io = ocf_core_new_io(core);
+	io = ocf_core_new_io(core, cache_priv->io_queues[smp_processor_id()],
+			CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
+			CAS_BIO_BISIZE(bio), OCF_WRITE, 0, 0);
+
 	if (!io) {
 		CAS_PRINT_RL(KERN_CRIT
 			"Out of memory. Ending IO processing.\n");
@@ -717,10 +717,6 @@ static void _blockdev_make_request_discard(struct casdsk_disk *dsk,
 		return;
 	}
 
-	ocf_io_configure(io, CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT, CAS_BIO_BISIZE(bio),
-			0, 0, 0);
-
-	ocf_io_set_queue(io, cache_priv->io_queues[smp_processor_id()]);
 	ocf_io_set_cmpl(io, bio, NULL, block_dev_complete_bio_discard);
 
 	ocf_core_submit_discard(io);
@@ -775,17 +771,18 @@ static int _blockdev_make_request_fast(struct casdsk_disk *dsk,
 	data->master_io_req = bio;
 	data->start_time = jiffies;
 
-	io = ocf_core_new_io(core);
+	io = ocf_core_new_io(core, cache_priv->io_queues[smp_processor_id()],
+			CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
+			CAS_BIO_BISIZE(bio), (bio_data_dir(bio) == READ) ?
+					OCF_READ : OCF_WRITE,
+			cas_cls_classify(cache, bio), 0);
+
 	if (!io) {
 		printk(KERN_CRIT "Out of memory. Ending IO processing.\n");
 		cas_free_blk_data(data);
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -ENOMEM);
 		return CASDSK_BIO_HANDLED;
 	}
-
-	ocf_io_configure(io, CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT, CAS_BIO_BISIZE(bio),
-			(bio_data_dir(bio) == READ) ? OCF_READ : OCF_WRITE,
-			cas_cls_classify(cache, bio), 0);
 
 	ret = ocf_io_set_data(io, data, 0);
 	if (ret < 0) {
@@ -795,7 +792,6 @@ static int _blockdev_make_request_fast(struct casdsk_disk *dsk,
 		return CASDSK_BIO_HANDLED;
 	}
 
-	ocf_io_set_queue(io, cache_priv->io_queues[smp_processor_id()]);
 	ocf_io_set_cmpl(io, NULL, NULL, block_dev_complete_bio_fast);
 	ocf_io_set_start(io, block_dev_start_bio_fast);
 

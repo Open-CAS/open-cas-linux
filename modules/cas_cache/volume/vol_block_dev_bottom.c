@@ -210,7 +210,7 @@ CAS_DECLARE_BLOCK_CALLBACK(cas_bd_io_end, struct bio *bio,
 	BUG_ON(!bio->bi_private);
 	CAS_BLOCK_CALLBACK_INIT(bio);
 	io = bio->bi_private;
-	bdobj = bd_object(io->volume);
+	bdobj = bd_object(ocf_io_get_volume(io));
 	BUG_ON(!bdobj);
 	err = CAS_BLOCK_CALLBACK_ERROR(bio, error);
 	bdio = cas_io_to_blkio(io);
@@ -248,7 +248,7 @@ static void block_dev_submit_flush(struct ocf_io *io)
 {
 #ifdef CAS_FLUSH_SUPPORTED
 	struct blkio *blkio = cas_io_to_blkio(io);
-	struct bd_object *bdobj = bd_object(io->volume);
+	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
 	struct block_device *bdev = bdobj->btm_bd;
 	struct request_queue *q = bdev_get_queue(bdev);
 	struct bio *bio = NULL;
@@ -315,7 +315,7 @@ out:
 void block_dev_submit_discard(struct ocf_io *io)
 {
 	struct blkio *blkio = cas_io_to_blkio(io);
-	struct bd_object *bdobj = bd_object(io->volume);
+	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
 	struct block_device *bd = bdobj->btm_bd;
 	struct request_queue *q = bdev_get_queue(bd);
 	struct bio *bio = NULL;
@@ -396,7 +396,7 @@ out:
 static inline bool cas_bd_io_prepare(int *dir, struct ocf_io *io)
 {
 	struct blkio *bdio = cas_io_to_blkio(io);
-	struct bd_object *bdobj = bd_object(io->volume);
+	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
 
 	/* Setup DIR */
 	bdio->dir = *dir;
@@ -437,7 +437,7 @@ static inline bool cas_bd_io_prepare(int *dir, struct ocf_io *io)
 static void block_dev_submit_io(struct ocf_io *io)
 {
 	struct blkio *bdio = cas_io_to_blkio(io);
-	struct bd_object *bdobj = bd_object(io->volume);
+	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
 	struct bio_vec_iter *iter = &bdio->iter;
 	uint64_t addr = io->addr;
 	uint32_t bytes = io->bytes;
