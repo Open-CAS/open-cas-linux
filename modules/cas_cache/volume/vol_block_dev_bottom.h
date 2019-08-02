@@ -21,6 +21,4 @@ int block_dev_try_get_io_class(struct bio *bio, int *io_class);
 
 int block_dev_init(void);
 
-void block_dev_deinit(void);
-
 #endif /* __VOL_BLOCK_DEV_BOTTOM_H__ */

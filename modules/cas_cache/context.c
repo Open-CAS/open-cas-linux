@@ -430,13 +430,11 @@ int cas_initialize_context(void)
 	ret = atomic_dev_init();
 	if (ret) {
 		printk(KERN_ERR "Cannot initialize atomic device layer\n");
-		goto err_block_dev;
+		goto err_rpool;
 	}
 
 	return 0;
 
-err_block_dev:
-	block_dev_deinit();
 err_rpool:
 	cas_rpool_destroy(cas_bvec_pages_rpool, _cas_free_page_rpool, NULL);
 err_mpool:
@@ -449,8 +447,6 @@ err_ctx:
 
 void cas_cleanup_context(void)
 {
-	block_dev_deinit();
-	atomic_dev_deinit();
 	cas_garbage_collector_deinit();
 	cas_mpool_destroy(cas_bvec_pool);
 	cas_rpool_destroy(cas_bvec_pages_rpool, _cas_free_page_rpool, NULL);
