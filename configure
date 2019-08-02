@@ -24,19 +24,21 @@ CONFIG_FILE=$SCRIPTPATH/"config.out"
 generate_config() {
 	rm -f ${CONFIG_FILE}
 	touch ${CONFIG_FILE}
-	declare -a pid_list
-	progress=0
+	n_cores=$(nproc)
 
 	# Compile each test module in background
 	echo "Preparing configuration"
 		for file in $CONFIG_FILES; do
-			progress=$((progress+1))
 			# $1 - Action to be performed
 			# $2 - File with stored configuration
 			# $3 - Name of called script (since script is running as subprocess
 			#		it has to be passed explicitly)
 			source $file "check" "$CONFIG_FILE" "$file" &
-			pid_list+=($!)
+
+			# Prevent spawning more subprocesses than CPU available
+			while [ $(ps --no-headers -o pid --ppid=$$ | wc -w) -ge $n_cores ] ; do
+				sleep 1
+			done
 	done
 
 	# Wait for all compilation processes to finish
