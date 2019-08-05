@@ -17,11 +17,11 @@ class casadm:
 
     class result:
         def __init__(self, cmd):
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.exit_code = p.wait()
-            output = p.communicate()
-            self.stdout = output[0]
-            self.stderr = output[1]
+            p = subprocess.run(cmd, universal_newlines=True, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+            self.exit_code = p.returncode
+            self.stdout = p.stdout
+            self.stderr = p.stderr
 
     class CasadmError(Exception):
         def __init__(self, result):
@@ -500,10 +500,10 @@ def start_cache(cache, load, force=False):
             force=force)
 
 def configure_cache(cache):
-    if cache.params.has_key('cleaning_policy'):
+    if 'cleaning_policy' in cache.params:
         casadm.set_param('cleaning', cache_id=cache.cache_id,
                 policy=cache.params['cleaning_policy'])
-    if cache.params.has_key('ioclass_file'):
+    if 'ioclass_file' in cache.params:
         casadm.io_class_load_config(cache_id=cache.cache_id,
                 ioclass_file=cache.params['ioclass_file'])
 
