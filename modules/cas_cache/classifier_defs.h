@@ -6,6 +6,8 @@
 #ifndef __CLASSIFIER_DEFS_H__
 #define __CLASSIFIER_DEFS_H__
 
+#define MAX_STRING_SPECIFIER_LEN 256
+
 /* Rule matches 1:1 with io class. It contains multiple conditions with
  * associated logical operator (and/or) */
 struct cas_cls_rule {
@@ -116,6 +118,12 @@ struct cas_cls_numeric {
 
 	/* Condition operand as unsigned int */
 	uint64_t v_u64;
+};
+
+/* String condition context */
+struct cas_cls_string {
+	/* String specifier*/
+	char string[MAX_STRING_SPECIFIER_LEN];
 };
 
 /* Directory condition context */

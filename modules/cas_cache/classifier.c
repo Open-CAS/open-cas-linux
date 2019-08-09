@@ -185,6 +185,34 @@ error:
 	return result;
 }
 
+/* String condition constructor. @data is expected to contain string
+ * to be matched. */
+static int _cas_cls_string_ctr(struct cas_classifier *cls,
+		struct cas_cls_condition *c, char *data)
+{
+	struct cas_cls_string *ctx;
+
+	if (!data || strlen(data) == 0) {
+		CAS_CLS_MSG(KERN_ERR, "Missing string specifier\n");
+		return -EINVAL;
+	}
+
+	if (strlen(data) > MAX_STRING_SPECIFIER_LEN) {
+		CAS_CLS_MSG(KERN_ERR, "String specifier to long: %s\n", data);
+		return -EINVAL;
+	}
+
+	ctx = kmalloc(sizeof(*ctx), GFP_KERNEL);
+	if (!ctx)
+		return -ENOMEM;
+
+	strcpy(ctx->string, data);
+
+	c->context = ctx;
+
+	return 0;
+}
+
 /* Unsigned int numeric test function */
 static cas_cls_eval_t _cas_cls_numeric_test_u(
 		struct cas_cls_condition *c, uint64_t val)
@@ -417,6 +445,114 @@ static void _cas_cls_directory_dtr(struct cas_classifier *cls,
 	kfree(ctx);
 }
 
+/* File extension test function */
+static cas_cls_eval_t _cas_cls_extension_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	struct cas_cls_string *ctx;
+	struct inode *inode;
+	struct dentry *dentry;
+	char *extension;
+
+	ctx = c->context;
+	inode = io->inode;
+
+	if (!inode)
+		return cas_cls_eval_no;
+
+	/* I/O target inode dentry */
+	dentry = _cas_cls_dir_get_inode_dentry(inode);
+	if (!dentry)
+		return cas_cls_eval_no;
+
+	extension = strrchr(dentry->d_name.name, '.');
+	if (!extension)
+		return cas_cls_eval_no;
+
+	/* First character of @extension is '.', which we don't want to compare */
+	if (strcmp(ctx->string, extension + 1) == 0)
+		return cas_cls_eval_yes;
+
+	return cas_cls_eval_no;
+}
+
+/* LBA test function */
+static cas_cls_eval_t _cas_cls_lba_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	uint64_t lba = CAS_BIO_BISECTOR(io->bio);
+
+	return _cas_cls_numeric_test_u(c, lba);
+}
+
+/* PID test function */
+static cas_cls_eval_t _cas_cls_pid_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	/* 'current' is kernel macro that allows to access control block of
+	   currently executing task */
+	struct task_struct *ti = current;
+
+	return _cas_cls_numeric_test_u(c, ti->pid);
+}
+
+/* Process name test function */
+static cas_cls_eval_t _cas_cls_process_name_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	struct cas_cls_string *ctx;
+	/* 'current' is kernel macro that allows to access control block of
+	   currently executing task */
+	struct task_struct *ti = current;
+	char comm[TASK_COMM_LEN];
+
+	ctx = c->context;
+
+	get_task_comm(comm, ti);
+
+	if (strcmp(ctx->string, comm) == 0)
+		return cas_cls_eval_yes;
+
+	return cas_cls_eval_no;
+}
+
+/* File offset test function */
+static cas_cls_eval_t _cas_cls_file_offset_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	struct inode *inode;
+	struct dentry *dentry;
+	uint64_t offset;
+
+	inode = io->inode;
+
+	if (!inode)
+		return cas_cls_eval_no;
+
+	/* I/O target inode dentry */
+	dentry = _cas_cls_dir_get_inode_dentry(inode);
+	if (!dentry)
+		return cas_cls_eval_no;
+
+	offset = PAGE_SIZE * io->page->index +
+		io->bio->bi_io_vec->bv_offset;
+
+	return _cas_cls_numeric_test_u(c, offset);
+}
+
+/* Request size test function */
+static cas_cls_eval_t _cas_cls_request_size_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	return _cas_cls_numeric_test_u(c, CAS_BIO_BISIZE(io->bio));
+}
+
 /* Array of condition handlers */
 static struct cas_cls_condition_handler _handlers[] = {
 	{ "done", _cas_cls_done_test, _cas_cls_generic_ctr },
@@ -428,6 +564,16 @@ static struct cas_cls_condition_handler _handlers[] = {
 			_cas_cls_generic_dtr },
 	{ "directory", _cas_cls_directory_test, _cas_cls_directory_ctr,
 			_cas_cls_directory_dtr },
+	{ "extension", _cas_cls_extension_test, _cas_cls_string_ctr,
+			_cas_cls_generic_dtr },
+	{ "lba", _cas_cls_lba_test, _cas_cls_numeric_ctr, _cas_cls_generic_dtr },
+	{ "pid", _cas_cls_pid_test, _cas_cls_numeric_ctr, _cas_cls_generic_dtr },
+	{ "process_name", _cas_cls_process_name_test, _cas_cls_string_ctr,
+					_cas_cls_generic_dtr },
+	{ "file_offset", _cas_cls_file_offset_test, _cas_cls_numeric_ctr,
+					_cas_cls_generic_dtr },
+	{ "request_size", _cas_cls_request_size_test, _cas_cls_numeric_ctr,
+					_cas_cls_generic_dtr },
 #ifdef CAS_WLTH_SUPPORT
 	{ "wlth", _cas_cls_wlth_test, _cas_cls_numeric_ctr,
 			_cas_cls_generic_dtr},
