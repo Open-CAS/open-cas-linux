@@ -9,16 +9,9 @@
 #define BLK_RQ_POS(rq) (CAS_BIO_BISECTOR((rq)->bio))
 #define BLK_RQ_BYTES(rq) blk_rq_bytes(rq)
 
-extern u32 use_io_scheduler;
-
-static inline void __blockdev_end_request_all(struct request *rq, int error)
-{
-	__blk_end_request_all(rq, map_cas_err_to_generic(error));
-}
-
 static inline void _blockdev_end_request_all(struct request *rq, int error)
 {
-	blk_end_request_all(rq, map_cas_err_to_generic(error));
+	CAS_END_REQUEST_ALL(rq, map_cas_err_to_generic(error));
 }
 
 static inline bool _blockdev_can_handle_rq(struct request *rq)
@@ -28,9 +21,10 @@ static inline bool _blockdev_can_handle_rq(struct request *rq)
 	if (unlikely(!cas_is_rq_type_fs(rq)))
 		error = __LINE__;
 
-	if (unlikely(rq->next_rq))
-	if (unlikely(CAS_BIDI_RQ(rq)))
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 1, 0)
+	if (unlikely(blk_bidi_rq(rq)))
 		error = __LINE__;
+#endif
 
 	if (error != 0) {
 		CAS_PRINT_RL(KERN_ERR "%s cannot handle request (ERROR %d)\n",
@@ -39,16 +33,6 @@ static inline bool _blockdev_can_handle_rq(struct request *rq)
 	}
 
 	return true;
-}
-
-static inline struct request *_blockdev_peek_request(struct request_queue *q)
-{
-	return blk_peek_request(q);
-}
-
-static inline void _blockdev_start_request(struct request *rq)
-{
-	blk_start_request(rq);
 }
 
 static void _blockdev_set_bio_data(struct blk_data *data, struct bio *bio)
@@ -387,7 +371,7 @@ static uint32_t _blkdev_scan_request(ocf_cache_t cache, struct request *rq,
 	return size;
 }
 
-static int _blkdev_handle_request(struct request *rq, ocf_core_t core)
+static int __block_dev_queue_rq(struct request *rq, ocf_core_t core)
 {
 	ocf_cache_t cache = ocf_core_get_cache(core);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
@@ -398,7 +382,7 @@ static int _blkdev_handle_request(struct request *rq, ocf_core_t core)
 	uint32_t size;
 	int ret;
 
-	if (_blockdev_is_request_barier(rq)) {
+	if (_blockdev_is_request_barier(rq) || !_blockdev_can_handle_rq(rq)) {
 		CAS_PRINT_RL(KERN_WARNING
 			"special bio was sent,not supported!\n");
 		return -ENOTSUPP;
@@ -500,7 +484,19 @@ static int _blkdev_handle_request(struct request *rq, ocf_core_t core)
 		}
 	}
 
-	return 0;
+	return ret;
+}
+
+static int _block_dev_queue_request(struct casdsk_disk *dsk, struct request *rq, void *private)
+{
+	ocf_core_t core = private;
+	int ret;
+
+	ret = __block_dev_queue_rq(rq, core);
+	if (ret)
+		_blockdev_end_request_all(rq, ret);
+
+	return ret;
 }
 
 static inline int _blkdev_can_hndl_bio(struct bio *bio)
@@ -586,7 +582,7 @@ static void _blockdev_set_discard_properties(ocf_cache_t cache,
 	core_q = bdev_get_queue(core_bd);
 	cache_q = bdev_get_queue(cache_bd);
 
-	cas_queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, exp_q);
+	CAS_QUEUE_FLAG_SET(QUEUE_FLAG_DISCARD, exp_q);
 
 	CAS_SET_DISCARD_ZEROES_DATA(exp_q->limits, 0);
 	if (core_q && blk_queue_discard(core_q)) {
@@ -667,13 +663,7 @@ static int _blockdev_set_geometry(struct casdsk_disk *dsk, void *private)
 	return 0;
 }
 
-static inline bool _blockdev_is_elevator_inited(struct request_queue *q)
-{
-	return !!block_dev_get_elevator_name(q);
-}
-
-static int _blockdev_prep_rq_fn(struct casdsk_disk *dsk, struct request_queue *q,
-				struct request *rq, void *private)
+static void _blockdev_pending_req_inc(struct casdsk_disk *dsk, void *private)
 {
 	ocf_core_t core;
 	ocf_volume_t obj;
@@ -686,17 +676,21 @@ static int _blockdev_prep_rq_fn(struct casdsk_disk *dsk, struct request_queue *q
 	BUG_ON(!bvol);
 
 	atomic64_inc(&bvol->pending_rqs);
-
-	return CAS_BLKPREP_OK;
 }
 
-static int _blockdev_prepare_queue(struct casdsk_disk *dsk,
-		struct request_queue *q, void *private)
+static void _blockdev_pending_req_dec(struct casdsk_disk *dsk, void *private)
 {
-	if (!_blockdev_is_elevator_inited(q))
-		return -EINVAL;
+	ocf_core_t core;
+	ocf_volume_t obj;
+	struct bd_object *bvol;
 
-	return 0;
+	BUG_ON(!private);
+	core = private;
+	obj = ocf_core_get_volume(core);
+	bvol = bd_object(obj);
+	BUG_ON(!bvol);
+
+	atomic64_dec(&bvol->pending_rqs);
 }
 
 static void _blockdev_make_request_discard(struct casdsk_disk *dsk,
@@ -814,51 +808,12 @@ err:
 	return CASDSK_BIO_NOT_HANDLED;
 }
 
-static void _blockdev_request_fn(struct casdsk_disk *dsk, struct request_queue *q,
-				 void *private)
-{
-	ocf_core_t core;
-	ocf_volume_t obj;
-	struct bd_object *bvol;
-	struct request *rq;
-	int result;
-
-	BUG_ON(!private);
-	core = private;
-	obj = ocf_core_get_volume(core);
-	bvol = bd_object(obj);
-
-	while (true) {
-		rq = _blockdev_peek_request(q);
-		if (rq == NULL)
-			break;
-
-		_blockdev_start_request(rq);
-
-		if (!_blockdev_can_handle_rq(rq)) {
-			__blockdev_end_request_all(rq, -EIO);
-			continue;
-		}
-
-		spin_unlock_irq(q->queue_lock);
-
-		result = _blkdev_handle_request(rq, core);
-
-		spin_lock_irq(q->queue_lock);
-
-		if (result)
-			__blockdev_end_request_all(rq, result);
-
-		atomic64_dec(&bvol->pending_rqs);
-	}
-}
-
 static struct casdsk_exp_obj_ops _blockdev_exp_obj_ops = {
-	.prepare_queue = _blockdev_prepare_queue,
 	.set_geometry = _blockdev_set_geometry,
 	.make_request_fn = _blockdev_make_request_fast,
-	.request_fn = _blockdev_request_fn,
-	.prep_rq_fn = _blockdev_prep_rq_fn,
+	.queue_rq_fn = _block_dev_queue_request,
+	.pending_rq_inc = _blockdev_pending_req_inc,
+	.pending_rq_dec = _blockdev_pending_req_dec,
 };
 
 /**

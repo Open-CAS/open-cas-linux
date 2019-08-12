@@ -9,6 +9,7 @@
 #include <linux/fs.h>
 #include <linux/blkdev.h>
 #include <linux/mutex.h>
+#include <linux/blk-mq.h>
 
 struct casdsk_exp_obj;
 
@@ -35,6 +36,7 @@ struct casdsk_disk {
 	int gd_flags;
 	int gd_minors;
 
+	struct blk_mq_tag_set tag_set;
 	struct casdsk_exp_obj *exp_obj;
 
 	struct kobject kobj;
