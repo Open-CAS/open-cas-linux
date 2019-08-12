@@ -247,8 +247,8 @@ int cas_create_cleaner_thread(ocf_cleaner_t c)
 	int result;
 
 	result = _cas_create_thread(&info, _cas_cleaner_thread, c,
-			CAS_CPUS_ALL, "cas_clean_%d",
-			ocf_cache_get_id(cache));
+			CAS_CPUS_ALL, "cas_clean_%s",
+			ocf_cache_get_name(cache));
 	if (!result) {
 		ocf_cleaner_set_priv(c, info);
 		_cas_start_thread(info);
@@ -277,8 +277,8 @@ int cas_create_metadata_updater_thread(ocf_metadata_updater_t mu)
 	int result;
 
 	result = _cas_create_thread(&info, _cas_metadata_updater_thread,
-			mu, CAS_CPUS_ALL, "ocf_metadata_updater_%d",
-			ocf_cache_get_id(ocf_metadata_updater_get_cache(mu)));
+			mu, CAS_CPUS_ALL, "ocf_metadata_updater_%s",
+			ocf_cache_get_name(ocf_metadata_updater_get_cache(mu)));
 	if (!result) {
 		ocf_metadata_updater_set_priv(mu, info);
 		_cas_start_thread(info);

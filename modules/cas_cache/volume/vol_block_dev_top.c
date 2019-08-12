@@ -891,6 +891,16 @@ int block_dev_activate_all_exported_objects(ocf_cache_t cache)
 			true);
 }
 
+static const char *get_cache_id_string(ocf_cache_t cache)
+{
+	return ocf_cache_get_name(cache) + sizeof("cache") - 1;
+}
+
+static const char *get_core_id_string(ocf_core_t core)
+{
+	return ocf_core_get_name(core) + sizeof("core") - 1;
+}
+
 int block_dev_create_exported_object(ocf_core_t core)
 {
 	ocf_volume_t obj = ocf_core_get_volume(core);
@@ -901,9 +911,9 @@ int block_dev_create_exported_object(ocf_core_t core)
 	struct casdsk_disk *dsk;
 	int result;
 
-	snprintf(dev_name, DISK_NAME_LEN, "cas%d-%d",
-			ocf_cache_get_id(cache),
-			ocf_core_get_id(core));
+	snprintf(dev_name, DISK_NAME_LEN, "cas%s-%s",
+			get_cache_id_string(cache),
+			get_core_id_string(core));
 
 	dsk = casdisk_functions.casdsk_disk_claim(uuid->data, core);
 	if (dsk != bvol->dsk)

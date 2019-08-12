@@ -52,7 +52,7 @@ bool cas_upgrade_is_in_upgrade(void)
  * +------------+-------------------------------+---------------+
  * |Group	|		Key		|	Type	|
  * |------------|-------------------------------|---------------|
- * |cache	|	cache_id		|	uint	|
+ * |cache	|	cache_name		|	string	|
  * |cache	|	cache_path		|	string	|
  * |cache	|	cache_type		|	uint	|
  * |cache	|	cache_line_size		|	uint	|
@@ -62,7 +62,7 @@ bool cas_upgrade_is_in_upgrade(void)
  * |cache	|	cache_seq_cutoff_policy	|	uint	|
  * |------------|-------------------------------|---------------|
  * |core	|	core_no			|	uint	|
- * |core	|	core_X_id		|	uint	|
+ * |core	|	core_X_name		|	string	|
  * |core	|	core_X_path		|	string	|
  * |core	|	core_X_type		|	uint	|
  * |------------|-------------------------------|---------------|
@@ -87,14 +87,14 @@ bool cas_upgrade_is_in_upgrade(void)
 
 #define UPGRADE_IFACE_VERSION_STR "upgrade_iface_version"
 
-#define CACHE_ID_STR "cache_id"
+#define CACHE_NAME_STR "cache_name"
 #define CACHE_PATH_STR "cache_path"
 #define CACHE_LINE_SIZE_STR "cache_line_size"
 #define CACHE_TYPE_STR "cache_type"
 #define CACHE_MODE_STR "cache_mode"
 
 #define CORE_NO_STR "core_no"
-#define CORE_ID_STR "core_%lu_id"
+#define CORE_NAME_STR "core_%lu_name"
 #define CORE_PATH_STR "core_%lu_path"
 #define CORE_SEQ_CUTOFF_THRESHOLD_STR "core_%lu_seq_cutoff_thresh"
 #define CORE_SEQ_CUTOFF_POLICY_STR "core_%lu_seq_cutoff_policy"
@@ -134,12 +134,12 @@ static int _cas_upgrade_dump_cache_conf_main(ocf_cache_t cache,
 		return result;
 	}
 
-	result = cas_properties_add_uint(cache_props, CACHE_ID_STR,
-			(uint64_t) ocf_cache_get_id(cache),
+	result = cas_properties_add_string(cache_props, CACHE_NAME_STR,
+			ocf_cache_get_name(cache),
 			CAS_PROPERTIES_CONST);
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
-				"Error during adding cache_id\n");
+				"Error during adding cache_name\n");
 		return result;
 	}
 
@@ -192,7 +192,6 @@ int _cas_upgrade_core_visitor(ocf_core_t core, void *cntx)
 {
 	int result = 0;
 	char *value = NULL;
-	uint32_t core_idx = ocf_core_get_id(core);
 	struct _ocf_core_visitor_ctx *core_visitor_ctx =
 			(struct _ocf_core_visitor_ctx*) cntx;
 	struct cas_properties *cache_props = core_visitor_ctx->cache_props;
@@ -207,12 +206,12 @@ int _cas_upgrade_core_visitor(ocf_core_t core, void *cntx)
 		return result;
 	}
 
-	result = snprintf(value, MAX_STR_LEN, CORE_ID_STR, core_no);
+	result = snprintf(value, MAX_STR_LEN, CORE_NAME_STR, core_no);
 	if (result < 0)
 		goto err;
 
-	result = cas_properties_add_uint(cache_props, value, core_idx,
-			CAS_PROPERTIES_CONST);
+	result = cas_properties_add_string(cache_props, value,
+			ocf_core_get_name(core), CAS_PROPERTIES_CONST);
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT OCF_PREFIX_SHORT
 				"Error during adding core id\n");
@@ -309,7 +308,6 @@ err:
 static int _cas_upgrade_dump_cache_conf_flush(ocf_cache_t cache,
 	struct cas_properties *cache_props)
 {
-	ocf_cache_id_t cache_id = ocf_cache_get_id(cache);
 	uint32_t cleaning_type;
 	uint32_t alru_thread_wakeup_time;
 	uint32_t alru_stale_buffer_time;
@@ -321,18 +319,18 @@ static int _cas_upgrade_dump_cache_conf_flush(ocf_cache_t cache,
 
 	CAS_DEBUG_TRACE();
 
-	result |= cache_mngt_get_cleaning_policy(cache_id, &cleaning_type);
-	result |= cache_mngt_get_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_get_cleaning_policy(cache, &cleaning_type);
+	result |= cache_mngt_get_cleaning_param(cache, ocf_cleaning_alru,
 			ocf_alru_wake_up_time, &alru_thread_wakeup_time);
-	result |= cache_mngt_get_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_get_cleaning_param(cache, ocf_cleaning_alru,
 			ocf_alru_stale_buffer_time, &alru_stale_buffer_time);
-	result |= cache_mngt_get_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_get_cleaning_param(cache, ocf_cleaning_alru,
 			ocf_alru_flush_max_buffers, &alru_flush_max_buffers);
-	result |= cache_mngt_get_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_get_cleaning_param(cache, ocf_cleaning_alru,
 			ocf_alru_activity_threshold, &alru_activity_threshold);
-	result |= cache_mngt_get_cleaning_param(cache_id, ocf_cleaning_acp,
+	result |= cache_mngt_get_cleaning_param(cache, ocf_cleaning_acp,
 			ocf_acp_wake_up_time, &acp_thread_wakeup_time);
-	result |= cache_mngt_get_cleaning_param(cache_id, ocf_cleaning_acp,
+	result |= cache_mngt_get_cleaning_param(cache, ocf_cleaning_acp,
 			ocf_acp_flush_max_buffers, &acp_flush_max_buffers);
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
@@ -747,13 +745,14 @@ int cas_upgrade_set_pt_and_flush_visitor_core(ocf_core_t core, void *cntx)
 int _cas_upgrade_set_pt_and_flush_visitor_cache(ocf_cache_t cache, void *cntx)
 {
 	int *result = (int*) cntx;
-	int cache_id = ocf_cache_get_id(cache);
+	const char *cache_name = ocf_cache_get_name(cache);
 
-	*result = cache_mngt_set_cache_mode(cache_id, ocf_cache_mode_pt, false);
+	*result = cache_mngt_set_cache_mode(cache_name,
+			ocf_cache_mode_pt, false);
 	if (*result)
 		return *result;
 
-	*result = cache_mngt_flush_device(cache_id);
+	*result = cache_mngt_flush_device(cache_name);
 	if (*result)
 		return *result;
 
@@ -787,7 +786,7 @@ int _cas_upgrade_stop_devices_visitor_exit(ocf_cache_t cache, void *cntx)
 {
 	int *result = (int*) cntx;
 
-	*result = cache_mngt_exit_instance(ocf_cache_get_id(cache), true);
+	*result = cache_mngt_exit_instance(ocf_cache_get_name(cache), true);
 
 	return *result;
 }
@@ -811,7 +810,7 @@ static int _cas_upgrade_stop_devices(void)
 }
 
 static int _cas_upgrade_restore_conf_main(struct cas_properties *cache_props,
-		uint64_t *cache_id)
+		char *cache_name)
 {
 	int result = 0;
 	uint64_t cache_mode, cache_line_size;
@@ -834,7 +833,8 @@ static int _cas_upgrade_restore_conf_main(struct cas_properties *cache_props,
 	if (result)
 		goto error;
 
-	result = cas_properties_get_uint(cache_props, CACHE_ID_STR, cache_id);
+	result = cas_properties_get_string(cache_props, CACHE_NAME_STR,
+			cache_name, OCF_CACHE_NAME_SIZE);
 	if (result)
 		goto error;
 
@@ -861,7 +861,7 @@ static int _cas_upgrade_restore_conf_main(struct cas_properties *cache_props,
 	if (cache_mode >= ocf_cache_mode_max)
 		cache_mode = ocf_cache_mode_default;
 
-	cfg.id = *cache_id;
+	cfg.name = cache_name;
 	cfg.cache_mode = cache_mode;
 	/* cfg.eviction_policy = TODO */
 	cfg.cache_line_size = cache_line_size;
@@ -905,8 +905,8 @@ static int _cas_upgrade_restore_conf_core(struct cas_properties *cache_props,
 {
 	int result = 0;
 	unsigned long i = 0;
-	uint64_t core_id, core_no, version;
-	ocf_core_id_t core_id_int;
+	uint64_t core_no, version;
+	char core_name[OCF_CORE_NAME_SIZE];
 
 	char *core_path = NULL;
 	char *key = NULL;
@@ -946,24 +946,23 @@ static int _cas_upgrade_restore_conf_core(struct cas_properties *cache_props,
 		if (result)
 			goto error;
 
-		result = snprintf(key, MAX_STR_LEN, CORE_ID_STR, i);
+		result = snprintf(key, MAX_STR_LEN, CORE_NAME_STR, i);
 		if (result < 0)
 			goto error;
 
-		result = cas_properties_get_uint(cache_props, key, &core_id);
+		result = cas_properties_get_string(cache_props, key,
+				core_name, OCF_CORE_NAME_SIZE);
 		if (result)
 			goto error;
 
-		core_id_int = core_id;
-
+		cfg.name = core_name;
 		cfg.try_add = 0;
 		cfg.volume_type = BLOCK_DEVICE_VOLUME;
-		cfg.core_id = core_id_int;
 		cfg.uuid.data = core_path;
 		cfg.uuid.size = strnlen(core_path, MAX_STR_LEN) + 1;
 
-		result = cache_mngt_add_core_to_cache(&cfg,
-				ocf_cache_get_id(cache), NULL);
+		result = cache_mngt_add_core_to_cache(ocf_cache_get_name(cache),
+				&cfg, NULL);
 		if (result)
 			goto error;
 	}
@@ -977,7 +976,6 @@ error:
 static int _cas_upgrade_restore_conf_flush(struct cas_properties *cache_props,
 		ocf_cache_t cache)
 {
-	ocf_cache_id_t cache_id = ocf_cache_get_id(cache);
 	uint64_t cleaning_type;
 	uint64_t alru_thread_wakeup_time = OCF_ALRU_DEFAULT_WAKE_UP;
 	uint64_t alru_stale_buffer_time = OCF_ALRU_DEFAULT_STALENESS_TIME;
@@ -1063,18 +1061,18 @@ static int _cas_upgrade_restore_conf_flush(struct cas_properties *cache_props,
 	if (result)
 		return result;
 
-	result |= cache_mngt_set_cleaning_policy(cache_id, cleaning_type);
-	result |= cache_mngt_set_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_set_cleaning_policy(cache, cleaning_type);
+	result |= cache_mngt_set_cleaning_param(cache, ocf_cleaning_alru,
 			ocf_alru_wake_up_time, alru_thread_wakeup_time);
-	result |= cache_mngt_set_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_set_cleaning_param(cache, ocf_cleaning_alru,
 			ocf_alru_stale_buffer_time, alru_stale_buffer_time);
-	result |= cache_mngt_set_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_set_cleaning_param(cache, ocf_cleaning_alru,
 			ocf_alru_flush_max_buffers, alru_flush_max_buffers);
-	result |= cache_mngt_set_cleaning_param(cache_id, ocf_cleaning_alru,
+	result |= cache_mngt_set_cleaning_param(cache, ocf_cleaning_alru,
 			ocf_alru_activity_threshold, alru_activity_threshold);
-	result |= cache_mngt_set_cleaning_param(cache_id, ocf_cleaning_acp,
+	result |= cache_mngt_set_cleaning_param(cache, ocf_cleaning_acp,
 			ocf_acp_wake_up_time, acp_thread_wakeup_time);
-	result |= cache_mngt_set_cleaning_param(cache_id, ocf_cleaning_acp,
+	result |= cache_mngt_set_cleaning_param(cache, ocf_cleaning_acp,
 			ocf_acp_flush_max_buffers, acp_flush_max_buffers);
 
 	return result;
@@ -1112,8 +1110,6 @@ static int _cas_upgrade_restore_conf_io_class(
 		result = -OCF_ERR_NO_MEM;
 		return result;
 	}
-
-	cfg->cache_id = ocf_cache_get_id(cache);
 
 	result = cas_properties_get_uint(cache_props, IO_CLASS_NO_STR,
 			&io_class_no);
@@ -1181,7 +1177,7 @@ static int _cas_upgrade_restore_conf_io_class(
 		cfg->info[part_id].min_size = (uint32_t)min_size;
 	}
 
-	result = cache_mngt_set_partitions(cfg);
+	result = cache_mngt_set_partitions(ocf_cache_get_name(cache), cfg);
 
 error_after_alloc_buffers:
 	kfree(key);
@@ -1193,16 +1189,16 @@ error_after_alloc_buffers:
 static int _cas_upgrade_restore_cache(struct cas_properties *cache_props)
 {
 	int result = 0;
-	uint64_t cache_id;
+	char cache_name[OCF_CACHE_NAME_SIZE];
 	ocf_cache_t cache;
 
 	CAS_DEBUG_TRACE();
 
-	result = _cas_upgrade_restore_conf_main(cache_props, &cache_id);
+	result = _cas_upgrade_restore_conf_main(cache_props, cache_name);
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
 	if (result)
 		return result;
 
@@ -1237,16 +1233,18 @@ int _cas_upgrade_restore_cache_mode_visitor(ocf_core_t core, void *cntx)
 static int _cas_upgrade_restore_cache_mode(struct cas_properties *cache_props)
 {
 	int result = 0;
-	uint64_t cache_id, cache_mode;
+	uint64_t cache_mode;
+	char cache_name[OCF_CACHE_NAME_SIZE];
 	ocf_cache_t cache;
 
 	CAS_DEBUG_TRACE();
 
-	result = cas_properties_get_uint(cache_props, CACHE_ID_STR, &cache_id);
+	result = cas_properties_get_string(cache_props, CACHE_NAME_STR,
+			cache_name, OCF_CACHE_NAME_SIZE);
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
 	if (result)
 		return result;
 
@@ -1256,7 +1254,7 @@ static int _cas_upgrade_restore_cache_mode(struct cas_properties *cache_props)
 		goto error;
 
 	if (ocf_cache_get_mode(cache) != cache_mode) {
-		result = cache_mngt_set_cache_mode(ocf_cache_get_id(cache),
+		result = cache_mngt_set_cache_mode(ocf_cache_get_name(cache),
 				cache_mode, false);
 		if (result)
 			goto error;
@@ -1274,16 +1272,17 @@ static int _cas_upgrade_restore_cache_after_error(
 		struct cas_properties *cache_props)
 {
 	int result = 0;
-	uint64_t cache_id;
+	char cache_name[OCF_CACHE_NAME_SIZE];
 	ocf_cache_t cache = NULL;
 
 	CAS_DEBUG_TRACE();
 
-	result = cas_properties_get_uint(cache_props, CACHE_ID_STR, &cache_id);
+	result = cas_properties_get_string(cache_props, CACHE_NAME_STR,
+			cache_name, OCF_CACHE_NAME_SIZE);
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
 	if (result == -OCF_ERR_CACHE_NOT_EXIST) {
 		result = _cas_upgrade_restore_cache(cache_props);
 	} else if (result == 0) {
@@ -1363,8 +1362,8 @@ int cas_upgrade_check_ctx_visitor(ocf_cache_t cache, void *cntx)
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
 				"Upgrade error. Cannot start upgrade in flight"
-				" cache %d is in incomplete state\n",
-				ocf_cache_get_id(cache));
+				" %s is in incomplete state\n",
+				ocf_cache_get_name(cache));
 	}
 
 	return result;
