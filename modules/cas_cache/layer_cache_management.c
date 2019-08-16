@@ -154,13 +154,75 @@ static int _cache_mngt_cache_stop_sync(ocf_cache_t cache)
 	return result;
 }
 
-int cache_mngt_flush_object(ocf_cache_id_t cache_id, ocf_core_id_t core_id)
+static uint16_t find_free_cache_id(ocf_ctx_t ctx)
+{
+	ocf_cache_t cache;
+	uint16_t id;
+	int result;
+
+	for (id = OCF_CACHE_ID_MIN; id < OCF_CACHE_ID_MAX; id++) {
+		result = mngt_get_cache_by_id(ctx, id, &cache);
+		if (!result)
+			ocf_mngt_cache_put(cache);
+		else if (result == -OCF_ERR_CACHE_NOT_EXIST)
+			break;
+		else
+			return OCF_CACHE_ID_MAX;
+	}
+
+	return id;
+}
+
+static uint64_t _ffz(uint64_t word)
+{
+	int i;
+
+	for (i = 0; i < sizeof(word)*8 && (word & 1); i++)
+		word >>= 1;
+
+	return i;
+}
+
+static uint16_t find_free_core_id(uint64_t *bitmap)
+{
+	uint16_t i, ret = OCF_CORE_MAX;
+	bool zero_core_free = !(*bitmap & 0x1UL);
+
+	/* check if any core id is free except 0 */
+	for (i = 0; i * sizeof(uint64_t) * 8 < OCF_CORE_MAX; i++) {
+		uint64_t ignore_mask = (i == 0) ? 1UL : 0UL;
+		if (~(bitmap[i] | ignore_mask)) {
+			ret = min((uint64_t)OCF_CORE_MAX,
+					(uint64_t)(i * sizeof(uint64_t) * 8
+					+ _ffz(bitmap[i] | ignore_mask)));
+			break;
+		}
+	}
+
+	/* return 0 only if no other core is free */
+	if (ret == OCF_CORE_MAX && zero_core_free)
+		return 0;
+
+	return ret;
+}
+
+static void mark_core_id_used(uint64_t *bitmap, uint16_t core_id)
+{
+	set_bit(core_id, (unsigned long *)bitmap);
+}
+
+static void mark_core_id_free(uint64_t *bitmap, uint16_t core_id)
+{
+	clear_bit(core_id, (unsigned long *)bitmap);
+}
+
+int cache_mngt_flush_object(const char *cache_name, const char *core_name)
 {
 	ocf_cache_t cache;
 	ocf_core_t core;
 	int result;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
 	if (result)
 		return result;
 
@@ -170,7 +232,7 @@ int cache_mngt_flush_object(ocf_cache_id_t cache_id, ocf_core_id_t core_id)
 		return result;
 	}
 
-	result = ocf_core_get(cache, core_id, &core);
+	result = ocf_core_get_by_name(cache, core_name, &core);
 	if (result)
 		goto out;
 
@@ -182,12 +244,12 @@ out:
 	return result;
 }
 
-int cache_mngt_flush_device(ocf_cache_id_t id)
+int cache_mngt_flush_device(const char *cache_name)
 {
 	int result;
 	ocf_cache_t cache;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, id, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
 	if (result)
 		return result;
 
@@ -204,14 +266,9 @@ int cache_mngt_flush_device(ocf_cache_id_t id)
 	return result;
 }
 
-int cache_mngt_set_cleaning_policy(ocf_cache_id_t cache_id, uint32_t type)
+int cache_mngt_set_cleaning_policy(ocf_cache_t cache, uint32_t type)
 {
-	ocf_cache_t cache;
 	int result;
-
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
-	if (result)
-		return result;
 
 	result = _cache_mngt_lock_sync(cache);
 	if (result) {
@@ -227,19 +284,13 @@ int cache_mngt_set_cleaning_policy(ocf_cache_id_t cache_id, uint32_t type)
 
 out:
 	ocf_mngt_cache_unlock(cache);
-	ocf_mngt_cache_put(cache);
 	return result;
 }
 
-int cache_mngt_get_cleaning_policy(ocf_cache_id_t cache_id, uint32_t *type)
+int cache_mngt_get_cleaning_policy(ocf_cache_t cache, uint32_t *type)
 {
 	ocf_cleaning_t tmp_type;
-	ocf_cache_t cache;
 	int result;
-
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
-	if (result)
-		return result;
 
 	result = _cache_mngt_read_lock_sync(cache);
 	if (result) {
@@ -253,19 +304,13 @@ int cache_mngt_get_cleaning_policy(ocf_cache_id_t cache_id, uint32_t *type)
 		*type = tmp_type;
 
 	ocf_mngt_cache_read_unlock(cache);
-	ocf_mngt_cache_put(cache);
 	return result;
 }
 
-int cache_mngt_set_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
+int cache_mngt_set_cleaning_param(ocf_cache_t cache, ocf_cleaning_t type,
 		uint32_t param_id, uint32_t param_value)
 {
-	ocf_cache_t cache;
 	int result;
-
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
-	if (result)
-		return result;
 
 	result = _cache_mngt_lock_sync(cache);
 	if (result) {
@@ -282,19 +327,13 @@ int cache_mngt_set_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
 
 out:
 	ocf_mngt_cache_unlock(cache);
-	ocf_mngt_cache_put(cache);
 	return result;
 }
 
-int cache_mngt_get_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
+int cache_mngt_get_cleaning_param(ocf_cache_t cache, ocf_cleaning_t type,
 		uint32_t param_id, uint32_t *param_value)
 {
-	ocf_cache_t cache;
 	int result;
-
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
-	if (result)
-		return result;
 
 	result = _cache_mngt_read_lock_sync(cache);
 	if (result) {
@@ -306,7 +345,6 @@ int cache_mngt_get_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
 			param_id, param_value);
 
 	ocf_mngt_cache_read_unlock(cache);
-	ocf_mngt_cache_put(cache);
 	return result;
 }
 
@@ -437,15 +475,37 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 		struct kcas_insert_core *cmd_info)
 {
 	struct block_device *bdev;
+	static char core_name[OCF_CORE_NAME_SIZE];
+	struct cache_priv *cache_priv;
+	ocf_cache_t cache;
+	uint16_t core_id;
 	int result;
 
 	if (strnlen(cmd_info->core_path_name, MAX_STR_LEN) >= MAX_STR_LEN)
 		return -OCF_ERR_INVAL;
 
+	if (cmd_info->core_id == OCF_CORE_MAX) {
+		result = mngt_get_cache_by_id(cas_ctx, cmd_info->cache_id,
+				&cache);
+		if (result)
+			return result;
+
+		cache_priv = ocf_cache_get_priv(cache);
+		ocf_mngt_cache_put(cache);
+
+		core_id = find_free_core_id(cache_priv->core_id_bitmap);
+		if (core_id == OCF_CORE_MAX)
+			return -OCF_ERR_INVAL;
+
+		cmd_info->core_id = core_id;
+	}
+
+	snprintf(core_name, sizeof(core_name), "core%d", cmd_info->core_id);
+
 	memset(cfg, 0, sizeof(*cfg));
+	cfg->name = core_name;
 	cfg->uuid.data = cmd_info->core_path_name;
 	cfg->uuid.size = strnlen(cmd_info->core_path_name, MAX_STR_LEN) + 1;
-	cfg->core_id = cmd_info->core_id;
 	cfg->try_add = cmd_info->try_add;
 
 	if (cas_upgrade_is_in_upgrade()) {
@@ -474,7 +534,8 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 	return result;
 }
 
-int cache_mngt_update_core_uuid(ocf_cache_t cache, ocf_core_id_t id, ocf_uuid_t uuid)
+static int cache_mngt_update_core_uuid(ocf_cache_t cache, const char *core_name,
+		ocf_uuid_t uuid)
 {
 	ocf_core_t core;
 	ocf_volume_t vol;
@@ -483,7 +544,7 @@ int cache_mngt_update_core_uuid(ocf_cache_t cache, ocf_core_id_t id, ocf_uuid_t 
 	bool match;
 	int result;
 
-	if (ocf_core_get(cache, id, &core)) {
+	if (ocf_core_get_by_name(cache, core_name, &core)) {
 		/* no such core */
 		return -ENODEV;
 	}
@@ -560,17 +621,18 @@ static void _cache_mngt_add_core_complete(ocf_cache_t cache,
 
 static void _cache_mngt_remove_core_complete(void *priv, int error);
 
-int cache_mngt_add_core_to_cache(struct ocf_mngt_core_config *cfg,
-		ocf_cache_id_t cache_id, struct kcas_insert_core *cmd_info)
+int cache_mngt_add_core_to_cache(const char *cache_name,
+		struct ocf_mngt_core_config *cfg,
+		struct kcas_insert_core *cmd_info)
 {
 	struct _cache_mngt_add_core_context add_context;
 	struct _cache_mngt_sync_context remove_context;
 	ocf_cache_t cache;
 	ocf_core_t core;
-	ocf_core_id_t core_id;
 	int result, remove_core_result;
+	struct cache_priv *cache_priv;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
 	if (cfg->try_add && (result == -OCF_ERR_CACHE_NOT_EXIST)) {
 		result = ocf_mngt_core_pool_add(cas_ctx, &cfg->uuid,
 				cfg->volume_type);
@@ -597,7 +659,7 @@ int cache_mngt_add_core_to_cache(struct ocf_mngt_core_config *cfg,
 	}
 
 	if (cmd_info && cmd_info->update_path) {
-		result = cache_mngt_update_core_uuid(cache, cfg->core_id, &cfg->uuid);
+		result = cache_mngt_update_core_uuid(cache, cfg->name, &cfg->uuid);
 		ocf_mngt_cache_unlock(cache);
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -615,8 +677,6 @@ int cache_mngt_add_core_to_cache(struct ocf_mngt_core_config *cfg,
 	if (result)
 		goto error_affter_lock;
 
-	core_id = ocf_core_get_id(core);
-
 	result = block_dev_create_exported_object(core);
 	if (result)
 		goto error_after_add_core;
@@ -625,11 +685,12 @@ int cache_mngt_add_core_to_cache(struct ocf_mngt_core_config *cfg,
 	if (result)
 		goto error_after_create_exported_object;
 
+
+	cache_priv = ocf_cache_get_priv(cache);
+	mark_core_id_used(cache_priv->core_id_bitmap, cmd_info->core_id);
+
 	ocf_mngt_cache_unlock(cache);
 	ocf_mngt_cache_put(cache);
-
-	if (cmd_info)
-		cmd_info->core_id = core_id;
 
 	_cache_mngt_log_core_device_path(core);
 
@@ -713,8 +774,9 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 	int result, flush_result = 0;
 	ocf_cache_t cache;
 	ocf_core_t core;
+	struct cache_priv *cache_priv;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cmd->cache_id, &cache);
+	result = mngt_get_cache_by_id(cas_ctx, cmd->cache_id, &cache);
 	if (result)
 		return result;
 
@@ -725,7 +787,7 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 		if (result)
 			goto put;
 
-		result = ocf_core_get(cache, cmd->core_id, &core);
+		result = get_core_by_id(cache, cmd->core_id, &core);
 		if (result < 0)
 			goto rd_unlock;
 
@@ -742,7 +804,7 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 	if (result)
 		goto put;
 
-	result = ocf_core_get(cache, cmd->core_id, &core);
+	result = get_core_by_id(cache, cmd->core_id, &core);
 	if (result < 0) {
 		goto unlock;
 	}
@@ -777,6 +839,11 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 
 	wait_for_completion(&context.compl);
 
+	if (!result && cmd->detach) {
+		cache_priv = ocf_cache_get_priv(cache);
+		mark_core_id_free(cache_priv->core_id_bitmap, cmd->core_id);
+	}
+
 	if (!result && flush_result)
 		result = flush_result;
 
@@ -792,14 +859,13 @@ rd_unlock:
 	return result;
 }
 
-int cache_mngt_reset_stats(ocf_cache_id_t cache_id,
-		ocf_core_id_t core_id)
+int cache_mngt_reset_stats(const char *cache_name, const char *core_name)
 {
 	ocf_cache_t cache;
 	ocf_core_t core;
 	int result = 0;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
 	if (result)
 		return result;
 
@@ -809,8 +875,8 @@ int cache_mngt_reset_stats(ocf_cache_id_t cache_id,
 		return result;
 	}
 
-	if (core_id != OCF_CORE_ID_INVALID) {
-		result = ocf_core_get(cache, core_id, &core);
+	if (!core_name) {
+		result = ocf_core_get_by_name(cache, core_name, &core);
 		if (result)
 			goto out;
 
@@ -836,7 +902,8 @@ static inline void io_class_info2cfg(ocf_part_id_t part_id,
 	cfg->max_size = info->max_size;
 }
 
-int cache_mngt_set_partitions(struct kcas_io_classes *cfg)
+int cache_mngt_set_partitions(const char *cache_name,
+		struct kcas_io_classes *cfg)
 {
 	ocf_cache_t cache;
 	struct ocf_mngt_io_classes_config *io_class_cfg;
@@ -861,7 +928,7 @@ int cache_mngt_set_partitions(struct kcas_io_classes *cfg)
 				&io_class_cfg->config[class_id]);
 	}
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cfg->cache_id, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
 	if (result)
 		goto out_get;
 
@@ -910,19 +977,17 @@ static int _cache_mngt_create_exported_object(ocf_core_t core, void *cntx)
 
 	result = block_dev_create_exported_object(core);
 	if (result) {
-		printk(KERN_ERR "Cannot to create exported object, "
-				"cache id = %u, core id = %u\n",
-				ocf_cache_get_id(cache),
-				ocf_core_get_id(core));
+		printk(KERN_ERR "Cannot to create exported object, %s.%s\n",
+				ocf_cache_get_name(cache),
+				ocf_core_get_name(core));
 		return result;
 	}
 
 	result = block_dev_activate_exported_object(core);
 	if (result) {
-		printk(KERN_ERR "Cannot to activate exported object, "
-				"cache id = %u, core id = %u\n",
-				ocf_cache_get_id(cache),
-				ocf_core_get_id(core));
+		printk(KERN_ERR "Cannot to activate exported object, %s.%s\n",
+				ocf_cache_get_name(cache),
+				ocf_core_get_name(core));
 	}
 
 	return result;
@@ -933,10 +998,9 @@ static int _cache_mngt_destroy_exported_object(ocf_core_t core, void *cntx)
 	if (block_dev_destroy_exported_object(core)) {
 		ocf_cache_t cache = ocf_core_get_cache(core);
 
-		printk(KERN_ERR "Cannot to destroy exported object, "
-				"cache id = %u, core id = %u\n",
-				ocf_cache_get_id(cache),
-				ocf_core_get_id(core));
+		printk(KERN_ERR "Cannot to destroy exported object, %s.%s\n",
+				ocf_cache_get_name(cache),
+				ocf_core_get_name(core));
 	}
 
 	return 0;
@@ -966,16 +1030,28 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	struct block_device *bdev;
 	int part_count;
 	char holder[] = "CAS START\n";
+	char cache_name[OCF_CACHE_NAME_SIZE];
+	uint16_t cache_id;
 	bool is_part;
 
 	if (strnlen(cmd->cache_path_name, MAX_STR_LEN) >= MAX_STR_LEN)
 		return -OCF_ERR_INVAL;
 
+	if (cmd->cache_id == OCF_CACHE_ID_MAX) {
+		cache_id = find_free_cache_id(cas_ctx);
+		if (cache_id == OCF_CACHE_ID_MAX)
+			return -OCF_ERR_INVAL;
+
+		cmd->cache_id = cache_id;
+	}
+
+	cache_name_from_id(cache_name, cmd->cache_id);
+
 	memset(cfg, 0, sizeof(*cfg));
 	memset(device_cfg, 0, sizeof(*device_cfg));
 	memset(atomic_params, 0, sizeof(*atomic_params));
 
-	cfg->id = cmd->cache_id;
+	cfg->name = cache_name;
 	cfg->cache_mode = cmd->caching_mode;
 	cfg->cache_line_size = cmd->line_size;
 	cfg->eviction_policy = cmd->eviction_policy;
@@ -1120,7 +1196,7 @@ static int _cache_mngt_cache_priv_init(ocf_cache_t cache)
 	struct cache_priv *cache_priv;
 	uint32_t cpus_no = num_online_cpus();
 
-	cache_priv = vmalloc(sizeof(*cache_priv) +
+	cache_priv = vzalloc(sizeof(*cache_priv) +
 			cpus_no * sizeof(*cache_priv->io_queues));
 	if (!cache_priv)
 		return -OCF_ERR_NO_MEM;
@@ -1340,36 +1416,24 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 
 /**
  * @brief routine implementing dynamic sequential cutoff parameter switching
- * @param[in] cache_id cache id to which the change pertains
- * @param[in] core_id core id to which the change pertains
- * or OCF_CORE_ID_INVALID for setting value for all cores
- * attached to specified cache
+ * @param[in] cache cache to which the change pertains
+ * @param[in] core core to which the change pertains
+ * or NULL for setting value for all cores attached to specified cache
  * @param[in] thresh new sequential cutoff threshold value
  * @return exit code of successful completion is 0;
  * nonzero exit code means failure
  */
 
-int cache_mngt_set_seq_cutoff_threshold(ocf_cache_id_t cache_id, ocf_core_id_t core_id,
+int cache_mngt_set_seq_cutoff_threshold(ocf_cache_t cache, ocf_core_t core,
 		uint32_t thresh)
 {
-	ocf_cache_t cache;
-	ocf_core_t core;
 	int result;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
+	result = _cache_mngt_lock_sync(cache);
 	if (result)
 		return result;
 
-	result = _cache_mngt_lock_sync(cache);
-	if (result) {
-		ocf_mngt_cache_put(cache);
-		return result;
-	}
-
-	if (core_id != OCF_CORE_ID_INVALID) {
-		result = ocf_core_get(cache, core_id, &core);
-		if (result)
-			goto out;
+	if (core) {
 		result = ocf_mngt_core_set_seq_cutoff_threshold(core, thresh);
 	} else {
 		result = ocf_mngt_core_set_seq_cutoff_threshold_all(cache,
@@ -1383,46 +1447,32 @@ int cache_mngt_set_seq_cutoff_threshold(ocf_cache_id_t cache_id, ocf_core_id_t c
 
 out:
 	ocf_mngt_cache_unlock(cache);
-	ocf_mngt_cache_put(cache);
 	return result;
 }
 
 /**
  * @brief routine implementing dynamic sequential cutoff parameter switching
- * @param[in] id cache id to which the change pertains
- * @param[in] core_id core id to which the change pertains
- * or OCF_CORE_ID_INVALID for setting value for all cores
- * attached to specified cache
+ * @param[in] cache cache to which the change pertains
+ * @param[in] core core to which the change pertains
+ * or NULL for setting value for all cores attached to specified cache
  * @param[in] policy new sequential cutoff policy value
  * @return exit code of successful completion is 0;
  * nonzero exit code means failure
  */
 
-int cache_mngt_set_seq_cutoff_policy(ocf_cache_id_t id, ocf_core_id_t core_id,
+int cache_mngt_set_seq_cutoff_policy(ocf_cache_t cache, ocf_core_t core,
 		ocf_seq_cutoff_policy policy)
 {
-	ocf_cache_t cache;
-	ocf_core_t core;
 	int result;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, id, &cache);
+	result = _cache_mngt_lock_sync(cache);
 	if (result)
 		return result;
 
-	result = _cache_mngt_lock_sync(cache);
-	if (result) {
-		ocf_mngt_cache_put(cache);
-		return result;
-	}
-
-	if (core_id != OCF_CORE_ID_INVALID) {
-		result = ocf_core_get(cache, core_id, &core);
-		if (result)
-			goto out;
+	if (core)
 		result = ocf_mngt_core_set_seq_cutoff_policy(core, policy);
-	} else {
+	else
 		result = ocf_mngt_core_set_seq_cutoff_policy_all(cache, policy);
-	}
 
 	if (result)
 		goto out;
@@ -1431,106 +1481,71 @@ int cache_mngt_set_seq_cutoff_policy(ocf_cache_id_t id, ocf_core_id_t core_id,
 
 out:
 	ocf_mngt_cache_unlock(cache);
-	ocf_mngt_cache_put(cache);
 	return result;
 }
 
 /**
- * @brief routine implementing dynamic sequential cutoff parameter switching
- * @param[in] cache_id cache id to which the change pertains
- * @param[in] core_id core id to which the change pertains
- * or OCF_CORE_ID_INVALID for setting value for all cores
- * attached to specified cache
- * @param[out] thresh new sequential cutoff threshold value
+ * @brief Get sequential cutoff threshold value
+ * @param[in] core OCF core
+ * @param[out] thresh sequential cutoff threshold value
  * @return exit code of successful completion is 0;
  * nonzero exit code means failure
  */
 
-int cache_mngt_get_seq_cutoff_threshold(ocf_cache_id_t cache_id,
-		ocf_core_id_t core_id, uint32_t *thresh)
+int cache_mngt_get_seq_cutoff_threshold(ocf_core_t core, uint32_t *thresh)
 {
-	ocf_cache_t cache;
-	ocf_core_t core;
+	ocf_cache_t cache = ocf_core_get_cache(core);
 	int result;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
-	if (result)
-		return result;
-
 	result = _cache_mngt_read_lock_sync(cache);
-	if (result) {
-		ocf_mngt_cache_put(cache);
-		return result;
-	}
-
-	result = ocf_core_get(cache, core_id, &core);
 	if (result)
-		goto out;
+		return result;
 
 	result = ocf_mngt_core_get_seq_cutoff_threshold(core, thresh);
 
-out:
 	ocf_mngt_cache_read_unlock(cache);
-	ocf_mngt_cache_put(cache);
 	return result;
 }
 
 /**
- * @brief routine implementing dynamic sequential cutoff parameter switching
- * @param[in] id cache id to which the change pertains
- * @param[in] core_id core id to which the change pertains
- * or OCF_CORE_ID_INVALID for setting value for all cores
- * attached to specified cache
- * @param[out] policy new sequential cutoff policy value
+ * @brief Get sequential cutoff policy
+ * @param[in] core OCF core
+ * @param[out] thresh sequential cutoff policy
  * @return exit code of successful completion is 0;
  * nonzero exit code means failure
  */
 
-int cache_mngt_get_seq_cutoff_policy(ocf_cache_id_t id, ocf_core_id_t core_id,
+int cache_mngt_get_seq_cutoff_policy(ocf_core_t core,
 		ocf_seq_cutoff_policy *policy)
 {
-	ocf_cache_t cache;
-	ocf_core_t core;
+	ocf_cache_t cache = ocf_core_get_cache(core);
 	int result;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, id, &cache);
-	if (result)
-		return result;
-
 	result = _cache_mngt_read_lock_sync(cache);
-	if (result) {
-		ocf_mngt_cache_put(cache);
-		return result;
-	}
-
-	result = ocf_core_get(cache, core_id, &core);
 	if (result)
-		goto out;
+		return result;
 
 	result = ocf_mngt_core_get_seq_cutoff_policy(core, policy);
 
-out:
 	ocf_mngt_cache_read_unlock(cache);
-	ocf_mngt_cache_put(cache);
 	return result;
 }
 
 /**
  * @brief routine implementing dynamic cache mode switching
- * @param device caching device to which operation applies
+ * @param cache_name name of cache to which operation applies
  * @param mode target mode (WRITE_THROUGH, WRITE_BACK, WRITE_AROUND etc.)
  * @param flush shall we flush dirty data during switch, or shall we flush
  *            all remaining dirty data before entering new mode?
  */
-
-int cache_mngt_set_cache_mode(ocf_cache_id_t id, ocf_cache_mode_t mode,
+int cache_mngt_set_cache_mode(const char *cache_name, ocf_cache_mode_t mode,
 		uint8_t flush)
 {
 	ocf_cache_mode_t old_mode;
 	ocf_cache_t cache;
 	int result;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, id, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
 	if (result)
 		return result;
 
@@ -1566,19 +1581,19 @@ out:
 
 /**
  * @brief routine implements --stop-cache command.
- * @param[in] cache_id caching device id to be removed
+ * @param[in] cache_name caching device name to be removed
  * @param[in] flush Boolean: shall we flush dirty data before removing cache.
  *		if yes, flushing may still be interrupted by user (in which case
  *		device won't be actually removed and error will be returned)
  */
-int cache_mngt_exit_instance(ocf_cache_id_t id, int flush)
+int cache_mngt_exit_instance(const char *cache_name, int flush)
 {
 	ocf_cache_t cache;
 	struct cache_priv *cache_priv;
 	int status, flush_status = 0;
 
 	/* Get cache */
-	status = ocf_mngt_cache_get_by_id(cas_ctx, id, &cache);
+	status = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
 	if (status)
 		return status;
 
@@ -1685,8 +1700,10 @@ put:
 
 static int cache_mngt_list_caches_visitor(ocf_cache_t cache, void *cntx)
 {
-	ocf_cache_id_t id = ocf_cache_get_id(cache);
 	struct kcas_cache_list *list = cntx;
+	uint16_t id;
+
+	BUG_ON(cache_id_from_name(&id, ocf_cache_get_name(cache)));
 
 	if (list->id_position >= id)
 		return 0;
@@ -1706,13 +1723,13 @@ int cache_mngt_list_caches(struct kcas_cache_list *list)
 	return ocf_mngt_cache_visit(cas_ctx, cache_mngt_list_caches_visitor, list);
 }
 
-int cache_mngt_interrupt_flushing(ocf_cache_id_t id)
+int cache_mngt_interrupt_flushing(const char *cache_name)
 {
 	ocf_cache_t cache;
 	struct cache_priv *cache_priv;
 	int result;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, id, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
 	if (result)
 		return result;
 
@@ -1735,7 +1752,7 @@ int cache_mngt_get_info(struct kcas_cache_info *info)
 	ocf_core_t core;
 	const struct ocf_volume_uuid *uuid;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, info->cache_id, &cache);
+	result = mngt_get_cache_by_id(cas_ctx, info->cache_id, &cache);
 	if (result)
 		return result;
 
@@ -1769,7 +1786,7 @@ int cache_mngt_get_info(struct kcas_cache_info *info)
 	/* Collect cores IDs */
 	for (i = 0, j = 0; j < info->info.core_count &&
 			i < OCF_CORE_MAX; i++) {
-		if (ocf_core_get(cache, i, &core))
+		if (get_core_by_id(cache, i, &core))
 			continue;
 
 		info->core_id[j] = i;
@@ -1786,13 +1803,13 @@ put:
 int cache_mngt_get_io_class_info(struct kcas_io_class *part)
 {
 	int result;
-	ocf_cache_id_t cache_id = part->cache_id;
-	ocf_core_id_t core_id = part->core_id;
+	uint16_t cache_id = part->cache_id;
+	uint16_t core_id = part->core_id;
 	uint32_t io_class_id = part->class_id;
 	ocf_cache_t cache;
 	ocf_core_t core;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, cache_id, &cache);
+	result = mngt_get_cache_by_id(cas_ctx, cache_id, &cache);
 	if (result)
 		return result;
 
@@ -1807,7 +1824,7 @@ int cache_mngt_get_io_class_info(struct kcas_io_class *part)
 		goto end;
 
 	if (part->get_stats) {
-		result = ocf_core_get(cache, core_id, &core);
+		result = get_core_by_id(cache, core_id, &core);
 		if (result < 0) {
 			result = OCF_ERR_CORE_NOT_AVAIL;
 			goto end;
@@ -1830,7 +1847,7 @@ int cache_mngt_get_core_info(struct kcas_core_info *info)
 	const struct ocf_volume_uuid *uuid;
 	int result;
 
-	result = ocf_mngt_cache_get_by_id(cas_ctx, info->cache_id, &cache);
+	result = mngt_get_cache_by_id(cas_ctx, info->cache_id, &cache);
 	if (result)
 		return result;
 
@@ -1838,7 +1855,7 @@ int cache_mngt_get_core_info(struct kcas_core_info *info)
 	if(result)
 		goto put;
 
-	result = ocf_core_get(cache, info->core_id, &core);
+	result = get_core_by_id(cache, info->core_id, &core);
 	if (result < 0) {
 		result = OCF_ERR_CORE_NOT_AVAIL;
 		goto unlock;
@@ -1882,102 +1899,172 @@ void cache_mngt_wait_for_rq_finish(ocf_cache_t cache)
 
 int cache_mngt_set_core_params(struct kcas_set_core_param *info)
 {
+	ocf_cache_t cache;
+	ocf_core_t core;
+	int result;
+
+	result = mngt_get_cache_by_id(cas_ctx, info->cache_id, &cache);
+	if (result)
+		return result;
+
+	result = get_core_by_id(cache, info->core_id, &core);
+	if (result)
+		goto out;
+
 	switch (info->param_id) {
 	case core_param_seq_cutoff_threshold:
-		return cache_mngt_set_seq_cutoff_threshold(info->cache_id,
-				info->core_id, info->param_value);
+		result = cache_mngt_set_seq_cutoff_threshold(cache, core,
+				info->param_value);
+		break;
 	case core_param_seq_cutoff_policy:
-		return cache_mngt_set_seq_cutoff_policy(info->cache_id,
-				info->core_id, info->param_value);
+		result = cache_mngt_set_seq_cutoff_policy(cache, core,
+				info->param_value);
+		break;
 	default:
-		return -EINVAL;
+		result = -EINVAL;
 	}
+
+out:
+	ocf_mngt_cache_put(cache);
+	return result;
 }
 
 int cache_mngt_get_core_params(struct kcas_get_core_param *info)
 {
+	ocf_cache_t cache;
+	ocf_core_t core;
+	int result;
+
+	result = mngt_get_cache_by_id(cas_ctx, info->cache_id, &cache);
+	if (result)
+		return result;
+
+	result = get_core_by_id(cache, info->core_id, &core);
+	if (result)
+		goto out;
+
 	switch (info->param_id) {
 	case core_param_seq_cutoff_threshold:
-		return cache_mngt_get_seq_cutoff_threshold(info->cache_id,
-				info->core_id, &info->param_value);
+		result = cache_mngt_get_seq_cutoff_threshold(core,
+				&info->param_value);
+		break;
 	case core_param_seq_cutoff_policy:
-		return cache_mngt_get_seq_cutoff_policy(info->cache_id,
-				info->core_id, &info->param_value);
+		result = cache_mngt_get_seq_cutoff_policy(core,
+				&info->param_value);
+		break;
 	default:
-		return -EINVAL;
+		result = -EINVAL;
 	}
+
+out:
+	ocf_mngt_cache_put(cache);
+	return result;
 }
 
 int cache_mngt_set_cache_params(struct kcas_set_cache_param *info)
 {
+	ocf_cache_t cache;
+	int result;
+
+	result = mngt_get_cache_by_id(cas_ctx, info->cache_id, &cache);
+	if (result)
+		return result;
+
 	switch (info->param_id) {
 	case cache_param_cleaning_policy_type:
-		return cache_mngt_set_cleaning_policy(info->cache_id,
+		result = cache_mngt_set_cleaning_policy(cache,
 				info->param_value);
+		break;
 
 	case cache_param_cleaning_alru_wake_up_time:
-		return cache_mngt_set_cleaning_param(info->cache_id,
+		result = cache_mngt_set_cleaning_param(cache,
 				ocf_cleaning_alru, ocf_alru_wake_up_time,
 				info->param_value);
+		break;
 	case cache_param_cleaning_alru_stale_buffer_time:
-		return cache_mngt_set_cleaning_param(info->cache_id,
+		result = cache_mngt_set_cleaning_param(cache,
 				ocf_cleaning_alru, ocf_alru_stale_buffer_time,
 				info->param_value);
+		break;
 	case cache_param_cleaning_alru_flush_max_buffers:
-		return cache_mngt_set_cleaning_param(info->cache_id,
+		result = cache_mngt_set_cleaning_param(cache,
 				ocf_cleaning_alru, ocf_alru_flush_max_buffers,
 				info->param_value);
+		break;
 	case cache_param_cleaning_alru_activity_threshold:
-		return cache_mngt_set_cleaning_param(info->cache_id,
+		result = cache_mngt_set_cleaning_param(cache,
 				ocf_cleaning_alru, ocf_alru_activity_threshold,
 				info->param_value);
+		break;
 
 	case cache_param_cleaning_acp_wake_up_time:
-		return cache_mngt_set_cleaning_param(info->cache_id,
+		result = cache_mngt_set_cleaning_param(cache,
 				ocf_cleaning_acp, ocf_acp_wake_up_time,
 				info->param_value);
+		break;
 	case cache_param_cleaning_acp_flush_max_buffers:
-		return cache_mngt_set_cleaning_param(info->cache_id,
+		result = cache_mngt_set_cleaning_param(cache,
 				ocf_cleaning_acp, ocf_acp_flush_max_buffers,
 				info->param_value);
+		break;
 	default:
-		return -EINVAL;
+		result = -EINVAL;
 	}
+
+	ocf_mngt_cache_put(cache);
+	return result;
 }
 
 int cache_mngt_get_cache_params(struct kcas_get_cache_param *info)
 {
+	ocf_cache_t cache;
+	int result;
+
+	result = mngt_get_cache_by_id(cas_ctx, info->cache_id, &cache);
+	if (result)
+		return result;
+
 	switch (info->param_id) {
 	case cache_param_cleaning_policy_type:
-		return cache_mngt_get_cleaning_policy(info->cache_id,
+		result = cache_mngt_get_cleaning_policy(cache,
 				&info->param_value);
+		break;
 
 	case cache_param_cleaning_alru_wake_up_time:
-		return cache_mngt_get_cleaning_param(info->cache_id,
+		result = cache_mngt_get_cleaning_param(cache,
 				ocf_cleaning_alru, ocf_alru_wake_up_time,
 				&info->param_value);
+		break;
 	case cache_param_cleaning_alru_stale_buffer_time:
-		return cache_mngt_get_cleaning_param(info->cache_id,
+		result = cache_mngt_get_cleaning_param(cache,
 				ocf_cleaning_alru, ocf_alru_stale_buffer_time,
 				&info->param_value);
+		break;
 	case cache_param_cleaning_alru_flush_max_buffers:
-		return cache_mngt_get_cleaning_param(info->cache_id,
+		result = cache_mngt_get_cleaning_param(cache,
 				ocf_cleaning_alru, ocf_alru_flush_max_buffers,
 				&info->param_value);
+		break;
 	case cache_param_cleaning_alru_activity_threshold:
-		return cache_mngt_get_cleaning_param(info->cache_id,
+		result = cache_mngt_get_cleaning_param(cache,
 				ocf_cleaning_alru, ocf_alru_activity_threshold,
 				&info->param_value);
+		break;
 
 	case cache_param_cleaning_acp_wake_up_time:
-		return cache_mngt_get_cleaning_param(info->cache_id,
+		result = cache_mngt_get_cleaning_param(cache,
 				ocf_cleaning_acp, ocf_acp_wake_up_time,
 				&info->param_value);
+		break;
 	case cache_param_cleaning_acp_flush_max_buffers:
-		return cache_mngt_get_cleaning_param(info->cache_id,
+		result = cache_mngt_get_cleaning_param(cache,
 				ocf_cleaning_acp, ocf_acp_flush_max_buffers,
 				&info->param_value);
+		break;
 	default:
-		return -EINVAL;
+		result = -EINVAL;
 	}
+
+	ocf_mngt_cache_put(cache);
+	return result;
 }

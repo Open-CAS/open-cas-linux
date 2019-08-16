@@ -40,7 +40,7 @@ struct kcas_start_cache {
 	/**
 	 * id of newely inserted cache (in range 1-OCF_CACHE_ID_MAX).
 	 */
-	ocf_cache_id_t cache_id;
+	uint16_t cache_id;
 
 	/**
 	 * cache initialization mode
@@ -86,7 +86,7 @@ struct kcas_start_cache {
 };
 
 struct kcas_stop_cache {
-	ocf_cache_id_t cache_id; /**< id of cache to be stopped */
+	uint16_t cache_id; /**< id of cache to be stopped */
 
 	uint8_t flush_data; /**< should data be flushed? */
 
@@ -94,7 +94,7 @@ struct kcas_stop_cache {
 };
 
 struct kcas_set_cache_state {
-	ocf_cache_id_t cache_id; /**< id of cache for which state should be set */
+	uint16_t cache_id; /**< id of cache for which state should be set */
 
 	/**
 	 * caching mode for new cache instance
@@ -113,8 +113,8 @@ struct kcas_set_cache_state {
 };
 
 struct kcas_insert_core {
-	ocf_cache_id_t cache_id; /**< id of an running cache */
-	ocf_core_id_t core_id; /**< id of newely inserted core object */
+	uint16_t cache_id; /**< id of an running cache */
+	uint16_t core_id; /**< id of newely inserted core object */
 	char core_path_name[MAX_STR_LEN]; /**< path to a core object */
 	bool try_add; /**< add core to pool if cache isn't present */
 	bool update_path; /**< provide alternative path for core device */
@@ -123,8 +123,8 @@ struct kcas_insert_core {
 };
 
 struct kcas_remove_core {
-	ocf_cache_id_t cache_id; /**< id of an running cache */
-	ocf_core_id_t core_id; /**< id core object to be removed */
+	uint16_t cache_id; /**< id of an running cache */
+	uint16_t core_id; /**< id core object to be removed */
 	bool force_no_flush; /**< remove core without flushing */
 	bool detach; /**< detach core without removing it from cache metadata */
 
@@ -132,34 +132,34 @@ struct kcas_remove_core {
 };
 
 struct kcas_reset_stats {
-	ocf_cache_id_t cache_id; /**< id of an running cache */
-	ocf_core_id_t core_id; /**< id core object to be removed */
+	uint16_t cache_id; /**< id of an running cache */
+	uint16_t core_id; /**< id core object to be removed */
 
 	int ext_err_code;
 };
 
 struct kcas_flush_cache {
-	ocf_cache_id_t cache_id; /**< id of an running cache */
+	uint16_t cache_id; /**< id of an running cache */
 
 	int ext_err_code;
 };
 
 struct kcas_interrupt_flushing {
-	ocf_cache_id_t cache_id; /**< id of an running cache */
+	uint16_t cache_id; /**< id of an running cache */
 
 	int ext_err_code;
 };
 
 struct kcas_flush_core {
-	ocf_cache_id_t cache_id; /**< id of an running cache */
-	ocf_core_id_t core_id; /**< id core object to be removed */
+	uint16_t cache_id; /**< id of an running cache */
+	uint16_t core_id; /**< id core object to be removed */
 
 	int ext_err_code;
 };
 
 struct kcas_cache_info {
 	/** id of a cache */
-	ocf_cache_id_t cache_id;
+	uint16_t cache_id;
 
 	/** path to caching device */
 	char cache_path_name[MAX_STR_LEN];
@@ -167,7 +167,7 @@ struct kcas_cache_info {
 	/**
 	 * IDs of cores associated with this cache.
 	 */
-	ocf_core_id_t core_id[OCF_CORE_MAX];
+	uint16_t core_id[OCF_CORE_MAX];
 
 	struct ocf_cache_info info;
 
@@ -181,10 +181,10 @@ struct kcas_core_info {
 	char core_path_name[MAX_STR_LEN];
 
 	/** Cache id */
-	ocf_cache_id_t cache_id;
+	uint16_t cache_id;
 
 	/** Core id */
-	ocf_core_id_t core_id;
+	uint16_t core_id;
 
 	/** CAS statistics of core */
 	struct ocf_stats_core stats;
@@ -223,10 +223,10 @@ struct kcas_core_pool_count {
  */
 struct kcas_io_class {
 	/** Cache ID */
-	ocf_cache_id_t cache_id;
+	uint16_t cache_id;
 
 	/** Core ID */
-	ocf_core_id_t core_id;
+	uint16_t core_id;
 
 	/** IO class id for which info will be retrieved */
 	uint32_t class_id;
@@ -248,7 +248,7 @@ struct kcas_io_class {
  */
 struct kcas_io_classes {
 	/** Cache ID */
-	ocf_cache_id_t cache_id;
+	uint16_t cache_id;
 
 	int ext_err_code;
 
@@ -268,7 +268,7 @@ struct kcas_cache_list {
 	/** requested number of ids and returned in response cmd */
 	uint32_t in_out_num;
 	/** array with cache list and its properties */
-	ocf_cache_id_t cache_id_tab[CACHE_LIST_ID_LIMIT];
+	uint16_t cache_id_tab[CACHE_LIST_ID_LIMIT];
 
 	int ext_err_code;
 };
@@ -325,8 +325,8 @@ enum kcas_core_param_id {
 };
 
 struct kcas_set_core_param {
-	ocf_cache_id_t cache_id;
-	ocf_core_id_t core_id;
+	uint16_t cache_id;
+	uint16_t core_id;
 	enum kcas_core_param_id param_id;
 	uint32_t param_value;
 
@@ -334,8 +334,8 @@ struct kcas_set_core_param {
 };
 
 struct kcas_get_core_param {
-	ocf_cache_id_t cache_id;
-	ocf_core_id_t core_id;
+	uint16_t cache_id;
+	uint16_t core_id;
 	enum kcas_core_param_id param_id;
 	uint32_t param_value;
 
@@ -354,7 +354,7 @@ enum kcas_cache_param_id {
 };
 
 struct kcas_set_cache_param {
-	ocf_cache_id_t cache_id;
+	uint16_t cache_id;
 	enum kcas_cache_param_id param_id;
 	uint32_t param_value;
 
@@ -362,7 +362,7 @@ struct kcas_set_cache_param {
 };
 
 struct kcas_get_cache_param {
-	ocf_cache_id_t cache_id;
+	uint16_t cache_id;
 	enum kcas_cache_param_id param_id;
 	uint32_t param_value;
 

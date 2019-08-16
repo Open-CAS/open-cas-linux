@@ -118,11 +118,11 @@ int caslog(int log_level, const char *template, ...);
 #define UNDEFINED -1
 void metadata_memory_footprint(uint64_t size, float *footprint, const char **units);
 
-int start_cache(ocf_cache_id_t cache_id, unsigned int cache_init,
+int start_cache(uint16_t cache_id, unsigned int cache_init,
 		const char *cache_device, ocf_cache_mode_t cache_mode,
 		ocf_eviction_t eviction_policy_type,
 		ocf_cache_line_size_t line_size, int force);
-int stop_cache(ocf_cache_id_t cache_id, int flush);
+int stop_cache(uint16_t cache_id, int flush);
 
 #ifdef WI_AVAILABLE
 #define CAS_CLI_HELP_START_CACHE_MODES "wt|wb|wa|pt|wi|wo"

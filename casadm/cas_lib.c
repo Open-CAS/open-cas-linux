@@ -868,7 +868,7 @@ static void check_cache_scheduler(const char *cache_device, const char *elv_name
 	}
 }
 
-int start_cache(ocf_cache_id_t cache_id, unsigned int cache_init,
+int start_cache(uint16_t cache_id, unsigned int cache_init,
 		const char *cache_device, ocf_cache_mode_t cache_mode,
 		ocf_eviction_t eviction_policy_type,
 		ocf_cache_line_size_t line_size, int force)
@@ -1001,7 +1001,7 @@ int start_cache(ocf_cache_id_t cache_id, unsigned int cache_init,
 	return SUCCESS;
 }
 
-int stop_cache(ocf_cache_id_t cache_id, int flush)
+int stop_cache(uint16_t cache_id, int flush)
 {
 	int fd = 0;
 	struct kcas_stop_cache cmd;

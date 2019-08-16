@@ -10,27 +10,28 @@
 
 struct atomic_dev_params;
 
-int cache_mngt_set_cleaning_policy(ocf_cache_id_t cache_id, uint32_t type);
+int cache_mngt_set_cleaning_policy(ocf_cache_t cache, uint32_t type);
 
-int cache_mngt_get_cleaning_policy(ocf_cache_id_t cache_id, uint32_t *type);
+int cache_mngt_get_cleaning_policy(ocf_cache_t cache, uint32_t *type);
 
-int cache_mngt_set_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
+int cache_mngt_set_cleaning_param(ocf_cache_t cache, ocf_cleaning_t type,
                 uint32_t param_id, uint32_t param_value);
 
-int cache_mngt_get_cleaning_param(ocf_cache_id_t cache_id, ocf_cleaning_t type,
+int cache_mngt_get_cleaning_param(ocf_cache_t cache, ocf_cleaning_t type,
                 uint32_t param_id, uint32_t *param_value);
 
-int cache_mngt_add_core_to_cache(struct ocf_mngt_core_config *cfg,
-		ocf_cache_id_t cache_id, struct kcas_insert_core *cmd_info);
+int cache_mngt_add_core_to_cache(const char *cache_name,
+		struct ocf_mngt_core_config *cfg,
+		struct kcas_insert_core *cmd_info);
 
 int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd);
 
-int cache_mngt_reset_stats(ocf_cache_id_t cache_id,
-		ocf_core_id_t core_id);
+int cache_mngt_reset_stats(const char *cache_name, const char *core_name);
 
-int cache_mngt_set_partitions(struct kcas_io_classes *cfg);
+int cache_mngt_set_partitions(const char *cache_name,
+		struct kcas_io_classes *cfg);
 
-int cache_mngt_exit_instance(ocf_cache_id_t id, int flush);
+int cache_mngt_exit_instance(const char *cache_name, int flush);
 
 int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
@@ -50,31 +51,27 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
 		struct kcas_start_cache *cmd);
 
-int cache_mngt_set_seq_cutoff_threshold(ocf_cache_id_t id, ocf_core_id_t core_id,
+int cache_mngt_set_seq_cutoff_threshold(ocf_cache_t cache, ocf_core_t core,
 		uint32_t thresh);
 
-int cache_mngt_set_seq_cutoff_policy(ocf_cache_id_t id, ocf_core_id_t core_id,
+int cache_mngt_set_seq_cutoff_policy(ocf_cache_t cache, ocf_core_t core,
 		ocf_seq_cutoff_policy policy);
 
-int cache_mngt_get_seq_cutoff_threshold(ocf_cache_id_t id, ocf_core_id_t core_id,
-		uint32_t *thresh);
+int cache_mngt_get_seq_cutoff_threshold(ocf_core_t core, uint32_t *thresh);
 
-int cache_mngt_get_seq_cutoff_policy(ocf_cache_id_t id, ocf_core_id_t core_id,
+int cache_mngt_get_seq_cutoff_policy(ocf_core_t core,
 		ocf_seq_cutoff_policy *policy);
 
-int cache_mngt_set_cache_mode(ocf_cache_id_t id, ocf_cache_mode_t mode,
+int cache_mngt_set_cache_mode(const char *cache_name, ocf_cache_mode_t mode,
 		uint8_t flush);
 
-int cache_mngt_flush_object(ocf_cache_id_t cache_id, ocf_core_id_t core_id);
+int cache_mngt_flush_object(const char *cache_name, const char *core_name);
 
-int cache_mngt_flush_device(ocf_cache_id_t id);
-
-ocf_cache_line_t cache_mngt_lookup(ocf_cache_t cache,
-		ocf_core_id_t core_id, uint64_t core_cacheline);
+int cache_mngt_flush_device(const char *cache_name);
 
 int cache_mngt_list_caches(struct kcas_cache_list *list);
 
-int cache_mngt_interrupt_flushing(ocf_cache_id_t id);
+int cache_mngt_interrupt_flushing(const char *cache_name);
 
 int cache_mngt_get_info(struct kcas_cache_info *info);
 

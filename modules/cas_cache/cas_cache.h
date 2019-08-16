@@ -57,6 +57,7 @@ enum {
 struct cas_classifier;
 
 struct cache_priv {
+	uint64_t core_id_bitmap[DIV_ROUND_UP(OCF_CORE_MAX, 8*sizeof(uint64_t))];
 	struct cas_classifier *classifier;
 	atomic_t flush_interrupt_enabled;
 	ocf_queue_t mngt_queue;
@@ -95,5 +96,61 @@ struct casdsk_functions_mapper {
 	int (*casdsk_disk_clear_pt)(struct casdsk_disk *dsk);
 	struct gendisk *(*casdsk_exp_obj_get_gendisk)(struct casdsk_disk *dsk);
 };
+
+static inline void cache_name_from_id(char *name, uint16_t id)
+{
+	int result;
+
+	result = snprintf(name, OCF_CACHE_NAME_SIZE, "cache%d", id);
+	ENV_BUG_ON(result >= OCF_CACHE_NAME_SIZE);
+}
+
+static inline void core_name_from_id(char *name, uint16_t id)
+{
+	int result;
+
+	result = snprintf(name, OCF_CORE_NAME_SIZE, "core%d", id);
+	ENV_BUG_ON(result >= OCF_CORE_NAME_SIZE);
+}
+
+static inline int cache_id_from_name(uint16_t *cache_id, const char *name)
+{
+	const char *id_str;
+	long res;
+	int result;
+
+	if (strnlen(name, OCF_CACHE_NAME_SIZE) < sizeof("cache") - 1)
+		return -EINVAL;
+
+	id_str = name + sizeof("cache") - 1;
+
+	result = kstrtol(id_str, 10, &res);
+
+	if (!result)
+		*cache_id = res;
+
+	return result;
+}
+
+static inline int mngt_get_cache_by_id(ocf_ctx_t ctx, uint16_t id,
+		ocf_cache_t *cache)
+{
+	char cache_name[OCF_CACHE_NAME_SIZE];
+
+	cache_name_from_id(cache_name, id);
+
+	return ocf_mngt_cache_get_by_name(ctx, cache_name, cache);
+}
+
+static inline int get_core_by_id(ocf_cache_t cache, uint16_t id,
+		ocf_core_t *core)
+{
+	char core_name[OCF_CORE_NAME_SIZE];
+
+	core_name_from_id(core_name, id);
+
+	return ocf_core_get_by_name(cache, core_name, core);
+}
+
 
 #endif
