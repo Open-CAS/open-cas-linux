@@ -114,6 +114,10 @@ static inline int env_mutex_is_locked(env_mutex *mutex)
 	return mutex_is_locked(mutex);
 }
 
+static inline void env_mutex_destroy(env_mutex *mutex)
+{
+}
+
 /* *** RECURSIVE MUTEX *** */
 
 typedef struct {
@@ -197,6 +201,10 @@ static inline int env_rmutex_is_locked(env_rmutex *rmutex)
 	return mutex_is_locked(&rmutex->mutex);
 }
 
+static inline void env_rmutex_destroy(env_rmutex *rmutex)
+{
+}
+
 /* *** RW SEMAPHORE *** */
 
 typedef struct
@@ -261,6 +269,10 @@ static inline int env_rwsem_is_locked(env_rwsem *s)
 	return rwsem_is_locked(&s->sem);
 }
 
+static inline void env_rwsem_destroy(env_rwsem *s)
+{
+}
+
 /* *** COMPLETION *** */
 
 typedef struct completion env_completion;
@@ -278,6 +290,10 @@ static inline void env_completion_wait(env_completion *completion)
 static inline void env_completion_complete(env_completion *completion)
 {
 	complete(completion);
+}
+
+static inline void env_completion_destroy(env_completion *completion)
+{
 }
 
 /* *** ATOMIC VARIABLES *** */
@@ -429,6 +445,10 @@ static inline void env_spinlock_unlock_irq(env_spinlock *l)
 	spin_unlock_irq(l);
 }
 
+static inline void env_spinlock_destroy(env_spinlock *l)
+{
+}
+
 #define env_spinlock_lock_irqsave(l, flags) \
 		spin_lock_irqsave((l), (flags))
 
@@ -462,6 +482,10 @@ static inline void env_rwlock_write_lock(env_rwlock *l)
 static inline void env_rwlock_write_unlock(env_rwlock *l)
 {
 	write_unlock(l);
+}
+
+static inline void env_rwlock_destroy(env_rwlock *l)
+{
 }
 
 /* *** WAITQUEUE *** */
