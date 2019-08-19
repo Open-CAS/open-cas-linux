@@ -565,6 +565,7 @@ const struct ocf_volume_properties cas_object_blk_properties = {
 		.set_data = cas_blk_io_set_data,
 		.get_data = cas_blk_io_get_data,
 	},
+	.deinit = NULL,
 };
 
 int block_dev_init(void)
@@ -577,10 +578,6 @@ int block_dev_init(void)
 		return ret;
 
 	return 0;
-}
-void block_dev_deinit(void)
-{
-	ocf_ctx_unregister_volume_type(cas_ctx, BLOCK_DEVICE_VOLUME);
 }
 
 int block_dev_try_get_io_class(struct bio *bio, int *io_class)

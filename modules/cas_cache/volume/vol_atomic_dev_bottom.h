@@ -26,6 +26,4 @@ struct atomic_dev_params {
 
 int atomic_dev_init(void);
 
-void atomic_dev_deinit(void);
-
 #endif /* __VOL_ATOMIC_DEV_BOTTOM_H__ */

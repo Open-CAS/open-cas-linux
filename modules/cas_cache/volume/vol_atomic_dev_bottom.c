@@ -1126,6 +1126,14 @@ error:
 	io->end(io, result);
 }
 
+static void atomic_dev_deinit(void)
+{
+	if (atomic_io_allocator) {
+		cas_mpool_destroy(atomic_io_allocator);
+		atomic_io_allocator = NULL;
+	}
+}
+
 const struct ocf_volume_properties cas_object_atomic_properties = {
 	.name = "Atomic Writes NVMe",
 	.io_priv_size = sizeof(struct blkio),
@@ -1148,6 +1156,7 @@ const struct ocf_volume_properties cas_object_atomic_properties = {
 		.set_data = cas_blk_io_set_data,
 		.get_data = cas_blk_io_get_data,
 	},
+	.deinit = atomic_dev_deinit
 };
 
 int atomic_dev_init(void)
@@ -1171,25 +1180,11 @@ int atomic_dev_init(void)
 	return 0;
 }
 
-void atomic_dev_deinit(void)
-{
-	if (atomic_io_allocator) {
-		cas_mpool_destroy(atomic_io_allocator);
-		atomic_io_allocator = NULL;
-	}
-
-	ocf_ctx_unregister_volume_type(cas_ctx, ATOMIC_DEVICE_VOLUME);
-}
-
 #else
 
 int atomic_dev_init(void)
 {
 	return 0;
-}
-
-void atomic_dev_deinit(void)
-{
 }
 
 #endif
