@@ -64,7 +64,7 @@ struct command_args{
 
 static struct command_args command_args_values = {
 		.force = 0,
-		.cache_id = 0,
+		.cache_id = OCF_CACHE_ID_INVALID,
 		.core_id = OCF_CORE_ID_INVALID,
 		.state = CACHE_INIT_NEW,
 		.cache_mode = ocf_cache_mode_default,
