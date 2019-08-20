@@ -875,7 +875,7 @@ int cache_mngt_reset_stats(const char *cache_name, const char *core_name)
 		return result;
 	}
 
-	if (!core_name) {
+	if (core_name) {
 		result = ocf_core_get_by_name(cache, core_name, &core);
 		if (result)
 			goto out;
