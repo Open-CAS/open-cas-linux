@@ -167,7 +167,7 @@ static uint16_t find_free_cache_id(ocf_ctx_t ctx)
 		else if (result == -OCF_ERR_CACHE_NOT_EXIST)
 			break;
 		else
-			return OCF_CACHE_ID_MAX;
+			return OCF_CACHE_ID_INVALID;
 	}
 
 	return id;
@@ -1037,9 +1037,9 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	if (strnlen(cmd->cache_path_name, MAX_STR_LEN) >= MAX_STR_LEN)
 		return -OCF_ERR_INVAL;
 
-	if (cmd->cache_id == OCF_CACHE_ID_MAX) {
+	if (cmd->cache_id == OCF_CACHE_ID_INVALID) {
 		cache_id = find_free_cache_id(cas_ctx);
-		if (cache_id == OCF_CACHE_ID_MAX)
+		if (cache_id == OCF_CACHE_ID_INVALID)
 			return -OCF_ERR_INVAL;
 
 		cmd->cache_id = cache_id;
@@ -1051,7 +1051,7 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	memset(device_cfg, 0, sizeof(*device_cfg));
 	memset(atomic_params, 0, sizeof(*atomic_params));
 
-	cfg->name = cache_name;
+	strncpy(cfg->name, cache_name, OCF_CACHE_NAME_SIZE);
 	cfg->cache_mode = cmd->caching_mode;
 	cfg->cache_line_size = cmd->line_size;
 	cfg->eviction_policy = cmd->eviction_policy;
