@@ -65,7 +65,7 @@ run_cmd "dd if=/dev/urandom of=${DEVICE_NAME}1-2 count=1000 bs=4096 oflag=direct
 
 run_cmd "casctl stop --flush"
 
-run_cmd "casadm -S -d ${CACHE_DEVICE}1"
+run_cmd "casadm -S -d ${CACHE_DEVICE}1 --force"
 
 run_cmd "casctl stop"
 

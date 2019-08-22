@@ -28,6 +28,10 @@ TEST_COUNT_HALF=16384
 #param device
 get_stat_sectors_read() {
     L_DEVICE=$(basename $1)
+    if [[  ${L_DEVICE} =~ "nvme" ]]
+    then
+        L_DEVICE="${L_DEVICE:0:${#L_DEVICE}-1}p${L_DEVICE: -1}"
+    fi
     L_STAT=$(cat /proc/diskstats | grep $L_DEVICE | awk '{ print $6 }')
     echo $L_STAT
 }
