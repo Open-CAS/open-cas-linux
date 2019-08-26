@@ -665,7 +665,7 @@ static int read_io_class_stats(int ctrl_fd, int cache_id, int core_id,
 		io_class_tmp->get_stats = 1;
 	}
 
-	if (ioctl(ctrl_fd, KCAS_IOCTL_PARTITION_STATS, io_class_tmp) < 0) {
+	if (ioctl(ctrl_fd, KCAS_IOCTL_PARTITION_INFO, io_class_tmp) < 0) {
 		io_class_out->ext_err_code = io_class_tmp->ext_err_code;
 		return FAILURE;
 	}

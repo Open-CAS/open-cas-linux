@@ -51,7 +51,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		cmd != KCAS_IOCTL_LIST_CACHE &&
 		cmd != KCAS_IOCTL_GET_CACHE_COUNT &&
 		cmd != KCAS_IOCTL_CORE_INFO &&
-		cmd != KCAS_IOCTL_PARTITION_STATS &&
+		cmd != KCAS_IOCTL_PARTITION_INFO &&
 		cmd != KCAS_IOCTL_GET_CAPABILITIES) {
 		return -EFAULT;
 	}
@@ -213,7 +213,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
 
-	case KCAS_IOCTL_PARTITION_STATS: {
+	case KCAS_IOCTL_PARTITION_INFO: {
 		struct kcas_io_class *cmd_info;
 
 		GET_CMD_INFO(cmd_info, arg);

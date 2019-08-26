@@ -385,7 +385,7 @@ struct kcas_get_cache_param {
  *    11    *    KCAS_IOCTL_FLUSH_CORE                      *    OK            *
  *    12    *    KCAS_IOCTL_CACHE_INFO                      *    DEPRECATED    *
  *    13    *    KCAS_IOCTL_CORE_INFO                       *    DEPRECATED    *
- *    14    *    KCAS_IOCTL_PARTITION_STATS                 *    OK            *
+ *    14    *    KCAS_IOCTL_PARTITION_INFO                  *    OK            *
  *    15    *    KCAS_IOCTL_PARTITION_SET                   *    OK            *
  *    16    *    KCAS_IOCTL_GET_CACHE_COUNT                 *    OK            *
  *    17    *    KCAS_IOCTL_LIST_CACHE                      *    OK            *
@@ -433,7 +433,7 @@ struct kcas_get_cache_param {
 #define KCAS_IOCTL_FLUSH_CORE _IOR(KCAS_IOCTL_MAGIC, 11, struct kcas_flush_core)
 
 /** Retrieving partition status for specified cache id and partition id */
-#define KCAS_IOCTL_PARTITION_STATS _IOWR(KCAS_IOCTL_MAGIC, 14, struct kcas_io_class)
+#define KCAS_IOCTL_PARTITION_INFO _IOWR(KCAS_IOCTL_MAGIC, 14, struct kcas_io_class)
 
 /** Configure partitions for specified cache id */
 #define KCAS_IOCTL_PARTITION_SET _IOWR(KCAS_IOCTL_MAGIC, 15, struct kcas_io_classes)

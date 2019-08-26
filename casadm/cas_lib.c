@@ -2028,7 +2028,7 @@ int partition_list(unsigned int cache_id, unsigned int output_format)
 		io_class.cache_id = cache_id;
 		io_class.class_id = i;
 
-		result = run_ioctl(fd, KCAS_IOCTL_PARTITION_STATS, &io_class);
+		result = run_ioctl(fd, KCAS_IOCTL_PARTITION_INFO, &io_class);
 		if (result) {
 			if (OCF_ERR_IO_CLASS_NOT_EXIST == io_class.ext_err_code) {
 				result = SUCCESS;
