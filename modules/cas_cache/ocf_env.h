@@ -616,4 +616,21 @@ static inline uint32_t env_crc32(uint32_t crc, uint8_t const *data, size_t len)
 #define ENV_BUG()			BUG()
 #define ENV_BUG_ON(cond)		BUG_ON(cond)
 
+
+/* *** EXECUTION COTNEXT *** */
+static inline unsigned env_get_execution_context(void)
+{
+	return get_cpu();
+}
+
+static inline void env_put_execution_context(unsigned ctx)
+{
+	put_cpu();
+}
+
+static inline unsigned env_get_execution_context_count(void)
+{
+	return num_online_cpus();
+}
+
 #endif /* __OCF_ENV_H__ */
