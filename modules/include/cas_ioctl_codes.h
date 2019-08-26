@@ -157,6 +157,28 @@ struct kcas_flush_core {
 	int ext_err_code;
 };
 
+struct kcas_get_stats {
+	/** id of a cache */
+	uint16_t cache_id;
+
+	/** id of a core */
+	uint16_t core_id;
+
+	/** id of an ioclass */
+	uint16_t part_id;
+
+	/** fields to be filled with statistics */
+	struct ocf_stats_usage usage;
+
+	struct ocf_stats_requests req;
+
+	struct ocf_stats_blocks blocks;
+
+	struct ocf_stats_errors errors;
+
+	int ext_err_code;
+};
+
 struct kcas_cache_info {
 	/** id of a cache */
 	uint16_t cache_id;
@@ -405,6 +427,7 @@ struct kcas_get_cache_param {
  *    31    *    KCAS_IOCTL_GET_CORE_PARAM                  *    OK            *
  *    32    *    KCAS_IOCTL_SET_CACHE_PARAM                 *    OK            *
  *    33    *    KCAS_IOCTL_GET_CACHE_PARAM                 *    OK            *
+ *    34    *    KCAS_IOCTL_GET_STATS                       *    OK            *
  *******************************************************************************
  */
 
@@ -491,6 +514,9 @@ struct kcas_get_cache_param {
 
 /** Get various cache runtime parameters */
 #define KCAS_IOCTL_GET_CACHE_PARAM _IOW(KCAS_IOCTL_MAGIC, 33, struct kcas_get_cache_param)
+
+/** Get stats of particular OCF object */
+#define KCAS_IOCTL_GET_STATS _IOR(KCAS_IOCTL_MAGIC, 34, struct kcas_get_stats)
 
 /**
  * Extended kernel CAS error codes
