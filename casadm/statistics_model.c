@@ -220,208 +220,133 @@ static void print_usage_header(FILE* outfile)
 			   "%", "[Units]");
 }
 
-static void print_core_usage(const struct ocf_stats_core* exp_obj_stats,
-			     uint32_t cache_size, uint32_t cache_occupancy,
-			     FILE* outfile, ocf_cache_line_size_t line_size)
+static void print_usage_stats(struct ocf_stats_usage *stats, FILE* outfile)
 {
 	print_usage_header(outfile);
 
 	print_val_perc_table_row(outfile, "Occupancy", UNIT_BLOCKS,
-				percentage(exp_obj_stats->cache_occupancy,
-					cache_size),
-				"%lu",
-				cache_line_in_4k(exp_obj_stats->cache_occupancy,
-					line_size));
+					stats->occupancy.percent/10, "%lu", stats->occupancy.value);
 	print_val_perc_table_row(outfile, "Free", UNIT_BLOCKS,
-				percentage(cache_size - cache_occupancy, cache_size),
-				"%lu",
-				cache_line_in_4k(cache_size - cache_occupancy,
-					line_size));
+					stats->free.percent/10, "%lu", stats->free.value);
 	print_val_perc_table_row(outfile, "Clean", UNIT_BLOCKS,
-				percentage(exp_obj_stats->cache_occupancy - exp_obj_stats->dirty,
-					exp_obj_stats->cache_occupancy),
-				"%lu",
-				cache_line_in_4k(exp_obj_stats->cache_occupancy - exp_obj_stats->dirty,
-					line_size));
+					stats->clean.percent/10, "%lu", stats->clean.value);
 	print_val_perc_table_row(outfile, "Dirty", UNIT_BLOCKS,
-				percentage(exp_obj_stats->dirty,
-					exp_obj_stats->cache_occupancy),
-				"%lu",
-				cache_line_in_4k(exp_obj_stats->dirty,
-					line_size));
+					stats->dirty.percent/10, "%lu", stats->dirty.value);
 }
 
-static void print_req_section(const struct ocf_stats_req *stats, const char *op_name,
-			      FILE *outfile, uint64_t total_reqs)
+static void print_req_stats(const struct ocf_stats_requests *stats,
+		FILE *outfile)
 {
-	uint64_t cache_hits;
-	float percent;
-
-	cache_hits = stats->total - (stats->full_miss + stats->partial_miss);
-
-	percent = percentage(cache_hits, total_reqs);
-	print_val_perc_table_section(outfile, make_row_title(op_name, "hits"),
-				     UNIT_REQUESTS, percent, "%lu", cache_hits);
-
-	percent = percentage(stats->partial_miss, total_reqs);
-	print_val_perc_table_row(outfile, make_row_title(op_name, "partial misses"),
-				 UNIT_REQUESTS, percent, "%lu", stats->partial_miss);
-
-	percent = percentage(stats->full_miss, total_reqs);
-	print_val_perc_table_row(outfile, make_row_title(op_name, "full misses"),
-				 UNIT_REQUESTS, percent, "%lu", stats->full_miss);
-
-	percent = percentage(stats->total, total_reqs);
-	print_val_perc_table_row(outfile, make_row_title(op_name, "total"),
-				 UNIT_REQUESTS, percent, "%lu", stats->total);
-}
-
-static void print_req_stats(const struct ocf_stats_core *exp_obj_stats,
-			    FILE *outfile)
-{
-	const struct ocf_stats_req *req_stats;
-	float percent;
-	uint64_t total_reqs = 0, serv_reqs = 0;
-
 	print_table_header(outfile, 4, "Request statistics", "Count",
 			   "%", "[Units]");
 
-	total_reqs += exp_obj_stats->read_reqs.total;
-	total_reqs += exp_obj_stats->write_reqs.total;
+	print_val_perc_table_section(outfile, "Read hits",
+				     UNIT_REQUESTS, stats->rd_hits.percent/10, "%lu",
+					 stats->rd_hits.value);
+	print_val_perc_table_row(outfile, "Read partial misses",
+				     UNIT_REQUESTS, stats->rd_partial_misses.percent/10, "%lu",
+					 stats->rd_partial_misses.value);
+	print_val_perc_table_row(outfile, "Read full misses",
+				     UNIT_REQUESTS, stats->rd_full_misses.percent/10, "%lu",
+					 stats->rd_full_misses.value);
+	print_val_perc_table_row(outfile, "Read total",
+				     UNIT_REQUESTS, stats->rd_total.percent/10, "%lu",
+					 stats->rd_total.value);
 
-	serv_reqs = total_reqs;
+	print_val_perc_table_section(outfile, "Write hits",
+				     UNIT_REQUESTS, stats->wr_hits.percent/10, "%lu",
+					 stats->wr_hits.value);
+	print_val_perc_table_row(outfile, "Write partial misses",
+				     UNIT_REQUESTS, stats->wr_partial_misses.percent/10, "%lu",
+					 stats->wr_partial_misses.value);
+	print_val_perc_table_row(outfile, "Write full misses",
+				     UNIT_REQUESTS, stats->wr_full_misses.percent/10, "%lu",
+					 stats->wr_full_misses.value);
+	print_val_perc_table_row(outfile, "Write total",
+				     UNIT_REQUESTS, stats->wr_total.percent/10, "%lu",
+					 stats->wr_total.value);
 
-	total_reqs += exp_obj_stats->read_reqs.pass_through;
-	total_reqs += exp_obj_stats->write_reqs.pass_through;
+	print_val_perc_table_section(outfile, "Pass-Through reads",
+				     UNIT_REQUESTS, stats->rd_pt.percent/10, "%lu",
+					 stats->rd_pt.value);
+	print_val_perc_table_row(outfile, "Pass-Through writes",
+				     UNIT_REQUESTS, stats->wr_pt.percent/10, "%lu",
+					 stats->wr_pt.value);
+	print_val_perc_table_row(outfile, "Serviced requests",
+				     UNIT_REQUESTS, stats->serviced.percent/10, "%lu",
+					 stats->serviced.value);
 
-	/* Section for reads. */
-	req_stats = &exp_obj_stats->read_reqs;
-	print_req_section(req_stats, "Read", outfile, total_reqs);
-
-	/* Section for writes. */
-	req_stats = &exp_obj_stats->write_reqs;
-	print_req_section(req_stats, "Write", outfile, total_reqs);
-
-	/* Pass-Through requests. */
-	percent = percentage(exp_obj_stats->read_reqs.pass_through, total_reqs);
-	print_val_perc_table_section(outfile, "Pass-Through reads", UNIT_REQUESTS,
-				     percent, "%lu",
-				     exp_obj_stats->read_reqs.pass_through);
-
-	percent = percentage(exp_obj_stats->write_reqs.pass_through, total_reqs);
-	print_val_perc_table_row(outfile, "Pass-Through writes", UNIT_REQUESTS,
-				 percent, "%lu",
-				 exp_obj_stats->write_reqs.pass_through);
-
-	/* Summary. */
-	percent = percentage(serv_reqs, total_reqs);
-	print_val_perc_table_row(outfile, "Serviced requests", UNIT_REQUESTS,
-				 percent, "%lu", serv_reqs);
-
-	print_val_perc_table_section(outfile, "Total requests", UNIT_REQUESTS,
-				     total_reqs ? 100.0f : 0.0f, "%lu",
-				     total_reqs);
+	print_val_perc_table_section(outfile, "Total requests",
+				     UNIT_REQUESTS, stats->total.percent/10, "%lu",
+					 stats->total.value);
 }
 
-static void print_block_section(const struct ocf_stats_block *stats_4k,
-				const char *dev_name, FILE *outfile,
-				ocf_cache_line_size_t cache_line_size)
+static void print_blk_stats(const struct ocf_stats_blocks *stats,
+		bool cache_stats, FILE *outfile)
 {
-	uint64_t total_4k;
-	float percent;
-
-	total_4k = stats_4k->read + stats_4k->write;
-
-	percent = percentage(stats_4k->read, total_4k);
-	print_val_perc_table_section(outfile,
-				     make_row_title("Reads from", dev_name),
-				     UNIT_BLOCKS, percent, "%lu", stats_4k->read);
-
-	percent = percentage(stats_4k->write, total_4k);
-	print_val_perc_table_row(outfile,
-				 make_row_title("Writes to", dev_name),
-				 UNIT_BLOCKS, percent, "%lu", stats_4k->write);
-
-	print_val_perc_table_row(outfile,
-				 make_row_title("Total to/from", dev_name),
-				 UNIT_BLOCKS, total_4k ? 100.0f : 0.0f, "%lu",
-				 total_4k);
-}
-
-static struct ocf_stats_block convert_block_stats_to_4k(
-			const struct ocf_stats_block *stats)
-{
-	struct ocf_stats_block stats_4k;
-	stats_4k.read = bytes_to_4k(stats->read);
-	stats_4k.write = bytes_to_4k(stats->write);
-	return stats_4k;
-}
-
-void print_block_stats(const struct ocf_stats_core *exp_obj_stats,
-		       FILE *outfile, ocf_cache_line_size_t cache_line_size)
-{
-	struct ocf_stats_block cache_volume_stats_4k =
-		convert_block_stats_to_4k(&exp_obj_stats->cache_volume);
-	struct ocf_stats_block core_volume_stats_4k =
-		convert_block_stats_to_4k(&exp_obj_stats->core_volume);
-	struct ocf_stats_block core_stats_4k  =
-		convert_block_stats_to_4k(&exp_obj_stats->core);
-
 	print_table_header(outfile, 4, "Block statistics", "Count",
-				"%", "[Units]");
+			   "%", "[Units]");
 
-	print_block_section(&core_volume_stats_4k, "core", outfile,
-				cache_line_size);
-	print_block_section(&cache_volume_stats_4k, "cache", outfile,
-				cache_line_size);
-	print_block_section(&core_stats_4k, "exported object", outfile,
-				cache_line_size);
+	print_val_perc_table_section(outfile, "Reads from core(s)",
+				     UNIT_BLOCKS, stats->core_volume_rd.percent/10, "%lu",
+					 stats->core_volume_rd.value);
+	print_val_perc_table_row(outfile, "Writes to core(s)",
+				     UNIT_BLOCKS, stats->core_volume_wr.percent/10, "%lu",
+					 stats->core_volume_wr.value);
+	print_val_perc_table_row(outfile, "Total to/from core(s)",
+				     UNIT_BLOCKS, stats->core_volume_total.percent/10, "%lu",
+					 stats->core_volume_total.value);
+
+	print_val_perc_table_section(outfile, "Reads from cache",
+				     UNIT_BLOCKS, stats->cache_volume_rd.percent/10, "%lu",
+					 stats->cache_volume_rd.value);
+	print_val_perc_table_row(outfile, "Writes to cache",
+				     UNIT_BLOCKS, stats->cache_volume_wr.percent/10, "%lu",
+					 stats->cache_volume_wr.value);
+	print_val_perc_table_row(outfile, "Total to/from cache",
+				     UNIT_BLOCKS, stats->cache_volume_total.percent/10, "%lu",
+					 stats->cache_volume_total.value);
+
+	print_val_perc_table_section(outfile, "Reads from exported object(s)",
+				     UNIT_BLOCKS, stats->volume_rd.percent/10, "%lu",
+					 stats->volume_rd.value);
+	print_val_perc_table_row(outfile, "Writes to exported object(s)",
+				     UNIT_BLOCKS, stats->volume_wr.percent/10, "%lu",
+					 stats->volume_wr.value);
+	print_val_perc_table_row(outfile, "Total to/from exported object(s)",
+				     UNIT_BLOCKS, stats->volume_total.percent/10, "%lu",
+					 stats->volume_total.value);
 }
 
-static void print_error_section(const struct ocf_stats_error *stats,
-				const char *section_name, FILE *outfile)
+static void print_err_stats(const struct ocf_stats_errors *stats,
+		FILE *outfile)
 {
-	uint64_t total = 0;
-	float percent;
+	print_table_header(outfile, 4, "Error statistics", "Count", "%",
+			   "[Units]");
 
-	total = stats->read + stats->write;
+	print_val_perc_table_section(outfile, "Cache read errors",
+				     UNIT_REQUESTS, stats->cache_volume_rd.percent/10, "%lu",
+					 stats->cache_volume_rd.value);
+	print_val_perc_table_row(outfile, "Cache write errors",
+				     UNIT_REQUESTS, stats->cache_volume_wr.percent/10, "%lu",
+					 stats->cache_volume_wr.value);
+	print_val_perc_table_row(outfile, "Cache total errors",
+				     UNIT_REQUESTS, stats->cache_volume_total.percent/10, "%lu",
+					 stats->cache_volume_total.value);
 
-	percent = percentage(stats->read, total);
-	print_val_perc_table_section(outfile,
-				     make_row_title(section_name , "read errors"),
-				     UNIT_REQUESTS, percent, "%u", stats->read);
-	percent = percentage(stats->write, total);
-	print_val_perc_table_row(outfile,
-				 make_row_title(section_name, "write errors"),
-				 UNIT_REQUESTS, percent, "%u", stats->write);
-	print_val_perc_table_row(outfile,
-				 make_row_title(section_name, "total errors"),
-				 UNIT_REQUESTS, total ? 100.0f : 0.0f, "%lu", total);
-}
+	print_val_perc_table_section(outfile, "Core read errors",
+				     UNIT_REQUESTS, stats->core_volume_rd.percent/10, "%lu",
+					 stats->core_volume_rd.value);
+	print_val_perc_table_row(outfile, "Core write errors",
+				     UNIT_REQUESTS, stats->core_volume_wr.percent/10, "%lu",
+					 stats->core_volume_wr.value);
+	print_val_perc_table_row(outfile, "Core total errors",
+				     UNIT_REQUESTS, stats->core_volume_total.percent/10, "%lu",
+					 stats->core_volume_total.value);
 
-static void print_error_stats_total(const struct ocf_stats_error *cache_stats,
-				    const struct ocf_stats_error *core_stats,
-				    FILE *outfile)
-{
-	uint64_t total;
-
-	total = cache_stats->read + cache_stats->write +
-		core_stats->read + core_stats->write;
-
-	print_val_perc_table_section(outfile, "Total errors", UNIT_REQUESTS,
-				     total ? 100.0f : 0.0f, "%lu", total);
-}
-
-static void print_error_stats(const struct ocf_stats_core *exp_obj_stats,
-			      FILE *outfile)
-{
-	print_table_header(outfile, 4, "Error statistics", "Count", "%", "[Units]");
-
-	print_error_section(&exp_obj_stats->cache_errors, "Cache", outfile);
-	print_error_section(&exp_obj_stats->core_errors, "Core", outfile);
-
-	print_error_stats_total(&exp_obj_stats->cache_errors,
-				&exp_obj_stats->core_errors, outfile);
+	print_val_perc_table_section(outfile, "Total errors",
+				     UNIT_REQUESTS, stats->total.percent/10, "%lu",
+					 stats->total.value);
 }
 
 void cache_stats_core_counters(const struct kcas_core_info *info,
@@ -841,40 +766,32 @@ int cache_stats_cores(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		      unsigned int cache_id, unsigned int core_id, int io_class_id,
 		      FILE *outfile, unsigned int stats_filters)
 {
-	int i;
-	int _core_id;
-	uint32_t cache_size;
-	ocf_cache_line_size_t cache_line_size;
 	struct kcas_core_info core_info;
+	struct kcas_get_stats stats;
 
-	for (i = 0; i < cache_info->info.core_count; ++i) {
-		/* if user only requested stats pertaining to a specific core,
-		   skip all other cores */
-		_core_id = cache_info->core_id[i];
-		if ((core_id != OCF_CORE_ID_INVALID) && (core_id != _core_id)) {
-			continue;
-		}
-		/* call function to print stats */
-		if (get_core_info(ctrl_fd, cache_id, _core_id, &core_info)) {
-			cas_printf(LOG_ERR, "Error while retrieving stats for core %d\n", _core_id);
-			print_err(core_info.ext_err_code);
-			return FAILURE;
-		}
-
-		cache_size = cache_info->info.size;
-		cache_line_size = cache_info->info.cache_line_size / KiB;
-
-		cache_stats_core_counters(&core_info, cache_size,
-				cache_info->info.occupancy,
-				stats_filters, outfile, cache_line_size);
+	if (get_core_info(ctrl_fd, cache_id, core_id, &core_info)) {
+		cas_printf(LOG_ERR, "Error while retrieving stats for core %d\n", core_id);
+		print_err(core_info.ext_err_code);
+		return FAILURE;
 	}
+
+	stats.cache_id = cache_id;
+	stats.core_id = core_id;
+	stats.part_id = OCF_IO_CLASS_INVALID;
+
+	if (ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &stats) < 0) {
+		cas_printf(LOG_ERR, "Error while retrieving stats for core %d\n", core_id);
+		print_err(core_info.ext_err_code);
+		return FAILURE;
+	}
+
+	cache_stats_core_counters(&core_info, &stats, stats_filters, outfile);
 
 	return SUCCESS;
 }
 
 int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
-		     unsigned int cache_id, FILE *outfile,
-		     unsigned int stats_filters)
+		     unsigned int cache_id, FILE *outfile)
 {
 	float flush_progress = 0;
 	float value;
@@ -941,46 +858,6 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 	return SUCCESS;
 }
 
-int cache_stats_usage(int ctrl_fd, const struct kcas_cache_info *cache_info,
-		      unsigned int cache_id, FILE* outfile)
-{
-	print_usage_header(outfile);
-
-	print_val_perc_table_row(outfile, "Occupancy", UNIT_BLOCKS,
-				percentage(cache_info->info.occupancy,
-					cache_info->info.size),
-					"%lu",
-					cache_line_in_4k(cache_info->info.occupancy,
-					cache_info->info.cache_line_size / KiB));
-
-	print_val_perc_table_row(outfile, "Free", UNIT_BLOCKS,
-				percentage(cache_info->info.size -
-					cache_info->info.occupancy,
-					cache_info->info.size),
-					"%lu",
-					cache_line_in_4k(cache_info->info.size -
-					cache_info->info.occupancy,
-					cache_info->info.cache_line_size / KiB));
-
-	print_val_perc_table_row(outfile, "Clean", UNIT_BLOCKS,
-				percentage(cache_info->info.occupancy -
-					cache_info->info.dirty,
-					cache_info->info.occupancy),
-					"%lu",
-					cache_line_in_4k(cache_info->info.occupancy -
-					cache_info->info.dirty,
-					cache_info->info.cache_line_size / KiB));
-
-	print_val_perc_table_row(outfile, "Dirty", UNIT_BLOCKS,
-				percentage(cache_info->info.dirty,
-					cache_info->info.occupancy),
-					"%lu",
-					cache_line_in_4k(cache_info->info.dirty,
-					cache_info->info.cache_line_size / KiB));
-
-	return SUCCESS;
-}
-
 int cache_stats_inactive_usage(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		      unsigned int cache_id, FILE* outfile)
 {
@@ -1013,83 +890,20 @@ int cache_stats_inactive_usage(int ctrl_fd, const struct kcas_cache_info *cache_
 	return SUCCESS;
 }
 
-int cache_stats_counters(int ctrl_fd, const struct kcas_cache_info *cache_info,
-			 unsigned int cache_id, FILE *outfile,
-			 unsigned int stats_filters)
+void cache_stats_counters(struct kcas_get_stats *cache_stats, FILE *outfile,
+		unsigned int stats_filters)
 {
-	int i;
-	int _core_id;
-	struct ocf_stats_core *stats;
-	struct ocf_stats_core total_stats;
-	struct kcas_core_info core_info;
-
-	struct ocf_stats_error total_cache_errors, total_core_errors;
-
-	memset(&total_stats, 0, sizeof(total_stats));
-
-	memset(&total_cache_errors, 0, sizeof(total_cache_errors));
-	memset(&total_core_errors, 0, sizeof(total_core_errors));
-
-	for (i = 0; i < cache_info->info.core_count; ++i) {
-		/* if user only requested stats pertaining to a specific core,
-		   skip all other cores */
-		_core_id = cache_info->core_id[i];
-		/* call function to print stats */
-		if (get_core_info(ctrl_fd, cache_id, _core_id, &core_info)) {
-			cas_printf(LOG_ERR, "Error while retrieving stats for core %d\n", _core_id);
-			print_err(core_info.ext_err_code);
-			return FAILURE;
-		}
-
-		stats = &core_info.stats;
-
-		/* Convert block stats to 4k before adding them up. This way
-		  sum of block stats for cores is consistent with cache
-		  stats */
-		stats->cache_volume = convert_block_stats_to_4k(&stats->cache_volume);
-		stats->core_volume = convert_block_stats_to_4k(&stats->core_volume);
-		stats->core = convert_block_stats_to_4k(&stats->core);
-
-		accum_block_stats(&total_stats.cache_volume, &stats->cache_volume);
-		accum_block_stats(&total_stats.core_volume, &stats->core_volume);
-		accum_block_stats(&total_stats.core, &stats->core);
-
-		accum_req_stats(&total_stats.read_reqs, &stats->read_reqs);
-		accum_req_stats(&total_stats.write_reqs, &stats->write_reqs);
-
-		accum_error_stats(&total_cache_errors, &stats->cache_errors);
-		accum_error_stats(&total_core_errors, &stats->core_errors);
-	}
-
 	/* Totals for requests stats. */
-	if (stats_filters & STATS_FILTER_REQ) {
-		print_req_stats(&total_stats, outfile);
-	}
+	if (stats_filters & STATS_FILTER_REQ)
+		print_req_stats(&cache_stats->req, outfile);
 
 	/* Totals for blocks stats. */
-	if (stats_filters & STATS_FILTER_BLK) {
-		print_table_header(outfile, 4, "Block statistics", "Count",
-				   "%", "[Units]");
-		print_block_section(&total_stats.core_volume, "core(s)", outfile,
-					cache_info->info.cache_line_size / KiB);
-		print_block_section(&total_stats.cache_volume, "cache", outfile,
-					cache_info->info.cache_line_size / KiB);
-		print_block_section(&total_stats.core, "exported object(s)", outfile,
-					cache_info->info.cache_line_size / KiB);
-	}
+	if (stats_filters & STATS_FILTER_BLK)
+		print_blk_stats(&cache_stats->blocks, true, outfile);
 
 	/* Totals for error stats. */
-	if (stats_filters & STATS_FILTER_ERR) {
-		print_table_header(outfile, 4, "Error statistics", "Count", "%",
-				   "[Units]");
-		print_error_section(&total_cache_errors, "Cache", outfile);
-		print_error_section(&total_core_errors, "Core", outfile);
-
-		print_error_stats_total(&total_cache_errors, &total_core_errors,
-					outfile);
-	}
-
-	return SUCCESS;
+	if (stats_filters & STATS_FILTER_ERR)
+		print_err_stats(&cache_stats->errors, outfile);
 }
 
 
@@ -1139,6 +953,7 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 	int ret = SUCCESS;
 	int attempt_no = 0;
 	struct kcas_cache_info cache_info;
+	struct kcas_get_stats cache_stats = {};
 
 	ctrl_fd = open_ctrl_device();
 
@@ -1146,6 +961,7 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 		print_err(KCAS_ERR_SYSTEM);
 		return FAILURE;
 	}
+
 
 	/**
 	 *
@@ -1228,25 +1044,29 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 		}
 	} else if (core_id == OCF_CORE_ID_INVALID) {
 
-		begin_record(intermediate_file[1]);
-		if (stats_filters & STATS_FILTER_CONF) {
-			if (cache_stats_conf(ctrl_fd, &cache_info,
-						cache_id,
-						intermediate_file[1],
-						stats_filters)) {
-				ret = FAILURE;
-				goto cleanup;
-			}
+		cache_stats.cache_id = cache_id;
+		cache_stats.core_id = OCF_CORE_ID_INVALID;
+		cache_stats.part_id = OCF_IO_CLASS_INVALID;
+
+		if (ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &cache_stats) < 0) {
+			ret = FAILURE;
+			goto cleanup;
 		}
 
-		if (stats_filters & STATS_FILTER_USAGE) {
-			if (cache_stats_usage(ctrl_fd, &cache_info,
+		begin_record(intermediate_file[1]);
+
+		if (stats_filters & STATS_FILTER_CONF) {
+			if (cache_stats_conf(ctrl_fd, &cache_info,
 						cache_id,
 						intermediate_file[1])) {
 				ret = FAILURE;
 				goto cleanup;
 			}
 		}
+
+		if (stats_filters & STATS_FILTER_USAGE)
+			print_usage_stats(&cache_stats.usage, intermediate_file[1]);
+
 		if ((cache_info.info.state & (1 << ocf_cache_state_incomplete))
 				&& stats_filters & STATS_FILTER_USAGE) {
 			if (cache_stats_inactive_usage(ctrl_fd, &cache_info,
@@ -1258,13 +1078,8 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 		}
 
 		if (stats_filters & STATS_FILTER_COUNTERS) {
-			if (cache_stats_counters(ctrl_fd, &cache_info,
-						cache_id,
-						intermediate_file[1],
-						stats_filters)) {
-				ret = FAILURE;
-				goto cleanup;
-			}
+			cache_stats_counters(&cache_stats, intermediate_file[1],
+						stats_filters);
 		}
 
 	} else {
