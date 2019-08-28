@@ -39,8 +39,6 @@
 #define UNIT_REQUESTS "Requests"
 #define UNIT_BLOCKS "4KiB blocks"
 
-#define ALLOWED_NUMBER_OF_ATTEMPTS 10
-
 static inline float percentage(uint64_t numerator, uint64_t denominator)
 {
 	float result;
@@ -531,6 +529,37 @@ static void print_stats_ioclass_req(const struct ocf_stats_io_class* part_stats,
 
 }
 
+
+void cache_stats_inactive_usage(int ctrl_fd, const struct kcas_cache_info *cache_info,
+		      unsigned int cache_id, FILE* outfile)
+{
+	print_table_header(outfile, 4, "Inactive usage statistics", "Count",
+			   "%", "[Units]");
+
+    print_val_perc_table_row(outfile, "Inactive Occupancy", UNIT_BLOCKS,
+				percentage(cache_info->info.inactive.occupancy,
+					cache_info->info.size),
+					"%lu",
+					cache_line_in_4k(cache_info->info.inactive.occupancy,
+					cache_info->info.cache_line_size / KiB));
+
+    print_val_perc_table_row(outfile, "Inactive Clean", UNIT_BLOCKS,
+				percentage(cache_info->info.inactive.occupancy -
+					cache_info->info.inactive.dirty,
+					cache_info->info.occupancy),
+					"%lu",
+					cache_line_in_4k(cache_info->info.inactive.occupancy -
+					cache_info->info.inactive.dirty,
+					cache_info->info.cache_line_size / KiB));
+
+    print_val_perc_table_row(outfile, "Inactive Dirty", UNIT_BLOCKS,
+				percentage(cache_info->info.inactive.dirty,
+					cache_info->info.occupancy),
+					"%lu",
+					cache_line_in_4k(cache_info->info.inactive.dirty,
+					cache_info->info.cache_line_size / KiB));
+}
+
 static void print_stats_ioclass_blk(const struct ocf_stats_io_class* part_stats,
 		const struct ocf_stats_io_class* denominators, FILE *outfile,
 		ocf_cache_line_size_t cache_line_size)
@@ -776,34 +805,6 @@ static inline void accum_error_stats(struct ocf_stats_error *to,
 	to->write += from->write;
 }
 
-int cache_stats_cores(int ctrl_fd, const struct kcas_cache_info *cache_info,
-		      unsigned int cache_id, unsigned int core_id, int io_class_id,
-		      FILE *outfile, unsigned int stats_filters)
-{
-	struct kcas_core_info core_info;
-	struct kcas_get_stats stats;
-
-	if (get_core_info(ctrl_fd, cache_id, core_id, &core_info)) {
-		cas_printf(LOG_ERR, "Error while retrieving stats for core %d\n", core_id);
-		print_err(core_info.ext_err_code);
-		return FAILURE;
-	}
-
-	stats.cache_id = cache_id;
-	stats.core_id = core_id;
-	stats.part_id = OCF_IO_CLASS_INVALID;
-
-	if (ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &stats) < 0) {
-		cas_printf(LOG_ERR, "Error while retrieving stats for core %d\n", core_id);
-		print_err(core_info.ext_err_code);
-		return FAILURE;
-	}
-
-	cache_stats_core_counters(&core_info, &stats, stats_filters, outfile);
-
-	return SUCCESS;
-}
-
 int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		     unsigned int cache_id, FILE *outfile)
 {
@@ -872,38 +873,6 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 	return SUCCESS;
 }
 
-int cache_stats_inactive_usage(int ctrl_fd, const struct kcas_cache_info *cache_info,
-		      unsigned int cache_id, FILE* outfile)
-{
-	print_table_header(outfile, 4, "Inactive usage statistics", "Count",
-			   "%", "[Units]");
-
-    print_val_perc_table_row(outfile, "Inactive Occupancy", UNIT_BLOCKS,
-				percentage(cache_info->info.inactive.occupancy,
-					cache_info->info.size),
-					"%lu",
-					cache_line_in_4k(cache_info->info.inactive.occupancy,
-					cache_info->info.cache_line_size / KiB));
-
-    print_val_perc_table_row(outfile, "Inactive Clean", UNIT_BLOCKS,
-				percentage(cache_info->info.inactive.occupancy -
-					cache_info->info.inactive.dirty,
-					cache_info->info.occupancy),
-					"%lu",
-					cache_line_in_4k(cache_info->info.inactive.occupancy -
-					cache_info->info.inactive.dirty,
-					cache_info->info.cache_line_size / KiB));
-
-    print_val_perc_table_row(outfile, "Inactive Dirty", UNIT_BLOCKS,
-				percentage(cache_info->info.inactive.dirty,
-					cache_info->info.occupancy),
-					"%lu",
-					cache_line_in_4k(cache_info->info.inactive.dirty,
-					cache_info->info.cache_line_size / KiB));
-
-	return SUCCESS;
-}
-
 void cache_stats_counters(struct kcas_get_stats *cache_stats, FILE *outfile,
 		unsigned int stats_filters)
 {
@@ -920,6 +889,63 @@ void cache_stats_counters(struct kcas_get_stats *cache_stats, FILE *outfile,
 		print_err_stats(&cache_stats->errors, outfile);
 }
 
+static int cache_stats(int ctrl_fd, const struct kcas_cache_info *cache_info,
+		      unsigned int cache_id, FILE *outfile, unsigned int stats_filters)
+{
+	struct kcas_get_stats cache_stats = {};
+	cache_stats.cache_id = cache_id;
+	cache_stats.core_id = OCF_CORE_ID_INVALID;
+	cache_stats.part_id = OCF_IO_CLASS_INVALID;
+
+	if (ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &cache_stats) < 0)
+		return FAILURE;
+
+	begin_record(outfile);
+
+	if (stats_filters & STATS_FILTER_CONF)
+		cache_stats_conf(ctrl_fd, cache_info, cache_id, outfile);
+
+	if (stats_filters & STATS_FILTER_USAGE)
+		print_usage_stats(&cache_stats.usage, outfile);
+
+	if ((cache_info->info.state & (1 << ocf_cache_state_incomplete))
+			&& (stats_filters & STATS_FILTER_USAGE)) {
+		cache_stats_inactive_usage(ctrl_fd, cache_info, cache_id, outfile);
+	}
+
+	if (stats_filters & STATS_FILTER_COUNTERS)
+		cache_stats_counters(&cache_stats, outfile, stats_filters);
+
+	return SUCCESS;
+}
+
+int cache_stats_cores(int ctrl_fd, const struct kcas_cache_info *cache_info,
+		      unsigned int cache_id, unsigned int core_id, int io_class_id,
+		      FILE *outfile, unsigned int stats_filters)
+{
+	struct kcas_core_info core_info;
+	struct kcas_get_stats stats;
+
+	if (get_core_info(ctrl_fd, cache_id, core_id, &core_info)) {
+		cas_printf(LOG_ERR, "Error while retrieving stats for core %d\n", core_id);
+		print_err(core_info.ext_err_code);
+		return FAILURE;
+	}
+
+	stats.cache_id = cache_id;
+	stats.core_id = core_id;
+	stats.part_id = OCF_IO_CLASS_INVALID;
+
+	if (ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &stats) < 0) {
+		cas_printf(LOG_ERR, "Error while retrieving stats for core %d\n", core_id);
+		print_err(core_info.ext_err_code);
+		return FAILURE;
+	}
+
+	cache_stats_core_counters(&core_info, &stats, stats_filters, outfile);
+
+	return SUCCESS;
+}
 
 struct stats_printout_ctx
 {
@@ -942,10 +968,6 @@ void *stats_printout(void *ctx)
 	return 0;
 }
 
-bool _usage_stats_is_valid(struct kcas_cache_info *cmd_info)
-{
-	return (cmd_info->info.size >= cmd_info->info.occupancy);
-}
 /**
  * @brief print cache statistics in various variants
  *
@@ -965,9 +987,7 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 {
 	int ctrl_fd, i;
 	int ret = SUCCESS;
-	int attempt_no = 0;
 	struct kcas_cache_info cache_info;
-	struct kcas_get_stats cache_stats = {};
 
 	ctrl_fd = open_ctrl_device();
 
@@ -975,25 +995,6 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 		print_err(KCAS_ERR_SYSTEM);
 		return FAILURE;
 	}
-
-
-	/**
-	 *
-	 * Procedure of printing out statistics is as follows:
-	 *
-	 *
-	 * statistics_model.c (retrieve structures from kernel, don't do formatting)
-	 *       |
-	 *       v
-	 *  abstract CSV notation with prefixes (as a temporary file)
-	 *       |
-	 *       v
-	 * statistics_view (parse basic csv notation, generate proper output)
-	 *       |
-	 *       v
-	 *  desired output format
-	 *
-	 */
 
 	/* 1 is writing end, 0 is reading end of a pipe */
 	FILE *intermediate_file[2];
@@ -1020,34 +1021,25 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 
 	cache_info.cache_id = cache_id;
 
-	do {
-		if (0 != attempt_no) {
-			usleep(300 * 1000);
-		}
+	if (ioctl(ctrl_fd, KCAS_IOCTL_CACHE_INFO, &cache_info) < 0) {
+		cas_printf(LOG_ERR, "Cache Id %d not running\n", cache_id);
+		ret = FAILURE;
+		goto cleanup;
+	}
 
-		if (ioctl(ctrl_fd, KCAS_IOCTL_CACHE_INFO, &cache_info) < 0) {
-			cas_printf(LOG_ERR, "Cache Id %d not running\n", cache_id);
+	/* Check if core exists in cache */
+	if (core_id != OCF_CORE_ID_INVALID) {
+		for (i = 0; i < cache_info.info.core_count; ++i) {
+			if (core_id == cache_info.core_id[i]) {
+				break;
+			}
+		}
+		if (i == cache_info.info.core_count) {
+			cas_printf(LOG_ERR, "No such core device in cache.\n");
 			ret = FAILURE;
 			goto cleanup;
 		}
-
-		/* Check if core exists in cache */
-		if (core_id != OCF_CORE_ID_INVALID) {
-			for (i = 0; i < cache_info.info.core_count; ++i) {
-				if (core_id == cache_info.core_id[i]) {
-					break;
-				}
-			}
-			if (i == cache_info.info.core_count) {
-				cas_printf(LOG_ERR, "No such core device in cache.\n");
-				ret = FAILURE;
-				goto cleanup;
-			}
-		}
-
-		attempt_no++;
-	} while (false == _usage_stats_is_valid(&cache_info) &&
-		(attempt_no < ALLOWED_NUMBER_OF_ATTEMPTS));
+	}
 
 	if (stats_filters & STATS_FILTER_IOCLASS) {
 		if (cache_stats_ioclasses(ctrl_fd, &cache_info, cache_id,
@@ -1057,50 +1049,14 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 			return FAILURE;
 		}
 	} else if (core_id == OCF_CORE_ID_INVALID) {
-
-		cache_stats.cache_id = cache_id;
-		cache_stats.core_id = OCF_CORE_ID_INVALID;
-		cache_stats.part_id = OCF_IO_CLASS_INVALID;
-
-		if (ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &cache_stats) < 0) {
+		if (cache_stats(ctrl_fd, &cache_info, cache_id, intermediate_file[1],
+					stats_filters)) {
 			ret = FAILURE;
 			goto cleanup;
 		}
-
-		begin_record(intermediate_file[1]);
-
-		if (stats_filters & STATS_FILTER_CONF) {
-			if (cache_stats_conf(ctrl_fd, &cache_info,
-						cache_id,
-						intermediate_file[1])) {
-				ret = FAILURE;
-				goto cleanup;
-			}
-		}
-
-		if (stats_filters & STATS_FILTER_USAGE)
-			print_usage_stats(&cache_stats.usage, intermediate_file[1]);
-
-		if ((cache_info.info.state & (1 << ocf_cache_state_incomplete))
-				&& stats_filters & STATS_FILTER_USAGE) {
-			if (cache_stats_inactive_usage(ctrl_fd, &cache_info,
-						cache_id,
-						intermediate_file[1])) {
-				ret = FAILURE;
-				goto cleanup;
-			}
-		}
-
-		if (stats_filters & STATS_FILTER_COUNTERS) {
-			cache_stats_counters(&cache_stats, intermediate_file[1],
-						stats_filters);
-		}
-
 	} else {
-		if (cache_stats_cores(ctrl_fd, &cache_info, cache_id,
-					core_id, io_class_id,
-					intermediate_file[1], stats_filters)) {
-
+		if (cache_stats_cores(ctrl_fd, &cache_info, cache_id, core_id,
+					io_class_id, intermediate_file[1], stats_filters)) {
 			ret = FAILURE;
 			goto cleanup;
 		}
