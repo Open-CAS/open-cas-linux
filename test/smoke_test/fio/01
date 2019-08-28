@@ -37,7 +37,8 @@ CACHE_LINE_SIZES="4 8 16 32 64"
 for mode in $CACHE_MODES; do
 	for line_size in $CACHE_LINE_SIZES; do
 		CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" \
-						CACHE_MODE_OPTION="$mode" CACHE_LINE_SIZE="$line_size" start_cache
+						CACHE_MODE_OPTION="$mode" CACHE_LINE_SIZE="$line_size" \
+						CACHE_FORCE_OPTION="yes" start_cache
 		CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
 
 		for engine in $IO_ENGINES; do

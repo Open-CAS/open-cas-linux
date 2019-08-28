@@ -19,7 +19,6 @@ struct casdsk_exp_obj {
 
 	struct gendisk *gd;
 	struct request_queue *queue;
-	spinlock_t rq_lock;
 
 	struct block_device *locked_bd;
 

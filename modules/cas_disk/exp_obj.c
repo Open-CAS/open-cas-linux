@@ -8,6 +8,7 @@
 #include <linux/string.h>
 #include <linux/blkpg.h>
 #include <linux/elevator.h>
+#include <linux/blk-mq.h>
 
 #include "cas_disk_defs.h"
 #include "cas_disk.h"
@@ -63,47 +64,6 @@ void casdsk_deinit_exp_objs(void)
 	kmem_cache_destroy(casdsk_module->pt_io_ctx_cache);
 	kmem_cache_destroy(casdsk_module->pending_rqs_cache);
 	kmem_cache_destroy(casdsk_module->exp_obj_cache);
-}
-
-static int _casdsk_exp_obj_prep_rq_fn(struct request_queue *q, struct request *rq)
-{
-	struct casdsk_disk *dsk;;
-
-	BUG_ON(!q);
-	BUG_ON(!q->queuedata);
-	dsk = q->queuedata;
-	BUG_ON(!dsk->exp_obj);
-
-	if (likely(dsk->exp_obj->ops && dsk->exp_obj->ops->prep_rq_fn))
-		return dsk->exp_obj->ops->prep_rq_fn(dsk, q, rq, dsk->private);
-	else
-		return BLKPREP_OK;
-}
-
-static void _casdsk_exp_obj_request_fn(struct request_queue *q)
-{
-	struct casdsk_disk *dsk;
-	struct request *rq;
-
-	BUG_ON(!q);
-	BUG_ON(!q->queuedata);
-	dsk = q->queuedata;
-	BUG_ON(!dsk);
-	BUG_ON(!dsk->exp_obj);
-
-	if (likely(dsk->exp_obj->ops && dsk->exp_obj->ops->request_fn)) {
-		dsk->exp_obj->ops->request_fn(dsk, q, dsk->private);
-	} else {
-		/*
-		 * request_fn() is required, as we can't do any default
-		 * action in attached mode. In PT mode we handle all bios
-		 * directly in make_request_fn(), so request_fn() will not
-		 * be called.
-		 */
-
-		rq = blk_peek_request(q);
-		BUG_ON(rq);
-	}
 }
 
 static inline void _casdsk_exp_obj_handle_bio_att(struct casdsk_disk *dsk,
@@ -468,6 +428,70 @@ static int _casdsk_exp_obj_init_kobject(struct casdsk_disk *dsk)
 	return result;
 }
 
+static CAS_BLK_STATUS_T _casdsk_exp_obj_queue_qr(struct blk_mq_hw_ctx *hctx,
+			const struct blk_mq_queue_data *bd)
+{
+	struct casdsk_disk *dsk = hctx->driver_data;
+	struct casdsk_exp_obj *exp_obj = dsk->exp_obj;
+	struct request *rq = bd->rq;
+	int result = 0;
+
+	if (likely(exp_obj->ops && exp_obj->ops->queue_rq_fn)) {
+		exp_obj->ops->pending_rq_inc(dsk, dsk->private);
+
+		result = exp_obj->ops->queue_rq_fn(dsk, rq, dsk->private);
+
+		exp_obj->ops->pending_rq_dec(dsk, dsk->private);
+	} else {
+		/*
+		* queue_rq_fn() is required, as we can't do any default
+		* action in attached mode. In PT mode we handle all bios
+		* directly in make_request_fn(), so queue_rq_fn() will not
+		* be called.
+		*/
+		BUG_ON(rq);
+	}
+
+	return result;
+}
+
+static struct blk_mq_ops casdsk_mq_ops = {
+	.queue_rq       = _casdsk_exp_obj_queue_qr,
+};
+
+static void _casdsk_init_queues(struct casdsk_disk *dsk)
+{
+	struct request_queue *q = dsk->exp_obj->queue;
+	struct blk_mq_hw_ctx *hctx;
+	int i;
+
+	queue_for_each_hw_ctx(q, hctx, i) {
+		if (!hctx->nr_ctx || !hctx->tags)
+			continue;
+
+		hctx->driver_data = dsk;
+	}
+}
+
+static int _casdsk_init_tag_set(struct casdsk_disk *dsk, struct blk_mq_tag_set *set)
+{
+	BUG_ON(!dsk);
+	BUG_ON(!set);
+
+	set->ops = &casdsk_mq_ops;
+	set->nr_hw_queues = num_online_cpus();
+	set->numa_node = NUMA_NO_NODE;
+	/*TODO: Should we inherit qd from core device? */
+	set->queue_depth = BLKDEV_MAX_RQ;
+
+	set->cmd_size = 0;
+	set->flags = BLK_MQ_F_SHOULD_MERGE;
+
+	set->driver_data = dsk;
+
+	return blk_mq_alloc_tag_set(set);
+}
+
 int casdsk_exp_obj_create(struct casdsk_disk *dsk, const char *dev_name,
 			struct module *owner, struct casdsk_exp_obj_ops *ops)
 {
@@ -524,29 +548,27 @@ int casdsk_exp_obj_create(struct casdsk_disk *dsk, const char *dev_name,
 	if (result)
 		goto error_dev_t;
 
-	spin_lock_init(&exp_obj->rq_lock);
+	result = _casdsk_init_tag_set(dsk, &dsk->tag_set);
+	if (result) {
+		goto error_init_tag_set;
+	}
 
-	queue = blk_init_queue(_casdsk_exp_obj_request_fn, &exp_obj->rq_lock);
+	queue = blk_mq_init_queue(&dsk->tag_set);
 	if (!queue) {
 		result = -ENOMEM;
 		goto error_init_queue;
 	}
+
 	BUG_ON(queue->queuedata);
 	queue->queuedata = dsk;
 	exp_obj->queue = queue;
+
+	_casdsk_init_queues(dsk);
 
 	gd->fops = &_casdsk_exp_obj_ops;
 	gd->queue = queue;
 	gd->private_data = dsk;
 	strlcpy(gd->disk_name, exp_obj->dev_name, sizeof(gd->disk_name));
-
-	if (exp_obj->ops->prepare_queue) {
-		result = exp_obj->ops->prepare_queue(dsk, queue, dsk->private);
-		if (result)
-			goto error_prepare_queue;
-	}
-
-	blk_queue_prep_rq(queue, _casdsk_exp_obj_prep_rq_fn);
 
 	dsk->exp_obj->mk_rq_fn = queue->make_request_fn;
 	blk_queue_make_request(queue, _casdsk_exp_obj_make_rq_fn);
@@ -562,9 +584,9 @@ int casdsk_exp_obj_create(struct casdsk_disk *dsk, const char *dev_name,
 error_set_geometry:
 	if (exp_obj->ops->cleanup_queue)
 		exp_obj->ops->cleanup_queue(dsk, queue, dsk->private);
-error_prepare_queue:
-	blk_cleanup_queue(queue);
 error_init_queue:
+	blk_mq_free_tag_set(&dsk->tag_set);
+error_init_tag_set:
 	_casdsk_exp_obj_clear_dev_t(dsk);
 error_dev_t:
 	put_disk(gd);
@@ -744,6 +766,8 @@ int casdsk_exp_obj_destroy(struct casdsk_disk *dsk)
 	if (exp_obj->queue)
 		blk_cleanup_queue(exp_obj->queue);
 
+	blk_mq_free_tag_set(&dsk->tag_set);
+
 	atomic_set(&dsk->mode, CASDSK_MODE_UNKNOWN);
 	put_disk(exp_obj->gd);
 
@@ -786,40 +810,12 @@ static void _casdsk_exp_obj_wait_for_pending_rqs(struct casdsk_disk *dsk)
 			schedule();
 }
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(3, 3, 0)
-static void _casdsk_exp_obj_drain_elevator(struct request_queue *q)
-{
-	if (q->elevator && q->elevator->elevator_type)
-		while (q->elevator->elevator_type->ops.
-				elevator_dispatch_fn(q, 1))
-			;
-}
-#elif LINUX_VERSION_CODE <= KERNEL_VERSION(4, 10, 0)
-static void _casdsk_exp_obj_drain_elevator(struct request_queue *q)
-{
-	if (q->elevator && q->elevator->type)
-		while (q->elevator->type->ops.elevator_dispatch_fn(q, 1))
-			;
-}
-#else
-static void _casdsk_exp_obj_drain_elevator(struct request_queue *q)
-{
-	if (q->elevator && q->elevator->type)
-		while (q->elevator->type->ops.sq.elevator_dispatch_fn(q, 1))
-			;
-}
-#endif
-
 static void _casdsk_exp_obj_flush_queue(struct casdsk_disk *dsk)
 {
 	struct casdsk_exp_obj *exp_obj = dsk->exp_obj;
 	struct request_queue *q = exp_obj->queue;
 
-	spin_lock_irq(q->queue_lock);
-	_casdsk_exp_obj_drain_elevator(q);
-	spin_unlock_irq(q->queue_lock);
-
-	blk_run_queue(q);
+	blk_mq_run_hw_queues(q, false);
 	blk_sync_queue(q);
 }
 
