@@ -140,12 +140,13 @@ static void print_table_header(FILE *outfile, uint32_t ncols, ...)
 
 static void print_val_perc_table_elem(FILE *outfile, const char *tag,
 				      const char *title, const char *unit,
-				      float percent, const char * fmt,
+				      uint64_t percent, const char * fmt,
 				      va_list ap)
 {
+	float percent_val = (percent % 10 >= 5 ? percent+5 : percent) / 100.f;
 	fprintf(outfile, "%s\"%s\",", tag, title);
 	vfprintf(outfile, fmt, ap);
-	fprintf(outfile, ",%.1f", percent);
+	fprintf(outfile, ",%.1f", percent_val);
 	if (unit) {
 		fprintf(outfile, ",\"[%s]\"", unit);
 	}
@@ -166,7 +167,7 @@ static inline void print_val_perc_table_row(FILE *outfile, const char *title,
 
 __attribute__((format(printf, 5, 6)))
 static inline void print_val_perc_table_section(FILE *outfile, const char *title,
-						const char *unit, float percent,
+						const char *unit, uint64_t percent,
 						const char *fmt, ...)
 {
 	va_list ap;
@@ -221,13 +222,13 @@ static void print_usage_stats(struct ocf_stats_usage *stats, FILE* outfile)
 	print_usage_header(outfile);
 
 	print_val_perc_table_row(outfile, "Occupancy", UNIT_BLOCKS,
-					stats->occupancy.percent/10, "%lu", stats->occupancy.value);
+					stats->occupancy.fraction, "%lu", stats->occupancy.value);
 	print_val_perc_table_row(outfile, "Free", UNIT_BLOCKS,
-					stats->free.percent/10, "%lu", stats->free.value);
+					stats->free.fraction, "%lu", stats->free.value);
 	print_val_perc_table_row(outfile, "Clean", UNIT_BLOCKS,
-					stats->clean.percent/10, "%lu", stats->clean.value);
+					stats->clean.fraction, "%lu", stats->clean.value);
 	print_val_perc_table_row(outfile, "Dirty", UNIT_BLOCKS,
-					stats->dirty.percent/10, "%lu", stats->dirty.value);
+					stats->dirty.fraction, "%lu", stats->dirty.value);
 }
 
 static void print_req_stats(const struct ocf_stats_requests *stats,
@@ -237,43 +238,43 @@ static void print_req_stats(const struct ocf_stats_requests *stats,
 			   "%", "[Units]");
 
 	print_val_perc_table_section(outfile, "Read hits",
-				     UNIT_REQUESTS, stats->rd_hits.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->rd_hits.fraction, "%lu",
 					 stats->rd_hits.value);
 	print_val_perc_table_row(outfile, "Read partial misses",
-				     UNIT_REQUESTS, stats->rd_partial_misses.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->rd_partial_misses.fraction, "%lu",
 					 stats->rd_partial_misses.value);
 	print_val_perc_table_row(outfile, "Read full misses",
-				     UNIT_REQUESTS, stats->rd_full_misses.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->rd_full_misses.fraction, "%lu",
 					 stats->rd_full_misses.value);
 	print_val_perc_table_row(outfile, "Read total",
-				     UNIT_REQUESTS, stats->rd_total.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->rd_total.fraction, "%lu",
 					 stats->rd_total.value);
 
 	print_val_perc_table_section(outfile, "Write hits",
-				     UNIT_REQUESTS, stats->wr_hits.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->wr_hits.fraction, "%lu",
 					 stats->wr_hits.value);
 	print_val_perc_table_row(outfile, "Write partial misses",
-				     UNIT_REQUESTS, stats->wr_partial_misses.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->wr_partial_misses.fraction, "%lu",
 					 stats->wr_partial_misses.value);
 	print_val_perc_table_row(outfile, "Write full misses",
-				     UNIT_REQUESTS, stats->wr_full_misses.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->wr_full_misses.fraction, "%lu",
 					 stats->wr_full_misses.value);
 	print_val_perc_table_row(outfile, "Write total",
-				     UNIT_REQUESTS, stats->wr_total.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->wr_total.fraction, "%lu",
 					 stats->wr_total.value);
 
 	print_val_perc_table_section(outfile, "Pass-Through reads",
-				     UNIT_REQUESTS, stats->rd_pt.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->rd_pt.fraction, "%lu",
 					 stats->rd_pt.value);
 	print_val_perc_table_row(outfile, "Pass-Through writes",
-				     UNIT_REQUESTS, stats->wr_pt.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->wr_pt.fraction, "%lu",
 					 stats->wr_pt.value);
 	print_val_perc_table_row(outfile, "Serviced requests",
-				     UNIT_REQUESTS, stats->serviced.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->serviced.fraction, "%lu",
 					 stats->serviced.value);
 
 	print_val_perc_table_section(outfile, "Total requests",
-				     UNIT_REQUESTS, stats->total.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->total.fraction, "%lu",
 					 stats->total.value);
 }
 
@@ -294,47 +295,47 @@ static void print_blk_stats(const struct ocf_stats_blocks *stats,
 
 	get_stat_name(stat_name, max_stat_len, "Reads from core", postfix);
 	print_val_perc_table_section(outfile, stat_name,
-				     UNIT_BLOCKS, stats->core_volume_rd.percent/10, "%lu",
+				     UNIT_BLOCKS, stats->core_volume_rd.fraction, "%lu",
 					 stats->core_volume_rd.value);
 
 	get_stat_name(stat_name, max_stat_len, "Writes to core", postfix);
 	print_val_perc_table_row(outfile, stat_name,
-				     UNIT_BLOCKS, stats->core_volume_wr.percent/10, "%lu",
+				     UNIT_BLOCKS, stats->core_volume_wr.fraction, "%lu",
 					 stats->core_volume_wr.value);
 
 	get_stat_name(stat_name, max_stat_len, "Total to/from core", postfix);
 	print_val_perc_table_row(outfile, stat_name,
-				     UNIT_BLOCKS, stats->core_volume_total.percent/10, "%lu",
+				     UNIT_BLOCKS, stats->core_volume_total.fraction, "%lu",
 					 stats->core_volume_total.value);
 
 	print_val_perc_table_section(outfile, "Reads from cache",
-				     UNIT_BLOCKS, stats->cache_volume_rd.percent/10, "%lu",
+				     UNIT_BLOCKS, stats->cache_volume_rd.fraction, "%lu",
 					 stats->cache_volume_rd.value);
 
 	print_val_perc_table_row(outfile, "Writes to cache",
-				     UNIT_BLOCKS, stats->cache_volume_wr.percent/10, "%lu",
+				     UNIT_BLOCKS, stats->cache_volume_wr.fraction, "%lu",
 					 stats->cache_volume_wr.value);
 
 	print_val_perc_table_row(outfile, "Total to/from cache",
-				     UNIT_BLOCKS, stats->cache_volume_total.percent/10, "%lu",
+				     UNIT_BLOCKS, stats->cache_volume_total.fraction, "%lu",
 					 stats->cache_volume_total.value);
 
 	get_stat_name(stat_name, max_stat_len, "Reads from exported object",
 					postfix);
 	print_val_perc_table_section(outfile, stat_name,
-				     UNIT_BLOCKS, stats->volume_rd.percent/10, "%lu",
+				     UNIT_BLOCKS, stats->volume_rd.fraction, "%lu",
 					 stats->volume_rd.value);
 
 	get_stat_name(stat_name, max_stat_len, "Writes to exported object",
 					postfix);
 	print_val_perc_table_row(outfile, stat_name,
-				     UNIT_BLOCKS, stats->volume_wr.percent/10, "%lu",
+				     UNIT_BLOCKS, stats->volume_wr.fraction, "%lu",
 					 stats->volume_wr.value);
 
 	get_stat_name(stat_name, max_stat_len, "Total to/from exported object",
 					postfix);
 	print_val_perc_table_row(outfile, stat_name,
-				     UNIT_BLOCKS, stats->volume_total.percent/10, "%lu",
+				     UNIT_BLOCKS, stats->volume_total.fraction, "%lu",
 					 stats->volume_total.value);
 }
 
@@ -345,27 +346,27 @@ static void print_err_stats(const struct ocf_stats_errors *stats,
 			   "[Units]");
 
 	print_val_perc_table_section(outfile, "Cache read errors",
-				     UNIT_REQUESTS, stats->cache_volume_rd.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->cache_volume_rd.fraction, "%lu",
 					 stats->cache_volume_rd.value);
 	print_val_perc_table_row(outfile, "Cache write errors",
-				     UNIT_REQUESTS, stats->cache_volume_wr.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->cache_volume_wr.fraction, "%lu",
 					 stats->cache_volume_wr.value);
 	print_val_perc_table_row(outfile, "Cache total errors",
-				     UNIT_REQUESTS, stats->cache_volume_total.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->cache_volume_total.fraction, "%lu",
 					 stats->cache_volume_total.value);
 
 	print_val_perc_table_section(outfile, "Core read errors",
-				     UNIT_REQUESTS, stats->core_volume_rd.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->core_volume_rd.fraction, "%lu",
 					 stats->core_volume_rd.value);
 	print_val_perc_table_row(outfile, "Core write errors",
-				     UNIT_REQUESTS, stats->core_volume_wr.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->core_volume_wr.fraction, "%lu",
 					 stats->core_volume_wr.value);
 	print_val_perc_table_row(outfile, "Core total errors",
-				     UNIT_REQUESTS, stats->core_volume_total.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->core_volume_total.fraction, "%lu",
 					 stats->core_volume_total.value);
 
 	print_val_perc_table_section(outfile, "Total errors",
-				     UNIT_REQUESTS, stats->total.percent/10, "%lu",
+				     UNIT_REQUESTS, stats->total.fraction, "%lu",
 					 stats->total.value);
 }
 
