@@ -408,128 +408,6 @@ static void print_stats_ioclass_conf(const struct kcas_io_class* io_class,
 		      "Yes" : "No");
 }
 
-static void print_stats_ioclass_usage(uint32_t part_id,
-				      const struct ocf_stats_io_class* part_stats,
-				      const struct ocf_stats_io_class* denominators,
-				      FILE *outfile, uint32_t cache_size,
-				      ocf_cache_line_size_t cache_line_size)
-{
-	float percent;
-	uint64_t clean;
-
-	print_table_header(outfile, 4, "Usage statistics", "Count", "%", "[Units]");
-
-	percent = percentage(part_stats->occupancy_clines, cache_size);
-	print_val_perc_table_section(outfile, "Occupancy", UNIT_BLOCKS, percent,
-			"%ld",
-			cache_line_in_4k(part_stats->occupancy_clines,
-			cache_line_size));
-
-	/* Occupancy, dirty, etc. information. */
-	/* For now free stat should be printed for the unclassified IO class. */
-	if (IOCLASS_UNCLASSIFIED == part_id) {
-		print_val_perc_table_row(outfile, "Free", UNIT_BLOCKS,
-					100.0f, "%ld",
-					cache_line_in_4k(part_stats->free_clines,
-					cache_line_size));
-	} else {
-		print_val_perc_table_row(outfile, "Free", UNIT_BLOCKS,
-					     0.0f, "%d", 0);
-	}
-
-	clean = part_stats->occupancy_clines - part_stats->dirty_clines;
-	percent = percentage(clean, part_stats->occupancy_clines);
-	print_val_perc_table_row(outfile, "Clean", UNIT_BLOCKS, percent,
-				"%ld",
-				cache_line_in_4k(clean, cache_line_size));
-
-	percent = percentage(part_stats->dirty_clines, part_stats->occupancy_clines);
-	print_val_perc_table_row(outfile, "Dirty", UNIT_BLOCKS, percent,
-				"%ld",
-				cache_line_in_4k(part_stats->dirty_clines,
-					cache_line_size));
-}
-
-static void print_stats_ioclass_req(const struct ocf_stats_io_class* part_stats,
-				    const struct ocf_stats_io_class* denominators,
-				    FILE *outfile, uint64_t req_grand_total)
-{
-	const struct ocf_stats_req *req_stats;
-	float percent;
-	uint64_t hits;
-	uint64_t serv_reqs = 0;
-	uint64_t total_reqs = 0;
-
-	print_table_header(outfile, 4, "Request statistics", "Count",
-			   "%", "[Units]");
-
-	/* Handling read operations. */
-	req_stats = &part_stats->read_reqs;
-
-	hits = req_stats->total - (req_stats->partial_miss + req_stats->full_miss);
-	percent = percentage(hits, req_grand_total);
-	print_val_perc_table_section(outfile, "Read hits", UNIT_REQUESTS, percent,
-				 "%ld", hits);
-
-	percent = percentage(req_stats->partial_miss, req_grand_total);
-	print_val_perc_table_row(outfile, "Read partial misses", UNIT_REQUESTS,
-				 percent, "%ld", req_stats->partial_miss);
-
-	percent = percentage(req_stats->full_miss, req_grand_total);
-	print_val_perc_table_row(outfile, "Read full misses", UNIT_REQUESTS,
-				 percent, "%ld", req_stats->full_miss);
-
-	percent = percentage(req_stats->total, req_grand_total);
-	print_val_perc_table_row(outfile, "Read total", UNIT_REQUESTS,
-				     percent, "%ld", req_stats->total);
-
-	/* Handling write operations. */
-	req_stats = &part_stats->write_reqs;
-
-	hits = req_stats->total - (req_stats->partial_miss + req_stats->full_miss);
-	percent = percentage(hits, req_grand_total);
-	print_val_perc_table_section(outfile, "Write hits", UNIT_REQUESTS, percent,
-				 "%ld", hits);
-
-	percent = percentage(req_stats->partial_miss, req_grand_total);
-	print_val_perc_table_row(outfile, "Write partial misses", UNIT_REQUESTS,
-				 percent, "%ld", req_stats->partial_miss);
-
-	percent = percentage(req_stats->full_miss, req_grand_total);
-	print_val_perc_table_row(outfile, "Write full misses", UNIT_REQUESTS,
-				 percent, "%ld", req_stats->full_miss);
-
-	percent = percentage(req_stats->total, req_grand_total);
-	print_val_perc_table_row(outfile, "Write total", UNIT_REQUESTS,
-				     percent, "%ld", req_stats->total);
-
-	/* Pass-Through requests. */
-	percent = percentage(part_stats->read_reqs.pass_through, req_grand_total);
-	print_val_perc_table_section(outfile, "Pass-Through reads", UNIT_REQUESTS,
-				     percent, "%lu",
-				     part_stats->read_reqs.pass_through);
-
-	percent = percentage(part_stats->write_reqs.pass_through, req_grand_total);
-	print_val_perc_table_row(outfile, "Pass-Through writes", UNIT_REQUESTS,
-				 percent, "%lu",
-				 part_stats->write_reqs.pass_through);
-
-	/* Summary. */
-	serv_reqs += part_stats->read_reqs.total;
-	serv_reqs += part_stats->write_reqs.total;
-	total_reqs = serv_reqs + part_stats->read_reqs.pass_through +
-			part_stats->write_reqs.pass_through;
-
-	percent = percentage(serv_reqs, req_grand_total);
-	print_val_perc_table_row(outfile, "Serviced requests", UNIT_REQUESTS,
-				 percent, "%lu", serv_reqs);
-
-	percent = percentage(total_reqs, req_grand_total);
-	print_val_perc_table_section(outfile, "Total requests", UNIT_REQUESTS,
-				percent, "%lu", total_reqs);
-
-}
-
 
 void cache_stats_inactive_usage(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		      unsigned int cache_id, FILE* outfile)
@@ -561,107 +439,23 @@ void cache_stats_inactive_usage(int ctrl_fd, const struct kcas_cache_info *cache
 					cache_info->info.cache_line_size / KiB));
 }
 
-static void print_stats_ioclass_blk(const struct ocf_stats_io_class* part_stats,
-		const struct ocf_stats_io_class* denominators, FILE *outfile,
-		ocf_cache_line_size_t cache_line_size)
-{
-	float percent;
-
-	print_table_header(outfile, 4, "Block statistics", "Count", "%",
-			   "[Units]");
-
-	/* Handling read operations. */
-	percent = percentage(part_stats->blocks.read, denominators->blocks.read);
-	print_val_perc_table_section(outfile, "Blocks reads", UNIT_BLOCKS,
-				     percent, "%ld",
-				     bytes_to_4k(part_stats->blocks.read));
-
-	/* Handling write operations. */
-	percent = percentage(part_stats->blocks.write, denominators->blocks.write);
-	print_val_perc_table_section(outfile, "Blocks writes", UNIT_BLOCKS,
-				     percent, "%ld",
-				     bytes_to_4k(part_stats->blocks.write));
-}
-
 /**
  * print statistics regarding single io class (partition)
  */
-void print_stats_ioclass(const struct kcas_cache_info *cache_info,
-			 const struct kcas_io_class *io_class,
-			 FILE *outfile, unsigned int stats_filters,
-			 struct ocf_stats_io_class *denominators, uint64_t req_grand_total,
-			 ocf_cache_line_size_t cache_line_size)
+void print_stats_ioclass(struct kcas_io_class *io_class,
+		struct kcas_get_stats *stats, FILE *outfile, unsigned int stats_filters)
 {
-	const struct ocf_stats_io_class *part_stats;
-	uint32_t part_id;
-
-	part_id = io_class->class_id;
-	part_stats = &io_class->stats;
-
-	begin_record(outfile);
-
-	if (stats_filters & STATS_FILTER_CONF) {
+	if (stats_filters & STATS_FILTER_CONF)
 		print_stats_ioclass_conf(io_class, outfile);
-	}
 
-	if (stats_filters & STATS_FILTER_USAGE) {
-		print_stats_ioclass_usage(part_id, part_stats, denominators,
-					  outfile, cache_info->info.size,
-					  cache_line_size);
-	}
+	if (stats_filters & STATS_FILTER_USAGE)
+		print_usage_stats(&stats->usage, outfile);
 
-	if (stats_filters & STATS_FILTER_REQ) {
-		print_stats_ioclass_req(part_stats, denominators, outfile, req_grand_total);
-	}
+	if (stats_filters & STATS_FILTER_REQ)
+		print_req_stats(&stats->req, outfile);
 
-	if (stats_filters & STATS_FILTER_BLK) {
-		print_stats_ioclass_blk(part_stats, denominators, outfile,
-					cache_line_size);
-	}
-}
-
-static int read_io_class_stats(int ctrl_fd, int cache_id, int core_id,
-			       int part_id,
-			       struct kcas_io_class *io_class_tmp,
-			       struct kcas_io_class *io_class_out)
-{
-	memset(io_class_tmp, 0, sizeof(*io_class_tmp));
-
-	io_class_tmp->cache_id = cache_id;
-	io_class_tmp->class_id = part_id;
-	if (core_id != OCF_CORE_ID_INVALID) {
-		io_class_tmp->core_id = core_id;
-		io_class_tmp->get_stats = 1;
-	}
-
-	if (ioctl(ctrl_fd, KCAS_IOCTL_PARTITION_INFO, io_class_tmp) < 0) {
-		io_class_out->ext_err_code = io_class_tmp->ext_err_code;
-		return FAILURE;
-	}
-
-	io_class_out->ext_err_code = io_class_tmp->ext_err_code;
-	strncpy_s(io_class_out->info.name, sizeof(io_class_out->info.name),
-		  io_class_tmp->info.name, sizeof(io_class_tmp->info.name) - 1);
-	io_class_out->class_id = io_class_tmp->class_id;
-	io_class_out->info.priority = io_class_tmp->info.priority;
-	io_class_out->info.cache_mode = io_class_tmp->info.cache_mode;
-
-	return SUCCESS;
-
-}
-
-static inline void accum_block_stats(struct ocf_stats_block *to, const struct ocf_stats_block *from)
-{
-	to->read += from->read;
-	to->write += from->write;
-}
-
-static inline void accum_req_stats(struct ocf_stats_req *to, const struct ocf_stats_req *from)
-{
-	to->full_miss += from->full_miss;
-	to->partial_miss += from->partial_miss;
-	to->total += from->total;
-	to->pass_through += from->pass_through;
+	if (stats_filters & STATS_FILTER_BLK)
+		print_blk_stats(&stats->blocks, true, outfile);
 }
 
 /**
@@ -673,137 +467,54 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 			  int io_class_id, FILE *outfile,
 			  unsigned int stats_filters)
 {
-	int i, j, _core_id;
-	struct ocf_stats_io_class denominators;
-	struct ocf_stats_io_class* part_stats_cum;
-	struct ocf_stats_io_class* part_stats_core;
-	struct kcas_io_class io_class_new[OCF_IO_CLASS_MAX] = {};
-	struct kcas_io_class io_class_tmp;
-	uint64_t req_grand_total = 0;
-	memset(&denominators, 0, sizeof(denominators));
+	struct kcas_io_class info = {};
+	struct kcas_get_stats stats = {};
+	int part_iter_id;
 
-	if (-1 != io_class_id && io_class_id >= OCF_IO_CLASS_MAX) {
-		cas_printf(LOG_ERR, "Partition %d does not exists\n", io_class_id);
-		return FAILURE;
-	}
+	if (io_class_id != OCF_IO_CLASS_INVALID) {
+		info.cache_id = cache_id;
+		info.class_id = io_class_id;
+		stats.cache_id = cache_id;
+		stats.core_id = core_id;
+		stats.part_id = io_class_id;
 
-	for (i = 0; i < OCF_IO_CLASS_MAX; ++i) {
-		/* print stats for each ioclass */
-
-		if (!cache_info->info.core_count) {
-			if (read_io_class_stats(ctrl_fd, cache_id, 0, i,
-						&io_class_tmp,
-						&io_class_new[i])) {
-				if (io_class_new[i].ext_err_code ==
-				    OCF_ERR_IO_CLASS_NOT_EXIST) {
-					continue;
-				}
-
-				cas_printf(LOG_ERR,
-					   "Error while retrieving stats for partition %d\n",
-					   i);
-				print_err(io_class_new[i].ext_err_code);
-				goto cleanup;
-			}
-		} else {
-			for (j = 0; j < cache_info->info.core_count; ++j) {
-
-				_core_id = cache_info->core_id[j];
-				if (core_id != OCF_CORE_ID_INVALID && core_id != _core_id) {
-					continue;
-				}
-
-				if (read_io_class_stats(ctrl_fd, cache_id,
-							_core_id, i,
-							&io_class_tmp,
-							&io_class_new[i])) {
-					if (io_class_new[i].ext_err_code ==
-					    OCF_ERR_IO_CLASS_NOT_EXIST) {
-						continue;
-					}
-
-					cas_printf(LOG_ERR,
-						   "Error while retrieving stats for partition %d, core %d\n",
-						   i, core_id);
-					print_err(io_class_new[i].ext_err_code);
-					goto cleanup;
-				}
-
-				part_stats_cum = &io_class_new[i].stats;
-				part_stats_core = &io_class_tmp.stats;
-
-				part_stats_cum->free_clines =
-					part_stats_core->free_clines;
-
-				part_stats_cum->occupancy_clines +=
-					part_stats_core->occupancy_clines;
-				part_stats_cum->dirty_clines +=
-					part_stats_core->dirty_clines;
-
-				accum_block_stats(&part_stats_cum->blocks,
-						  &part_stats_core->blocks);
-				accum_req_stats(&part_stats_cum->read_reqs,
-						&part_stats_core->read_reqs);
-				accum_req_stats(&part_stats_cum->write_reqs,
-						&part_stats_core->write_reqs);
-			}
-		}
-	}
-
-	for (i = 0; i < OCF_IO_CLASS_MAX; ++i) {
-		if (io_class_new[i].ext_err_code == OCF_ERR_IO_CLASS_NOT_EXIST) {
-			continue;
-		}
-		const struct ocf_stats_io_class *ps = &io_class_new[i].stats;
-
-		denominators.occupancy_clines += ps->occupancy_clines;
-		denominators.dirty_clines += ps->dirty_clines;
-
-		accum_block_stats(&denominators.blocks, &ps->blocks);
-
-		accum_req_stats(&denominators.read_reqs, &ps->read_reqs);
-		accum_req_stats(&denominators.write_reqs, &ps->write_reqs);
-	}
-	req_grand_total += denominators.read_reqs.total;
-	req_grand_total += denominators.read_reqs.pass_through;
-	req_grand_total += denominators.write_reqs.total;
-	req_grand_total += denominators.write_reqs.pass_through;
-
-	if (-1 == io_class_id) {
-		for (i = 0; i < OCF_IO_CLASS_MAX; ++i) {
-			if (io_class_new[i].ext_err_code == OCF_ERR_IO_CLASS_NOT_EXIST) {
-				continue;
-			}
-			print_stats_ioclass(cache_info, &io_class_new[i],
-					outfile, stats_filters, &denominators, req_grand_total,
-					cache_info->info.cache_line_size / KiB);
-		}
-	} else {
-		if (io_class_new[io_class_id].ext_err_code == OCF_ERR_IO_CLASS_NOT_EXIST) {
-			cas_printf(LOG_ERR, "Partition %d does not exists\n", io_class_id);
+		if (ioctl(ctrl_fd, KCAS_IOCTL_PARTITION_INFO, &info) < 0)
 			return FAILURE;
-		}
-		print_stats_ioclass(cache_info, &io_class_new[io_class_id],
-				outfile, stats_filters, &denominators, req_grand_total,
-				cache_info->info.cache_line_size / KiB);
+
+		if (ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &stats) < 0)
+			return FAILURE;
+
+		begin_record(outfile);
+
+		print_stats_ioclass(&info, &stats, outfile, stats_filters);
+
+		return SUCCESS;
+	}
+
+	for (part_iter_id = 0; part_iter_id < OCF_IO_CLASS_MAX; part_iter_id++) {
+		int ret;
+		info.cache_id = cache_id;
+		info.class_id = part_iter_id;
+		stats.cache_id = cache_id;
+		stats.core_id = core_id;
+		stats.part_id = part_iter_id;
+
+		ret = ioctl(ctrl_fd, KCAS_IOCTL_PARTITION_INFO, &info);
+		if (ret == -OCF_ERR_IO_CLASS_NOT_EXIST)
+			continue;
+		else if (ret)
+			return FAILURE;
+
+		ret = ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &stats);
+		if (ret)
+			return FAILURE;
+
+		begin_record(outfile);
+
+		print_stats_ioclass(&info, &stats, outfile, stats_filters);
 	}
 
 	return SUCCESS;
-
-cleanup:
-	close(ctrl_fd);
-
-	if (outfile != stdout) {
-		fclose(outfile);
-	}
-	return FAILURE;
-}
-
-static inline void accum_error_stats(struct ocf_stats_error *to,
-				     const struct ocf_stats_error *from)
-{
-	to->read += from->read;
-	to->write += from->write;
 }
 
 int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
@@ -1047,7 +758,8 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 					core_id, io_class_id,
 					intermediate_file[1],
 					stats_filters)) {
-			return FAILURE;
+			ret = FAILURE;
+			goto cleanup;
 		}
 	} else if (core_id == OCF_CORE_ID_INVALID) {
 		if (cache_stats(ctrl_fd, &cache_info, cache_id, intermediate_file[1],

@@ -247,20 +247,11 @@ struct kcas_io_class {
 	/** Cache ID */
 	uint16_t cache_id;
 
-	/** Core ID */
-	uint16_t core_id;
-
 	/** IO class id for which info will be retrieved */
 	uint32_t class_id;
 
 	/** IO class info */
 	struct ocf_io_class_info info;
-
-	/** Flag indicating if partition counters should be fetched. */
-	uint8_t get_stats;
-
-	/** IO class statistics */
-	struct ocf_stats_io_class stats;
 
 	int ext_err_code;
 };
