@@ -16,6 +16,16 @@ https://opensource.org/licenses/BSD-3-Clause for full license texts).
 
 Open CAS uses Safe string library (safeclib) that is MIT licensed.
 
+## Getting Started
+
+To quickly install and deploy Open CAS Linux in your system please follow the instructions
+available [here.](https://open-cas.github.io/getting_started_open_cas_linux.html)
+
+## Guide
+
+The complete documentation for Open CAS Linux is available in the Open CAS Linux Administration Guide
+available [here.](https://open-cas.github.io/guide_introduction.html)
+
 ## Security
 
 To report a potential security vulnerability please follow the instructions
