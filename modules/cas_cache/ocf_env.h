@@ -431,6 +431,11 @@ static inline void env_spinlock_lock(env_spinlock *l)
 	spin_lock(l);
 }
 
+static inline int env_spinlock_trylock(env_spinlock *l)
+{
+	return spin_trylock(l) ? 0 : -OCF_ERR_NO_LOCK;
+}
+
 static inline void env_spinlock_unlock(env_spinlock *l)
 {
 	spin_unlock(l);
