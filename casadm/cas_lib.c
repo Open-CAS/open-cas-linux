@@ -2683,11 +2683,11 @@ int list_caches(unsigned int list_format)
 			curr_core = &curr_cache->cores[j];
 			core_path = curr_core->path;
 
-			core_flush_prog = calculate_flush_progress(curr_core->info.stats.dirty,
-					curr_core->info.stats.flushed);
+			core_flush_prog = calculate_flush_progress(curr_core->info.info.dirty,
+					curr_core->info.info.flushed);
 
 			if (!core_flush_prog && cache_flush_prog) {
-				core_flush_prog = curr_core->info.stats.dirty ? 0 : 100;
+				core_flush_prog = curr_core->info.info.dirty ? 0 : 100;
 			}
 
 			if (core_flush_prog || cache_flush_prog) {

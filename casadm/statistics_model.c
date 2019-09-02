@@ -189,7 +189,7 @@ static void print_core_conf(const struct kcas_core_info *info, FILE *outfile)
 	uint64_t core_size;
 	float core_size_gb;
 
-	core_size = info->stats.core_size_bytes / KiB / 4;
+	core_size = info->info.core_size_bytes / KiB / 4;
 	core_size_gb = calc_gb(core_size);
 
 	print_kv_pair(outfile, "Core Id", "%i", info->core_id);
@@ -199,16 +199,16 @@ static void print_core_conf(const struct kcas_core_info *info, FILE *outfile)
 				info->cache_id, info->core_id);
 	print_kv_pair(outfile, "Core Size", "%lu, [4KiB Blocks], %.2f, [GiB]",
 				core_size, core_size_gb);
-	print_kv_pair_time(outfile, "Dirty for", info->stats.dirty_for);
+	print_kv_pair_time(outfile, "Dirty for", info->info.dirty_for);
 
 	print_kv_pair(outfile, "Status", "%s",
 			get_core_state_name(info->state));
 
 	print_kv_pair(outfile, "Seq cutoff threshold", "%llu, [KiB]",
-				info->stats.seq_cutoff_threshold / KiB);
+				info->info.seq_cutoff_threshold / KiB);
 
 	print_kv_pair(outfile, "Seq cutoff policy", "%s",
-				seq_cutoff_policy_to_name(info->stats.seq_cutoff_policy));
+				seq_cutoff_policy_to_name(info->info.seq_cutoff_policy));
 }
 
 static void print_usage_header(FILE* outfile)

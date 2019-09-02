@@ -1909,7 +1909,7 @@ int cache_mngt_get_core_info(struct kcas_core_info *info)
 		goto unlock;
 	}
 
-	result = ocf_core_get_stats(core, &info->stats);
+	result = ocf_core_get_info(core, &info->info);
 	if (result)
 		goto unlock;
 

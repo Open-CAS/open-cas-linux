@@ -208,8 +208,7 @@ struct kcas_core_info {
 	/** Core id */
 	uint16_t core_id;
 
-	/** CAS statistics of core */
-	struct ocf_stats_core stats;
+	struct ocf_core_info info;
 
 	ocf_core_state_t state;
 
