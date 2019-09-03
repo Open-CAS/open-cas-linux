@@ -269,8 +269,9 @@ static inline int env_rwsem_is_locked(env_rwsem *s)
 	return rwsem_is_locked(&s->sem);
 }
 
-static inline void env_rwsem_destroy(env_rwsem *s)
+static inline int env_rwsem_destroy(env_rwsem *s)
 {
+	return 0;
 }
 
 /* *** COMPLETION *** */
