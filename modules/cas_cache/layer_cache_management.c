@@ -1900,7 +1900,7 @@ void cache_mngt_wait_for_rq_finish(ocf_cache_t cache)
 int cache_mngt_set_core_params(struct kcas_set_core_param *info)
 {
 	ocf_cache_t cache;
-	ocf_core_t core;
+	ocf_core_t core = NULL;
 	int result;
 
 	result = mngt_get_cache_by_id(cas_ctx, info->cache_id, &cache);
@@ -1908,7 +1908,7 @@ int cache_mngt_set_core_params(struct kcas_set_core_param *info)
 		return result;
 
 	result = get_core_by_id(cache, info->core_id, &core);
-	if (result)
+	if (result && result != -OCF_ERR_CORE_NOT_EXIST)
 		goto out;
 
 	switch (info->param_id) {
