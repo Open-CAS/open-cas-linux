@@ -6,6 +6,7 @@
 #define __CASDISK_H__
 
 #include <linux/blkdev.h>
+#include "linux_kernel_version.h"
 
 /**
  * Version of cas_disk interface
@@ -54,7 +55,7 @@ struct casdsk_exp_obj_ops {
 	 * @brief queue_rq_fn of exported object (top) block device.
 	 * Called by cas_disk when cas_disk device is in attached mode.
 	 */
-	int (*queue_rq_fn)(struct casdsk_disk *dsk, struct request *rq,
+	CAS_BLK_STATUS_T (*queue_rq_fn)(struct casdsk_disk *dsk, struct request *rq,
 			   void *private);
 
 	/**

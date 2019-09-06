@@ -11,7 +11,8 @@
 
 static inline void _blockdev_end_request_all(struct request *rq, int error)
 {
-	CAS_END_REQUEST_ALL(rq, map_cas_err_to_generic(error));
+	CAS_END_REQUEST_ALL(rq, CAS_ERRNO_TO_BLK_STS(
+					map_cas_err_to_generic(error)));
 }
 
 static inline bool _blockdev_can_handle_rq(struct request *rq)
@@ -90,7 +91,7 @@ void block_dev_complete_bio_fast(struct ocf_io *io, int error)
 
 	_blockdev_end_io_acct(bio, data->start_time);
 
-	CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), error);
+	CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(error));
 	ocf_io_put(io);
 	cas_free_blk_data(data);
 }
@@ -99,7 +100,7 @@ void block_dev_complete_bio_discard(struct ocf_io *io, int error)
 {
 	struct bio *bio = io->priv1;
 
-	CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), error);
+	CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(error));
 	ocf_io_put(io);
 }
 
@@ -487,16 +488,14 @@ static int __block_dev_queue_rq(struct request *rq, ocf_core_t core)
 	return ret;
 }
 
-static int _block_dev_queue_request(struct casdsk_disk *dsk, struct request *rq, void *private)
+static CAS_BLK_STATUS_T _block_dev_queue_request(struct casdsk_disk *dsk, struct request *rq, void *private)
 {
 	ocf_core_t core = private;
-	int ret;
-
-	ret = __block_dev_queue_rq(rq, core);
+	int ret = __block_dev_queue_rq(rq, core);
 	if (ret)
 		_blockdev_end_request_all(rq, ret);
 
-	return ret;
+	return CAS_ERRNO_TO_BLK_STS(ret);
 }
 
 static inline int _blkdev_can_hndl_bio(struct bio *bio)
@@ -504,7 +503,7 @@ static inline int _blkdev_can_hndl_bio(struct bio *bio)
 	if (CAS_CHECK_BARRIER(bio)) {
 		CAS_PRINT_RL(KERN_WARNING
 			"special bio was sent, not supported!\n");
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -EOPNOTSUPP);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-EOPNOTSUPP));
 		return -ENOTSUPP;
 	}
 
@@ -708,7 +707,7 @@ static void _blockdev_make_request_discard(struct casdsk_disk *dsk,
 	if (!io) {
 		CAS_PRINT_RL(KERN_CRIT
 			"Out of memory. Ending IO processing.\n");
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -ENOMEM);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));
 		return;
 	}
 
@@ -750,14 +749,14 @@ static int _blockdev_make_request_fast(struct casdsk_disk *dsk,
 		CAS_PRINT_RL(KERN_ERR
 			"Not able to handle empty BIO, flags = "
 			CAS_BIO_OP_FLAGS_FORMAT "\n",  CAS_BIO_OP_FLAGS(bio));
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -EINVAL);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-EINVAL));
 		return CASDSK_BIO_HANDLED;
 	}
 
 	data = cas_alloc_blk_data(bio_segments(bio), GFP_ATOMIC);
 	if (!data) {
 		CAS_PRINT_RL(KERN_CRIT "BIO data vector allocation error\n");
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -ENOMEM);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));
 		return CASDSK_BIO_HANDLED;
 	}
 
@@ -775,7 +774,7 @@ static int _blockdev_make_request_fast(struct casdsk_disk *dsk,
 	if (!io) {
 		printk(KERN_CRIT "Out of memory. Ending IO processing.\n");
 		cas_free_blk_data(data);
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -ENOMEM);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));
 		return CASDSK_BIO_HANDLED;
 	}
 
@@ -783,7 +782,7 @@ static int _blockdev_make_request_fast(struct casdsk_disk *dsk,
 	if (ret < 0) {
 		ocf_io_put(io);
 		cas_free_blk_data(data);
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -EINVAL);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-EINVAL));
 		return CASDSK_BIO_HANDLED;
 	}
 

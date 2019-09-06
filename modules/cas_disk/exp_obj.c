@@ -91,7 +91,7 @@ CAS_DECLARE_BLOCK_CALLBACK(_casdsk_exp_obj_bio_pt_io, struct bio *bio,
 	io = bio->bi_private;
 	BUG_ON(!io);
 	CAS_BIO_ENDIO(io->bio, CAS_BIO_BISIZE(io->bio),
-			CAS_BLOCK_CALLBACK_ERROR(bio, error));
+			CAS_BLOCK_CALLBACK_ERROR(bio, CAS_ERRNO_TO_BLK_STS(error)));
 
 	if (atomic_dec_return(&io->dsk->exp_obj->pt_ios) < 0)
 		BUG();
@@ -110,14 +110,14 @@ static inline void _casdsk_exp_obj_handle_bio_pt(struct casdsk_disk *dsk,
 
 	io = kmem_cache_zalloc(casdsk_module->pt_io_ctx_cache, GFP_ATOMIC);
 	if (!io) {
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -ENOMEM);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));
 		return;
 	}
 
 	cloned_bio = cas_bio_clone(bio, GFP_ATOMIC);
 	if (!cloned_bio) {
 		kmem_cache_free(casdsk_module->pt_io_ctx_cache, io);
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -ENOMEM);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));
 		return;
 	}
 
@@ -141,7 +141,7 @@ static inline void _casdsk_exp_obj_handle_bio(struct casdsk_disk *dsk,
 	else if (casdsk_disk_is_pt(dsk))
 		_casdsk_exp_obj_handle_bio_pt(dsk, q, bio);
 	else if (casdsk_disk_is_shutdown(dsk))
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), -EIO);
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-EIO));
 	else
 		BUG();
 }
@@ -434,7 +434,7 @@ static CAS_BLK_STATUS_T _casdsk_exp_obj_queue_qr(struct blk_mq_hw_ctx *hctx,
 	struct casdsk_disk *dsk = hctx->driver_data;
 	struct casdsk_exp_obj *exp_obj = dsk->exp_obj;
 	struct request *rq = bd->rq;
-	int result = 0;
+	CAS_BLK_STATUS_T result = CAS_BLK_STS_OK;
 
 	if (likely(exp_obj->ops && exp_obj->ops->queue_rq_fn)) {
 		exp_obj->ops->pending_rq_inc(dsk, dsk->private);
