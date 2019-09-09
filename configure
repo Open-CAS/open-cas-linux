@@ -64,8 +64,6 @@ generate_header() {
 		source $file "apply" "$CONF" "$file"
 	done
 
-	wait
-
 	for file in $SECOND; do
 		CONF=$(cat ${CONFIG_FILE} | grep $(basename $file) | cut -d' ' -f2)
 		source $file "apply" "$CONF" "$file"
