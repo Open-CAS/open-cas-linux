@@ -592,9 +592,18 @@ static void _cache_mngt_log_core_device_path(ocf_core_t core)
 			ocf_core_get_name(core), ocf_cache_get_name(cache));
 }
 
-static int _cache_mngt_log_core_device_path_visitor(ocf_core_t core, void *cntx)
+static int _cache_mngt_core_device_loaded_visitor(ocf_core_t core, void *cntx)
 {
+	struct cache_priv *cache_priv;
+	uint16_t core_id = OCF_CORE_ID_INVALID;
+	ocf_cache_t cache = ocf_core_get_cache(core);
+	cache_priv = ocf_cache_get_priv(cache);
+
 	_cache_mngt_log_core_device_path(core);
+
+	core_id_from_name(&core_id, ocf_core_get_name(core));
+
+	mark_core_id_used(cache_priv->core_id_bitmap, core_id);
 
 	return 0;
 }
@@ -1339,7 +1348,7 @@ static int _cache_mngt_load(struct ocf_mngt_cache_config *cfg,
 	if (result)
 		goto err_core_obj;
 
-	ocf_core_visit(tmp_cache, _cache_mngt_log_core_device_path_visitor,
+	ocf_core_visit(tmp_cache, _cache_mngt_core_device_loaded_visitor,
 			NULL, false);
 
 	*cache = tmp_cache;
