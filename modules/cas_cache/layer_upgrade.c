@@ -66,6 +66,10 @@ bool cas_upgrade_is_in_upgrade(void)
  * |core	|	core_X_path		|	string	|
  * |core	|	core_X_type		|	uint	|
  * |------------|-------------------------------|---------------|
+ * |promotion	|	promotion_policy	|	uint	|
+ * |promotion	|	nhit_insertion_threshold|	uint	|
+ * |promotion	|	nhit_insertion_trigger	|	uint	|
+ * |------------|-------------------------------|---------------|
  * |flush	|	flush_cleaning_policy	|	uint	|
  * |flush	|	flush_wake_up_time	|	uint	|
  * |flush	|	flush_staleness_time	|	uint	|
@@ -99,6 +103,10 @@ bool cas_upgrade_is_in_upgrade(void)
 #define CORE_SEQ_CUTOFF_THRESHOLD_STR "core_%lu_seq_cutoff_thresh"
 #define CORE_SEQ_CUTOFF_POLICY_STR "core_%lu_seq_cutoff_policy"
 
+#define PROMOTION_POLICY_STR "promotion_policy"
+#define PROMOTION_NHIT_INSERTION_STR "nhit_insertion_threshold"
+#define PROMOTION_NHIT_TRIGGER_STR "nhit_trigger_threshold"
+
 #define CLEANING_POLICY_STR "flush_cleaning_policy"
 #define CLEANING_ALRU_WAKEUP_TIME_STR "flush_wakeup_time"
 #define CLEANING_ALRU_STALENESS_TIME_STR "flush_staleness_time"
@@ -116,7 +124,8 @@ bool cas_upgrade_is_in_upgrade(void)
 #define IO_CLASS_CACHE_MODE_STR "io_class_%lu_cache_mode"
 
 #define CAS_UPGRADE_IFACE_VERSION_19_03_00 190300
-#define CAS_UPGRADE_IFACE_CURRENT_VERSION CAS_UPGRADE_IFACE_VERSION_19_03_00
+#define CAS_UPGRADE_IFACE_VERSION_19_09_00 190900
+#define CAS_UPGRADE_IFACE_CURRENT_VERSION CAS_UPGRADE_IFACE_VERSION_19_09_00
 
 static int _cas_upgrade_dump_cache_conf_main(ocf_cache_t cache,
 	struct cas_properties *cache_props)
@@ -305,6 +314,72 @@ err:
 	return result;
 }
 
+static int _cas_upgrade_dump_cache_conf_promotion(ocf_cache_t cache,
+	struct cas_properties *cache_props)
+{
+	uint32_t promotion_type = ocf_promotion_default;
+	uint32_t nhit_insertion_threshold;
+	uint32_t nhit_trigger_threshold;
+
+	int result = 0;
+
+	result = cache_mngt_get_promotion_policy(cache, &promotion_type);
+	if (result) {
+		printk(KERN_ERR OCF_PREFIX_SHORT
+				"Unable to get promotion policy type\n");
+		return result;
+	}
+
+	if (promotion_type == ocf_promotion_nhit) {
+		result |= cache_mngt_get_promotion_param(cache,
+				ocf_nhit_insertion_threshold,
+				&nhit_insertion_threshold);
+		result |= cache_mngt_get_promotion_param(cache,
+				ocf_nhit_trigger_threshold,
+				&nhit_trigger_threshold);
+	}
+
+	if (result) {
+		printk(KERN_ERR OCF_PREFIX_SHORT
+				"Unable to get promotion policy params\n");
+		return result;
+	}
+
+	result = cas_properties_add_uint(cache_props, PROMOTION_POLICY_STR,
+				promotion_type, CAS_PROPERTIES_CONST);
+	if (result) {
+		printk(KERN_ERR OCF_PREFIX_SHORT
+				"Error during adding promotion policy type\n");
+		return result;
+	}
+
+	if (promotion_type == ocf_promotion_nhit) {
+		result = cas_properties_add_uint(cache_props,
+				PROMOTION_NHIT_INSERTION_STR,
+				nhit_insertion_threshold,
+				CAS_PROPERTIES_CONST);
+		if (result) {
+			printk(KERN_ERR OCF_PREFIX_SHORT
+					"Error during adding nhit insertion "
+					"threshold\n");
+			return result;
+		}
+
+		result = cas_properties_add_uint(cache_props,
+				PROMOTION_NHIT_TRIGGER_STR,
+				nhit_trigger_threshold,
+				CAS_PROPERTIES_CONST);
+		if (result) {
+			printk(KERN_ERR OCF_PREFIX_SHORT
+					"Error during adding nhit trigger "
+					"threshold\n");
+			return result;
+		}
+	}
+
+	return result;
+}
+
 static int _cas_upgrade_dump_cache_conf_flush(ocf_cache_t cache,
 	struct cas_properties *cache_props)
 {
@@ -315,6 +390,7 @@ static int _cas_upgrade_dump_cache_conf_flush(ocf_cache_t cache,
 	uint32_t alru_activity_threshold;
 	uint32_t acp_thread_wakeup_time;
 	uint32_t acp_flush_max_buffers;
+
 	int result = 0;
 
 	CAS_DEBUG_TRACE();
@@ -583,6 +659,10 @@ static int _cas_upgrade_dump_cache_conf(ocf_cache_t device,
 		return result;
 
 	result = _cas_upgrade_dump_cache_conf_flush(device, cache_props);
+	if (result)
+		return result;
+
+	result = _cas_upgrade_dump_cache_conf_promotion(device, cache_props);
 	if (result)
 		return result;
 
@@ -1078,6 +1158,68 @@ static int _cas_upgrade_restore_conf_flush(struct cas_properties *cache_props,
 	return result;
 }
 
+static int _cas_upgrade_restore_conf_promotion(struct cas_properties *cache_props,
+		ocf_cache_t cache)
+{
+	uint64_t promotion_type;
+	uint64_t nhit_insertion_threshold;
+	uint64_t nhit_trigger_threshold;
+
+	int result = 0;
+
+	result = cas_properties_get_uint(cache_props, PROMOTION_POLICY_STR,
+			&promotion_type);
+	if (result) {
+		printk(KERN_ERR OCF_PREFIX_SHORT "Couldn't retrieve promotion "
+				"policy type \n");
+		goto out;
+	}
+
+	result = cache_mngt_set_promotion_policy(cache, promotion_type);
+	if (result) {
+		printk(KERN_ERR OCF_PREFIX_SHORT "Couldn't set promotion policy\n");
+		goto out;
+	}
+
+	if (promotion_type != ocf_promotion_nhit)
+		goto out;
+
+	result = cas_properties_get_uint(cache_props,
+			PROMOTION_NHIT_INSERTION_STR, &nhit_insertion_threshold);
+	if (result) {
+		printk(KERN_ERR OCF_PREFIX_SHORT "Couldn't retrieve NHIT insertion "
+				"threshold parameter \n");
+		goto out;
+	}
+
+	result = cas_properties_get_uint(cache_props,
+			PROMOTION_NHIT_TRIGGER_STR, &nhit_trigger_threshold);
+	if (result) {
+		printk(KERN_ERR OCF_PREFIX_SHORT "Couldn't retrieve NHIT insertion "
+				"trigger parameter \n");
+		goto out;
+	}
+
+	result = cache_mngt_set_promotion_param(cache, ocf_nhit_insertion_threshold,
+			nhit_insertion_threshold);
+	if (result) {
+		printk(KERN_ERR OCF_PREFIX_SHORT "Couldn't set NHIT insertion "
+				"threshold parameter \n");
+		goto out;
+	}
+
+	result = cache_mngt_set_promotion_param(cache, ocf_nhit_trigger_threshold,
+			nhit_trigger_threshold);
+	if (result) {
+		printk(KERN_ERR OCF_PREFIX_SHORT "Couldn't set NHIT trigger "
+				"threshold parameter \n");
+		goto out;
+	}
+
+out:
+	return result;
+}
+
 static int _cas_upgrade_restore_conf_io_class(
 		struct cas_properties *cache_props, ocf_cache_t cache)
 {
@@ -1207,6 +1349,10 @@ static int _cas_upgrade_restore_cache(struct cas_properties *cache_props)
 		goto error;
 
 	result = _cas_upgrade_restore_conf_flush(cache_props, cache);
+	if (result)
+		goto error;
+
+	result = _cas_upgrade_restore_conf_promotion(cache_props, cache);
 	if (result)
 		goto error;
 
