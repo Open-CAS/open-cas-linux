@@ -132,6 +132,25 @@ static inline int cache_id_from_name(uint16_t *cache_id, const char *name)
 	return result;
 }
 
+static inline int core_id_from_name(uint16_t *core_id, const char *name)
+{
+	const char *id_str;
+	long res;
+	int result;
+
+	if (strnlen(name, OCF_CORE_NAME_SIZE) < sizeof("core") - 1)
+		return -EINVAL;
+
+	id_str = name + sizeof("core") - 1;
+
+	result = kstrtol(id_str, 10, &res);
+
+	if (!result)
+		*core_id = res;
+
+	return result;
+}
+
 static inline int mngt_get_cache_by_id(ocf_ctx_t ctx, uint16_t id,
 		ocf_cache_t *cache)
 {
