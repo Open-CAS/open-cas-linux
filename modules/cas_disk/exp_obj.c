@@ -428,7 +428,7 @@ static int _casdsk_exp_obj_init_kobject(struct casdsk_disk *dsk)
 	return result;
 }
 
-static CAS_BLK_STATUS_T _casdsk_exp_obj_queue_qr(struct blk_mq_hw_ctx *hctx,
+static CAS_BLK_STATUS_T _casdsk_exp_obj_queue_rq(struct blk_mq_hw_ctx *hctx,
 			const struct blk_mq_queue_data *bd)
 {
 	struct casdsk_disk *dsk = hctx->driver_data;
@@ -456,7 +456,10 @@ static CAS_BLK_STATUS_T _casdsk_exp_obj_queue_qr(struct blk_mq_hw_ctx *hctx,
 }
 
 static struct blk_mq_ops casdsk_mq_ops = {
-	.queue_rq       = _casdsk_exp_obj_queue_qr,
+	.queue_rq       = _casdsk_exp_obj_queue_rq,
+#ifdef CAS_BLK_MQ_OPS_MAP_QUEUE
+	.map_queue	= blk_mq_map_queue,
+#endif
 };
 
 static void _casdsk_init_queues(struct casdsk_disk *dsk)
