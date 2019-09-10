@@ -73,10 +73,14 @@ kernel_not_supp_fail() {
 # $2 - path to file with valid configs
 # $3 - name of processed template file
 conf_run() {
+	local OLD_IFS=$IFS
+	IFS='?'
+
 	case "$1" in
 		"check") check $2 $3;;
 		"apply") apply $2 ;;
 	esac
+
+	IFS=$OLD_IFS
 }
 
-IFS='?'

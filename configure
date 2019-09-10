@@ -61,10 +61,8 @@ generate_header() {
 	echo "Configuring OpenCAS"
 	for file in $FIRST; do
 		CONF=$(cat ${CONFIG_FILE} | grep $(basename $file) | cut -d' ' -f2)
-		source $file "apply" "$CONF" "$file" &
+		source $file "apply" "$CONF" "$file"
 	done
-
-	wait
 
 	for file in $SECOND; do
 		CONF=$(cat ${CONFIG_FILE} | grep $(basename $file) | cut -d' ' -f2)
