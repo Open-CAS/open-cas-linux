@@ -431,6 +431,11 @@ static inline void env_spinlock_lock(env_spinlock *l)
 	spin_lock(l);
 }
 
+static inline int env_spinlock_trylock(env_spinlock *l)
+{
+	return spin_trylock(l) ? 0 : -OCF_ERR_NO_LOCK;
+}
+
 static inline void env_spinlock_unlock(env_spinlock *l)
 {
 	spin_unlock(l);
@@ -615,5 +620,22 @@ static inline uint32_t env_crc32(uint32_t crc, uint8_t const *data, size_t len)
 
 #define ENV_BUG()			BUG()
 #define ENV_BUG_ON(cond)		BUG_ON(cond)
+
+
+/* *** EXECUTION COTNEXT *** */
+static inline unsigned env_get_execution_context(void)
+{
+	return get_cpu();
+}
+
+static inline void env_put_execution_context(unsigned ctx)
+{
+	put_cpu();
+}
+
+static inline unsigned env_get_execution_context_count(void)
+{
+	return num_online_cpus();
+}
 
 #endif /* __OCF_ENV_H__ */
