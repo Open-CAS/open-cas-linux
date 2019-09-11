@@ -2123,6 +2123,17 @@ int cache_mngt_set_cache_params(struct kcas_set_cache_param *info)
 				ocf_cleaning_acp, ocf_acp_flush_max_buffers,
 				info->param_value);
 		break;
+	case cache_param_promotion_policy_type:
+		result = cache_mngt_set_promotion_policy(cache, info->param_value);
+		break;
+	case cache_param_promotion_nhit_insertion_threshold:
+		result = cache_mngt_set_promotion_param(cache,
+				ocf_nhit_insertion_threshold, info->param_value);
+		break;
+	case cache_param_promotion_nhit_trigger_threshold:
+		result = cache_mngt_set_promotion_param(cache,
+				ocf_nhit_trigger_threshold, info->param_value);
+		break;
 	default:
 		result = -EINVAL;
 	}
