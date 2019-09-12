@@ -39,11 +39,11 @@
 #define UNIT_REQUESTS "Requests"
 #define UNIT_BLOCKS "4KiB blocks"
 
-static inline float percentage(uint64_t numerator, uint64_t denominator)
+static inline float fraction(uint64_t numerator, uint64_t denominator)
 {
 	float result;
 	if (denominator) {
-		result = 100.0 * numerator / denominator;
+		result = 10000.0 * numerator / denominator;
 	} else {
 		result = 0;
 	}
@@ -415,28 +415,15 @@ void cache_stats_inactive_usage(int ctrl_fd, const struct kcas_cache_info *cache
 	print_table_header(outfile, 4, "Inactive usage statistics", "Count",
 			   "%", "[Units]");
 
-    print_val_perc_table_row(outfile, "Inactive Occupancy", UNIT_BLOCKS,
-				percentage(cache_info->info.inactive.occupancy,
-					cache_info->info.size),
-					"%lu",
-					cache_line_in_4k(cache_info->info.inactive.occupancy,
-					cache_info->info.cache_line_size / KiB));
-
-    print_val_perc_table_row(outfile, "Inactive Clean", UNIT_BLOCKS,
-				percentage(cache_info->info.inactive.occupancy -
-					cache_info->info.inactive.dirty,
-					cache_info->info.occupancy),
-					"%lu",
-					cache_line_in_4k(cache_info->info.inactive.occupancy -
-					cache_info->info.inactive.dirty,
-					cache_info->info.cache_line_size / KiB));
-
-    print_val_perc_table_row(outfile, "Inactive Dirty", UNIT_BLOCKS,
-				percentage(cache_info->info.inactive.dirty,
-					cache_info->info.occupancy),
-					"%lu",
-					cache_line_in_4k(cache_info->info.inactive.dirty,
-					cache_info->info.cache_line_size / KiB));
+	print_val_perc_table_row(outfile, "Inactive Occupancy", UNIT_BLOCKS,
+					cache_info->info.inactive.occupancy.fraction, "%lu",
+					cache_info->info.inactive.occupancy.value);
+	print_val_perc_table_row(outfile, "Inactive Clean", UNIT_BLOCKS,
+					cache_info->info.inactive.clean.fraction, "%lu",
+					cache_info->info.inactive.clean.value);
+	print_val_perc_table_row(outfile, "Inactive Dirty", UNIT_BLOCKS,
+					cache_info->info.inactive.dirty.fraction, "%lu",
+					cache_info->info.inactive.dirty.value);
 }
 
 /**
