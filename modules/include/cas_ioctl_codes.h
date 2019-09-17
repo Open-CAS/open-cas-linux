@@ -390,8 +390,6 @@ struct kcas_get_cache_param {
  *     4    *    KCAS_IOCTL_INSERT_CORE                     *    DEPRECATED    *
  *     5    *    KCAS_IOCTL_REMOVE_CORE                     *    DEPRECATED    *
  *     6    *    KCAS_IOCTL_RESET_STATS                     *    OK            *
- *     7    *    KCAS_IOCTL_SET_CLEANING_PARAMETERS         *    DEPRECATED    *
- *     8    *    KCAS_IOCTL_GET_CLEANING_PARAMETERS         *    DEPRECATED    *
  *     9    *    KCAS_IOCTL_FLUSH_CACHE                     *    OK            *
  *    10    *    KCAS_IOCTL_INTERRUPT_FLUSHING              *    OK            *
  *    11    *    KCAS_IOCTL_FLUSH_CORE                      *    OK            *
