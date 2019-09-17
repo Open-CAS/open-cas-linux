@@ -1060,7 +1060,7 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	memset(device_cfg, 0, sizeof(*device_cfg));
 	memset(atomic_params, 0, sizeof(*atomic_params));
 
-	strncpy(cfg->name, cache_name, OCF_CACHE_NAME_SIZE);
+	strncpy(cfg->name, cache_name, OCF_CACHE_NAME_SIZE - 1);
 	cfg->cache_mode = cmd->caching_mode;
 	cfg->cache_line_size = cmd->line_size;
 	cfg->eviction_policy = cmd->eviction_policy;

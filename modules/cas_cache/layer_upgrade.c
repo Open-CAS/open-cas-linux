@@ -861,7 +861,7 @@ static int _cas_upgrade_restore_conf_main(struct cas_properties *cache_props,
 	if (cache_mode >= ocf_cache_mode_max)
 		cache_mode = ocf_cache_mode_default;
 
-	strncpy(cfg.name, cache_name, OCF_CACHE_NAME_SIZE);
+	strncpy(cfg.name, cache_name, OCF_CACHE_NAME_SIZE - 1);
 	cfg.cache_mode = cache_mode;
 	/* cfg.eviction_policy = TODO */
 	cfg.cache_line_size = cache_line_size;
