@@ -314,7 +314,7 @@ static int _cas_ctx_logger_print(ocf_logger_t logger, ocf_logger_lvl_t lvl,
 		[log_debug] = KERN_DEBUG,
 	};
 	char *format;
-	if (((unsigned)lvl) >= sizeof(level))
+	if (((unsigned)lvl) >= sizeof(level)/sizeof(level[0]))
 		return -EINVAL;
 
 	format = kasprintf(GFP_ATOMIC, "%s%s", level[lvl], fmt);
