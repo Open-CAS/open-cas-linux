@@ -73,6 +73,8 @@ int cache_mngt_list_caches(struct kcas_cache_list *list);
 
 int cache_mngt_interrupt_flushing(const char *cache_name);
 
+int cache_mngt_get_stats(struct kcas_get_stats *stats);
+
 int cache_mngt_get_info(struct kcas_cache_info *info);
 
 int cache_mngt_get_io_class_info(struct kcas_io_class *part);

@@ -1753,6 +1753,58 @@ int cache_mngt_interrupt_flushing(const char *cache_name)
 
 }
 
+int cache_mngt_get_stats(struct kcas_get_stats *stats)
+{
+	int result;
+	ocf_cache_t cache;
+	ocf_core_t core = NULL;
+
+	result = mngt_get_cache_by_id(cas_ctx, stats->cache_id, &cache);
+	if (result)
+		return result;
+
+	result = _cache_mngt_read_lock_sync(cache);
+	if (result)
+		goto put;
+
+	if (stats->core_id == OCF_CORE_ID_INVALID &&
+			stats->part_id == OCF_IO_CLASS_INVALID) {
+		result = ocf_stats_collect_cache(cache, &stats->usage, &stats->req,
+				&stats->blocks, &stats->errors);
+		if (result)
+			goto unlock;
+
+	} else if (stats->part_id == OCF_IO_CLASS_INVALID) {
+		result = get_core_by_id(cache, stats->core_id, &core);
+		if (result)
+			goto unlock;
+
+		result = ocf_stats_collect_core(core, &stats->usage, &stats->req,
+				&stats->blocks, &stats->errors);
+		if (result)
+			goto unlock;
+
+	} else {
+		if (stats->core_id == OCF_CORE_ID_INVALID) {
+			result = ocf_stats_collect_part_cache(cache, stats->part_id,
+					&stats->usage, &stats->req, &stats->blocks);
+		} else {
+			result = get_core_by_id(cache, stats->core_id, &core);
+			if (result)
+				goto unlock;
+
+			result = ocf_stats_collect_part_core(core, stats->part_id,
+					&stats->usage, &stats->req, &stats->blocks);
+		}
+	}
+
+unlock:
+	ocf_mngt_cache_read_unlock(cache);
+put:
+	ocf_mngt_cache_put(cache);
+	return result;
+}
+
 int cache_mngt_get_info(struct kcas_cache_info *info)
 {
 	uint32_t i, j;
@@ -1813,10 +1865,8 @@ int cache_mngt_get_io_class_info(struct kcas_io_class *part)
 {
 	int result;
 	uint16_t cache_id = part->cache_id;
-	uint16_t core_id = part->core_id;
 	uint32_t io_class_id = part->class_id;
 	ocf_cache_t cache;
-	ocf_core_t core;
 
 	result = mngt_get_cache_by_id(cas_ctx, cache_id, &cache);
 	if (result)
@@ -1831,17 +1881,6 @@ int cache_mngt_get_io_class_info(struct kcas_io_class *part)
 	result = ocf_cache_io_class_get_info(cache, io_class_id, &part->info);
 	if (result)
 		goto end;
-
-	if (part->get_stats) {
-		result = get_core_by_id(cache, core_id, &core);
-		if (result < 0) {
-			result = OCF_ERR_CORE_NOT_AVAIL;
-			goto end;
-		}
-
-		result = ocf_core_io_class_get_stats(core, io_class_id,
-				&part->stats);
-	}
 
 end:
 	ocf_mngt_cache_read_unlock(cache);
@@ -1870,7 +1909,7 @@ int cache_mngt_get_core_info(struct kcas_core_info *info)
 		goto unlock;
 	}
 
-	result = ocf_core_get_stats(core, &info->stats);
+	result = ocf_core_get_info(core, &info->info);
 	if (result)
 		goto unlock;
 

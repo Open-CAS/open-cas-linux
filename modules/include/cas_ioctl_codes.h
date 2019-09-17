@@ -157,6 +157,28 @@ struct kcas_flush_core {
 	int ext_err_code;
 };
 
+struct kcas_get_stats {
+	/** id of a cache */
+	uint16_t cache_id;
+
+	/** id of a core */
+	uint16_t core_id;
+
+	/** id of an ioclass */
+	uint16_t part_id;
+
+	/** fields to be filled with statistics */
+	struct ocf_stats_usage usage;
+
+	struct ocf_stats_requests req;
+
+	struct ocf_stats_blocks blocks;
+
+	struct ocf_stats_errors errors;
+
+	int ext_err_code;
+};
+
 struct kcas_cache_info {
 	/** id of a cache */
 	uint16_t cache_id;
@@ -186,8 +208,7 @@ struct kcas_core_info {
 	/** Core id */
 	uint16_t core_id;
 
-	/** CAS statistics of core */
-	struct ocf_stats_core stats;
+	struct ocf_core_info info;
 
 	ocf_core_state_t state;
 
@@ -225,20 +246,11 @@ struct kcas_io_class {
 	/** Cache ID */
 	uint16_t cache_id;
 
-	/** Core ID */
-	uint16_t core_id;
-
 	/** IO class id for which info will be retrieved */
 	uint32_t class_id;
 
 	/** IO class info */
 	struct ocf_io_class_info info;
-
-	/** Flag indicating if partition counters should be fetched. */
-	uint8_t get_stats;
-
-	/** IO class statistics */
-	struct ocf_stats_io_class stats;
 
 	int ext_err_code;
 };
@@ -385,7 +397,7 @@ struct kcas_get_cache_param {
  *    11    *    KCAS_IOCTL_FLUSH_CORE                      *    OK            *
  *    12    *    KCAS_IOCTL_CACHE_INFO                      *    DEPRECATED    *
  *    13    *    KCAS_IOCTL_CORE_INFO                       *    DEPRECATED    *
- *    14    *    KCAS_IOCTL_PARTITION_STATS                 *    OK            *
+ *    14    *    KCAS_IOCTL_PARTITION_INFO                  *    OK            *
  *    15    *    KCAS_IOCTL_PARTITION_SET                   *    OK            *
  *    16    *    KCAS_IOCTL_GET_CACHE_COUNT                 *    OK            *
  *    17    *    KCAS_IOCTL_LIST_CACHE                      *    OK            *
@@ -405,6 +417,7 @@ struct kcas_get_cache_param {
  *    31    *    KCAS_IOCTL_GET_CORE_PARAM                  *    OK            *
  *    32    *    KCAS_IOCTL_SET_CACHE_PARAM                 *    OK            *
  *    33    *    KCAS_IOCTL_GET_CACHE_PARAM                 *    OK            *
+ *    34    *    KCAS_IOCTL_GET_STATS                       *    OK            *
  *******************************************************************************
  */
 
@@ -433,7 +446,7 @@ struct kcas_get_cache_param {
 #define KCAS_IOCTL_FLUSH_CORE _IOR(KCAS_IOCTL_MAGIC, 11, struct kcas_flush_core)
 
 /** Retrieving partition status for specified cache id and partition id */
-#define KCAS_IOCTL_PARTITION_STATS _IOWR(KCAS_IOCTL_MAGIC, 14, struct kcas_io_class)
+#define KCAS_IOCTL_PARTITION_INFO _IOWR(KCAS_IOCTL_MAGIC, 14, struct kcas_io_class)
 
 /** Configure partitions for specified cache id */
 #define KCAS_IOCTL_PARTITION_SET _IOWR(KCAS_IOCTL_MAGIC, 15, struct kcas_io_classes)
@@ -491,6 +504,9 @@ struct kcas_get_cache_param {
 
 /** Get various cache runtime parameters */
 #define KCAS_IOCTL_GET_CACHE_PARAM _IOW(KCAS_IOCTL_MAGIC, 33, struct kcas_get_cache_param)
+
+/** Get stats of particular OCF object */
+#define KCAS_IOCTL_GET_STATS _IOR(KCAS_IOCTL_MAGIC, 34, struct kcas_get_stats)
 
 /**
  * Extended kernel CAS error codes

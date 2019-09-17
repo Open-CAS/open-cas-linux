@@ -295,8 +295,8 @@ void get_core_flush_progress(int fd, int cache_id, int core_id, float *prog)
 	cmd_info.core_id = core_id;
 
 	if (0 == ioctl(fd, KCAS_IOCTL_CORE_INFO, &cmd_info)) {
-		*prog = calculate_flush_progress(cmd_info.stats.dirty,
-				cmd_info.stats.flushed);
+		*prog = calculate_flush_progress(cmd_info.info.dirty,
+				cmd_info.info.flushed);
 	}
 }
 
@@ -367,7 +367,7 @@ void *print_command_progress(void *th_arg)
 			} else if (EINTR == errno) {
 				interrupted = 1;
 			} else { /* other error conditions are EFAULT or EINVAL
-				  * cannot happen in realistic conditions, 
+				  * cannot happen in realistic conditions,
 				  * and are likely to refer to OS errors, which
 				  * cannot possibly be handled. Perform abortion.
 				  */
