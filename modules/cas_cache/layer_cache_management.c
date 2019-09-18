@@ -271,10 +271,8 @@ int cache_mngt_set_cleaning_policy(ocf_cache_t cache, uint32_t type)
 	int result;
 
 	result = _cache_mngt_lock_sync(cache);
-	if (result) {
-		ocf_mngt_cache_put(cache);
+	if (result)
 		return result;
-	}
 
 	result = ocf_mngt_cache_cleaning_set_policy(cache, type);
 	if (result)
@@ -293,10 +291,8 @@ int cache_mngt_get_cleaning_policy(ocf_cache_t cache, uint32_t *type)
 	int result;
 
 	result = _cache_mngt_read_lock_sync(cache);
-	if (result) {
-		ocf_mngt_cache_put(cache);
+	if (result)
 		return result;
-	}
 
 	result = ocf_mngt_cache_cleaning_get_policy(cache, &tmp_type);
 
@@ -313,10 +309,8 @@ int cache_mngt_set_cleaning_param(ocf_cache_t cache, ocf_cleaning_t type,
 	int result;
 
 	result = _cache_mngt_lock_sync(cache);
-	if (result) {
-		ocf_mngt_cache_put(cache);
+	if (result)
 		return result;
-	}
 
 	result = ocf_mngt_cache_cleaning_set_param(cache, type,
 			param_id, param_value);
@@ -336,10 +330,8 @@ int cache_mngt_get_cleaning_param(ocf_cache_t cache, ocf_cleaning_t type,
 	int result;
 
 	result = _cache_mngt_read_lock_sync(cache);
-	if (result) {
-		ocf_mngt_cache_put(cache);
+	if (result)
 		return result;
-	}
 
 	result = ocf_mngt_cache_cleaning_get_param(cache, type,
 			param_id, param_value);
@@ -1507,12 +1499,15 @@ int cache_mngt_get_seq_cutoff_threshold(ocf_core_t core, uint32_t *thresh)
 	int result;
 
 	result = _cache_mngt_read_lock_sync(cache);
-	if (result)
+	if (result) {
+		ocf_mngt_cache_put(cache);
 		return result;
+	}
 
 	result = ocf_mngt_core_get_seq_cutoff_threshold(core, thresh);
 
 	ocf_mngt_cache_read_unlock(cache);
+	ocf_mngt_cache_put(cache);
 	return result;
 }
 
@@ -1531,12 +1526,15 @@ int cache_mngt_get_seq_cutoff_policy(ocf_core_t core,
 	int result;
 
 	result = _cache_mngt_read_lock_sync(cache);
-	if (result)
+	if (result) {
+		ocf_mngt_cache_put(cache);
 		return result;
+	}
 
 	result = ocf_mngt_core_get_seq_cutoff_policy(core, policy);
 
 	ocf_mngt_cache_read_unlock(cache);
+	ocf_mngt_cache_put(cache);
 	return result;
 }
 
