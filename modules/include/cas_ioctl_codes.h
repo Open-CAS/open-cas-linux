@@ -96,16 +96,7 @@ struct kcas_stop_cache {
 struct kcas_set_cache_state {
 	uint16_t cache_id; /**< id of cache for which state should be set */
 
-	/**
-	 * caching mode for new cache instance
-	 * valid choices are:
-	 * * WRITE_THROUGH
-	 * * WRITE_BACK
-	 * * WRITE_AROUND
-	 * * PASS_THROUGH
-	 */
 	ocf_cache_mode_t caching_mode;
-
 
 	uint8_t flush_data; /**< should data be flushed? */
 

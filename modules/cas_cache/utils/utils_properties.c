@@ -365,7 +365,6 @@ error_after_buffer_allocation:
 
 void cas_properties_print(struct cas_properties *props)
 {
-	int result = 0;
 	struct list_head *curr;
 	struct _cas_property *entry;
 	char *abc;
@@ -387,8 +386,9 @@ void cas_properties_print(struct cas_properties *props)
 		case cas_property_uint:
 			printk(", uint, ");
 			printk("Value: %llu ", entry->value_uint);
+			break;
 		default:
-			result = -EINVAL;
+			printk("Invalid type!");
 			break;
 		}
 		printk("\n");
