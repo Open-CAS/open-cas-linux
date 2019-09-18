@@ -882,6 +882,10 @@ static int adjust_column_widths(struct view_t *this,
 
 	for (i = 0 ; i != w ; ++i) {
 		int this_width = vector_get(&prv->col_w, i);
+		/*
+		 * This condition is exactly the same as in above loop, where
+		 * above_avg_cols is incremented. So there is no risk of division by 0.
+		 */
 		if (this_width > avg_width) {
 			int reduce_by = excess_width / above_avg_cols;
 			vector_set(&prv->col_w, i, this_width - reduce_by);
