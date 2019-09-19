@@ -35,7 +35,6 @@
 #include "safeclib/safe_str_lib.h"
 #include "safeclib/safe_lib.h"
 #include <cas_ioctl_codes.h>
-#include <cas_version.h>
 #include "psort.h"
 #define PRINT_STAT(x) header->cmd_input.cache_stats.x
 

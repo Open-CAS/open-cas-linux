@@ -21,7 +21,6 @@
 #include "cas_lib_utils.h"
 #include "safeclib/safe_str_lib.h"
 #include <cas_ioctl_codes.h>
-#include <cas_version.h>
 #include "upgrade.h"
 #include "statistics_view.h"
 
