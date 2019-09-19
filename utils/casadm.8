@@ -236,6 +236,8 @@ Available namespaces are:
 \fBcleaning\fR - Cleaning policy parameters.
 \fBcleaning-alru\fR - Cleaning policy ALRU parameters.
 \fBcleaning-acp\fR - Cleaning policy ACP parameters.
+\fBpromotion\fR - Promotion policy parameters.
+\fBpromotion-nhit\fR - Promotion policy NHIT parameters.
 
 .SH Options that are valid with --set-param (-X) --name (-n) seq-cutoff are:
 
@@ -310,6 +312,36 @@ Period of time between awakenings of flushing thread [ms] (default: 10 ms).
 .B -b, --flush-max-buffers <NUMBER>
 Number of dirty cache blocks to be flushed in one cleaning cycle (default: 128).
 
+.SH Options that are valid with --set-param (-X) --name (-n) promotion are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -p, --policy {always|nhit}
+Promotion policy type to be used with a given cache instance.
+
+Available policies:
+.br
+1. \fBalways\fR. Core lines are attempted to be promoted each time they're accessed.
+.br
+2. \fBnhit\fR. Core lines are attempted to be promoted after n accesses.
+
+.SH Options that are valid with --set-param (-X) --name (-n) promotion-nhit are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -o, --trigger <PERCENTAGE>
+Percent of cache to be occupied before cache inserts will be filtered by the policy.
+
+.TP
+.B -t, --threshold <NUMBER>
+Number of core line accesses required for it to be inserted into cache.
+
 .SH Options that are valid with --get-param (-G) are:
 
 .TP
@@ -322,6 +354,8 @@ Available namespaces are:
 \fBcleaning\fR - Cleaning policy parameters.
 \fBcleaning-alru\fR - Cleaning policy ALRU parameters.
 \fBcleaning-acp\fR - Cleaning policy ACP parameters.
+\fBpromotion\fR - Promotion policy parameters.
+\fBpromotion-nhit\fR - Promotion policy NHIT parameters.
 
 .SH Options that are valid with --get-param (-G) --name (-n) seq-cutoff are:
 
@@ -358,6 +392,26 @@ Identifier of cache instance <1-16384>.
 Defines output format for parameter list. It can be either \fBtable\fR (default) or \fBcsv\fR.
 
 .SH Options that are valid with --get-param (-G) --name (-n) cleaning-acp are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -o, --output-format {table|csv}
+Defines output format for parameter list. It can be either \fBtable\fR (default) or \fBcsv\fR.
+
+.SH Options that are valid with --get-param (-G) --name (-n) promotion are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -o, --output-format {table|csv}
+Defines output format for parameter list. It can be either \fBtable\fR (default) or \fBcsv\fR.
+
+.SH Options that are valid with --get-param (-G) --name (-n) promotion-nhit are:
 
 .TP
 .B -i, --cache-id <ID>

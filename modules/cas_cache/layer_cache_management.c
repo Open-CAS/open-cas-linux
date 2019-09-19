@@ -348,6 +348,73 @@ int cache_mngt_get_cleaning_param(ocf_cache_t cache, ocf_cleaning_t type,
 	return result;
 }
 
+int cache_mngt_set_promotion_policy(ocf_cache_t cache, uint32_t type)
+{
+	int result;
+
+	result = _cache_mngt_lock_sync(cache);
+	if (result) {
+		return result;
+	}
+
+	result = ocf_mngt_cache_promotion_set_policy(cache, type);
+	if (result)
+		goto out;
+
+	result = _cache_mngt_save_sync(cache);
+
+out:
+	ocf_mngt_cache_unlock(cache);
+	return result;
+}
+
+int cache_mngt_get_promotion_policy(ocf_cache_t cache, uint32_t *type)
+{
+	int result;
+
+	result = _cache_mngt_read_lock_sync(cache);
+	if (result) {
+		return result;
+	}
+
+	*type = ocf_mngt_cache_promotion_get_policy(cache);
+
+	ocf_mngt_cache_read_unlock(cache);
+	return result;
+}
+
+int cache_mngt_set_promotion_param(ocf_cache_t cache, uint32_t param_id,
+		uint32_t param_value)
+{
+	int result;
+
+	result = _cache_mngt_lock_sync(cache);
+	if (result) {
+		return result;
+	}
+
+	result = ocf_mngt_cache_promotion_set_param(cache, param_id, param_value);
+
+	ocf_mngt_cache_unlock(cache);
+	return result;
+}
+
+int cache_mngt_get_promotion_param(ocf_cache_t cache, uint32_t param_id,
+		uint32_t *param_value)
+{
+	int result;
+
+	result = _cache_mngt_read_lock_sync(cache);
+	if (result) {
+		return result;
+	}
+
+	result = ocf_mngt_cache_promotion_get_param(cache, param_id, param_value);
+
+	ocf_mngt_cache_read_unlock(cache);
+	return result;
+}
+
 struct get_paths_ctx {
 	char *core_path_name_tab;
 	int max_count;
@@ -1064,6 +1131,7 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	cfg->cache_mode = cmd->caching_mode;
 	cfg->cache_line_size = cmd->line_size;
 	cfg->eviction_policy = cmd->eviction_policy;
+	cfg->promotion_policy = ocf_promotion_default;
 	cfg->cache_line_size = cmd->line_size;
 	cfg->pt_unaligned_io = !unaligned_io;
 	cfg->use_submit_io_fast = !use_io_scheduler;
@@ -2055,6 +2123,17 @@ int cache_mngt_set_cache_params(struct kcas_set_cache_param *info)
 				ocf_cleaning_acp, ocf_acp_flush_max_buffers,
 				info->param_value);
 		break;
+	case cache_param_promotion_policy_type:
+		result = cache_mngt_set_promotion_policy(cache, info->param_value);
+		break;
+	case cache_param_promotion_nhit_insertion_threshold:
+		result = cache_mngt_set_promotion_param(cache,
+				ocf_nhit_insertion_threshold, info->param_value);
+		break;
+	case cache_param_promotion_nhit_trigger_threshold:
+		result = cache_mngt_set_promotion_param(cache,
+				ocf_nhit_trigger_threshold, info->param_value);
+		break;
 	default:
 		result = -EINVAL;
 	}
@@ -2107,6 +2186,19 @@ int cache_mngt_get_cache_params(struct kcas_get_cache_param *info)
 	case cache_param_cleaning_acp_flush_max_buffers:
 		result = cache_mngt_get_cleaning_param(cache,
 				ocf_cleaning_acp, ocf_acp_flush_max_buffers,
+				&info->param_value);
+		break;
+	case cache_param_promotion_policy_type:
+		result = cache_mngt_get_promotion_policy(cache, &info->param_value);
+		break;
+	case cache_param_promotion_nhit_insertion_threshold:
+		result = cache_mngt_get_promotion_param(cache,
+				ocf_nhit_insertion_threshold,
+				&info->param_value);
+		break;
+	case cache_param_promotion_nhit_trigger_threshold:
+		result = cache_mngt_get_promotion_param(cache,
+				ocf_nhit_trigger_threshold,
 				&info->param_value);
 		break;
 	default:

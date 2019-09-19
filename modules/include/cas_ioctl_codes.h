@@ -353,6 +353,9 @@ enum kcas_cache_param_id {
 	cache_param_cleaning_alru_activity_threshold,
 	cache_param_cleaning_acp_wake_up_time,
 	cache_param_cleaning_acp_flush_max_buffers,
+	cache_param_promotion_policy_type,
+	cache_param_promotion_nhit_insertion_threshold,
+	cache_param_promotion_nhit_trigger_threshold,
 	cache_param_id_max,
 };
 

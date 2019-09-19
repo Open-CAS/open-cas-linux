@@ -236,6 +236,8 @@ class cas_config(object):
                     raise ValueError('Incorrect path to io_class file')
             elif param_name == 'cleaning_policy':
                 self.check_cleaning_policy_valid(param_value)
+            elif param_name == 'promotion_policy':
+                self.check_promotion_policy_valid(param_value)
             elif param_name == 'cache_line_size':
                 self.check_cache_line_size_valid(param_value)
             else:
@@ -268,6 +270,11 @@ class cas_config(object):
             if cleaning_policy.lower() not in ['acp', 'alru', 'nop']:
                 raise ValueError('{0} is invalid cleaning policy name'.format(
                     cleaning_policy))
+
+        def check_promotion_policy_valid(self, promotion_policy):
+            if promotion_policy.lower() not in ['always', 'nhit']:
+                raise ValueError('{0} is invalid promotion policy name'.format(
+                    promotion_policy))
 
         def check_cache_line_size_valid(self, cache_line_size):
             if cache_line_size not in ['4', '8', '16', '32', '64']:
@@ -500,12 +507,19 @@ def start_cache(cache, load, force=False):
             force=force)
 
 def configure_cache(cache):
-    if 'cleaning_policy' in cache.params:
-        casadm.set_param('cleaning', cache_id=cache.cache_id,
-                policy=cache.params['cleaning_policy'])
-    if 'ioclass_file' in cache.params:
-        casadm.io_class_load_config(cache_id=cache.cache_id,
-                ioclass_file=cache.params['ioclass_file'])
+    if "cleaning_policy" in cache.params:
+        casadm.set_param(
+            "cleaning", cache_id=cache.cache_id, policy=cache.params["cleaning_policy"]
+        )
+    if "promotion_policy" in cache.params:
+        casadm.set_param(
+            "promotion", cache_id=cache.cache_id, policy=cache.params["promotion"]
+        )
+    if "ioclass_file" in cache.params:
+        casadm.io_class_load_config(
+            cache_id=cache.cache_id, ioclass_file=cache.params["ioclass_file"]
+        )
+
 
 def add_core(core, attach):
     casadm.add_core(

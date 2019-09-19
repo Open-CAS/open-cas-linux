@@ -50,6 +50,7 @@ struct command_args{
 	int cache_state_flush;
 	int flush_data;
 	int cleaning_policy_type;
+	int promotion_policy_type;
 	int script_subcmd;
 	int try_add;
 	int update_path;
@@ -75,6 +76,7 @@ static struct command_args command_args_values = {
 		.cache_state_flush = UNDEFINED, /* three state logic: YES NO UNDEFINED */
 		.flush_data = 1,
 		.cleaning_policy_type = 0,
+		.promotion_policy_type = 0,
 		.script_subcmd = -1,
 		.try_add = false,
 		.update_path = false,
@@ -560,6 +562,12 @@ static char *cleaning_policy_type_values[] = {
 	NULL,
 };
 
+static char *promotion_policy_type_values[] = {
+	[ocf_promotion_always] = "always",
+	[ocf_promotion_nhit] = "nhit",
+	NULL,
+};
+
 static struct cas_param cas_cache_params[] = {
 	/* Cleaning policy type */
 	[cache_param_cleaning_policy_type] = {
@@ -588,6 +596,20 @@ static struct cas_param cas_cache_params[] = {
 	[cache_param_cleaning_acp_flush_max_buffers] = {
 		.name = "Flush max buffers" ,
 	},
+
+	/* Promotion policy type */
+	[cache_param_promotion_policy_type] = {
+		.name = "Promotion policy type",
+		.value_names = promotion_policy_type_values,
+	},
+
+	/*Promotion policy NHIT params */
+	[cache_param_promotion_nhit_insertion_threshold] = {
+		.name = "Insertion threshold",
+	},
+	[cache_param_promotion_nhit_trigger_threshold] = {
+		.name = "Policy trigger [%]",
+	},
 	{0},
 };
 
@@ -614,6 +636,15 @@ static struct cas_param cas_cache_params[] = {
 #define CLEANING_ACP_MAX_BUFFERS_DESC "Number of cache lines flushed in single ACP cleaning thread iteration" \
 	" <%d-%d> (default: %d)"
 
+#define PROMOTION_POLICY_TYPE_DESC "Promotion policy type. "\
+	"Available policy types: {always|nhit}"
+
+#define PROMOTION_NHIT_TRIGGER_DESC "Cache occupancy value over which NHIT promotion is active " \
+	"<%d-%d>[%] (default: %d%)"
+
+#define PROMOTION_NHIT_THRESHOLD_DESC "Number of requests for given core line " \
+	"after which NHIT policy allows insertion into cache <%d-%d> (default: %d)"
+
 static cli_namespace set_param_namespace = {
 	.short_name = 'n',
 	.long_name = "name",
@@ -625,6 +656,21 @@ static cli_namespace set_param_namespace = {
 
 		CACHE_PARAMS_NS_BEGIN("cleaning", "Cleaning policy parameters")
 			{'p', "policy", CLEANING_POLICY_TYPE_DESC, 1, "POLICY", 0},
+		CACHE_PARAMS_NS_END()
+
+		CACHE_PARAMS_NS_BEGIN("promotion", "Promotion policy parameters")
+			{'p', "policy", PROMOTION_POLICY_TYPE_DESC, 1, "POLICY", 0},
+		CACHE_PARAMS_NS_END()
+
+		CACHE_PARAMS_NS_BEGIN("promotion-nhit", "Promotion policy NHIT parameters")
+			{'t', "threshold", PROMOTION_NHIT_THRESHOLD_DESC, 1, "NUMBER",
+				CLI_OPTION_RANGE_INT | CLI_OPTION_DEFAULT_INT,
+				OCF_NHIT_MIN_THRESHOLD, OCF_NHIT_MAX_THRESHOLD,
+				OCF_NHIT_THRESHOLD_DEFAULT},
+			{'o', "trigger", PROMOTION_NHIT_TRIGGER_DESC, 1, "NUMBER",
+				CLI_OPTION_RANGE_INT | CLI_OPTION_DEFAULT_INT,
+				OCF_NHIT_MIN_TRIGGER, OCF_NHIT_MAX_TRIGGER,
+				OCF_NHIT_TRIGGER_DEFAULT},
 		CACHE_PARAMS_NS_END()
 
 		CACHE_PARAMS_NS_BEGIN("cleaning-alru", "Cleaning policy ALRU parameters")
@@ -772,6 +818,49 @@ int set_param_cleaning_acp_handle_option(char *opt, const char **arg)
 
 		SET_CACHE_PARAM(cache_param_cleaning_acp_flush_max_buffers,
 				strtoul(arg[0], NULL, 10));
+	}
+
+	return FAILURE;
+}
+
+int set_param_promotion_handle_option(char *opt, const char **arg)
+{
+	if (!strcmp(opt, "policy")) {
+		if (!strcmp("always", arg[0])) {
+			SET_CACHE_PARAM(cache_param_promotion_policy_type,
+					ocf_promotion_always);
+		} else if (!strcmp("nhit", arg[0])) {
+			SET_CACHE_PARAM(cache_param_promotion_policy_type,
+					ocf_promotion_nhit);
+		} else {
+			cas_printf(LOG_ERR, "Error: Invalid policy name.\n");
+			return FAILURE;
+		}
+	} else {
+		return FAILURE;
+	}
+
+	return SUCCESS;
+}
+
+int set_param_promotion_nhit_handle_option(char *opt, const char **arg)
+{
+	if (!strcmp(opt, "threshold")) {
+		if (validate_str_num(arg[0], "threshold",
+				OCF_NHIT_MIN_THRESHOLD, OCF_NHIT_MAX_THRESHOLD)) {
+			return FAILURE;
+		}
+
+		SET_CACHE_PARAM(cache_param_promotion_nhit_insertion_threshold,
+				strtoul(arg[0], NULL, 10));
+	} else if (!strcmp(opt, "trigger")) {
+		if (validate_str_num(arg[0], "trigger",
+				OCF_NHIT_MIN_TRIGGER, OCF_NHIT_MAX_THRESHOLD)) {
+			return FAILURE;
+		}
+
+		SET_CACHE_PARAM(cache_param_promotion_nhit_trigger_threshold,
+				strtoul(arg[0], NULL, 10));
 	} else {
 		return FAILURE;
 	}
@@ -793,6 +882,12 @@ int set_param_namespace_handle_option(char *namespace, char *opt, const char **a
 	} else if (!strcmp(namespace, "cleaning-acp")) {
 		return cache_param_handle_option_generic(opt, arg,
 				set_param_cleaning_acp_handle_option);
+	} else if (!strcmp(namespace, "promotion")) {
+		return cache_param_handle_option_generic(opt, arg,
+				set_param_promotion_handle_option);
+	} else if (!strcmp(namespace, "promotion-nhit")) {
+		return cache_param_handle_option_generic(opt, arg,
+				set_param_promotion_nhit_handle_option);
 	} else {
 		return FAILURE;
 	}
@@ -831,6 +926,8 @@ static cli_namespace get_param_namespace = {
 		GET_CACHE_PARAMS_NS("cleaning", "Cleaning policy parameters")
 		GET_CACHE_PARAMS_NS("cleaning-alru", "Cleaning policy ALRU parameters")
 		GET_CACHE_PARAMS_NS("cleaning-acp", "Cleaning policy ACP parameters")
+		GET_CACHE_PARAMS_NS("promotion", "Promotion policy parameters")
+		GET_CACHE_PARAMS_NS("promotion-nhit", "Promotion policy NHIT parameters")
 
 		{0},
 	},
@@ -870,6 +967,15 @@ int get_param_namespace_handle_option(char *namespace, char *opt, const char **a
 	} else if (!strcmp(namespace, "cleaning-acp")) {
 		SELECT_CACHE_PARAM(cache_param_cleaning_acp_wake_up_time);
 		SELECT_CACHE_PARAM(cache_param_cleaning_acp_flush_max_buffers);
+		return cache_param_handle_option_generic(opt, arg,
+				get_param_handle_option);
+	} else if (!strcmp(namespace, "promotion")) {
+		SELECT_CACHE_PARAM(cache_param_promotion_policy_type);
+		return cache_param_handle_option_generic(opt, arg,
+				get_param_handle_option);
+	} else if (!strcmp(namespace, "promotion-nhit")) {
+		SELECT_CACHE_PARAM(cache_param_promotion_nhit_insertion_threshold);
+		SELECT_CACHE_PARAM(cache_param_promotion_nhit_trigger_threshold);
 		return cache_param_handle_option_generic(opt, arg,
 				get_param_handle_option);
 	} else {

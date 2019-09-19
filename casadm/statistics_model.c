@@ -548,6 +548,8 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		      eviction_policy_to_name(cache_info->info.eviction_policy));
 	print_kv_pair(outfile, "Cleaning Policy", "%s",
 		      cleaning_policy_to_name(cache_info->info.cleaning_policy));
+	print_kv_pair(outfile, "Promotion Policy", "%s",
+		      promotion_policy_to_name(cache_info->info.promotion_policy));
 	print_kv_pair(outfile, "Cache line size", "%llu, [KiB]",
 		      cache_info->info.cache_line_size / KiB);
 

@@ -265,6 +265,12 @@ static struct name_to_val_mapping cleaning_policy_names[] = {
 	{ NULL }
 };
 
+static struct name_to_val_mapping promotion_policy_names[] = {
+	{ .short_name = "always", .value = ocf_promotion_always },
+	{ .short_name = "nhit", .value = ocf_promotion_nhit },
+	{ NULL}
+};
+
 static struct name_to_val_mapping metadata_mode_names[] = {
 	{ .short_name = "normal", .value = CAS_METADATA_MODE_NORMAL },
 	{ .short_name = "atomic", .value = CAS_METADATA_MODE_ATOMIC },
@@ -432,6 +438,16 @@ inline int validate_str_cln_policy(const char *s)
 inline const char *cleaning_policy_to_name(uint8_t policy)
 {
 	return val_to_short_name(policy, cleaning_policy_names, "Unknown");
+}
+
+inline int validate_str_promotion_policy(const char *s)
+{
+	return validate_str_val_mapping(s, promotion_policy_names, -1);
+}
+
+inline const char *promotion_policy_to_name(uint8_t policy)
+{
+	return val_to_short_name(policy, promotion_policy_names, "Unknown");
 }
 
 const char *metadata_mode_to_name(uint8_t metadata_mode)
@@ -707,6 +723,7 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info)
 	cache->flushed = info->info.flushed;
 	cache->eviction_policy = info->info.eviction_policy;
 	cache->cleaning_policy = info->info.cleaning_policy;
+	cache->promotion_policy = info->info.promotion_policy;
 	cache->size = info->info.cache_line_size;
 
 	if ((info->info.state & (1 << ocf_cache_state_running)) == 0) {

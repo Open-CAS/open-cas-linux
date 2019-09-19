@@ -44,6 +44,7 @@ struct cache_device {
 	int mode;
 	int eviction_policy;
 	int cleaning_policy;
+	int promotion_policy;
 	int dirty;
 	int flushed;
 	unsigned size;
@@ -92,6 +93,7 @@ enum metadata_mode_t {
 
 const char *eviction_policy_to_name(uint8_t policy);
 const char *cleaning_policy_to_name(uint8_t policy);
+const char *promotion_policy_to_name(uint8_t policy);
 const char *cache_mode_to_name(uint8_t cache_mode);
 const char *get_cache_state_name(int cache_state);
 const char *get_core_state_name(int core_state);
@@ -256,6 +258,7 @@ int validate_path(const char *path, int exist);
 int validate_str_cache_mode(const char *s);
 int validate_str_ev_policy(const char *s);
 int validate_str_cln_policy(const char *s);
+int validate_str_promotion_policy(const char *s);
 int validate_str_meta_variant(const char *s);
 int validate_str_stats_filters(const char* s);
 int validate_str_output_format(const char* s);
