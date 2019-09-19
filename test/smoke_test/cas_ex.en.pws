@@ -9,6 +9,7 @@ KiB
 LANG
 LBA
 MiB
+NHIT
 NUM
 NVMe
 OCF
@@ -37,6 +38,7 @@ lru
 metadata
 namespace
 namespaces
+nhit
 nop
 nvme
 opencas
