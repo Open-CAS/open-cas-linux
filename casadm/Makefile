@@ -24,14 +24,7 @@ endif
 DEFINES   += CAS_VERSION_MAIN=$(CAS_VERSION_MAIN)
 DEFINES   += CAS_VERSION_MAJOR=$(CAS_VERSION_MAJOR)
 DEFINES   += CAS_VERSION_MINOR=$(CAS_VERSION_MINOR)
-DEFINES   += CAS_BUILD_NO=\"$(CAS_BUILD_NO)\"
-
-#
-# Additional git version
-#
-ifneq ($(strip $(CAS_BUILD_FLAG)),)
-DEFINES    += CAS_BUILD_FLAG=\"$(CAS_BUILD_FLAG)\"
-endif
+DEFINES   += CAS_VERSION=\"$(CAS_VERSION)\"
 
 #
 # Include directories

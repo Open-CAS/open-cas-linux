@@ -9,7 +9,6 @@
 #include "ocf/ocf.h"
 #include "ocf_env.h"
 
-#include <cas_version.h>
 #include <cas_ioctl_codes.h>
 
 #include "linux_kernel_version.h"
