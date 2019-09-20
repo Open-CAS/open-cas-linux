@@ -27,8 +27,9 @@ def find_repo_root():
 def get_process_mock(return_value, stdout, stderr):
     process_mock = mock.Mock()
     attrs = {
-        "wait.return_value": return_value,
-        "communicate.return_value": (stdout, stderr),
+        "returncode": return_value,
+        "stdout": stdout,
+        "stderr": stderr
     }
     process_mock.configure_mock(**attrs)
 

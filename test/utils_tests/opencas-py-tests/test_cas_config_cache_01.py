@@ -54,7 +54,7 @@ def test_cache_config_from_line_device_is_directory(
     )
     mock_stat.return_value = mock.Mock(st_mode=stat.S_IFDIR)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="is not block device"):
         opencas.cas_config.cache_config.from_line(
             "1    /home/user/catpictures  WT"
         )
@@ -68,69 +68,68 @@ def test_cache_config_from_line_device_not_present(
     mock_path_exists.side_effect = h.get_mock_os_exists([])
     mock_stat.side_effect = OSError()
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="not found"):
         opencas.cas_config.cache_config.from_line("1    /dev/nvme0n1    WT")
 
 
 @mock.patch("os.path.exists")
 @mock.patch("os.stat")
-@mock.patch("subprocess.Popen")
+@mock.patch("subprocess.run")
 def test_cache_config_from_line_device_with_partitions(
-    mock_popen, mock_stat, mock_path_exists
+    mock_run, mock_stat, mock_path_exists
 ):
     mock_path_exists.side_effect = h.get_mock_os_exists(["/dev/sda"])
     mock_stat.return_value = mock.Mock(st_mode=stat.S_IFBLK)
-    mock_popen.return_value = h.get_process_mock(0, "sda\nsda1\nsda2", "")
+    mock_run.return_value = h.get_process_mock(0, "sda\nsda1\nsda2", "")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Partitions"):
         opencas.cas_config.cache_config.from_line("1    /dev/sda    WT")
 
 
 @mock.patch("os.path.exists")
 @mock.patch("os.stat")
-@mock.patch("subprocess.Popen")
+@mock.patch("subprocess.run")
 def test_cache_config_validate_device_with_partitions(
-    mock_popen, mock_stat, mock_path_exists
+    mock_run, mock_stat, mock_path_exists
 ):
     mock_path_exists.side_effect = h.get_mock_os_exists(["/dev/sda"])
     mock_stat.return_value = mock.Mock(st_mode=stat.S_IFBLK)
-    mock_popen.return_value = h.get_process_mock(0, "sda\nsda1\nsda2", "")
+    mock_run.return_value = h.get_process_mock(0, "sda\nsda1\nsda2", "")
 
     cache = opencas.cas_config.cache_config(
-        cache_id="1", device="/dev/sda", cache_mode="WT", params=dict()
+        cache_id="1", device="/dev/sda", cache_mode="WT"
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Partitions"):
         cache.validate_config(False)
 
 
 @mock.patch("os.path.exists")
 @mock.patch("os.stat")
-@mock.patch("subprocess.Popen")
+@mock.patch("subprocess.run")
 def test_cache_config_validate_force_device_with_partitions(
-    mock_popen, mock_stat, mock_path_exists
+    mock_run, mock_stat, mock_path_exists
 ):
     mock_path_exists.side_effect = h.get_mock_os_exists(["/dev/sda"])
     mock_stat.return_value = mock.Mock(st_mode=stat.S_IFBLK)
-    mock_popen.return_value = h.get_process_mock(0, "sda\nsda1\nsda2", "")
+    mock_run.return_value = h.get_process_mock(0, "sda\nsda1\nsda2", "")
 
     cache = opencas.cas_config.cache_config(
-        cache_id="1", device="/dev/sda", cache_mode="WT", params=dict()
+        cache_id="1", device="/dev/sda", cache_mode="WT"
     )
 
-    with pytest.raises(ValueError):
-        cache.validate_config(True)
+    cache.validate_config(True)
 
 
 @mock.patch("os.path.exists")
 @mock.patch("os.stat")
-@mock.patch("subprocess.Popen")
+@mock.patch("subprocess.run")
 def test_cache_config_from_line_device_without_partitions(
-    mock_popen, mock_stat, mock_path_exists
+    mock_run, mock_stat, mock_path_exists
 ):
     mock_path_exists.side_effect = h.get_mock_os_exists(["/dev/sda"])
     mock_stat.return_value = mock.Mock(st_mode=stat.S_IFBLK)
-    mock_popen.return_value = h.get_process_mock(0, "sda\n", "")
+    mock_run.return_value = h.get_process_mock(0, "sda\n", "")
 
     opencas.cas_config.cache_config.from_line("1    /dev/sda    WT")
 
@@ -215,7 +214,7 @@ def test_cache_config_from_line_parameter_validation_01(
 
     line = "1   /dev/sda    WT  {0}".format(params)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="[Ii]nvalid"):
         opencas.cas_config.cache_config.from_line(line)
 
 
@@ -279,7 +278,7 @@ def test_cache_config_from_line_cache_mode_validation_01(
 
 
 @pytest.mark.parametrize(
-    "mode", ["wt", "WT", "pt", "PT", "wb", "WB", "wa", "WA", "wA", "Wa"]
+    "mode", ["wt", "WT", "pt", "PT", "wb", "WB", "wa", "WA", "wA", "Wa", "wo", "WO", "wO", "Wo"]
 )
 @mock.patch("os.path.exists")
 @mock.patch("opencas.cas_config.cache_config.check_cache_device_empty")
@@ -376,6 +375,12 @@ def test_cache_config_from_line_cache_id_validation_02(
             "device": "/dev/nvme0n1",
             "cache_mode": "WT",
             "cache_line_size": "4",
+        },
+        {
+            "cache_id": "1",
+            "device": "/dev/nvme0n1",
+            "cache_mode": "wo",
+            "cache_line_size": "16",
         },
     ],
 )

@@ -233,7 +233,7 @@ class cas_config(object):
         def validate_parameter(self, param_name, param_value):
             if param_name == 'ioclass_file':
                 if not os.path.exists(param_value):
-                    raise ValueError('Incorrect path to io_class file')
+                    raise ValueError('Invalid path to io_class file')
             elif param_name == 'cleaning_policy':
                 self.check_cleaning_policy_valid(param_value)
             elif param_name == 'promotion_policy':
@@ -241,7 +241,7 @@ class cas_config(object):
             elif param_name == 'cache_line_size':
                 self.check_cache_line_size_valid(param_value)
             else:
-                raise ValueError('{0} is unknown parameter name'.format(param_name))
+                raise ValueError('{0} is invalid parameter name'.format(param_name))
 
         @staticmethod
         def check_cache_id_valid(cache_id):
