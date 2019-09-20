@@ -18,9 +18,11 @@ import opencas
         " ",
         "#",
         "                      #                      ",
-        ("TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Npbmcg"
+        (
+            "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Npbmcg"
             "ZWxpdCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFib3JlI"
-            "GV0IGRvbG9yZSBtYWduYSBhbGlxdWEu"),
+            "GV0IGRvbG9yZSBtYWduYSBhbGlxdWEu"
+        ),
         " # ? } { ! ",
         "1 /dev/nvme0n1 WT 1 2 3",
         "1 /dev/nvme0n1 WT   ioclass_file=ioclass.csv ,cache_line_size=4",
@@ -46,9 +48,7 @@ def test_cache_config_from_line_parsing_checks_02(mock_validate, line):
 
 @mock.patch("os.path.exists")
 @mock.patch("os.stat")
-def test_cache_config_from_line_device_is_directory(
-    mock_stat, mock_path_exists
-):
+def test_cache_config_from_line_device_is_directory(mock_stat, mock_path_exists):
     mock_path_exists.side_effect = h.get_mock_os_exists(
         ["/home/user/catpictures"]
     )
@@ -62,9 +62,7 @@ def test_cache_config_from_line_device_is_directory(
 
 @mock.patch("os.path.exists")
 @mock.patch("os.stat")
-def test_cache_config_from_line_device_not_present(
-    mock_stat, mock_path_exists
-):
+def test_cache_config_from_line_device_not_present(mock_stat, mock_path_exists):
     mock_path_exists.side_effect = h.get_mock_os_exists([])
     mock_stat.side_effect = OSError()
 
@@ -144,9 +142,7 @@ def test_cache_config_from_line_recursive_multilevel(
     mock_stat.raises = OSError()
 
     with pytest.raises(ValueError):
-        opencas.cas_config.cache_config.from_line(
-            "1    {0}    WT".format(device)
-        )
+        opencas.cas_config.cache_config.from_line("1    {0}    WT".format(device))
 
 
 @mock.patch("os.path.exists")
@@ -176,8 +172,10 @@ def test_cache_config_from_line_missing_ioclass_file(
 
     with pytest.raises(ValueError):
         opencas.cas_config.cache_config.from_line(
-            ("11 /dev/nvme0n1 WT   ioclass_file=ioclass.csv,"
-                "cleaning_policy=nop,cache_line_size=4")
+            (
+                "11 /dev/nvme0n1 WT   ioclass_file=ioclass.csv,"
+                "cleaning_policy=nop,cache_line_size=4"
+            )
         )
 
 
@@ -200,6 +198,12 @@ def test_cache_config_from_line_missing_ioclass_file(
         "cache_line_size=-1",
         "cache_line_size=four",
         "cache_line_size=128",
+        "promotion_policy=111111",
+        "promotion_policy=",
+        "promotion_policy=dinosaurs",
+        "promotion_policy=Robert'); DROP TABLE Students;--",
+        "promotion_policy=awlays",
+        "promotion_policy=nnhit",
     ],
 )
 @mock.patch("os.path.exists")
@@ -234,6 +238,9 @@ def test_cache_config_from_line_parameter_validation_01(
         "cache_line_size=64",
         "cache_line_size=4,cleaning_policy=nop",
         "ioclass_file=ioclass.csv,cache_line_size=4,cleaning_policy=nop",
+        "promotion_policy=nhit",
+        "promotion_policy=always",
+        "ioclass_file=ioclass.csv,cache_line_size=4,cleaning_policy=nop,promotion_policy=always",
     ],
 )
 @mock.patch("os.path.exists")
@@ -278,7 +285,23 @@ def test_cache_config_from_line_cache_mode_validation_01(
 
 
 @pytest.mark.parametrize(
-    "mode", ["wt", "WT", "pt", "PT", "wb", "WB", "wa", "WA", "wA", "Wa", "wo", "WO", "wO", "Wo"]
+    "mode",
+    [
+        "wt",
+        "WT",
+        "pt",
+        "PT",
+        "wb",
+        "WB",
+        "wa",
+        "WA",
+        "wA",
+        "Wa",
+        "wo",
+        "WO",
+        "wO",
+        "Wo",
+    ],
 )
 @mock.patch("os.path.exists")
 @mock.patch("opencas.cas_config.cache_config.check_cache_device_empty")
@@ -380,6 +403,20 @@ def test_cache_config_from_line_cache_id_validation_02(
             "cache_id": "1",
             "device": "/dev/nvme0n1",
             "cache_mode": "wo",
+            "cache_line_size": "16",
+        },
+        {
+            "cache_id": "1",
+            "device": "/dev/nvme0n1",
+            "cache_mode": "wo",
+            "promotion_policy": "always",
+            "cache_line_size": "16",
+        },
+        {
+            "cache_id": "1",
+            "device": "/dev/nvme0n1",
+            "cache_mode": "wo",
+            "promotion_policy": "nhit",
             "cache_line_size": "16",
         },
     ],
