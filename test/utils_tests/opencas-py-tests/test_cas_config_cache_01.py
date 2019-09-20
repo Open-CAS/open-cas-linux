@@ -18,9 +18,11 @@ import opencas
         " ",
         "#",
         "                      #                      ",
-        ("TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Npbmcg"
+        (
+            "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2Npbmcg"
             "ZWxpdCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFib3JlI"
-            "GV0IGRvbG9yZSBtYWduYSBhbGlxdWEu"),
+            "GV0IGRvbG9yZSBtYWduYSBhbGlxdWEu"
+        ),
         " # ? } { ! ",
         "1 /dev/nvme0n1 WT 1 2 3",
         "1 /dev/nvme0n1 WT   ioclass_file=ioclass.csv ,cache_line_size=4",
@@ -46,15 +48,13 @@ def test_cache_config_from_line_parsing_checks_02(mock_validate, line):
 
 @mock.patch("os.path.exists")
 @mock.patch("os.stat")
-def test_cache_config_from_line_device_is_directory(
-    mock_stat, mock_path_exists
-):
+def test_cache_config_from_line_device_is_directory(mock_stat, mock_path_exists):
     mock_path_exists.side_effect = h.get_mock_os_exists(
         ["/home/user/catpictures"]
     )
     mock_stat.return_value = mock.Mock(st_mode=stat.S_IFDIR)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="is not block device"):
         opencas.cas_config.cache_config.from_line(
             "1    /home/user/catpictures  WT"
         )
@@ -62,75 +62,72 @@ def test_cache_config_from_line_device_is_directory(
 
 @mock.patch("os.path.exists")
 @mock.patch("os.stat")
-def test_cache_config_from_line_device_not_present(
-    mock_stat, mock_path_exists
-):
+def test_cache_config_from_line_device_not_present(mock_stat, mock_path_exists):
     mock_path_exists.side_effect = h.get_mock_os_exists([])
     mock_stat.side_effect = OSError()
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="not found"):
         opencas.cas_config.cache_config.from_line("1    /dev/nvme0n1    WT")
 
 
 @mock.patch("os.path.exists")
 @mock.patch("os.stat")
-@mock.patch("subprocess.Popen")
+@mock.patch("subprocess.run")
 def test_cache_config_from_line_device_with_partitions(
-    mock_popen, mock_stat, mock_path_exists
+    mock_run, mock_stat, mock_path_exists
 ):
     mock_path_exists.side_effect = h.get_mock_os_exists(["/dev/sda"])
     mock_stat.return_value = mock.Mock(st_mode=stat.S_IFBLK)
-    mock_popen.return_value = h.get_process_mock(0, "sda\nsda1\nsda2", "")
+    mock_run.return_value = h.get_process_mock(0, "sda\nsda1\nsda2", "")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Partitions"):
         opencas.cas_config.cache_config.from_line("1    /dev/sda    WT")
 
 
 @mock.patch("os.path.exists")
 @mock.patch("os.stat")
-@mock.patch("subprocess.Popen")
+@mock.patch("subprocess.run")
 def test_cache_config_validate_device_with_partitions(
-    mock_popen, mock_stat, mock_path_exists
+    mock_run, mock_stat, mock_path_exists
 ):
     mock_path_exists.side_effect = h.get_mock_os_exists(["/dev/sda"])
     mock_stat.return_value = mock.Mock(st_mode=stat.S_IFBLK)
-    mock_popen.return_value = h.get_process_mock(0, "sda\nsda1\nsda2", "")
+    mock_run.return_value = h.get_process_mock(0, "sda\nsda1\nsda2", "")
 
     cache = opencas.cas_config.cache_config(
-        cache_id="1", device="/dev/sda", cache_mode="WT", params=dict()
+        cache_id="1", device="/dev/sda", cache_mode="WT"
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Partitions"):
         cache.validate_config(False)
 
 
 @mock.patch("os.path.exists")
 @mock.patch("os.stat")
-@mock.patch("subprocess.Popen")
+@mock.patch("subprocess.run")
 def test_cache_config_validate_force_device_with_partitions(
-    mock_popen, mock_stat, mock_path_exists
+    mock_run, mock_stat, mock_path_exists
 ):
     mock_path_exists.side_effect = h.get_mock_os_exists(["/dev/sda"])
     mock_stat.return_value = mock.Mock(st_mode=stat.S_IFBLK)
-    mock_popen.return_value = h.get_process_mock(0, "sda\nsda1\nsda2", "")
+    mock_run.return_value = h.get_process_mock(0, "sda\nsda1\nsda2", "")
 
     cache = opencas.cas_config.cache_config(
-        cache_id="1", device="/dev/sda", cache_mode="WT", params=dict()
+        cache_id="1", device="/dev/sda", cache_mode="WT"
     )
 
-    with pytest.raises(ValueError):
-        cache.validate_config(True)
+    cache.validate_config(True)
 
 
 @mock.patch("os.path.exists")
 @mock.patch("os.stat")
-@mock.patch("subprocess.Popen")
+@mock.patch("subprocess.run")
 def test_cache_config_from_line_device_without_partitions(
-    mock_popen, mock_stat, mock_path_exists
+    mock_run, mock_stat, mock_path_exists
 ):
     mock_path_exists.side_effect = h.get_mock_os_exists(["/dev/sda"])
     mock_stat.return_value = mock.Mock(st_mode=stat.S_IFBLK)
-    mock_popen.return_value = h.get_process_mock(0, "sda\n", "")
+    mock_run.return_value = h.get_process_mock(0, "sda\n", "")
 
     opencas.cas_config.cache_config.from_line("1    /dev/sda    WT")
 
@@ -145,9 +142,7 @@ def test_cache_config_from_line_recursive_multilevel(
     mock_stat.raises = OSError()
 
     with pytest.raises(ValueError):
-        opencas.cas_config.cache_config.from_line(
-            "1    {0}    WT".format(device)
-        )
+        opencas.cas_config.cache_config.from_line("1    {0}    WT".format(device))
 
 
 @mock.patch("os.path.exists")
@@ -177,8 +172,10 @@ def test_cache_config_from_line_missing_ioclass_file(
 
     with pytest.raises(ValueError):
         opencas.cas_config.cache_config.from_line(
-            ("11 /dev/nvme0n1 WT   ioclass_file=ioclass.csv,"
-                "cleaning_policy=nop,cache_line_size=4")
+            (
+                "11 /dev/nvme0n1 WT   ioclass_file=ioclass.csv,"
+                "cleaning_policy=nop,cache_line_size=4"
+            )
         )
 
 
@@ -201,6 +198,12 @@ def test_cache_config_from_line_missing_ioclass_file(
         "cache_line_size=-1",
         "cache_line_size=four",
         "cache_line_size=128",
+        "promotion_policy=111111",
+        "promotion_policy=",
+        "promotion_policy=dinosaurs",
+        "promotion_policy=Robert'); DROP TABLE Students;--",
+        "promotion_policy=awlays",
+        "promotion_policy=nnhit",
     ],
 )
 @mock.patch("os.path.exists")
@@ -215,7 +218,7 @@ def test_cache_config_from_line_parameter_validation_01(
 
     line = "1   /dev/sda    WT  {0}".format(params)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="[Ii]nvalid"):
         opencas.cas_config.cache_config.from_line(line)
 
 
@@ -235,6 +238,9 @@ def test_cache_config_from_line_parameter_validation_01(
         "cache_line_size=64",
         "cache_line_size=4,cleaning_policy=nop",
         "ioclass_file=ioclass.csv,cache_line_size=4,cleaning_policy=nop",
+        "promotion_policy=nhit",
+        "promotion_policy=always",
+        "ioclass_file=ioclass.csv,cache_line_size=4,cleaning_policy=nop,promotion_policy=always",
     ],
 )
 @mock.patch("os.path.exists")
@@ -279,7 +285,23 @@ def test_cache_config_from_line_cache_mode_validation_01(
 
 
 @pytest.mark.parametrize(
-    "mode", ["wt", "WT", "pt", "PT", "wb", "WB", "wa", "WA", "wA", "Wa"]
+    "mode",
+    [
+        "wt",
+        "WT",
+        "pt",
+        "PT",
+        "wb",
+        "WB",
+        "wa",
+        "WA",
+        "wA",
+        "Wa",
+        "wo",
+        "WO",
+        "wO",
+        "Wo",
+    ],
 )
 @mock.patch("os.path.exists")
 @mock.patch("opencas.cas_config.cache_config.check_cache_device_empty")
@@ -376,6 +398,26 @@ def test_cache_config_from_line_cache_id_validation_02(
             "device": "/dev/nvme0n1",
             "cache_mode": "WT",
             "cache_line_size": "4",
+        },
+        {
+            "cache_id": "1",
+            "device": "/dev/nvme0n1",
+            "cache_mode": "wo",
+            "cache_line_size": "16",
+        },
+        {
+            "cache_id": "1",
+            "device": "/dev/nvme0n1",
+            "cache_mode": "wo",
+            "promotion_policy": "always",
+            "cache_line_size": "16",
+        },
+        {
+            "cache_id": "1",
+            "device": "/dev/nvme0n1",
+            "cache_mode": "wo",
+            "promotion_policy": "nhit",
+            "cache_line_size": "16",
         },
     ],
 )
