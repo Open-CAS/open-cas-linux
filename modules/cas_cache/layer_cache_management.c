@@ -1360,6 +1360,66 @@ static void _cache_mngt_load_complete(ocf_cache_t cache, void *priv, int error)
 	complete(&context->compl);
 }
 
+struct cache_mngt_check_metadata_context {
+	struct completion compl;
+	char *cache_name;
+	int *result;
+};
+
+static void cache_mngt_check_metadata_end(void *priv, int error,
+		struct ocf_metadata_probe_status *status)
+{
+	struct cache_mngt_check_metadata_context *context = priv;
+
+	*context->result = error;
+
+	if (error == -OCF_ERR_NO_METADATA || error == -OCF_ERR_METADATA_VER) {
+		printk(KERN_ERR "Failed to load cache metadata!\n");
+	} else if (strncmp(status->cache_name, context->cache_name,
+			OCF_CACHE_NAME_SIZE)) {
+		*context->result = -OCF_ERR_CACHE_NAME_MISMATCH;
+		printk(KERN_ERR "Loaded cache name is invalid: %s!\n",
+				status->cache_name);
+	}
+
+	complete(&context->compl);
+}
+
+static int _cache_mngt_check_metadata(struct ocf_mngt_cache_config *cfg,
+		char *cache_path_name)
+{
+	struct cache_mngt_check_metadata_context context;
+	struct block_device *bdev;
+	ocf_volume_t volume;
+	char holder[] = "CAS CHECK METADATA\n";
+	int result;
+
+	bdev = blkdev_get_by_path(cache_path_name, (FMODE_EXCL|FMODE_READ),
+			holder);
+	if (IS_ERR(bdev)) {
+		return (PTR_ERR(bdev) == -EBUSY) ?
+			-OCF_ERR_NOT_OPEN_EXC :
+			-OCF_ERR_INVAL_VOLUME_TYPE;
+	}
+
+	result = cas_blk_open_volume_by_bdev(&volume, bdev);
+	if (result)
+		goto out_bdev;
+
+	init_completion(&context.compl);
+	context.cache_name = cfg->name;
+	context.result = &result;
+
+	ocf_metadata_probe(cas_ctx, volume, cache_mngt_check_metadata_end,
+			&context);
+	wait_for_completion(&context.compl);
+
+	cas_blk_close_volume(volume);
+out_bdev:
+	blkdev_put(bdev, (FMODE_EXCL|FMODE_READ));
+	return result;
+}
+
 static int _cache_mngt_load(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
 		struct kcas_start_cache *cmd, ocf_cache_t *cache)
@@ -1369,6 +1429,10 @@ static int _cache_mngt_load(struct ocf_mngt_cache_config *cfg,
 	ocf_queue_t mngt_queue = NULL;
 	struct cache_priv *cache_priv;
 	int result;
+
+	result = _cache_mngt_check_metadata(cfg, cmd->cache_path_name);
+	if (result)
+		return result;
 
 	result = ocf_mngt_cache_start(cas_ctx, &tmp_cache, cfg);
 	if (result)
