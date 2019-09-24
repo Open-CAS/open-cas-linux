@@ -138,6 +138,10 @@ struct {
 		   " option or use --force to\n discard on-disk metadata and"
 		  " start fresh cache instance.\n"
 	},
+	{
+		OCF_ERR_CACHE_NAME_MISMATCH,
+		"Cache id specified by user and loaded from metadata are different"
+	},
 
 	/* CAS kernel error mappings*/
 	{
