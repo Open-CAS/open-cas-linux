@@ -594,7 +594,7 @@ static inline void env_msleep(uint64_t n)
 #define env_strnlen(s, smax) strnlen(s, smax)
 #define env_strncmp strncmp
 #define env_strncpy(dest, dmax, src, slen) ({ \
-		strlcpy(dest, src, min_t(int, dmax, slen)); \
+		strlcpy(dest, src, min_t(int, dmax - 1, slen) + 1); \
 		0; \
 	})
 
