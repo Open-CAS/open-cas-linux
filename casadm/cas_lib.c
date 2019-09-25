@@ -1112,8 +1112,7 @@ int set_cache_mode(unsigned int cache_mode, unsigned int cache_id, int flush)
 		} else {
 			cas_printf(LOG_INFO, "CAS is currently migrating from %s to %s mode.\n"
 				"Dirty data are being flushed to primary storage device in background.\n"
-				"Please find flushing progress via list caches command (‘casadm -L’) or\n"
-				"via statistics command (‘casadm -P’).\n",
+				"Please find flushing progress via statistics command (‘casadm -P’).\n",
 				cache_mode_to_name_long(orig_mode),
 				cache_mode_to_name_long(cache_mode));
 		}
