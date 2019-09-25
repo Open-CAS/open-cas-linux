@@ -2085,9 +2085,11 @@ int cache_mngt_set_core_params(struct kcas_set_core_param *info)
 	if (result)
 		return result;
 
-	result = get_core_by_id(cache, info->core_id, &core);
-	if (result && result != -OCF_ERR_CORE_NOT_EXIST)
-		goto out;
+	if (info->core_id != OCF_CORE_ID_INVALID) {
+		result = get_core_by_id(cache, info->core_id, &core);
+		if (result)
+			goto out;
+	}
 
 	switch (info->param_id) {
 	case core_param_seq_cutoff_threshold:
