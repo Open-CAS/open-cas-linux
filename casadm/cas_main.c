@@ -819,7 +819,7 @@ int set_param_cleaning_acp_handle_option(char *opt, const char **arg)
 				strtoul(arg[0], NULL, 10));
 	}
 
-	return FAILURE;
+	return SUCCESS;
 }
 
 int set_param_promotion_handle_option(char *opt, const char **arg)
