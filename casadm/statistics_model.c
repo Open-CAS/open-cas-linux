@@ -487,7 +487,7 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		stats.part_id = part_iter_id;
 
 		ret = ioctl(ctrl_fd, KCAS_IOCTL_PARTITION_INFO, &info);
-		if (ret == -OCF_ERR_IO_CLASS_NOT_EXIST)
+		if (info.ext_err_code  == OCF_ERR_IO_CLASS_NOT_EXIST)
 			continue;
 		else if (ret)
 			return FAILURE;
@@ -499,6 +499,9 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		begin_record(outfile);
 
 		print_stats_ioclass(&info, &stats, outfile, stats_filters);
+
+		memset(&stats, 0, sizeof(stats));
+		memset(&info, 0, sizeof(info));
 	}
 
 	return SUCCESS;
