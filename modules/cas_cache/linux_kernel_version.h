@@ -38,6 +38,7 @@
 #include <linux/nmi.h>
 #include <linux/ratelimit.h>
 #include <linux/mm.h>
+#include <linux/blk-mq.h>
 
 #include "generated_defines.h"
 
