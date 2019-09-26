@@ -1632,15 +1632,12 @@ int cache_mngt_get_seq_cutoff_threshold(ocf_core_t core, uint32_t *thresh)
 	int result;
 
 	result = _cache_mngt_read_lock_sync(cache);
-	if (result) {
-		ocf_mngt_cache_put(cache);
+	if (result)
 		return result;
-	}
 
 	result = ocf_mngt_core_get_seq_cutoff_threshold(core, thresh);
 
 	ocf_mngt_cache_read_unlock(cache);
-	ocf_mngt_cache_put(cache);
 	return result;
 }
 
@@ -1659,15 +1656,12 @@ int cache_mngt_get_seq_cutoff_policy(ocf_core_t core,
 	int result;
 
 	result = _cache_mngt_read_lock_sync(cache);
-	if (result) {
-		ocf_mngt_cache_put(cache);
+	if (result)
 		return result;
-	}
 
 	result = ocf_mngt_core_get_seq_cutoff_policy(core, policy);
 
 	ocf_mngt_cache_read_unlock(cache);
-	ocf_mngt_cache_put(cache);
 	return result;
 }
 
