@@ -36,7 +36,7 @@ static int _cache_mngt_lock_sync(ocf_cache_t cache)
 	context.result = &result;
 
 	ocf_mngt_cache_lock(cache, _cache_mngt_lock_complete, &context);
-	wait_for_completion(&context.compl);
+	wait_for_completion_interruptible(&context.compl);
 
 	return result;
 }
@@ -50,7 +50,7 @@ static int _cache_mngt_read_lock_sync(ocf_cache_t cache)
 	context.result = &result;
 
 	ocf_mngt_cache_read_lock(cache, _cache_mngt_lock_complete, &context);
-	wait_for_completion(&context.compl);
+	wait_for_completion_interruptible(&context.compl);
 
 	return result;
 }
@@ -73,7 +73,7 @@ static int _cache_mngt_save_sync(ocf_cache_t cache)
 	context.result = &result;
 
 	ocf_mngt_cache_save(cache, _cache_mngt_save_sync_complete, &context);
-	wait_for_completion(&context.compl);
+	wait_for_completion_interruptible(&context.compl);
 
 	return result;
 }
@@ -98,7 +98,7 @@ static int _cache_mngt_cache_flush_sync(ocf_cache_t cache, bool interruption)
 
 	atomic_set(&cache_priv->flush_interrupt_enabled, 0);
 	ocf_mngt_cache_flush(cache, _cache_mngt_cache_flush_complete, &context);
-	wait_for_completion(&context.compl);
+	wait_for_completion_interruptible(&context.compl);
 	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
 
 	return result;
@@ -125,7 +125,7 @@ static int _cache_mngt_core_flush_sync(ocf_core_t core, bool interruption)
 
 	atomic_set(&cache_priv->flush_interrupt_enabled, 0);
 	ocf_mngt_core_flush(core, _cache_mngt_core_flush_complete, &context);
-	wait_for_completion(&context.compl);
+	wait_for_completion_interruptible(&context.compl);
 	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
 
 	return result;
@@ -149,7 +149,7 @@ static int _cache_mngt_cache_stop_sync(ocf_cache_t cache)
 	context.result = &result;
 
 	ocf_mngt_cache_stop(cache, _cache_mngt_cache_stop_complete, &context);
-	wait_for_completion(&context.compl);
+	wait_for_completion_interruptible(&context.compl);
 
 	return result;
 }
@@ -522,7 +522,7 @@ int cache_mngt_cache_check_device(struct kcas_cache_check_device *cmd_info)
 
 	ocf_metadata_probe(cas_ctx, volume, cache_mngt_metadata_probe_end,
 			&context);
-	wait_for_completion(&context.compl);
+	wait_for_completion_interruptible(&context.compl);
 
 	cas_blk_close_volume(volume);
 out_bdev:
@@ -742,7 +742,7 @@ int cache_mngt_add_core_to_cache(const char *cache_name,
 
 	ocf_mngt_cache_add_core(cache, cfg, _cache_mngt_add_core_complete,
 			&add_context);
-	wait_for_completion(&add_context.compl);
+	wait_for_completion_interruptible(&add_context.compl);
 	if (result)
 		goto error_affter_lock;
 
@@ -773,7 +773,7 @@ error_after_add_core:
 	remove_context.result = &remove_core_result;
 	ocf_mngt_cache_remove_core(core, _cache_mngt_remove_core_complete,
 			&remove_context);
-	wait_for_completion(&remove_context.compl);
+	wait_for_completion_interruptible(&remove_context.compl);
 
 error_affter_lock:
 	ocf_mngt_cache_unlock(cache);
@@ -906,7 +906,7 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 	if (!cmd->force_no_flush && !flush_result)
 		BUG_ON(ocf_mngt_core_is_dirty(core));
 
-	wait_for_completion(&context.compl);
+	wait_for_completion_interruptible(&context.compl);
 
 	if (!result && cmd->detach) {
 		cache_priv = ocf_cache_get_priv(cache);
@@ -1323,7 +1323,7 @@ static int _cache_mngt_start(struct ocf_mngt_cache_config *cfg,
 	ocf_mngt_cache_attach(tmp_cache, device_cfg,
 			_cache_mngt_attach_complete, &context);
 
-	wait_for_completion(&context.compl);
+	wait_for_completion_interruptible(&context.compl);
 	if (result)
 		goto err_attach;
 
@@ -1413,7 +1413,7 @@ static int _cache_mngt_check_metadata(struct ocf_mngt_cache_config *cfg,
 
 	ocf_metadata_probe(cas_ctx, volume, cache_mngt_check_metadata_end,
 			&context);
-	wait_for_completion(&context.compl);
+	wait_for_completion_interruptible(&context.compl);
 
 	cas_blk_close_volume(volume);
 out_bdev:
@@ -1459,7 +1459,7 @@ static int _cache_mngt_load(struct ocf_mngt_cache_config *cfg,
 	ocf_mngt_cache_load(tmp_cache, device_cfg,
 			_cache_mngt_load_complete, &context);
 
-	wait_for_completion(&context.compl);
+	wait_for_completion_interruptible(&context.compl);
 	if (result)
 		goto err_load;
 
