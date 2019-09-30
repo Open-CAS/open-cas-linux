@@ -7,7 +7,7 @@ CASCTL_DIR = /lib/opencas
 UDEVRULES_DIR = /lib/udev/rules.d
 UDEV:=$(shell which udevadm)
 SYSTEMCTL := $(shell which systemctl)
-PYTHON3 := $(shell which python3 &> /dev/null && echo 1)
+PYTHON3 := $(shell which python3)
 
 ifeq (, $(shell which systemctl))
 define cas_install
@@ -33,7 +33,7 @@ endif
 all: ;
 
 install:
-ifneq (1, $(PYTHON3))
+ifeq (, $(PYTHON3))
 	$(error package 'python3' not found)
 else
 	@echo "Installing Open-CAS utils"
