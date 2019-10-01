@@ -54,6 +54,10 @@ struct {
 		"Cache ID does not exist"
 	},
 	{
+		OCF_ERR_CORE_NOT_EXIST,
+		"Core ID does not exist"
+	},
+	{
 		OCF_ERR_CACHE_EXIST,
 		"Cache ID already exists"
 	},

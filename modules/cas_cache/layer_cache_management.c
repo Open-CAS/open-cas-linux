@@ -916,7 +916,7 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 
 	wait_for_completion_interruptible(&context.compl);
 
-	if (!result && cmd->detach) {
+	if (!result && !cmd->detach) {
 		cache_priv = ocf_cache_get_priv(cache);
 		mark_core_id_free(cache_priv->core_id_bitmap, cmd->core_id);
 	}
