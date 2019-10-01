@@ -1,0 +1,101 @@
+#!/bin/bash
+#
+# Copyright(c) 2012-2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+#DESCRIPTION --set-param and --get-param option fuzzing.
+
+# This tests checks whether CLI accepts correct data and rejects correct/incorrect
+# data for different promotion policy options. It tries to invoke CLI using different
+# combinations of required options and checks the return code.
+
+TESTS_DIR="$(dirname $0)/../"
+. $TESTS_DIR/cas_lib
+start_test $*
+
+# remove all partitions from cache and core
+TARGET_DEVICE_OPTION="$CACHE_DEVICE" remove_partitions
+TARGET_DEVICE_OPTION="$CORE_DEVICE" remove_partitions
+
+# Create 1 primary partition on CACHE_DEVICE of 2000M size
+TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION="2000M" PARTITION_IDS_OPTION="1" make_primary_partitions
+
+# create cache in WT mode and try to change promotion parameters
+CACHE_MODE_OPTION="wt" CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" CACHE_FORCE_OPTION="1" start_cache
+
+# changing promotion parameters should not be prohibited while core is added to cache
+CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="$CORE_DEVICE" add_core
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="50" TRIGGER_OPTION="15" set_promotion_params
+
+# remove core
+sleep 1
+CACHE_ID_OPTION="1" CORE_ID_OPTION="1" remove_core
+
+printf "\n============Running negative tests============\n"
+
+# test for inadmissible promotion policy type
+CACHE_ID_OPTION="1" PROMO_POL_OPTION="olweys" NEGATIVE_TEST_OPTION="1" set_promotion_policy
+CACHE_ID_OPTION="1" PROMO_POL_OPTION="olweys" NEGATIVE_TEST_OPTION="1" check_promotion_policy
+CACHE_ID_OPTION="1" PROMO_POL_OPTION="promotion-always" NEGATIVE_TEST_OPTION="1" set_promotion_policy
+CACHE_ID_OPTION="1" PROMO_POL_OPTION="promotion-always" NEGATIVE_TEST_OPTION="1" check_promotion_policy
+
+# test for negative numeric options
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="-1" TRIGGER_OPTION="50" NEGATIVE_TEST_OPTION="1" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="-1" TRIGGER_OPTION="50" NEGATIVE_TEST_OPTION="1" check_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="100" TRIGGER_OPTION="-1" NEGATIVE_TEST_OPTION="1" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="100" TRIGGER_OPTION="-1" NEGATIVE_TEST_OPTION="1" check_promotion_params
+
+# test for 0 and 1 threshold
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="0" TRIGGER_OPTION="50" NEGATIVE_TEST_OPTION="1" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="0" TRIGGER_OPTION="50" NEGATIVE_TEST_OPTION="1" check_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="1" TRIGGER_OPTION="0" NEGATIVE_TEST_OPTION="1" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="1" TRIGGER_OPTION="0" NEGATIVE_TEST_OPTION="1" check_promotion_params
+
+#test for out of range options
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="1385" TRIGGER_OPTION="50" NEGATIVE_TEST_OPTION="1" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="1385" TRIGGER_OPTION="50" NEGATIVE_TEST_OPTION="1" check_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="100" TRIGGER_OPTION="154" NEGATIVE_TEST_OPTION="1" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="100" TRIGGER_OPTION="154" NEGATIVE_TEST_OPTION="1" check_promotion_params
+
+printf "\n============Running positive tests============\n"
+
+# positive test
+# test various policy names
+CACHE_ID_OPTION="1" PROMO_POL_OPTION="always" set_promotion_policy
+CACHE_ID_OPTION="1" PROMO_POL_OPTION="always" check_promotion_policy
+CACHE_ID_OPTION="1" PROMO_POL_OPTION="nhit" set_promotion_policy
+CACHE_ID_OPTION="1" PROMO_POL_OPTION="nhit" check_promotion_policy
+
+# test various parameters
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="2" TRIGGER_OPTION="0" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="2" TRIGGER_OPTION="0" check_promotion_params
+
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="2" TRIGGER_OPTION="100" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="2" TRIGGER_OPTION="100" check_promotion_params
+
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="2" TRIGGER_OPTION="54" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="2" TRIGGER_OPTION="54" check_promotion_params
+
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="1000" TRIGGER_OPTION="0" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="1000" TRIGGER_OPTION="0" check_promotion_params
+
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="1000" TRIGGER_OPTION="100" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="1000" TRIGGER_OPTION="100" check_promotion_params
+
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="1000" TRIGGER_OPTION="54" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="1000" TRIGGER_OPTION="54" check_promotion_params
+
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="638" TRIGGER_OPTION="0" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="638" TRIGGER_OPTION="0" check_promotion_params
+
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="638" TRIGGER_OPTION="100" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="638" TRIGGER_OPTION="100" check_promotion_params
+
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="638" TRIGGER_OPTION="54" set_promotion_params
+CACHE_ID_OPTION="1" PROMO_POL_NS_OPTION="promotion-nhit" THRESHOLD_OPTION="638" TRIGGER_OPTION="54" check_promotion_params
+
+# stop cache now
+CACHE_ID_OPTION="1" stop_cache
+
+end_test 0
