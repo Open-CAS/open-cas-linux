@@ -531,6 +531,55 @@ get_cleaning_policy() {
     clear_options
 }
 
+set_promotion_policy() {
+    check_options ${FUNCNAME[0]}
+
+    local COMMAND="$CAS --set-param --name promotion --cache-id $CACHE_ID_OPTION \
+                   --policy $PROMO_POL_OPTION"
+
+    run_cmd $COMMAND
+    clear_options
+}
+
+check_promotion_policy() {
+    check_options ${FUNCNAME[0]}
+
+    local COMMAND="$CAS --get-param --name promotion --cache-id $CACHE_ID_OPTION \
+                   --output-format csv"
+
+    echo -n "$(date +%Y-%m-%d_%H:%M:%S)  "
+    echo -n "Checking if promotion policy type set to '$PROMO_POL_OPTION'. "
+
+    PROMO_POL_VALUE=$($COMMAND | grep -i type | cut -d ',' -f2)
+
+    if [ -n "$NEGATIVE_TEST_OPTION" ] && [ "$NEGATIVE_TEST_OPTION" -ne 0 ] ; then
+        echo -n "(negative test) "
+        if [[ "$PROMO_POL_OPTION" != "$PROMO_POL_VALUE" ]] ; then
+            success
+        else
+            error
+            echo "Promotion policy type set to inadmissible value '$PROMO_POL_VALUE'!"
+            if [ -z $DONT_FAIL_ON_ERROR_OPTION ]; then
+                end_test 1
+            fi
+            return 1
+        fi
+    else
+        if [[ "$PROMO_POL_OPTION" == "$PROMO_POL_VALUE" ]] ; then
+            success
+        else
+            error
+            echo "Promotion policy type do not match!"
+            if [ -z $DONT_FAIL_ON_ERROR_OPTION ]; then
+                end_test 1
+            fi
+            return 1
+        fi
+    fi
+
+    clear_options
+}
+
 set_flush_params() {
     check_options ${FUNCNAME[0]}
 
@@ -560,6 +609,81 @@ get_flush_params() {
                    --cache-id $CACHE_ID_OPTION --output-format csv"
 
     run_cmd $COMMAND
+    clear_options
+}
+
+set_promotion_params() {
+    check_options ${FUNCNAME[0]}
+
+    local COMMAND="$CAS --set-param --name $PROMO_POL_NS_OPTION --cache-id $CACHE_ID_OPTION"
+
+    if [ -n "$THRESHOLD_OPTION" ] ; then
+        COMMAND="$COMMAND --threshold $THRESHOLD_OPTION"
+    fi
+    if [ -n "$TRIGGER_OPTION" ] ; then
+        COMMAND="$COMMAND --trigger $TRIGGER_OPTION"
+    fi
+
+    run_cmd $COMMAND
+    clear_options
+}
+
+check_promotion_params() {
+    check_options ${FUNCNAME[0]}
+
+    local COMMAND="$CAS --get-param --name $PROMO_POL_NS_OPTION \
+                   --cache-id $CACHE_ID_OPTION --output-format csv"
+
+    echo -n "$(date +%Y-%m-%d_%H:%M:%S)  "
+    echo -n "Checking threshold and/or trigger values. "
+    if [ -z "$THRESHOLD_OPTION" ] && [ -z "$TRIGGER_OPTION" ] ; then
+        error
+        echo "No defined promotion policy option to check! "
+        if [ -z $DONT_FAIL_ON_ERROR_OPTION ]; then
+            end_test 1
+        fi
+        return 1
+    fi
+
+    if [ -n "$THRESHOLD_OPTION" ] ; then
+        echo -n "THRESHOLD value = '$THRESHOLD_OPTION' "
+        THRESHOLD_VALUE=$($COMMAND | grep -i threshold | cut -d ',' -f2)
+        if [ "$THRESHOLD_OPTION" -ne "$THRESHOLD_VALUE" ] ; then
+            THRESHOLD_VALUE_ERROR="Threshold value do not match!"
+        fi
+    fi
+    if [ -n "$TRIGGER_OPTION" ] ; then
+        echo -n "TRIGGER value = '$TRIGGER_OPTION' "
+        TRIGGER_VALUE=$($COMMAND | grep -i trigger | cut -d ',' -f2)
+        if [ "$TRIGGER_OPTION" -ne "$TRIGGER_VALUE" ] ; then
+            TRIGGER_VALUE_ERROR="Trigger value do not match!"
+        fi
+    fi
+    if [ -n "$NEGATIVE_TEST_OPTION" ] && [ "$NEGATIVE_TEST_OPTION" -ne 0 ] ; then
+        echo -n "(negative test) "
+        if [ -n "$THRESHOLD_VALUE_ERROR" ] || [ -n "$TRIGGER_VALUE_ERROR" ] ; then
+            success
+        else
+            error
+            echo "Given values match!"
+            if [ -z $DONT_FAIL_ON_ERROR_OPTION ]; then
+                end_test 1
+            fi
+            return 1
+        fi
+    else
+        if [ -z "$THRESHOLD_VALUE_ERROR" ] && [ -z "$TRIGGER_VALUE_ERROR" ] ; then
+            success
+        else
+            error
+            echo -e "$THRESHOLD_VALUE_ERROR\n$TRIGGER_VALUE_ERROR"
+            if [ -z $DONT_FAIL_ON_ERROR_OPTION ]; then
+                end_test 1
+            fi
+            return 1
+        fi
+    fi
+
     clear_options
 }
 
@@ -603,6 +727,10 @@ export -f set_flush_params
 export -f get_flush_params
 export -f set_cleaning_policy
 export -f get_cleaning_policy
+export -f set_promotion_params
+export -f check_promotion_params
+export -f set_promotion_policy
+export -f check_promotion_policy
 export -f dirty_stop
 export -f check_no_cache_running
 
