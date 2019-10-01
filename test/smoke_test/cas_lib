@@ -201,7 +201,7 @@ warning() {
 # code against NEGATIVE_TEST_OPTION. If the NEGATIVE_TEST_OPTION is set, then
 # we assume the command should fail - otherwise the command should succeed.
 # If the output is correct, the command is printed and the test continues;
-# if not, we print an error message and end the test immiedately.
+# if not, we print an error message and end the test immediately.
 run_cmd() {
     export RUN_CMD_OUTPUT=""
     local L_RUN_CMD_START=$SECONDS
@@ -214,7 +214,7 @@ run_cmd() {
     export RUN_CMD_OUTPUT="${OUTPUT}"
     export RUN_CMD_TIME=$(( $SECONDS - $L_RUN_CMD_START ))
     if [ -z "$SILENT_COMMAND_OPTION" ] ; then
-        if [ -n "$NEGATIVE_TEST_OPTION" ] ; then
+        if [ -n "$NEGATIVE_TEST_OPTION" ] && [ "$NEGATIVE_TEST_OPTION" -ne 0 ] ; then
             echo -n "(negative test) "
             if [ $STATUS -ne 0 ] ; then
                 success
@@ -222,10 +222,10 @@ run_cmd() {
                 error
                 echo "--- Command output:"
                 echo "$OUTPUT"
-        if [ -z $DONT_FAIL_ON_ERROR_OPTION ]; then
-             end_test 1
-        fi
-        return 1
+                if [ -z $DONT_FAIL_ON_ERROR_OPTION ]; then
+                    end_test 1
+                fi
+                return 1
             fi
         else
             if [ $STATUS -eq 0 ]  ; then
@@ -235,9 +235,9 @@ run_cmd() {
                 echo "--- Command output:"
                 echo "$OUTPUT"
                 if [ -z $DONT_FAIL_ON_ERROR_OPTION ]; then
-             end_test 1
-        fi
-        return 1
+                    end_test 1
+                fi
+                return 1
             fi
         fi
     fi
