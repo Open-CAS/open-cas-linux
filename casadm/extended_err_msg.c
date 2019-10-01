@@ -62,6 +62,10 @@ struct {
 		"Too many core devices in cache"
 	},
 	{
+		OCF_ERR_CORE_NOT_EXIST,
+		"Core ID does not exist"
+	},
+	{
 		OCF_ERR_CORE_EXIST,
 		"Core id already used"
 	},
