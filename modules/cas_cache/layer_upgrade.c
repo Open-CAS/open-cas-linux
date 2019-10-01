@@ -332,10 +332,10 @@ static int _cas_upgrade_dump_cache_conf_promotion(ocf_cache_t cache,
 
 	if (promotion_type == ocf_promotion_nhit) {
 		result |= cache_mngt_get_promotion_param(cache,
-				ocf_nhit_insertion_threshold,
+				ocf_promotion_nhit, ocf_nhit_insertion_threshold,
 				&nhit_insertion_threshold);
 		result |= cache_mngt_get_promotion_param(cache,
-				ocf_nhit_trigger_threshold,
+				ocf_promotion_nhit, ocf_nhit_trigger_threshold,
 				&nhit_trigger_threshold);
 	}
 
@@ -1199,16 +1199,16 @@ static int _cas_upgrade_restore_conf_promotion(struct cas_properties *cache_prop
 		goto out;
 	}
 
-	result = cache_mngt_set_promotion_param(cache, ocf_nhit_insertion_threshold,
-			nhit_insertion_threshold);
+	result = cache_mngt_set_promotion_param(cache, ocf_promotion_nhit,
+			ocf_nhit_insertion_threshold, nhit_insertion_threshold);
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT "Couldn't set NHIT insertion "
 				"threshold parameter \n");
 		goto out;
 	}
 
-	result = cache_mngt_set_promotion_param(cache, ocf_nhit_trigger_threshold,
-			nhit_trigger_threshold);
+	result = cache_mngt_set_promotion_param(cache, ocf_promotion_nhit,
+			ocf_nhit_trigger_threshold, nhit_trigger_threshold);
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT "Couldn't set NHIT trigger "
 				"threshold parameter \n");

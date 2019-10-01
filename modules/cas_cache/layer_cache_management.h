@@ -24,11 +24,11 @@ int cache_mngt_set_promotion_policy(ocf_cache_t cache, uint32_t type);
 
 int cache_mngt_get_promotion_policy(ocf_cache_t cache, uint32_t *type);
 
-int cache_mngt_set_promotion_param(ocf_cache_t cache, uint32_t param_id,
-		uint32_t param_value);
+int cache_mngt_set_promotion_param(ocf_cache_t cache, ocf_promotion_t type,
+		uint32_t param_id, uint32_t param_value);
 
-int cache_mngt_get_promotion_param(ocf_cache_t cache, uint32_t param_id,
-		uint32_t *param_value);
+int cache_mngt_get_promotion_param(ocf_cache_t cache, ocf_promotion_t type,
+		uint32_t param_id, uint32_t *param_value);
 
 int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 		struct ocf_mngt_core_config *cfg,

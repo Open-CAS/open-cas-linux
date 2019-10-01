@@ -378,8 +378,8 @@ int cache_mngt_get_promotion_policy(ocf_cache_t cache, uint32_t *type)
 	return result;
 }
 
-int cache_mngt_set_promotion_param(ocf_cache_t cache, uint32_t param_id,
-		uint32_t param_value)
+int cache_mngt_set_promotion_param(ocf_cache_t cache, ocf_promotion_t type,
+		uint32_t param_id, uint32_t param_value)
 {
 	int result;
 
@@ -388,14 +388,15 @@ int cache_mngt_set_promotion_param(ocf_cache_t cache, uint32_t param_id,
 		return result;
 	}
 
-	result = ocf_mngt_cache_promotion_set_param(cache, param_id, param_value);
+	result = ocf_mngt_cache_promotion_set_param(cache, type, param_id,
+			param_value);
 
 	ocf_mngt_cache_unlock(cache);
 	return result;
 }
 
-int cache_mngt_get_promotion_param(ocf_cache_t cache, uint32_t param_id,
-		uint32_t *param_value)
+int cache_mngt_get_promotion_param(ocf_cache_t cache, ocf_promotion_t type,
+		uint32_t param_id, uint32_t *param_value)
 {
 	int result;
 
@@ -404,7 +405,8 @@ int cache_mngt_get_promotion_param(ocf_cache_t cache, uint32_t param_id,
 		return result;
 	}
 
-	result = ocf_mngt_cache_promotion_get_param(cache, param_id, param_value);
+	result = ocf_mngt_cache_promotion_get_param(cache, type, param_id,
+			param_value);
 
 	ocf_mngt_cache_read_unlock(cache);
 	return result;
@@ -2199,11 +2201,11 @@ int cache_mngt_set_cache_params(struct kcas_set_cache_param *info)
 		result = cache_mngt_set_promotion_policy(cache, info->param_value);
 		break;
 	case cache_param_promotion_nhit_insertion_threshold:
-		result = cache_mngt_set_promotion_param(cache,
+		result = cache_mngt_set_promotion_param(cache, ocf_promotion_nhit,
 				ocf_nhit_insertion_threshold, info->param_value);
 		break;
 	case cache_param_promotion_nhit_trigger_threshold:
-		result = cache_mngt_set_promotion_param(cache,
+		result = cache_mngt_set_promotion_param(cache, ocf_promotion_nhit,
 				ocf_nhit_trigger_threshold, info->param_value);
 		break;
 	default:
@@ -2264,14 +2266,12 @@ int cache_mngt_get_cache_params(struct kcas_get_cache_param *info)
 		result = cache_mngt_get_promotion_policy(cache, &info->param_value);
 		break;
 	case cache_param_promotion_nhit_insertion_threshold:
-		result = cache_mngt_get_promotion_param(cache,
-				ocf_nhit_insertion_threshold,
-				&info->param_value);
+		result = cache_mngt_get_promotion_param(cache, ocf_promotion_nhit,
+				ocf_nhit_insertion_threshold, &info->param_value);
 		break;
 	case cache_param_promotion_nhit_trigger_threshold:
-		result = cache_mngt_get_promotion_param(cache,
-				ocf_nhit_trigger_threshold,
-				&info->param_value);
+		result = cache_mngt_get_promotion_param(cache, ocf_promotion_nhit,
+				ocf_nhit_trigger_threshold, &info->param_value);
 		break;
 	default:
 		result = -EINVAL;

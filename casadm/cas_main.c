@@ -854,7 +854,7 @@ int set_param_promotion_nhit_handle_option(char *opt, const char **arg)
 				strtoul(arg[0], NULL, 10));
 	} else if (!strcmp(opt, "trigger")) {
 		if (validate_str_num(arg[0], "trigger",
-				OCF_NHIT_MIN_TRIGGER, OCF_NHIT_MAX_THRESHOLD)) {
+				OCF_NHIT_MIN_TRIGGER, OCF_NHIT_MAX_TRIGGER)) {
 			return FAILURE;
 		}
 
