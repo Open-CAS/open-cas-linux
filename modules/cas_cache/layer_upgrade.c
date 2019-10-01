@@ -828,11 +828,11 @@ int _cas_upgrade_set_pt_and_flush_visitor_cache(ocf_cache_t cache, void *cntx)
 	const char *cache_name = ocf_cache_get_name(cache);
 
 	*result = cache_mngt_set_cache_mode(cache_name,
-			ocf_cache_mode_pt, false);
+			OCF_CACHE_NAME_SIZE, ocf_cache_mode_pt, false);
 	if (*result)
 		return *result;
 
-	*result = cache_mngt_flush_device(cache_name);
+	*result = cache_mngt_flush_device(cache_name, OCF_CACHE_NAME_SIZE);
 	if (*result)
 		return *result;
 
@@ -866,7 +866,8 @@ int _cas_upgrade_stop_devices_visitor_exit(ocf_cache_t cache, void *cntx)
 {
 	int *result = (int*) cntx;
 
-	*result = cache_mngt_exit_instance(ocf_cache_get_name(cache), true);
+	*result = cache_mngt_exit_instance(ocf_cache_get_name(cache),
+					OCF_CACHE_NAME_SIZE, true);
 
 	return *result;
 }
@@ -986,7 +987,6 @@ static int _cas_upgrade_restore_conf_core(struct cas_properties *cache_props,
 	int result = 0;
 	unsigned long i = 0;
 	uint64_t core_no, version;
-	char core_name[OCF_CORE_NAME_SIZE];
 
 	char *core_path = NULL;
 	char *key = NULL;
@@ -1031,18 +1031,17 @@ static int _cas_upgrade_restore_conf_core(struct cas_properties *cache_props,
 			goto error;
 
 		result = cas_properties_get_string(cache_props, key,
-				core_name, OCF_CORE_NAME_SIZE);
+				cfg.name, OCF_CORE_NAME_SIZE);
 		if (result)
 			goto error;
 
-		cfg.name = core_name;
 		cfg.try_add = 0;
 		cfg.volume_type = BLOCK_DEVICE_VOLUME;
 		cfg.uuid.data = core_path;
 		cfg.uuid.size = strnlen(core_path, MAX_STR_LEN) + 1;
 
 		result = cache_mngt_add_core_to_cache(ocf_cache_get_name(cache),
-				&cfg, NULL);
+					OCF_CACHE_NAME_SIZE, &cfg, NULL);
 		if (result)
 			goto error;
 	}
@@ -1319,7 +1318,8 @@ static int _cas_upgrade_restore_conf_io_class(
 		cfg->info[part_id].min_size = (uint32_t)min_size;
 	}
 
-	result = cache_mngt_set_partitions(ocf_cache_get_name(cache), cfg);
+	result = cache_mngt_set_partitions(ocf_cache_get_name(cache),
+					OCF_CACHE_NAME_SIZE, cfg);
 
 error_after_alloc_buffers:
 	kfree(key);
@@ -1340,7 +1340,8 @@ static int _cas_upgrade_restore_cache(struct cas_properties *cache_props)
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+					OCF_CACHE_NAME_SIZE, &cache);
 	if (result)
 		return result;
 
@@ -1390,7 +1391,8 @@ static int _cas_upgrade_restore_cache_mode(struct cas_properties *cache_props)
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+					OCF_CACHE_NAME_SIZE, &cache);
 	if (result)
 		return result;
 
@@ -1401,7 +1403,7 @@ static int _cas_upgrade_restore_cache_mode(struct cas_properties *cache_props)
 
 	if (ocf_cache_get_mode(cache) != cache_mode) {
 		result = cache_mngt_set_cache_mode(ocf_cache_get_name(cache),
-				cache_mode, false);
+				OCF_CACHE_NAME_SIZE, cache_mode, false);
 		if (result)
 			goto error;
 
@@ -1428,7 +1430,8 @@ static int _cas_upgrade_restore_cache_after_error(
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+					OCF_CACHE_NAME_SIZE, &cache);
 	if (result == -OCF_ERR_CACHE_NOT_EXIST) {
 		result = _cas_upgrade_restore_cache(cache_props);
 	} else if (result == 0) {

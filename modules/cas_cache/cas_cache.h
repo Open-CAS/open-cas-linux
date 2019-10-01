@@ -157,7 +157,8 @@ static inline int mngt_get_cache_by_id(ocf_ctx_t ctx, uint16_t id,
 
 	cache_name_from_id(cache_name, id);
 
-	return ocf_mngt_cache_get_by_name(ctx, cache_name, cache);
+	return ocf_mngt_cache_get_by_name(ctx, cache_name,
+					OCF_CACHE_NAME_SIZE, cache);
 }
 
 static inline int get_core_by_id(ocf_cache_t cache, uint16_t id,
@@ -167,7 +168,7 @@ static inline int get_core_by_id(ocf_cache_t cache, uint16_t id,
 
 	core_name_from_id(core_name, id);
 
-	return ocf_core_get_by_name(cache, core_name, core);
+	return ocf_core_get_by_name(cache, core_name, OCF_CORE_NAME_SIZE, core);
 }
 
 

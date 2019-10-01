@@ -30,18 +30,20 @@ int cache_mngt_set_promotion_param(ocf_cache_t cache, uint32_t param_id,
 int cache_mngt_get_promotion_param(ocf_cache_t cache, uint32_t param_id,
 		uint32_t *param_value);
 
-int cache_mngt_add_core_to_cache(const char *cache_name,
+int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 		struct ocf_mngt_core_config *cfg,
 		struct kcas_insert_core *cmd_info);
 
 int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd);
 
-int cache_mngt_reset_stats(const char *cache_name, const char *core_name);
+int cache_mngt_reset_stats(const char *cache_name, size_t cache_name_len,
+			const char *core_name, size_t core_name_len);
 
-int cache_mngt_set_partitions(const char *cache_name,
+int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 		struct kcas_io_classes *cfg);
 
-int cache_mngt_exit_instance(const char *cache_name, int flush);
+int cache_mngt_exit_instance(const char *cache_name, size_t name_len,
+			int flush);
 
 int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
@@ -72,16 +74,17 @@ int cache_mngt_get_seq_cutoff_threshold(ocf_core_t core, uint32_t *thresh);
 int cache_mngt_get_seq_cutoff_policy(ocf_core_t core,
 		ocf_seq_cutoff_policy *policy);
 
-int cache_mngt_set_cache_mode(const char *cache_name, ocf_cache_mode_t mode,
-		uint8_t flush);
+int cache_mngt_set_cache_mode(const char *cache_name, size_t name_len,
+			ocf_cache_mode_t mode, uint8_t flush);
 
-int cache_mngt_flush_object(const char *cache_name, const char *core_name);
+int cache_mngt_flush_object(const char *cache_name, size_t cache_name_len,
+			const char *core_name, size_t core_name_len);
 
-int cache_mngt_flush_device(const char *cache_name);
+int cache_mngt_flush_device(const char *cache_name, size_t name_len);
 
 int cache_mngt_list_caches(struct kcas_cache_list *list);
 
-int cache_mngt_interrupt_flushing(const char *cache_name);
+int cache_mngt_interrupt_flushing(const char *cache_name, size_t name_len);
 
 int cache_mngt_get_stats(struct kcas_get_stats *stats);
 
