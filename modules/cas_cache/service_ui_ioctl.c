@@ -83,7 +83,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		cache_name_from_id(cache_name, cmd_info->cache_id);
 
-		retval = cache_mngt_exit_instance(cache_name,
+		retval = cache_mngt_exit_instance(cache_name, OCF_CACHE_NAME_SIZE,
 				cmd_info->flush_data);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
@@ -98,7 +98,8 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		cache_name_from_id(cache_name, cmd_info->cache_id);
 
 		retval = cache_mngt_set_cache_mode(cache_name,
-				cmd_info->caching_mode, cmd_info->flush_data);
+				OCF_CACHE_NAME_SIZE, cmd_info->caching_mode,
+				cmd_info->flush_data);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -116,8 +117,8 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		if (retval)
 			RETURN_CMD_RESULT(cmd_info, arg, retval);
 
-		retval = cache_mngt_add_core_to_cache(cache_name, &cfg,
-				cmd_info);
+		retval = cache_mngt_add_core_to_cache(cache_name,
+					OCF_CACHE_NAME_SIZE, &cfg, cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -144,9 +145,11 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		if (cmd_info->core_id != OCF_CORE_ID_INVALID)
 			core_name_from_id(core_name, cmd_info->core_id);
 
-		retval = cache_mngt_reset_stats(cache_name,
+		retval = cache_mngt_reset_stats(cache_name, OCF_CACHE_NAME_SIZE,
 				cmd_info->core_id != OCF_CORE_ID_INVALID ?
-						core_name : NULL);
+						core_name : NULL,
+				cmd_info->core_id != OCF_CORE_ID_INVALID ?
+						OCF_CORE_NAME_SIZE : 0);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -159,7 +162,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		cache_name_from_id(cache_name, cmd_info->cache_id);
 
-		retval = cache_mngt_flush_device(cache_name);
+		retval = cache_mngt_flush_device(cache_name, OCF_CACHE_NAME_SIZE);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -172,7 +175,8 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		cache_name_from_id(cache_name, cmd_info->cache_id);
 
-		retval = cache_mngt_interrupt_flushing(cache_name);
+		retval = cache_mngt_interrupt_flushing(cache_name,
+						OCF_CACHE_NAME_SIZE);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -188,7 +192,8 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		core_name_from_id(core_name, cmd_info->core_id);
 
-		retval = cache_mngt_flush_object(cache_name, core_name);
+		retval = cache_mngt_flush_object(cache_name, OCF_CACHE_NAME_SIZE,
+						core_name, OCF_CORE_NAME_SIZE);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -244,7 +249,8 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		cache_name_from_id(cache_name, cmd_info->cache_id);
 
-		retval = cache_mngt_set_partitions(cache_name, cmd_info);
+		retval = cache_mngt_set_partitions(cache_name,
+						OCF_CACHE_NAME_SIZE, cmd_info);
 
 		/* return just sizeof(struct kcas_io_classes) bytes of data */
 		RETURN_CMD_RESULT(cmd_info, arg, retval);

@@ -216,13 +216,15 @@ static void mark_core_id_free(uint64_t *bitmap, uint16_t core_id)
 	clear_bit(core_id, (unsigned long *)bitmap);
 }
 
-int cache_mngt_flush_object(const char *cache_name, const char *core_name)
+int cache_mngt_flush_object(const char *cache_name, size_t cache_name_len,
+			const char *core_name, size_t core_name_len)
 {
 	ocf_cache_t cache;
 	ocf_core_t core;
 	int result;
 
-	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+					cache_name_len, &cache);
 	if (result)
 		return result;
 
@@ -232,7 +234,7 @@ int cache_mngt_flush_object(const char *cache_name, const char *core_name)
 		return result;
 	}
 
-	result = ocf_core_get_by_name(cache, core_name, &core);
+	result = ocf_core_get_by_name(cache, core_name, core_name_len, &core);
 	if (result)
 		goto out;
 
@@ -244,12 +246,13 @@ out:
 	return result;
 }
 
-int cache_mngt_flush_device(const char *cache_name)
+int cache_mngt_flush_device(const char *cache_name, size_t name_len)
 {
 	int result;
 	ocf_cache_t cache;
 
-	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+					name_len, &cache);
 	if (result)
 		return result;
 
@@ -563,7 +566,8 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 	snprintf(core_name, sizeof(core_name), "core%d", cmd_info->core_id);
 
 	memset(cfg, 0, sizeof(*cfg));
-	cfg->name = core_name;
+	env_strncpy(cfg->name, OCF_CORE_NAME_SIZE, core_name, OCF_CORE_NAME_SIZE);
+
 	cfg->uuid.data = cmd_info->core_path_name;
 	cfg->uuid.size = strnlen(cmd_info->core_path_name, MAX_STR_LEN) + 1;
 	cfg->try_add = cmd_info->try_add;
@@ -595,7 +599,7 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 }
 
 static int cache_mngt_update_core_uuid(ocf_cache_t cache, const char *core_name,
-		ocf_uuid_t uuid)
+				size_t name_len, ocf_uuid_t uuid)
 {
 	ocf_core_t core;
 	ocf_volume_t vol;
@@ -604,7 +608,7 @@ static int cache_mngt_update_core_uuid(ocf_cache_t cache, const char *core_name,
 	bool match;
 	int result;
 
-	if (ocf_core_get_by_name(cache, core_name, &core)) {
+	if (ocf_core_get_by_name(cache, core_name, name_len, &core)) {
 		/* no such core */
 		return -ENODEV;
 	}
@@ -690,7 +694,7 @@ static void _cache_mngt_add_core_complete(ocf_cache_t cache,
 
 static void _cache_mngt_remove_core_complete(void *priv, int error);
 
-int cache_mngt_add_core_to_cache(const char *cache_name,
+int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 		struct ocf_mngt_core_config *cfg,
 		struct kcas_insert_core *cmd_info)
 {
@@ -701,7 +705,8 @@ int cache_mngt_add_core_to_cache(const char *cache_name,
 	int result, remove_core_result;
 	struct cache_priv *cache_priv;
 
-	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+					name_len, &cache);
 	if (cfg->try_add && (result == -OCF_ERR_CACHE_NOT_EXIST)) {
 		result = ocf_mngt_core_pool_add(cas_ctx, &cfg->uuid,
 				cfg->volume_type);
@@ -728,7 +733,8 @@ int cache_mngt_add_core_to_cache(const char *cache_name,
 	}
 
 	if (cmd_info && cmd_info->update_path) {
-		result = cache_mngt_update_core_uuid(cache, cfg->name, &cfg->uuid);
+		result = cache_mngt_update_core_uuid(cache, cfg->name,
+						OCF_CORE_NAME_SIZE, &cfg->uuid);
 		ocf_mngt_cache_unlock(cache);
 		ocf_mngt_cache_put(cache);
 		return result;
@@ -928,13 +934,15 @@ rd_unlock:
 	return result;
 }
 
-int cache_mngt_reset_stats(const char *cache_name, const char *core_name)
+int cache_mngt_reset_stats(const char *cache_name, size_t cache_name_len,
+				const char *core_name, size_t core_name_len)
 {
 	ocf_cache_t cache;
 	ocf_core_t core;
 	int result = 0;
 
-	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, cache_name_len,
+						&cache);
 	if (result)
 		return result;
 
@@ -945,7 +953,8 @@ int cache_mngt_reset_stats(const char *cache_name, const char *core_name)
 	}
 
 	if (core_name) {
-		result = ocf_core_get_by_name(cache, core_name, &core);
+		result = ocf_core_get_by_name(cache, core_name,
+					core_name_len, &core);
 		if (result)
 			goto out;
 
@@ -971,7 +980,7 @@ static inline void io_class_info2cfg(ocf_part_id_t part_id,
 	cfg->max_size = info->max_size;
 }
 
-int cache_mngt_set_partitions(const char *cache_name,
+int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 		struct kcas_io_classes *cfg)
 {
 	ocf_cache_t cache;
@@ -997,7 +1006,8 @@ int cache_mngt_set_partitions(const char *cache_name,
 				&io_class_cfg->config[class_id]);
 	}
 
-	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+					name_len, &cache);
 	if (result)
 		goto out_get;
 
@@ -1672,14 +1682,15 @@ int cache_mngt_get_seq_cutoff_policy(ocf_core_t core,
  * @param flush shall we flush dirty data during switch, or shall we flush
  *            all remaining dirty data before entering new mode?
  */
-int cache_mngt_set_cache_mode(const char *cache_name, ocf_cache_mode_t mode,
-		uint8_t flush)
+int cache_mngt_set_cache_mode(const char *cache_name, size_t name_len,
+			ocf_cache_mode_t mode, uint8_t flush)
 {
 	ocf_cache_mode_t old_mode;
 	ocf_cache_t cache;
 	int result;
 
-	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+					name_len, &cache);
 	if (result)
 		return result;
 
@@ -1720,14 +1731,15 @@ out:
  *		if yes, flushing may still be interrupted by user (in which case
  *		device won't be actually removed and error will be returned)
  */
-int cache_mngt_exit_instance(const char *cache_name, int flush)
+int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 {
 	ocf_cache_t cache;
 	struct cache_priv *cache_priv;
 	int status, flush_status = 0;
 
 	/* Get cache */
-	status = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
+	status = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+					name_len, &cache);
 	if (status)
 		return status;
 
@@ -1857,13 +1869,14 @@ int cache_mngt_list_caches(struct kcas_cache_list *list)
 	return ocf_mngt_cache_visit(cas_ctx, cache_mngt_list_caches_visitor, list);
 }
 
-int cache_mngt_interrupt_flushing(const char *cache_name)
+int cache_mngt_interrupt_flushing(const char *cache_name, size_t name_len)
 {
 	ocf_cache_t cache;
 	struct cache_priv *cache_priv;
 	int result;
 
-	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name, &cache);
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+					name_len, &cache);
 	if (result)
 		return result;
 

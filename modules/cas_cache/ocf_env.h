@@ -421,9 +421,10 @@ static inline u64 env_atomic64_cmpxchg(atomic64_t *a, u64 old, u64 new)
 
 typedef spinlock_t env_spinlock;
 
-static inline void env_spinlock_init(env_spinlock *l)
+static inline int env_spinlock_init(env_spinlock *l)
 {
 	spin_lock_init(l);
+	return 0;
 }
 
 static inline void env_spinlock_lock(env_spinlock *l)
@@ -592,7 +593,8 @@ static inline void env_msleep(uint64_t n)
 	})
 #define env_strdup kstrdup
 #define env_strnlen(s, smax) strnlen(s, smax)
-#define env_strncmp strncmp
+#define env_strncmp(s1, slen1, s2, slen2) strncmp(s1, s2, \
+					min_t(size_t, slen1, slen2))
 #define env_strncpy(dest, dmax, src, slen) ({ \
 		strlcpy(dest, src, min_t(int, dmax, slen)); \
 		0; \
