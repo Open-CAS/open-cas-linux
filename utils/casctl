@@ -125,6 +125,10 @@ class cas:
         parser_stop.set_defaults(command='stop')
         parser_stop.add_argument ('--flush', action='store_true', help = 'Flush data before stopping')
 
+        if len(sys.argv[1:]) == 0:
+            parser.print_help()
+            return
+
         args = parser.parse_args(sys.argv[1:])
         getattr(self, 'command_' + args.command)(args)
 
