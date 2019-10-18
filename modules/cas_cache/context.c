@@ -297,6 +297,28 @@ static void _cas_ctx_metadata_updater_stop(ocf_metadata_updater_t mu)
 	return cas_stop_metadata_updater_thread(mu);
 }
 
+#define CAS_LOG_FORMAT_STRING_MAX_LEN 256
+
+int open(ocf_logger_t logger)
+{
+	void __percpu *priv;
+
+	priv = alloc_percpu(char[CAS_LOG_FORMAT_STRING_MAX_LEN]);
+	if (!priv)
+		return -ENOMEM;
+
+	ocf_logger_set_priv(logger, priv);
+
+	return 0;
+}
+
+void close(ocf_logger_t logger)
+{
+	void __percpu *priv = ocf_logger_get_priv(logger);
+
+	free_percpu(priv);
+}
+
 /*
  *
  */
@@ -313,17 +335,27 @@ static int _cas_ctx_logger_print(ocf_logger_t logger, ocf_logger_lvl_t lvl,
 		[log_info] = KERN_INFO,
 		[log_debug] = KERN_DEBUG,
 	};
-	char *format;
+	int ret;
+	void __percpu *priv;
+	char *buf;
+
 	if (((unsigned)lvl) >= sizeof(level)/sizeof(level[0]))
 		return -EINVAL;
 
-	format = kasprintf(GFP_ATOMIC, "%s%s", level[lvl], fmt);
-	if (!format)
-		return -ENOMEM;
+	priv = ocf_logger_get_priv(logger);
+	buf = get_cpu_ptr(priv);
 
-	vprintk(format, args);
+	/* Try to prepend log level prefix to format string. If this fails
+	 * for any reason, we just fall back to user provided format string */
+	ret = snprintf(buf, CAS_LOG_FORMAT_STRING_MAX_LEN, "%s%s", level[lvl],
+			fmt);
+	if (ret >= CAS_LOG_FORMAT_STRING_MAX_LEN)
+		vprintk(fmt, args);
+	else
+		vprintk(buf, args);
 
-	kfree(format);
+
+	put_cpu_ptr(priv);
 
 	return 0;
 }
