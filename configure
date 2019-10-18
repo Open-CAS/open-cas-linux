@@ -4,14 +4,44 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
+MISSING_TOOLS=0
+
 check_util() {
-    which $1 2>&1 > /dev/null || { echo >&2 "Error: missing '$1' utility"; exit 1; }
+	which $1 &> /dev/null
+	if [ $? -ne 0 ]
+	then
+		echo >&2 "Error: missing '$1' utility"
+		MISSING_TOOLS=1
+	fi
 }
 
 check_util dirname
 check_util realpath
 check_util basename
 check_util awk
+check_util python3
+check_util sed
+check_util make
+check_util gcc
+check_util lsblk
+
+if [ ! -e /lib/modules/$(uname -r)/build/ &> /dev/null ]
+then
+	echo >&2 "Error: missing kernel headers"
+	MISSING_TOOLS=1
+fi
+
+`python3 -c "import argparse" &> /dev/null`
+if [ $? -ne 0 ]
+then
+	echo >&2 "Error: missing argparse python module"
+	MISSING_TOOLS=1
+fi
+
+if [ "$MISSING_TOOLS" -ne "0" ]
+then
+	exit 1
+fi
 
 SCRIPTPATH=`dirname $0`
 SCRIPTPATH=`realpath $SCRIPTPATH`

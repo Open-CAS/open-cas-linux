@@ -34,6 +34,7 @@ compile_module(){
 
 	config_file=$1
 	test_module_dir=$SCRIPTPATH/configure.d/${config_file}_dir
+	test_module_log=$SCRIPTPATH/configure.d/.${config_file}.log
 	test_module_file=$test_module_dir/test_mod.c
 	test_module_obj=$test_module_dir/test_mod.o
 
@@ -54,11 +55,18 @@ compile_module(){
 	EOF
 	#######################################
 
-	make -C $test_module_dir KERNEL_DIR=${KERNEL_DIR} &> /dev/null
+	echo "### $2 ###" >> $test_module_log
+
+	make -C $test_module_dir KERNEL_DIR=${KERNEL_DIR} &>> $test_module_log
 
 	local ret=$?
 
 	rm -Rf $test_module_dir
+
+	if [ $ret -eq 0 ]
+	then
+		rm -f $test_module_log
+	fi
 
 	return $ret
 }
