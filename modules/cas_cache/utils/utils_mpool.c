@@ -85,7 +85,9 @@ void *cas_mpool_new_f(struct cas_mpool *mpool, uint32_t count, int flags)
 	if (allocator)
 		items = env_allocator_new(allocator);
 	else
-		items = env_zalloc(mpool->hdr_size + (mpool->item_size * count), flags);
+		items = __vmalloc(mpool->hdr_size + (mpool->item_size * count),
+				flags | __GFP_ZERO | __GFP_HIGHMEM,
+				PAGE_KERNEL);
 
 #ifdef ZERO_OR_NULL_PTR
 	if (ZERO_OR_NULL_PTR(items))
@@ -110,5 +112,5 @@ void cas_mpool_del(struct cas_mpool *mpool,
 	if (allocator)
 		env_allocator_del(allocator, items);
 	else
-		env_free(items);
+		cas_vfree(items);
 }
