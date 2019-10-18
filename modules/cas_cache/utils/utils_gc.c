@@ -3,10 +3,12 @@
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
+#include "cas_cache.h"
 #include "utils_gc.h"
 #include <linux/vmalloc.h>
 
 #if defined (CAS_GARBAGE_COLLECTOR)
+
 struct cas_vfree_item {
 	struct llist_head list;
 	struct work_struct ws;
@@ -34,6 +36,9 @@ static void cas_garbage_collector(struct work_struct *w)
 void cas_vfree(const void *addr)
 {
 	struct cas_vfree_item *item = this_cpu_ptr(&cas_vfree_item);
+
+	if (!addr)
+		return;
 
 	atomic_inc(&freed);
 
