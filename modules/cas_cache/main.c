@@ -76,6 +76,7 @@ int static cas_find_symbol(void *data, const char *namebuf,
 
 int static cas_casdisk_lookup_funtions(void)
 {
+	mutex_lock(&module_mutex);
 	cas_lookup_symbol(casdsk_disk_dettach);
 	cas_lookup_symbol(casdsk_exp_obj_destroy);
 	cas_lookup_symbol(casdsk_exp_obj_create);
@@ -100,6 +101,7 @@ int static cas_casdisk_lookup_funtions(void)
 	cas_lookup_symbol(casdsk_disk_open);
 	cas_lookup_symbol(casdsk_disk_clear_pt);
 	cas_lookup_symbol(casdsk_exp_obj_get_gendisk);
+	mutex_unlock(&module_mutex);
 	return 0;
 }
 
