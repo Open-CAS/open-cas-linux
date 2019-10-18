@@ -187,7 +187,7 @@ static int _blockdev_alloc_many_requests(ocf_core_t core,
 			flags = 0;
 		}
 
-		data = cas_alloc_blk_data(bio_segments(bio), GFP_ATOMIC);
+		data = cas_alloc_blk_data(bio_segments(bio), GFP_NOIO);
 		if (!data) {
 			CAS_PRINT_RL(KERN_CRIT "BIO data vector allocation error\n");
 			error = -ENOMEM;
@@ -420,7 +420,7 @@ static int __block_dev_queue_rq(struct request *rq, ocf_core_t core)
 	}
 
 	if (single_io) {
-		data = cas_alloc_blk_data(size, GFP_ATOMIC);
+		data = cas_alloc_blk_data(size, GFP_NOIO);
 		if (data == NULL) {
 			CAS_PRINT_RL(KERN_CRIT
 				"Out of memory. Ending IO processing.\n");
@@ -445,7 +445,7 @@ static int __block_dev_queue_rq(struct request *rq, ocf_core_t core)
 	} else {
 		struct list_head list = LIST_HEAD_INIT(list);
 
-		data = cas_alloc_blk_data(0, GFP_ATOMIC);
+		data = cas_alloc_blk_data(0, GFP_NOIO);
 		if (data == NULL) {
 			printk(KERN_CRIT
 				"Out of memory. Ending IO processing.\n");
@@ -753,7 +753,7 @@ static int _blockdev_make_request_fast(struct casdsk_disk *dsk,
 		return CASDSK_BIO_HANDLED;
 	}
 
-	data = cas_alloc_blk_data(bio_segments(bio), GFP_ATOMIC);
+	data = cas_alloc_blk_data(bio_segments(bio), GFP_NOIO);
 	if (!data) {
 		CAS_PRINT_RL(KERN_CRIT "BIO data vector allocation error\n");
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));

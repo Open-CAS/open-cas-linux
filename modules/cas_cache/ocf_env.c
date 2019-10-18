@@ -34,7 +34,7 @@ static inline size_t env_allocator_align(size_t size)
 }
 
 struct _env_allocator_item {
-	uint32_t flags;
+	uint32_t from_rpool;
 	uint32_t cpu;
 	char data[];
 };
@@ -49,7 +49,7 @@ void *env_allocator_new(env_allocator *allocator)
 		memset(item->data, 0, allocator->item_size -
 			sizeof(struct _env_allocator_item));
 	} else {
-		item = kmem_cache_zalloc(allocator->kmem_cache, GFP_ATOMIC);
+		item = kmem_cache_zalloc(allocator->kmem_cache, GFP_NOIO);
 	}
 
 	if (item) {
@@ -66,11 +66,10 @@ void *env_allocator_new_rpool(void *allocator_ctx, int cpu)
 	env_allocator *allocator = (env_allocator*) allocator_ctx;
 	struct _env_allocator_item *item;
 
-	item = kmem_cache_zalloc(allocator->kmem_cache, GFP_NOIO |
-			__GFP_NORETRY);
+	item = kmem_cache_zalloc(allocator->kmem_cache, GFP_KERNEL);
 
 	if (item) {
-		item->flags = (GFP_NOIO | __GFP_NORETRY);
+		item->from_rpool = 1;
 		item->cpu = cpu;
 	}
 
@@ -176,9 +175,10 @@ void env_allocator_del(env_allocator *allocator, void *obj)
 
 	atomic_dec(&allocator->count);
 
-	if (item->flags == (GFP_NOIO | __GFP_NORETRY) &&
-			!cas_rpool_try_put(allocator->rpool, item, item->cpu))
+	if (item->from_rpool && !cas_rpool_try_put(allocator->rpool, item,
+			item->cpu)) {
 			return;
+	}
 
 	kmem_cache_free(allocator->kmem_cache, item);
 }

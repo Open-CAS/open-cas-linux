@@ -18,7 +18,6 @@
 
 #define ENV_MEM_NORMAL	GFP_KERNEL
 #define ENV_MEM_NOIO	GFP_NOIO
-#define ENV_MEM_ATOMIC	GFP_ATOMIC
 
 static inline uint64_t env_get_free_memory(void)
 {
