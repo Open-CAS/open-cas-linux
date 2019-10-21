@@ -1,8 +1,9 @@
-ip: "x.x.x.x"
-user: "example_user"
-password: "example_password"
+# ip: "x.x.x.x"
+# user: "example_user"
+# password: "example_password"
 
-env: "HTTPS_PROXY=myproxy.example:12345"
+# env: "HTTPS_PROXY=myproxy.example:12345"
+
 working_dir: "/tmp/open-cas-linux/"
 
 disks:
