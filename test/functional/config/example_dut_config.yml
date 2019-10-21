@@ -1,0 +1,16 @@
+ip: "x.x.x.x"
+user: "example_user"
+password: "example_password"
+
+env: "HTTPS_PROXY=myproxy.example:12345"
+working_dir: "/tmp/open-cas-linux/"
+
+disks:
+  - path: '/dev/device_name1' # disk device path
+    serial: 'ABC'             # disk serial number
+    type: 'nand'              # disk type
+    blocksize: 512            # 512B
+  - path: '/dev/device_name2'
+    serial: 'DEF'
+    type: 'hdd'
+    blocksize: 512
