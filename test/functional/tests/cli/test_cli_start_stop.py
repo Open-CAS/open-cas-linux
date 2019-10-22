@@ -7,18 +7,15 @@
 import pytest
 from api.cas import casadm, casadm_parser
 from core.test_run import TestRun
-from storage_devices.disk import DiskType
+from storage_devices.disk import DiskType, DiskTypeSet
 from test_utils.size import Unit, Size
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane]))
 @pytest.mark.parametrize("shortcut", [True, False])
-@pytest.mark.parametrize('prepare_and_cleanup',
-                         [{"core_count": 0, "cache_count": 1, "cache_type": "optane"}, ],
-                         indirect=True)
-def test_cli_start_stop_default_value(prepare_and_cleanup, shortcut):
+def test_cli_start_stop_default_value(shortcut):
     with TestRun.LOGGER.step("Prepare devices"):
-        cache_device = next(
-            disk for disk in TestRun.dut.disks if disk.disk_type == DiskType.optane)
+        cache_device = TestRun.disks['cache']
         cache_device.create_partitions([Size(500, Unit.MebiByte)])
         cache_device = cache_device.partitions[0]
 
@@ -47,13 +44,10 @@ def test_cli_start_stop_default_value(prepare_and_cleanup, shortcut):
             TestRun.LOGGER.error("There is no 'No caches running' info in casadm -L output")
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane]))
 @pytest.mark.parametrize("shortcut", [True, False])
-@pytest.mark.parametrize('prepare_and_cleanup',
-                         [{"core_count": 1, "cache_count": 1, "cache_type": "optane"}],
-                         indirect=True)
-def test_cli_add_remove_default_value(prepare_and_cleanup, shortcut):
-    cache_device = next(
-        disk for disk in TestRun.dut.disks if disk.disk_type == DiskType.optane)
+def test_cli_add_remove_default_value(shortcut):
+    cache_device = TestRun.disks['cache']
     cache_device.create_partitions([Size(500, Unit.MebiByte)])
     cache_device = cache_device.partitions[0]
     cache = casadm.start_cache(cache_device, shortcut=shortcut, force=True)

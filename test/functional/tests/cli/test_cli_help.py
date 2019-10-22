@@ -14,10 +14,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @pytest.mark.parametrize("shortcut", [True, False])
-@pytest.mark.parametrize('prepare_and_cleanup',
-                         [{"core_count": 0, "cache_count": 0}],
-                         indirect=True)
-def test_cli_help(prepare_and_cleanup, shortcut):
+def test_cli_help(shortcut):
     prepare()
     LOGGER.info("Test run")
     output = casadm.help(shortcut)

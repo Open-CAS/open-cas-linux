@@ -14,13 +14,13 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_utils.filesystem.file import File
 from test_utils.os_utils import sync, Udev
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from .io_class_common import *
 
 
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_lba(prepare_and_cleanup):
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_ioclass_lba():
     """Write data to random lba and check if it is cached according to range
     defined in ioclass rule"""
     cache, core = prepare()
@@ -92,10 +92,9 @@ def test_ioclass_lba(prepare_and_cleanup):
         ), f"Inappropriately cached lba: {rand_lba}"
 
 
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_request_size(prepare_and_cleanup):
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_ioclass_request_size():
     cache, core = prepare()
 
     ioclass_id = 1
@@ -161,11 +160,10 @@ def test_ioclass_request_size(prepare_and_cleanup):
         assert stats["dirty"].get_value(Unit.Blocks4096) == 0
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("filesystem", list(Filesystem) + [False])
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_direct(prepare_and_cleanup, filesystem):
+def test_ioclass_direct(filesystem):
     """
     Perform buffered/direct IO to/from files or raw block device.
     Data from buffered IO should be cached.
@@ -247,11 +245,10 @@ def test_ioclass_direct(prepare_and_cleanup, filesystem):
         f"Expected: {base_occupancy + io_size}, actual: {new_occupancy}"
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_metadata(prepare_and_cleanup, filesystem):
+def test_ioclass_metadata(filesystem):
     """
     Perform operations on files that cause metadata update.
     Determine if every such operation results in increased writes to cached metadata.
@@ -338,11 +335,10 @@ def test_ioclass_metadata(prepare_and_cleanup, filesystem):
         pytest.xfail("No requests to metadata while deleting directory with files!")
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_id_as_condition(prepare_and_cleanup, filesystem):
+def test_ioclass_id_as_condition(filesystem):
     """
     Load config in which IO class ids are used as conditions in other IO class definitions.
     Check if performed IO is properly classified.
@@ -478,11 +474,10 @@ def test_ioclass_id_as_condition(prepare_and_cleanup, filesystem):
         f"Expected: {base_occupancy + ioclass_file_size}, actual: {new_occupancy}"
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_conditions_or(prepare_and_cleanup, filesystem):
+def test_ioclass_conditions_or(filesystem):
     """
     Load config with IO class combining 5 contradicting conditions connected by OR operator.
     Check if every IO fulfilling one condition is classified properly.
@@ -527,11 +522,10 @@ def test_ioclass_conditions_or(prepare_and_cleanup, filesystem):
             f"Expected: {base_occupancy + file_size}, actual: {new_occupancy}"
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_conditions_and(prepare_and_cleanup, filesystem):
+def test_ioclass_conditions_and(filesystem):
     """
     Load config with IO class combining 5 conditions contradicting at least one other condition
     connected by AND operator.

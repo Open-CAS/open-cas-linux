@@ -7,17 +7,16 @@
 import pytest
 from core.test_run import TestRun
 from tests.conftest import base_prepare
-from storage_devices.disk import DiskType
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.size import Size, Unit
 from api.cas.cache_config import CacheMode
 from api.cas import casadm
 from test_tools.dd import Dd
 
 
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_core_inactive(prepare_and_cleanup):
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_core_inactive():
     """
         1. Start cache with 3 cores.
         2. Stop cache.
@@ -48,10 +47,9 @@ def test_core_inactive(prepare_and_cleanup):
     assert stats["inactive core devices"] == 1
 
 
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_core_inactive_stats(prepare_and_cleanup):
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_core_inactive_stats():
     """
         1. Start cache with 3 cores.
         2. Switch cache into WB mode.
@@ -136,18 +134,8 @@ def test_core_inactive_stats(prepare_and_cleanup):
 
 def prepare():
     base_prepare()
-    cache_device = next(
-        disk
-        for disk in TestRun.dut.disks
-        if disk.disk_type in [DiskType.optane, DiskType.nand]
-    )
-    core_device = next(
-        disk
-        for disk in TestRun.dut.disks
-        if (
-            disk.disk_type.value > cache_device.disk_type.value and disk != cache_device
-        )
-    )
+    cache_device = TestRun.disks['cache']
+    core_device = TestRun.disks['core']
 
     cache_device.create_partitions([Size(500, Unit.MebiByte)])
     core_device.create_partitions(

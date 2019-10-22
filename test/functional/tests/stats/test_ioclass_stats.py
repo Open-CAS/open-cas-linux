@@ -12,7 +12,7 @@ from api.cas import casadm_parser
 from api.cas.cache_config import CleaningPolicy
 from tests.conftest import base_prepare
 from core.test_run import TestRun
-from storage_devices.disk import DiskType
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.disk_utils import Filesystem
 from test_utils.size import Size, Unit
 from test_utils.os_utils import sync, Udev
@@ -23,10 +23,9 @@ mountpoint = "/tmp/cas1-1"
 cache_id = 1
 
 
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_stats_set(prepare_and_cleanup):
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_ioclass_stats_set():
     """Try to retrieve stats for all set ioclasses"""
     prepare()
     min_ioclass_id = 1
@@ -56,10 +55,9 @@ def test_ioclass_stats_set(prepare_and_cleanup):
                 )
 
 
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_stats_sum(prepare_and_cleanup):
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_ioclass_stats_sum():
     """Check if stats for all set ioclasses sum up to cache stats"""
     cache, core = prepare()
     min_ioclass_id = 1
@@ -148,16 +146,8 @@ def flush_cache(cache_id):
 def prepare():
     base_prepare()
     ioclass_config.remove_ioclass_config()
-    cache_device = next(
-        disk
-        for disk in TestRun.dut.disks
-        if disk.disk_type in [DiskType.optane, DiskType.nand]
-    )
-    core_device = next(
-        disk
-        for disk in TestRun.dut.disks
-        if (disk.disk_type.value > cache_device.disk_type.value and disk != cache_device)
-    )
+    cache_device = TestRun.disks['cache']
+    core_device = TestRun.disks['core']
 
     cache_device.create_partitions([Size(500, Unit.MebiByte)])
     core_device.create_partitions([Size(2, Unit.GibiByte)])

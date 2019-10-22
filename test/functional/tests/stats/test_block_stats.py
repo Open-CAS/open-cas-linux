@@ -12,7 +12,7 @@ from test_tools.dd import Dd
 from api.cas.cache_config import CacheMode, CleaningPolicy
 from tests.conftest import base_prepare
 from core.test_run import TestRun
-from storage_devices.disk import DiskType
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.size import Size, Unit
 from test_utils.os_utils import Udev
 
@@ -72,6 +72,8 @@ write_wo_zero_stats = [
 ]
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize(
     "cache_mode,zero_stats",
     [
@@ -82,10 +84,7 @@ write_wo_zero_stats = [
         (CacheMode.WO, write_wo_zero_stats),
     ],
 )
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_block_stats_write(prepare_and_cleanup, cache_mode, zero_stats):
+def test_block_stats_write(cache_mode, zero_stats):
     """Perform read and write operations to cache instance in different cache modes
         and check if block stats values are correct"""
     cache, cores = prepare(cache_mode)
@@ -198,6 +197,8 @@ read_wo_zero_stats = [
 ]
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize(
     "cache_mode,zero_stats",
     [
@@ -208,10 +209,7 @@ read_wo_zero_stats = [
         (CacheMode.WO, read_wo_zero_stats),
     ],
 )
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_block_stats_read(prepare_and_cleanup, cache_mode, zero_stats):
+def test_block_stats_read(cache_mode, zero_stats):
     """Perform read and write operations to cache instance in different cache modes
         and check if block stats values are correct"""
     cache, cores = prepare(cache_mode)
@@ -294,16 +292,8 @@ def flush(cache):
 def prepare(cache_mode: CacheMode):
     base_prepare()
     ioclass_config.remove_ioclass_config()
-    cache_device = next(
-        disk
-        for disk in TestRun.dut.disks
-        if disk.disk_type in [DiskType.optane, DiskType.nand]
-    )
-    core_device = next(
-        disk
-        for disk in TestRun.dut.disks
-        if (disk.disk_type.value > cache_device.disk_type.value and disk != cache_device)
-    )
+    cache_device = TestRun.disks['cache']
+    core_device = TestRun.disks['core']
 
     cache_device.create_partitions([Size(500, Unit.MebiByte)])
     core_device.create_partitions(
