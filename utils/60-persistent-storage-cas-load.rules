@@ -3,9 +3,4 @@ SUBSYSTEM!="block", GOTO="cas_loader_end"
 
 RUN+="/lib/opencas/open-cas-loader /dev/$name"
 
-# Work around systemd<->udev interaction, make sure filesystems with labels on
-# cas are mounted properly
-KERNEL!="cas*", GOTO="cas_loader_end"
-IMPORT{builtin}="blkid"
-ENV{ID_FS_USAGE}=="filesystem|other", ENV{ID_FS_LABEL_ENC}=="?*", RUN+="/lib/opencas/open-cas-mount-utility $env{ID_FS_LABEL_ENC}"
 LABEL="cas_loader_end"
