@@ -895,6 +895,8 @@ int set_param_namespace_handle_option(char *namespace, char *opt, const char **a
 
 int handle_set_param()
 {
+	int err = 0;
+
 	if (command_args_values.params_count == 0) {
 		cas_printf(LOG_ERR, "Error: No parameters specified!\n");
 		return FAILURE;
@@ -902,15 +904,20 @@ int handle_set_param()
 
 	switch (command_args_values.params_type) {
 	case PARAM_TYPE_CORE:
-		return core_params_set(command_args_values.cache_id,
+		err = core_params_set(command_args_values.cache_id,
 				command_args_values.core_id,
 				cas_core_params);
 	case PARAM_TYPE_CACHE:
-		return cache_params_set(command_args_values.cache_id,
+		err = cache_params_set(command_args_values.cache_id,
 				cas_cache_params);
 	default:
-		return FAILURE;
+		err = FAILURE;
 	}
+
+	if (err)
+		cas_printf(LOG_ERR, "Setting runtime parameter failed!\n");
+
+	return err;
 }
 
 /*****************************************************************************
@@ -985,6 +992,7 @@ int get_param_namespace_handle_option(char *namespace, char *opt, const char **a
 int handle_get_param()
 {
 	int format = TEXT;
+	int err = 0;
 
 	if (OUTPUT_FORMAT_CSV == command_args_values.output_format) {
 		format = RAW_CSV;
@@ -992,15 +1000,20 @@ int handle_get_param()
 
 	switch (command_args_values.params_type) {
 	case PARAM_TYPE_CORE:
-		return core_params_get(command_args_values.cache_id,
+		err = core_params_get(command_args_values.cache_id,
 				command_args_values.core_id,
 				cas_core_params, format);
 	case PARAM_TYPE_CACHE:
-		return cache_params_get(command_args_values.cache_id,
+		err = cache_params_get(command_args_values.cache_id,
 				cas_cache_params, format);
 	default:
-		return FAILURE;
+		err = FAILURE;
 	}
+
+	if (err)
+		cas_printf(LOG_ERR, "Getting runtime parameter failed!\n");
+
+	return err;
 }
 
 static cli_option set_state_cache_mode_options[] = {
