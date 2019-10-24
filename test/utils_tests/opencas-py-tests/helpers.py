@@ -52,7 +52,7 @@ def get_hashed_config_list(conf):
 
 def get_conf_line_hash(line):
     """
-    Removes whitespace, lowercases, comments and sorts cache params if present.
+    Removes whitespace, lowercases, comments and sorts params if present.
     Returns empty line for comment-only lines
 
     We don't care about order of params and kinds of whitespace in config lines
@@ -60,15 +60,15 @@ def get_conf_line_hash(line):
     testing we pretend we don't.
     """
 
-    def sort_cache_params(params):
+    def sort_params(params):
         return ",".join(sorted(params.split(",")))
 
     line = line.split("#")[0]
 
-    cache_params_pattern = re.compile(r"(.*?\s)(\S+=\S+)")
-    match = cache_params_pattern.search(line)
+    params_pattern = re.compile(r"(.*?\s)(\S+=\S+)")
+    match = params_pattern.search(line)
     if match:
-        sorted_params = sort_cache_params(match.group(2))
+        sorted_params = sort_params(match.group(2))
         line = match.group(1) + sorted_params
 
     return "".join(line.lower().split())
