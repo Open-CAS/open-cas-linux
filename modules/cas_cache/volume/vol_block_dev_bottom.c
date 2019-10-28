@@ -92,7 +92,7 @@ uint64_t block_dev_get_byte_length(ocf_volume_t vol)
 }
 
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(3, 3, 0)
-static char *__block_dev_get_elevator_name(struct request_queue *q)
+static const char *__block_dev_get_elevator_name(struct request_queue *q)
 {
 	if (q->elevator->elevator_type == NULL)
 		return NULL;
@@ -106,7 +106,7 @@ static char *__block_dev_get_elevator_name(struct request_queue *q)
 	return q->elevator->elevator_type->elevator_name;
 }
 #else
-static char *__block_dev_get_elevator_name(struct request_queue *q)
+static const char *__block_dev_get_elevator_name(struct request_queue *q)
 {
 	if (q->elevator->type == NULL)
 		return NULL;
