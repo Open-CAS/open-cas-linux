@@ -12,8 +12,6 @@ from IPy import IP
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../test-framework"))
 
-from connection.ssh_executor import SshExecutor
-
 from core.test_run_utils import TestRun
 from api.cas import installer
 from api.cas import casadm
@@ -93,9 +91,7 @@ def pytest_runtest_teardown():
 
     with TestRun.LOGGER.step("Cleanup after test"):
         try:
-            ssh_e = type(TestRun.executor) is SshExecutor
-            is_active = TestRun.executor.is_active()
-            if ssh_e and not is_active:
+            if TestRun.executor.is_active():
                 TestRun.executor.wait_for_connection()
             Udev.enable()
             unmount_cas_devices()
