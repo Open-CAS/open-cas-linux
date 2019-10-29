@@ -11,7 +11,7 @@ from storage_devices.disk import DiskType, DiskTypeSet
 from test_utils.size import Unit, Size
 
 
-@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane]))
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.parametrize("shortcut", [True, False])
 def test_cli_start_stop_default_value(shortcut):
     with TestRun.LOGGER.step("Prepare devices"):
@@ -44,7 +44,7 @@ def test_cli_start_stop_default_value(shortcut):
             TestRun.LOGGER.error("There is no 'No caches running' info in casadm -L output")
 
 
-@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane]))
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.parametrize("shortcut", [True, False])
 def test_cli_add_remove_default_value(shortcut):
     cache_device = TestRun.disks['cache']
