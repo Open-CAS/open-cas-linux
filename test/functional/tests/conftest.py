@@ -10,9 +10,9 @@ import yaml
 import traceback
 from IPy import IP
 
-from connection.ssh_executor import SshExecutor
-
 sys.path.append(os.path.join(os.path.dirname(__file__), "../test-framework"))
+
+from connection.ssh_executor import SshExecutor
 
 from core.test_run_utils import TestRun
 from api.cas import installer
