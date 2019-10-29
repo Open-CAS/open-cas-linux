@@ -9,70 +9,51 @@ import logging
 from tests import conftest
 from core.test_run import TestRun
 
-LOGGER = logging.getLogger(__name__)
-
-opencas_repo_name = "open-cas-linux"
-
 
 def install_opencas():
-    LOGGER.info("Cloning Open CAS repository.")
-    TestRun.executor.run(f"if [ -d {opencas_repo_name} ]; "
-                         f"then rm -rf {opencas_repo_name}; fi")
-    output = TestRun.executor.run(
-        "git clone --recursive https://github.com/Open-CAS/open-cas-linux.git")
-    if output.exit_code != 0:
-        raise Exception(f"Error while cloning repository: {output.stdout}\n{output.stderr}")
+    TestRun.LOGGER.info("Copying Open CAS repository to DUT")
+    TestRun.executor.rsync(
+        f"{TestRun.plugins['opencas']['repo_dir']}/",
+        f"{TestRun.plugins['opencas']['working_dir']}/",
+        delete=True)
 
+    TestRun.LOGGER.info("Building Open CAS")
     output = TestRun.executor.run(
-        f"cd {opencas_repo_name} && "
-        f"git fetch --all && "
-        f"git fetch --tags {conftest.get_remote()} +refs/pull/*:refs/remotes/origin/pr/*")
-    if output.exit_code != 0:
-        raise Exception(
-            f"Failed to fetch: "
-            f"{output.stdout}\n{output.stderr}")
-
-    output = TestRun.executor.run(f"cd {opencas_repo_name} && "
-                                  f"git checkout {conftest.get_branch()}")
-    if output.exit_code != 0:
-        raise Exception(
-            f"Failed to checkout to {conftest.get_branch()}: {output.stdout}\n{output.stderr}")
-
-    LOGGER.info("Open CAS make and make install.")
-    output = TestRun.executor.run(
-        f"cd {opencas_repo_name} && "
-        "git submodule update --init --recursive && "
+        f"cd {TestRun.plugins['opencas']['working_dir']} && "
         "./configure && "
         "make -j")
     if output.exit_code != 0:
-        raise Exception(
+        TestRun.exception(
             f"Make command executed with nonzero status: {output.stdout}\n{output.stderr}")
 
-    output = TestRun.executor.run(f"cd {opencas_repo_name} && "
-                                  f"make install")
+    TestRun.LOGGER.info("Installing Open CAS")
+    output = TestRun.executor.run(
+        f"cd {TestRun.plugins['opencas']['working_dir']} && "
+        f"make install")
     if output.exit_code != 0:
-        raise Exception(
+        TestRun.exception(
             f"Error while installing Open CAS: {output.stdout}\n{output.stderr}")
 
-    LOGGER.info("Check if casadm is properly installed.")
+    TestRun.LOGGER.info("Check if casadm is properly installed.")
     output = TestRun.executor.run("casadm -V")
     if output.exit_code != 0:
-        raise Exception(
+        TestRun.exception(
             f"'casadm -V' command returned an error: {output.stdout}\n{output.stderr}")
     else:
-        LOGGER.info(output.stdout)
+        TestRun.LOGGER.info(output.stdout)
 
 
 def uninstall_opencas():
-    LOGGER.info("Uninstalling Open CAS.")
+    TestRun.LOGGER.info("Uninstalling Open CAS")
     output = TestRun.executor.run("casadm -V")
     if output.exit_code != 0:
-        raise Exception("Open CAS is not properly installed.")
+        TestRun.exception("Open CAS is not properly installed")
     else:
-        TestRun.executor.run(f"cd {opencas_repo_name} && "
-                             f"make uninstall")
+        TestRun.executor.run(
+            f"cd {TestRun.plugins['opencas']['working_dir']} && "
+            f"make uninstall")
         if output.exit_code != 0:
-            raise Exception(
+            TestRun.exception(
                 f"There was an error during uninstall process: {output.stdout}\n{output.stderr}")
 
 
@@ -83,11 +64,11 @@ def reinstall_opencas():
 
 
 def check_if_installed():
-    LOGGER.info("Check if Open-CAS-Linux is installed.")
+    TestRun.LOGGER.info("Check if Open-CAS-Linux is installed")
     output = TestRun.executor.run("which casadm")
     if output.exit_code == 0:
-        LOGGER.info("CAS is installed")
+        TestRun.LOGGER.info("CAS is installed")
 
         return True
-    LOGGER.info("CAS not installed")
+    TestRun.LOGGER.info("CAS not installed")
     return False
