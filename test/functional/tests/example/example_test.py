@@ -7,6 +7,7 @@ import pytest
 from test_tools.disk_utils import Filesystem
 from test_utils.size import Size, Unit
 from core.test_run import TestRun
+from storage_devices.disk import DiskType, DiskTypeSet
 from tests.conftest import base_prepare
 from test_utils.filesystem.file import File
 from test_utils.filesystem.directory import Directory
@@ -17,14 +18,12 @@ def setup_module():
     TestRun.LOGGER.warning("Entering setup method")
 
 
-@pytest.mark.parametrize('prepare_and_cleanup',
-                         [{"cache_type": "nand", "cache_count": 1}],
-                         indirect=True)
-def test_create_example_partitions(prepare_and_cleanup):
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+def test_create_example_partitions():
     prepare()
     TestRun.LOGGER.info("Test run")
     TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
-    test_disk = TestRun.dut.disks[0]
+    test_disk = TestRun.disks['cache']
     part_sizes = []
     for i in range(1, 6):
         part_sizes.append(Size(10 * i + 100, Unit.MebiByte))
@@ -33,10 +32,7 @@ def test_create_example_partitions(prepare_and_cleanup):
     test_disk.partitions[0].create_filesystem(Filesystem.ext3)
 
 
-@pytest.mark.parametrize('prepare_and_cleanup',
-                         [{"cache_type": "nand", "cache_count": 1}],
-                         indirect=True)
-def test_create_example_files(prepare_and_cleanup):
+def test_create_example_files():
     prepare()
     TestRun.LOGGER.info("Test run")
     file1 = File.create_file("example_file")

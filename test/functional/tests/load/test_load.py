@@ -8,14 +8,13 @@ import pytest
 from api.cas import casadm, casadm_parser
 from tests.conftest import base_prepare
 from core.test_run import TestRun
-from storage_devices.disk import DiskType
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.size import Size, Unit
 
 
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_load_occupied_id(prepare_and_cleanup):
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_load_occupied_id():
     """
         1. Start new cache instance (don't specify cache id)
         2. Add core to newly create cache.
@@ -26,18 +25,8 @@ def test_load_occupied_id(prepare_and_cleanup):
     """
     prepare()
 
-    cache_device = next(
-        disk
-        for disk in TestRun.dut.disks
-        if disk.disk_type in [DiskType.optane, DiskType.nand]
-    )
-    core_device = next(
-        disk
-        for disk in TestRun.dut.disks
-        if (
-            disk.disk_type.value > cache_device.disk_type.value and disk != cache_device
-        )
-    )
+    cache_device = TestRun.disks['cache']
+    core_device = TestRun.disks['core']
 
     TestRun.LOGGER.info("Creating partitons for test")
     cache_device.create_partitions([Size(500, Unit.MebiByte), Size(500, Unit.MebiByte)])

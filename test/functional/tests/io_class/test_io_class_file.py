@@ -11,13 +11,13 @@ from test_tools.dd import Dd
 from test_tools.disk_utils import Filesystem
 from test_utils.filesystem.file import File
 from test_utils.os_utils import sync, Udev, DropCachesMode, drop_caches
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from .io_class_common import *
 
 
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_file_extension(prepare_and_cleanup):
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_ioclass_file_extension():
     cache, core = prepare()
     iterations = 50
     ioclass_id = 1
@@ -77,10 +77,9 @@ def test_ioclass_file_extension(prepare_and_cleanup):
         assert stats["dirty"].get_value(Unit.Blocks4096) == 0
 
 
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_file_extension_preexisting_filesystem(prepare_and_cleanup):
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_ioclass_file_extension_preexisting_filesystem():
     """Create files on filesystem, add device with filesystem as a core,
         write data to files and check if they are cached properly"""
     cache, core = prepare()
@@ -143,10 +142,9 @@ def test_ioclass_file_extension_preexisting_filesystem(prepare_and_cleanup):
         )
 
 
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_file_offset(prepare_and_cleanup):
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_ioclass_file_offset():
     cache, core = prepare()
 
     ioclass_id = 1
@@ -220,11 +218,10 @@ def test_ioclass_file_offset(prepare_and_cleanup):
         ), f"Inappropriately cached offset: {file_offset}"
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_file_size(prepare_and_cleanup, filesystem):
+def test_ioclass_file_size(filesystem):
     """
     File size IO class rules are configured in a way that each tested file size is unambiguously
     classified.

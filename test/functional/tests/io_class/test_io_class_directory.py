@@ -14,14 +14,14 @@ from test_tools.disk_utils import Filesystem
 from test_utils.filesystem.directory import Directory
 from test_utils.filesystem.file import File
 from test_utils.os_utils import drop_caches, DropCachesMode, sync, Udev
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from .io_class_common import *
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_directory_depth(prepare_and_cleanup, filesystem):
+def test_ioclass_directory_depth(filesystem):
     """
     Test if directory classification works properly for deeply nested directories for read and
     write operations.
@@ -109,11 +109,10 @@ def test_ioclass_directory_depth(prepare_and_cleanup, filesystem):
         f"Expected: {base_occupancy + test_file_2.size}, actual: {new_occupancy}"
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_directory_dir_operations(prepare_and_cleanup, filesystem):
+def test_ioclass_directory_dir_operations(filesystem):
     """
     Test if directory classification works properly after directory operations like move or rename.
     The operations themselves should not cause reclassification but IO after those operations
@@ -280,11 +279,10 @@ def test_ioclass_directory_dir_operations(prepare_and_cleanup, filesystem):
         directory=dir_1, with_delay=True)
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize(
-    "prepare_and_cleanup", [{"core_count": 1, "cache_count": 1}], indirect=True
-)
-def test_ioclass_directory_file_operations(prepare_and_cleanup, filesystem):
+def test_ioclass_directory_file_operations(filesystem):
     """
     Test if directory classification works properly after file operations like move or rename.
     The operations themselves should not cause reclassification but IO after those operations

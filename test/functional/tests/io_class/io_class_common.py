@@ -7,7 +7,6 @@ from api.cas import casadm
 from api.cas import ioclass_config
 from api.cas.cache_config import CacheMode, CleaningPolicy
 from storage_devices.disk import DiskType
-from tests.conftest import base_prepare
 from core.test_run import TestRun
 from test_utils.size import Size, Unit
 
@@ -16,16 +15,9 @@ mountpoint = "/tmp/cas1-1"
 
 
 def prepare():
-    base_prepare()
     ioclass_config.remove_ioclass_config()
-    cache_device = next(filter(
-        lambda disk: disk.disk_type in [DiskType.optane, DiskType.nand],
-        TestRun.dut.disks
-    ))
-    core_device = next(filter(
-        lambda disk: disk.disk_type.value > cache_device.disk_type.value,
-        TestRun.dut.disks
-    ))
+    cache_device = TestRun.disks['cache']
+    core_device = TestRun.disks['core']
 
     cache_device.create_partitions([Size(500, Unit.MebiByte)])
     core_device.create_partitions([Size(1, Unit.GibiByte)])
