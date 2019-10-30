@@ -15,9 +15,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "../test-framework"))
 from core.test_run_utils import TestRun
 from api.cas import installer
 from api.cas import casadm
+from api.cas import git
 from test_utils.os_utils import Udev
 from log.logger import create_log
-from test_utils import git_utils
 
 plugins_dir = os.path.join(os.path.dirname(__file__), "../plugins")
 sys.path.append(plugins_dir)
@@ -181,6 +181,6 @@ def base_prepare(item):
             installer.install_opencas()
         TestRun.plugins['opencas']['already_updated'] = True
         TestRun.LOGGER.add_build_info(f'Commit hash:')
-        TestRun.LOGGER.add_build_info(f"{git_utils.get_current_commit_hash()}")
+        TestRun.LOGGER.add_build_info(f"{git.get_current_commit_hash()}")
         TestRun.LOGGER.add_build_info(f'Commit message:')
-        TestRun.LOGGER.add_build_info(f'{git_utils.get_current_commit_message()}')
+        TestRun.LOGGER.add_build_info(f'{git.get_current_commit_message()}')
