@@ -108,13 +108,13 @@ static inline void _casdsk_exp_obj_handle_bio_pt(struct casdsk_disk *dsk,
 	struct bio *cloned_bio;
 	struct casdsk_exp_obj_pt_io_ctx *io;
 
-	io = kmem_cache_zalloc(casdsk_module->pt_io_ctx_cache, GFP_ATOMIC);
+	io = kmem_cache_zalloc(casdsk_module->pt_io_ctx_cache, GFP_NOIO);
 	if (!io) {
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));
 		return;
 	}
 
-	cloned_bio = cas_bio_clone(bio, GFP_ATOMIC);
+	cloned_bio = cas_bio_clone(bio, GFP_NOIO);
 	if (!cloned_bio) {
 		kmem_cache_free(casdsk_module->pt_io_ctx_cache, io);
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));

@@ -18,7 +18,6 @@
 
 #define ENV_MEM_NORMAL	GFP_KERNEL
 #define ENV_MEM_NOIO	GFP_NOIO
-#define ENV_MEM_ATOMIC	GFP_ATOMIC
 
 static inline uint64_t env_get_free_memory(void)
 {
@@ -40,24 +39,14 @@ static inline void env_free(const void *ptr)
 	kfree(ptr);
 }
 
-static inline void *env_vmalloc_flags(size_t size, int flags)
-{
-	return __vmalloc(size, flags | __GFP_HIGHMEM, PAGE_KERNEL);
-}
-
-static inline void *env_vzalloc_flags(size_t size, int flags)
-{
-	return env_vmalloc_flags(size, flags | __GFP_ZERO);
-}
-
 static inline void *env_vmalloc(size_t size)
 {
-	return env_vmalloc_flags(size, GFP_KERNEL);
+	return vmalloc(size);
 }
 
 static inline void *env_vzalloc(size_t size)
 {
-	return env_vzalloc_flags(size, GFP_KERNEL);
+	return vzalloc(size);
 }
 
 static inline void env_vfree(const void *ptr)

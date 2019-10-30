@@ -721,7 +721,7 @@ static int cas_atomic_submit_discard_bio(struct cas_atomic_io *atom)
 	int offset;
 	unsigned long *cmd_addr = blk_mq_rq_to_pdu(req);
 
-	nvm_discard = kmalloc(sizeof(*nvm_discard), GFP_ATOMIC);
+	nvm_discard = kmalloc(sizeof(*nvm_discard), GFP_NOIO);
 	if (!nvm_discard) {
 		return -ENOMEM;
 	}
