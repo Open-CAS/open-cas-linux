@@ -72,7 +72,10 @@ def pytest_runtest_setup(item):
             if 'test_wrapper' in sys.modules:
                 test_wrapper.try_setup_serial_log(dut_config)
 
-            TestRun.plugins['opencas'] = {'already_updated': False}
+            TestRun.plugins['opencas'] = {
+                'repo_dir': os.path.join(os.path.dirname(__file__), "../../.."),
+                'already_updated': False
+            }
         except Exception as e:
             TestRun.LOGGER.exception(f"{str(e)}\n{traceback.format_exc()}")
         TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
