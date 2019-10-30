@@ -74,6 +74,7 @@ def pytest_runtest_setup(item):
 
             TestRun.plugins['opencas'] = {
                 'repo_dir': os.path.join(os.path.dirname(__file__), "../../.."),
+                'working_dir': dut_config['working_dir'],
                 'already_updated': False
             }
         except Exception as e:
