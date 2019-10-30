@@ -27,15 +27,6 @@ except ImportError:
     pass
 
 
-pytest_options = {}
-
-
-@pytest.fixture(scope="session", autouse=True)
-def get_pytest_options(request):
-    pytest_options["remote"] = request.config.getoption("--remote")
-    pytest_options["branch"] = request.config.getoption("--repo-tag")
-
-
 def pytest_runtest_setup(item):
     # There should be dut config file added to config package and
     # pytest should be executed with option --dut-config=conf_name'.
@@ -121,18 +112,8 @@ def pytest_addoption(parser):
     parser.addoption("--dut-config", action="store", default="None")
     parser.addoption("--log-path", action="store",
                      default=f"{os.path.join(os.path.dirname(__file__), '../results')}")
-    parser.addoption("--remote", action="store", default="origin")
-    parser.addoption("--repo-tag", action="store", default="master")
     parser.addoption("--force-reinstall", action="store", default="False")
     # TODO: investigate whether it is possible to pass the last param as bool
-
-
-def get_remote():
-    return pytest_options["remote"]
-
-
-def get_branch():
-    return pytest_options["branch"]
 
 
 def unmount_cas_devices():
