@@ -1,3 +1,7 @@
+# DUT type should be either "local" or "ssh"
+# if ssh is selected, then ip, user and password fields are required
+type: "local"
+
 # ip: "x.x.x.x"
 # user: "example_user"
 # password: "example_password"
