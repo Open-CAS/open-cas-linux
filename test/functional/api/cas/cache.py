@@ -140,3 +140,10 @@ class Cache:
                                               alru_params.staleness_time.total_seconds(),
                                               alru_params.flush_max_buffers,
                                               alru_params.activity_threshold.total_milliseconds())
+
+    def get_cache_config(self):
+        return CacheConfig(self.get_cache_line_size(),
+                           self.get_cache_mode(),
+                           self.get_cleaning_policy(),
+                           self.get_eviction_policy(),
+                           self.get_metadata_mode())

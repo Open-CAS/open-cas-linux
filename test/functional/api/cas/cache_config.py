@@ -37,6 +37,7 @@ class EvictionPolicy(Enum):
     lru = 0
     lmp = 1
     nop = 2
+    DEFAULT = lru
 
 
 class MetadataMode(Enum):
@@ -110,5 +111,22 @@ class SeqCutOffParameters:
 # TODO: Use case for this will be to iterate over configurations (kernel params such as
 # TODO: io scheduler, metadata layout) and prepare env before starting cache
 class CacheConfig:
-    def __init__(self):
-        pass
+    def __init__(self,
+                 cache_line_size=CacheLineSize.DEFAULT,
+                 cache_mode=CacheMode.DEFAULT,
+                 cleaning_policy=CleaningPolicy.DEFAULT,
+                 eviction_policy=EvictionPolicy.DEFAULT,
+                 metadata_mode=MetadataMode.normal):
+        self.cache_line_size = cache_line_size
+        self.cache_mode = cache_mode
+        self.cleaning_policy = cleaning_policy
+        self.eviction_policy = eviction_policy
+        self.metadata_mode = metadata_mode
+
+
+def __eq__(self, other):
+    return self.cache_line_size == other.cache_line_size and \
+        self.cache_mode == other.cache_mode and \
+        self.cleaning_policy == other.cleaning_policy and \
+        self.eviction_policy == other.eviction_policy and \
+        self.metadata_mode == other.metadata_mode

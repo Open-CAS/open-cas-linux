@@ -3,14 +3,13 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 from aenum import Enum
-from config.configuration import cas_kernel_module, disk_kernel_module
 from test_utils import os_utils
 from test_utils.os_utils import ModuleRemoveMethod
 
 
 class CasModule(Enum):
-    cache = cas_kernel_module
-    disk = disk_kernel_module
+    cache = "cas_cache"
+    disk = "cas_disk"
 
 
 def reload_all_cas_modules():
