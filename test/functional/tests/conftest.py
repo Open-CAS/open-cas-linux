@@ -17,7 +17,7 @@ from api.cas import installer
 from api.cas import casadm
 from api.cas import git
 from test_utils.os_utils import Udev
-from log.logger import create_log
+from log.logger import create_log, Log
 
 plugins_dir = os.path.join(os.path.dirname(__file__), "../plugins")
 sys.path.append(plugins_dir)
@@ -110,6 +110,7 @@ def pytest_runtest_teardown():
 
     TestRun.LOGGER.end()
     TestRun.LOGGER.get_additional_logs()
+    Log.destroy()
 
 
 def pytest_configure(config):
