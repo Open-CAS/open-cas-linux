@@ -8,7 +8,6 @@ from test_tools.disk_utils import Filesystem
 from test_utils.size import Size, Unit
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet
-from tests.conftest import base_prepare
 from test_utils.filesystem.file import File
 from test_utils.filesystem.directory import Directory
 from test_tools import fs_utils
@@ -20,7 +19,6 @@ def setup_module():
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 def test_create_example_partitions():
-    prepare()
     TestRun.LOGGER.info("Test run")
     TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
     test_disk = TestRun.disks['cache']
@@ -33,7 +31,6 @@ def test_create_example_partitions():
 
 
 def test_create_example_files():
-    prepare()
     TestRun.LOGGER.info("Test run")
     file1 = File.create_file("example_file")
     file1.write("Test file\ncontent line\ncontent")
@@ -56,6 +53,3 @@ def test_create_example_files():
         TestRun.LOGGER.info(f"Item {str(item)} - {type(item).__name__}")
     fs_utils.remove(file1.full_path, True)
 
-
-def prepare():
-    base_prepare()

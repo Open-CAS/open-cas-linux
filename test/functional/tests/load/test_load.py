@@ -6,7 +6,6 @@
 
 import pytest
 from api.cas import casadm, casadm_parser
-from tests.conftest import base_prepare
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.size import Size, Unit
@@ -23,7 +22,6 @@ def test_load_occupied_id():
         5. Try to load metadata from first device.
             * Load should fail.
     """
-    prepare()
 
     cache_device = TestRun.disks['cache']
     core_device = TestRun.disks['core']
@@ -59,7 +57,3 @@ def test_load_occupied_id():
 
     cores = caches[0].get_core_devices()
     assert len(cores) == 0
-
-
-def prepare():
-    base_prepare()

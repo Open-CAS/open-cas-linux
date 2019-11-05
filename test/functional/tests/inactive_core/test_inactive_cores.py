@@ -6,7 +6,6 @@
 
 import pytest
 from core.test_run import TestRun
-from tests.conftest import base_prepare
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.size import Size, Unit
 from api.cas.cache_config import CacheMode
@@ -133,7 +132,6 @@ def test_core_inactive_stats():
 
 
 def prepare():
-    base_prepare()
     cache_device = TestRun.disks['cache']
     core_device = TestRun.disks['core']
 

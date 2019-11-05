@@ -10,7 +10,6 @@ from api.cas import casadm
 from api.cas import ioclass_config
 from test_tools.dd import Dd
 from api.cas.cache_config import CacheMode, CleaningPolicy
-from tests.conftest import base_prepare
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.size import Size, Unit
@@ -290,7 +289,6 @@ def flush(cache):
 
 
 def prepare(cache_mode: CacheMode):
-    base_prepare()
     ioclass_config.remove_ioclass_config()
     cache_device = TestRun.disks['cache']
     core_device = TestRun.disks['core']
