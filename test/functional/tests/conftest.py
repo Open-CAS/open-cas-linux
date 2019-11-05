@@ -18,6 +18,7 @@ from api.cas import casadm
 from api.cas import git
 from test_utils.os_utils import Udev
 from log.logger import create_log, Log
+from test_utils.singleton import Singleton
 
 plugins_dir = os.path.join(os.path.dirname(__file__), "../plugins")
 sys.path.append(plugins_dir)
@@ -25,6 +26,13 @@ try:
     from test_wrapper import plugin as test_wrapper
 except ImportError:
     pass
+
+
+class OpencasPlugin(metaclass=Singleton):
+    def __init__(self, repo_dir, working_dir):
+        self.repo_dir = repo_dir
+        self.working_dir = working_dir
+        self.already_updated = False
 
 
 def pytest_runtest_setup(item):
@@ -63,11 +71,10 @@ def pytest_runtest_setup(item):
             if 'test_wrapper' in sys.modules:
                 test_wrapper.try_setup_serial_log(dut_config)
 
-            TestRun.plugins['opencas'] = {
-                'repo_dir': os.path.join(os.path.dirname(__file__), "../../.."),
-                'working_dir': dut_config['working_dir'],
-                'already_updated': False
-            }
+            TestRun.plugins['opencas'] = OpencasPlugin(
+                repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
+                working_dir=dut_config['working_dir'])
+
         except Exception as e:
             TestRun.LOGGER.exception(f"{str(e)}\n{traceback.format_exc()}")
         TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
@@ -161,11 +168,11 @@ def base_prepare(item):
             except Exception:
                 pass  # TODO: Reboot DUT if test is executed remotely
 
-        if get_force_param(item) and not TestRun.plugins['opencas']['already_updated']:
+        if get_force_param(item) and not TestRun.plugins['opencas'].already_updated:
             installer.reinstall_opencas()
         elif not installer.check_if_installed():
             installer.install_opencas()
-        TestRun.plugins['opencas']['already_updated'] = True
+        TestRun.plugins['opencas'].already_updated = True
         from api.cas import init_config
         init_config.create_default_init_config()
         TestRun.LOGGER.add_build_info(f'Commit hash:')
