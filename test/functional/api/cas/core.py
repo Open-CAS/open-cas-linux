@@ -17,7 +17,8 @@ class CoreStatus(Enum):
     detached = 3
 
 
-SEQ_CUTOFF_THRESHOLD_MAX = 4194181
+SEQ_CUTOFF_THRESHOLD_MAX = Size(4194181, Unit.KibiByte)
+SEQ_CUT_OFF_THRESHOLD_DEFAULT = Size(1, Unit.MebiByte)
 
 
 class Core(Device):

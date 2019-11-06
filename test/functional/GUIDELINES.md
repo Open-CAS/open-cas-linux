@@ -1,6 +1,6 @@
 # Preface
 
-This document contains guidlines and BKMs for writing tests. Following these
+This document contains guidelines and BKMs for writing tests. Following these
 will significantly reduce number of comments you will receive on the code
 review and will speed up the process of merging your patch.
 

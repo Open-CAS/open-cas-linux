@@ -34,9 +34,9 @@ class SeqCutOffPolicy(Enum):
 
     @classmethod
     def from_name(cls, name):
-        for policy, policy_name in SeqCutOffPolicy.__members__.items():
-            if name == policy:
-                return policy_name
+        for policy_name, policy in SeqCutOffPolicy.__members__.items():
+            if name == policy_name:
+                return policy
 
         raise ValueError(f"{name} is not a valid sequential cut off name")
 
