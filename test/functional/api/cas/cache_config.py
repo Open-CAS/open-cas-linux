@@ -32,6 +32,14 @@ class SeqCutOffPolicy(Enum):
     never = 2
     DEFAULT = full
 
+    @classmethod
+    def from_name(cls, name):
+        for policy, policy_name in SeqCutOffPolicy.__members__.items():
+            if name == policy:
+                return policy_name
+
+        raise ValueError(f"{name} is not a valid sequential cut off name")
+
 
 class EvictionPolicy(Enum):
     lru = 0
@@ -106,6 +114,7 @@ class SeqCutOffParameters:
         seq_cut_off_params = SeqCutOffParameters()
         seq_cut_off_params.policy = SeqCutOffPolicy.full
         seq_cut_off_params.threshold = Size(1024, Unit.KibiByte)
+        return seq_cut_off_params
 
 
 # TODO: Use case for this will be to iterate over configurations (kernel params such as

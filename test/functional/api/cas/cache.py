@@ -123,8 +123,18 @@ class Cache:
 
     def set_seq_cutoff_parameters(self, seq_cutoff_param: SeqCutOffParameters):
         return casadm.set_param_cutoff(self.cache_id,
-                                       seq_cutoff_param.threshold,
-                                       seq_cutoff_param.policy)
+                                       threshold=seq_cutoff_param.threshold,
+                                       policy=seq_cutoff_param.policy)
+
+    def set_seq_cutoff_threshold(self, threshold: Size):
+        return casadm.set_param_cutoff(self.cache_id,
+                                       threshold=threshold,
+                                       policy=None)
+
+    def set_seq_cutoff_policy(self, policy: SeqCutOffPolicy):
+        return casadm.set_param_cutoff(self.cache_id,
+                                       threshold=None,
+                                       policy=policy)
 
     def set_cleaning_policy(self, cleaning_policy: CleaningPolicy):
         return casadm.set_param_cleaning(self.cache_id, cleaning_policy)
