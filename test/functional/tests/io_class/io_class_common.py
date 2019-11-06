@@ -6,7 +6,6 @@
 from api.cas import casadm
 from api.cas import ioclass_config
 from api.cas.cache_config import CacheMode, CleaningPolicy
-from storage_devices.disk import DiskType
 from core.test_run import TestRun
 from test_utils.size import Size, Unit
 
