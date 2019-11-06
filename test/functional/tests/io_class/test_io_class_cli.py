@@ -24,15 +24,16 @@ ioclass_config_path = "/tmp/opencas_ioclass.conf"
 def test_ioclass_export_configuration(cache_mode):
     """
     title: Export IO class configuration to a file
-    description: Test CAS ability to create a properly formatted file with current IO class
-    configuration
+    description: |
+        Test CAS ability to create a properly formatted file with current IO class configuration
     pass_criteria:
      - CAS default IO class configuration contains unclassified class only
      - CAS properly imports previously exported configuration
     """
-    cache, core = prepare(cache_mode)
-    saved_config_path = "/tmp/opencas_saved.conf"
-    default_list = [IoClass.default()]
+    with TestRun.LOGGER.step(f"Test prepare"):
+        cache, core = prepare(cache_mode)
+        saved_config_path = "/tmp/opencas_saved.conf"
+        default_list = [IoClass.default()]
 
     with TestRun.LOGGER.step(f"Check IO class configuration (should contain only default class)"):
         csv = casadm.list_io_classes(cache.cache_id, OutputFormat.csv).stdout
@@ -50,7 +51,7 @@ def test_ioclass_export_configuration(cache_mode):
     with TestRun.LOGGER.step("Display and export IO class configuration - displayed configuration "
                              "should be the same as created"):
         TestRun.executor.run(
-            f"{casadm.list_io_classes_cmd(str(cache.cache_id), OutputFormat.csv.name)}" 
+            f"{casadm.list_io_classes_cmd(str(cache.cache_id), OutputFormat.csv.name)}"
             f" > {saved_config_path}")
         csv = fs_utils.read_file(saved_config_path)
         if not IoClass.compare_ioclass_lists(IoClass.csv_to_list(csv), random_list):
@@ -82,7 +83,8 @@ def test_ioclass_export_configuration(cache_mode):
                                  f"Current:\n{csv}\n"
                                  f"Expected:{IoClass.list_to_csv(random_list)}")
 
-    fs_utils.remove(saved_config_path)
+    with TestRun.LOGGER.step(f"Test cleanup"):
+        fs_utils.remove(saved_config_path)
 
 
 def prepare(cache_mode: CacheMode = None):

@@ -4,10 +4,11 @@
 #
 
 import enum
+import functools
+import random
 import re
 import string
 from datetime import timedelta
-from random import randint, randrange
 
 from packaging import version
 
@@ -24,6 +25,7 @@ MAX_CLASSIFICATION_DELAY = timedelta(seconds=6)
 IO_CLASS_CONFIG_HEADER = "IO class id,IO class name,Eviction priority,Allocation"
 
 
+@functools.total_ordering
 class IoClass:
     def __init__(self, class_id: int, rule: str = '', priority: int = None,
                  allocation: bool = True):
@@ -37,8 +39,12 @@ class IoClass:
                 f',{int(self.allocation)}')
 
     def __eq__(self, other):
-        return type(other) is IoClass and self.id == other.id and self.rule == other.rule \
-               and self.priority == other.priority and self.allocation == other.allocation
+        return ((self.id, self.rule, self.priority, self.allocation)
+                == (other.id, other.rule, other.priority, other.allocation))
+
+    def __lt__(self, other):
+        return ((self.id, self.rule, self.priority, self.allocation)
+                < (other.id, other.rule, other.priority, other.allocation))
 
     @staticmethod
     def from_string(ioclass_str: str):
@@ -75,40 +81,22 @@ class IoClass:
                             IoClass.list_to_csv(ioclass_list, add_default_rule))
 
     @staticmethod
-    def default():
-        return IoClass(0, 'unclassified', 255)
+    def default(priority: int = 255, allocation: bool = True):
+        return IoClass(0, 'unclassified', priority, allocation)
 
     @staticmethod
     def compare_ioclass_lists(list1: [], list2: []):
-        if len(list1) != len(list2):
-            return False
-        sorted_list1 = sorted(list1, key=lambda c: (c.id, c.priority, c.allocation))
-        sorted_list2 = sorted(list2, key=lambda c: (c.id, c.priority, c.allocation))
-        for i in range(len(list1)):
-            if sorted_list1[i] != sorted_list2[i]:
-                return False
-        return True
+        return sorted(list1) == sorted(list2)
 
     @staticmethod
     def generate_random_ioclass_list(count: int, max_priority: int = MAX_IO_CLASS_PRIORITY):
-        random_list = [IoClass.default().set_priority(randint(0, max_priority))
-                       .set_allocation(bool(randint(0, 1)))]
+        random_list = [IoClass.default(priority=random.randint(0, max_priority),
+                                       allocation=bool(random.randint(0, 1)))]
         for i in range(1, count):
-            random_list.append(IoClass(i).set_random_rule().set_priority(randint(0, max_priority))
-                               .set_allocation(bool(randint(0, 1))))
+            random_list.append(IoClass(i, priority=random.randint(0, max_priority),
+                                       allocation=bool(random.randint(0, 1)))
+                               .set_random_rule())
         return random_list
-
-    def set_priority(self, priority: int):
-        self.priority = priority
-        return self
-
-    def set_allocation(self, allocation: bool):
-        self.allocation = allocation
-        return self
-
-    def set_rule(self, rule: str):
-        self.rule = rule
-        return self
 
     def set_random_rule(self):
         rules = ["metadata", "direct", "file_size", "directory", "io_class", "extension", "lba",
@@ -116,22 +104,22 @@ class IoClass:
         if os_utils.get_kernel_version() >= version.Version("4.13"):
             rules.append("wlth")
 
-        rule = rules[randrange(len(rules))]
-        self.set_rule(IoClass.add_random_params(rule))
+        rule = random.choice(rules)
+        self.rule = IoClass.add_random_params(rule)
         return self
 
     @staticmethod
     def add_random_params(rule: str):
         if rule == "directory":
-            rule += \
-                f":/{random_string(randint(1, 40), string.ascii_letters + string.digits + '/')}"
+            allowed_chars = string.ascii_letters + string.digits + '/'
+            rule += f":/{random_string(random.randint(1, 40), allowed_chars)}"
         elif rule in ["file_size", "lba", "pid", "file_offset", "request_size", "wlth"]:
-            rule += f":{Operator(randrange(len(Operator))).name}:{randrange(1000000)}"
+            rule += f":{Operator(random.randrange(len(Operator))).name}:{random.randrange(1000000)}"
         elif rule == "io_class":
-            rule += f":{randrange(MAX_IO_CLASS_PRIORITY + 1)}"
+            rule += f":{random.randrange(MAX_IO_CLASS_PRIORITY + 1)}"
         elif rule in ["extension", "process_name"]:
-            rule += f":{random_string(randint(1, 10))}"
-        if randrange(2):
+            rule += f":{random_string(random.randint(1, 10))}"
+        if random.randrange(2):
             rule += "&done"
         return rule
 
