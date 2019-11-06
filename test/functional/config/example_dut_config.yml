@@ -1,3 +1,7 @@
+# DUT type should be either "local" or "ssh"
+# if ssh is selected, then ip, user and password fields are required
+type: "local"
+
 # ip: "x.x.x.x"
 # user: "example_user"
 # password: "example_password"
@@ -7,11 +11,11 @@
 working_dir: "/tmp/open-cas-linux/"
 
 disks:
-  - path: '/dev/device_name1' # disk device path
-    serial: 'ABC'             # disk serial number
-    type: 'nand'              # disk type
+  - path: "/dev/device_name1" # disk device path
+    serial: "ABC"             # disk serial number
+    type: "nand"              # disk type
     blocksize: 512            # 512B
-  - path: '/dev/device_name2'
-    serial: 'DEF'
-    type: 'hdd'
+  - path: "/dev/device_name2"
+    serial: "DEF"
+    type: "hdd"
     blocksize: 512
