@@ -13,13 +13,13 @@ from core.test_run import TestRun
 def install_opencas():
     TestRun.LOGGER.info("Copying Open CAS repository to DUT")
     TestRun.executor.rsync(
-        f"{TestRun.plugins['opencas']['repo_dir']}/",
-        f"{TestRun.plugins['opencas']['working_dir']}/",
+        f"{TestRun.plugins['opencas'].repo_dir}/",
+        f"{TestRun.plugins['opencas'].working_dir}/",
         delete=True)
 
     TestRun.LOGGER.info("Building Open CAS")
     output = TestRun.executor.run(
-        f"cd {TestRun.plugins['opencas']['working_dir']} && "
+        f"cd {TestRun.plugins['opencas'].working_dir} && "
         "./configure && "
         "make -j")
     if output.exit_code != 0:
@@ -28,7 +28,7 @@ def install_opencas():
 
     TestRun.LOGGER.info("Installing Open CAS")
     output = TestRun.executor.run(
-        f"cd {TestRun.plugins['opencas']['working_dir']} && "
+        f"cd {TestRun.plugins['opencas'].working_dir} && "
         f"make install")
     if output.exit_code != 0:
         TestRun.exception(
@@ -50,7 +50,7 @@ def uninstall_opencas():
         TestRun.exception("Open CAS is not properly installed")
     else:
         TestRun.executor.run(
-            f"cd {TestRun.plugins['opencas']['working_dir']} && "
+            f"cd {TestRun.plugins['opencas'].working_dir} && "
             f"make uninstall")
         if output.exit_code != 0:
             TestRun.exception(

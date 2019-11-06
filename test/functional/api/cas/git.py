@@ -10,12 +10,12 @@ from connection.local_executor import LocalExecutor
 def get_current_commit_hash():
     local_executor = LocalExecutor()
     return local_executor.run(
-        f"cd {TestRun.plugins['opencas']['repo_dir']} &&"
+        f"cd {TestRun.plugins['opencas'].repo_dir} &&"
         f'git show HEAD -s --pretty=format:"%H"').stdout
 
 
 def get_current_commit_message():
     local_executor = LocalExecutor()
     return local_executor.run(
-        f"cd {TestRun.plugins['opencas']['repo_dir']} &&"
+        f"cd {TestRun.plugins['opencas'].repo_dir} &&"
         f'git show HEAD -s --pretty=format:"%B"').stdout
