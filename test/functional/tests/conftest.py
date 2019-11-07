@@ -19,7 +19,8 @@ from api.cas import casadm
 from api.cas import git
 from test_utils.os_utils import Udev, kill_all_io
 from test_tools.disk_utils import PartitionTable, create_partition_table
-from log.logger import create_log, Log
+
+from log.logger import Log
 from test_utils.singleton import Singleton
 
 plugins_dir = os.path.join(os.path.dirname(__file__), "../plugins")
@@ -48,9 +49,6 @@ def pytest_runtest_setup(item):
     # Then it should be placed in plugins package
 
     TestRun.prepare(item)
-
-    test_name = item.name.split('[')[0]
-    TestRun.LOGGER = create_log(item.config.getoption('--log-path'), test_name)
 
     with TestRun.LOGGER.step("Dut prepare"):
         try:
