@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
-import pytest
 import os
 import sys
 import yaml
@@ -24,7 +23,8 @@ plugins_dir = os.path.join(os.path.dirname(__file__), "../plugins")
 sys.path.append(plugins_dir)
 try:
     from test_wrapper import plugin as test_wrapper
-except ImportError:
+except ImportError as e:
+    TestRun.LOGGER.info(str(e))
     pass
 
 
@@ -56,17 +56,25 @@ def pytest_runtest_setup(item):
                 with open(item.config.getoption('--dut-config')) as cfg:
                     dut_config = yaml.safe_load(cfg)
             except Exception:
-                dut_config = {}
+                TestRun.block("You need to specify DUT config. See the example_dut_config.py file.")
 
             if 'test_wrapper' in sys.modules:
                 if 'ip' in dut_config:
                     try:
                         IP(dut_config['ip'])
                     except ValueError:
-                        raise Exception("IP address from configuration file is in invalid format.")
-                dut_config = test_wrapper.prepare(dut_config)
-
-            TestRun.setup(dut_config)
+                        TestRun.exception(
+                            "IP address from configuration file is in invalid format.")
+                try:
+                    dut_config = test_wrapper.prepare(dut_config)
+                except Exception as ex:
+                    TestRun.LOGGER.exception(f"Exception occurred on test wrapper prepare stage:\n"
+                                             f"{str(ex)}\n{traceback.format_exc()}")
+            try:
+                TestRun.setup(dut_config)
+            except Exception as ex:
+                TestRun.LOGGER.exception(f"Exception occurred during test setup:\n"
+                                         f"{str(ex)}\n{traceback.format_exc()}")
 
             if 'test_wrapper' in sys.modules:
                 test_wrapper.try_setup_serial_log(dut_config)
@@ -75,8 +83,9 @@ def pytest_runtest_setup(item):
                 repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
                 working_dir=dut_config['working_dir'])
 
-        except Exception as e:
-            TestRun.LOGGER.exception(f"{str(e)}\n{traceback.format_exc()}")
+        except Exception as exception:
+            TestRun.LOGGER.exception(f"Conftest prepare exception:\n"
+                                     f"{str(exception)}\n{traceback.format_exc()}")
         TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
 
     base_prepare(item)
@@ -93,22 +102,26 @@ def pytest_runtest_teardown():
 
     with TestRun.LOGGER.step("Cleanup after test"):
         try:
-            if TestRun.executor.is_active():
-                TestRun.executor.wait_for_connection()
-            Udev.enable()
-            unmount_cas_devices()
-            casadm.stop_all_caches()
-        except Exception:
-            TestRun.LOGGER.warning("Exception occured during platform cleanup.")
+            if TestRun.executor:
+                if TestRun.executor.is_active():
+                    TestRun.executor.wait_for_connection()
+                Udev.enable()
+                unmount_cas_devices()
+                casadm.stop_all_caches()
+        except Exception as ex:
+            TestRun.LOGGER.warning(f"Exception occured during platform cleanup.\n"
+                                   f"{str(ex)}\n{traceback.format_exc()}")
 
         if 'test_wrapper' in sys.modules:
             try:
                 test_wrapper.cleanup()
-            except Exception as e:
-                TestRun.LOGGER.warning(f"Exception occured during test wrapper cleanup.\n{str(e)}")
+            except Exception as ex:
+                TestRun.LOGGER.warning(f"Exception occured during test wrapper cleanup.\n{str(ex)}"
+                                       f"\n{traceback.format_exc()}")
 
     TestRun.LOGGER.end()
-    TestRun.LOGGER.get_additional_logs()
+    if TestRun.executor:
+        TestRun.LOGGER.get_additional_logs()
     Log.destroy()
 
 
