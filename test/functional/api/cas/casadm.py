@@ -3,16 +3,18 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
-from .cli import *
-from .casctl import stop as casctl_stop
-from core.test_run import TestRun
-from .casadm_params import *
-from api.cas.cache_config import CacheLineSize, CacheMode, SeqCutOffPolicy, CleaningPolicy
-from test_utils.size import Size, Unit
 from typing import List
-from storage_devices.device import Device
-from api.cas.core import Core
+
 from api.cas.cache import Cache
+from api.cas.cache_config import CacheLineSize, CacheMode, SeqCutOffPolicy, CleaningPolicy
+from api.cas.core import Core
+from core.test_run import TestRun
+from storage_devices.device import Device
+from test_utils.output import CmdException
+from test_utils.size import Size, Unit
+from .casadm_params import *
+from .casctl import stop as casctl_stop
+from .cli import *
 
 
 def help(shortcut: bool = False):
@@ -30,8 +32,7 @@ def start_cache(cache_dev: Device, cache_mode: CacheMode = None,
         cache_dev=cache_dev.system_path, cache_mode=_cache_mode, cache_line_size=_cache_line_size,
         cache_id=_cache_id, force=force, load=load, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Failed to start cache. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Failed to start cache.", output)
     return Cache(cache_dev.system_path)
 
 
@@ -39,8 +40,7 @@ def stop_cache(cache_id: int, no_data_flush: bool = False, shortcut: bool = Fals
     output = TestRun.executor.run(
         stop_cmd(cache_id=str(cache_id), no_data_flush=no_data_flush, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Failed to stop cache. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Failed to stop cache.", output)
     return output
 
 
@@ -50,8 +50,7 @@ def add_core(cache: Cache, core_dev: Device, core_id: int = None, shortcut: bool
         add_core_cmd(cache_id=str(cache.cache_id), core_dev=core_dev.system_path,
                      core_id=_core_id, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Failed to add core. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Failed to add core.", output)
     return Core(core_dev.system_path, cache.cache_id)
 
 
@@ -60,16 +59,14 @@ def remove_core(cache_id: int, core_id: int, force: bool = False, shortcut: bool
         remove_core_cmd(cache_id=str(cache_id), core_id=str(core_id),
                         force=force, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Failed to remove core. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Failed to remove core.", output)
 
 
 def remove_detached(core_device: Device, shortcut: bool = False):
     output = TestRun.executor.run(
         remove_detached_cmd(core_device=core_device.system_path, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Failed to remove detached core. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Failed to remove detached core.", output)
     return output
 
 
@@ -78,8 +75,7 @@ def reset_counters(cache_id: int, core_id: int = None, shortcut: bool = False):
     output = TestRun.executor.run(
         reset_counters_cmd(cache_id=str(cache_id), core_id=_core_id, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Failed to reset counters. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Failed to reset counters.", output)
     return output
 
 
@@ -90,8 +86,7 @@ def flush(cache_id: int, core_id: int = None, shortcut: bool = False):
         command = flush_core_cmd(cache_id=str(cache_id), core_id=str(core_id), shortcut=shortcut)
     output = TestRun.executor.run(command)
     if output.exit_code != 0:
-        raise Exception(
-            f"Flushing failed. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Flushing failed.", output)
     return output
 
 
@@ -99,8 +94,7 @@ def load_cache(device: Device, shortcut: bool = False):
     output = TestRun.executor.run(
         load_cmd(cache_dev=device.system_path, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Failed to load cache. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Failed to load cache.", output)
     return Cache(device.system_path)
 
 
@@ -109,8 +103,7 @@ def list_caches(output_format: OutputFormat = None, shortcut: bool = False):
     output = TestRun.executor.run(
         list_cmd(output_format=_output_format, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Failed to list caches. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Failed to list caches.", output)
     return output
 
 
@@ -119,8 +112,7 @@ def print_version(output_format: OutputFormat = None, shortcut: bool = False):
     output = TestRun.executor.run(
         version_cmd(output_format=_output_format, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Failed to print version. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Failed to print version.", output)
     return output
 
 
@@ -128,8 +120,7 @@ def format_nvme(cache_dev: Device, force: bool = False, shortcut: bool = False):
     output = TestRun.executor.run(
         format_cmd(cache_dev=cache_dev.system_path, force=force, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Format command failed. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Format command failed.", output)
     return output
 
 
@@ -140,8 +131,7 @@ def stop_all_caches():
     casctl_stop()
     output = list_caches()
     if "No caches running" not in output.stdout:
-        raise Exception(
-            f"Error while stopping caches. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Error while stopping caches.", output)
 
 
 def print_statistics(cache_id: int, core_id: int = None, per_io_class: bool = False,
@@ -161,8 +151,7 @@ def print_statistics(cache_id: int, core_id: int = None, per_io_class: bool = Fa
             per_io_class=per_io_class, io_class_id=_io_class_id,
             filter=_filter, output_format=_output_format, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Printing statistics failed. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Printing statistics failed.", output)
     return output
 
 
@@ -176,8 +165,7 @@ def set_cache_mode(cache_mode: CacheMode, cache_id: int,
         set_cache_mode_cmd(cache_mode=cache_mode.name.lower(), cache_id=str(cache_id),
                            flush_cache=flush_cache, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Set cache mode command failed. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Set cache mode command failed.", output)
     return output
 
 
@@ -185,8 +173,7 @@ def load_io_classes(cache_id: int, file: str, shortcut: bool = False):
     output = TestRun.executor.run(
         load_io_classes_cmd(cache_id=str(cache_id), file=file, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Load IO class command failed. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Load IO class command failed.", output)
     return output
 
 
@@ -196,8 +183,7 @@ def list_io_classes(cache_id: int, output_format: OutputFormat, shortcut: bool =
         list_io_classes_cmd(cache_id=str(cache_id),
                             output_format=_output_format, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"List IO class command failed. stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("List IO class command failed.", output)
     return output
 
 
@@ -208,9 +194,7 @@ def get_param_cutoff(cache_id: int, core_id: int,
         get_param_cutoff_cmd(cache_id=str(cache_id), core_id=str(core_id),
                              output_format=_output_format, shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Getting sequential cutoff params failed."
-            f" stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Getting sequential cutoff params failed.", output)
     return output
 
 
@@ -220,9 +204,7 @@ def get_param_cleaning(cache_id: int, output_format: OutputFormat = None, shortc
         get_param_cleaning_cmd(cache_id=str(cache_id), output_format=_output_format,
                                shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Getting cleaning policy params failed."
-            f" stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Getting cleaning policy params failed.", output)
     return output
 
 
@@ -233,9 +215,7 @@ def get_param_cleaning_alru(cache_id: int, output_format: OutputFormat = None,
         get_param_cleaning_alru_cmd(cache_id=str(cache_id), output_format=_output_format,
                                     shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Getting alru cleaning policy params failed."
-            f" stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Getting alru cleaning policy params failed.", output)
     return output
 
 
@@ -246,9 +226,7 @@ def get_param_cleaning_acp(cache_id: int, output_format: OutputFormat = None,
         get_param_cleaning_acp_cmd(cache_id=str(cache_id), output_format=_output_format,
                                    shortcut=shortcut))
     if output.exit_code != 0:
-        raise Exception(
-            f"Getting acp cleaning policy params failed."
-            f" stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Getting acp cleaning policy params failed.", output)
     return output
 
 
@@ -265,9 +243,7 @@ def set_param_cutoff(cache_id: int, core_id: int = None, threshold: Size = None,
             threshold=_threshold, policy=policy.name)
     output = TestRun.executor.run(command)
     if output.exit_code != 0:
-        raise Exception(
-            f"Error while setting sequential cut-off params."
-            f" stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Error while setting sequential cut-off params.", output)
     return output
 
 
@@ -275,9 +251,7 @@ def set_param_cleaning(cache_id: int, policy: CleaningPolicy):
     output = TestRun.executor.run(
         set_param_cleaning_cmd(cache_id=str(cache_id), policy=policy.name))
     if output.exit_code != 0:
-        raise Exception(
-            f"Error while setting cleaning policy."
-            f" stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Error while setting cleaning policy.", output)
     return output
 
 
@@ -288,9 +262,7 @@ def set_param_cleaning_alru(cache_id: int, wake_up: int = None, staleness_time: 
             cache_id=str(cache_id), wake_up=str(wake_up), staleness_time=str(staleness_time),
             flush_max_buffers=str(flush_max_buffers), activity_threshold=str(activity_threshold)))
     if output.exit_code != 0:
-        raise Exception(
-            f"Error while setting alru cleaning policy parameters."
-            f" stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Error while setting alru cleaning policy parameters.", output)
     return output
 
 
@@ -299,7 +271,5 @@ def set_param_cleaning_acp(cache_id: int, wake_up: int = None, flush_max_buffers
         set_param_cleaning_acp_cmd(cache_id=str(cache_id), wake_up=str(wake_up),
                                    flush_max_buffers=str(flush_max_buffers)))
     if output.exit_code != 0:
-        raise Exception(
-            f"Error while setting acp cleaning policy parameters."
-            f" stdout: {output.stdout} \n stderr :{output.stderr}")
+        raise CmdException("Error while setting acp cleaning policy parameters.", output)
     return output
