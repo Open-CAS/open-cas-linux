@@ -5,9 +5,10 @@
 
 
 import pytest
+
 from api.cas import casadm, casadm_parser
 from core.test_run import TestRun
-from storage_devices.disk import DiskType, DiskTypeSet
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.size import Unit, Size
 
 
@@ -45,6 +46,7 @@ def test_cli_start_stop_default_value(shortcut):
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("shortcut", [True, False])
 def test_cli_add_remove_default_value(shortcut):
     cache_device = TestRun.disks['cache']
@@ -52,8 +54,7 @@ def test_cli_add_remove_default_value(shortcut):
     cache_device = cache_device.partitions[0]
     cache = casadm.start_cache(cache_device, shortcut=shortcut, force=True)
 
-    core_device = next(
-        disk for disk in TestRun.dut.disks if disk.disk_type != DiskType.optane)
+    core_device = TestRun.disks['core']
     casadm.add_core(cache, core_device, shortcut=shortcut)
 
     caches = casadm_parser.get_caches()
