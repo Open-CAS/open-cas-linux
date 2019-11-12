@@ -37,7 +37,7 @@
 #define IOCLASS_UNCLASSIFIED (0)
 
 #define UNIT_REQUESTS "Requests"
-#define UNIT_BLOCKS "4KiB blocks"
+#define UNIT_BLOCKS "4KiB Blocks"
 
 static inline float fraction(uint64_t numerator, uint64_t denominator)
 {
@@ -197,7 +197,7 @@ static void print_core_conf(const struct kcas_core_info *info, FILE *outfile)
 				info->core_path_name);
 	print_kv_pair(outfile, "Exported Object", "/dev/cas%d-%d",
 				info->cache_id, info->core_id);
-	print_kv_pair(outfile, "Core Size", "%lu, [4KiB Blocks], %.2f, [GiB]",
+	print_kv_pair(outfile, "Core Size", "%lu, [" UNIT_BLOCKS "], %.2f, [GiB]",
 				core_size, core_size_gb);
 	print_kv_pair_time(outfile, "Dirty for", info->info.dirty_for);
 
@@ -532,7 +532,7 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 	cache_size = cache_line_in_4k(cache_info->info.size,
 			cache_info->info.cache_line_size / KiB);
 
-	print_kv_pair(outfile, "Cache Size", "%lu, [4KiB Blocks], %.2f, [GiB]",
+	print_kv_pair(outfile, "Cache Size", "%lu, [" UNIT_BLOCKS "], %.2f, [GiB]",
 		      cache_size,
 		      (float) cache_size * (4 * KiB) / GiB);
 
