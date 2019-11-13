@@ -105,7 +105,7 @@ int _cas_rpool_pre_alloc_schedule(int cpu,
 void cas_rpool_destroy(struct cas_reserve_pool *rpool_master,
 		cas_rpool_del rpool_del, void *allocator_ctx)
 {
-	int i, cpu_no = num_online_cpus();
+	int i, max_cpus = num_possible_cpus();
 	struct _cas_reserve_pool_per_cpu *current_rpool = NULL;
 	struct list_head *item = NULL, *next = NULL;
 	void *entry;
@@ -120,7 +120,10 @@ void cas_rpool_destroy(struct cas_reserve_pool *rpool_master,
 		return;
 	}
 
-	for (i = 0; i < cpu_no; i++) {
+	for (i = 0; i < max_cpus; i++) {
+		if (!cpu_online(i))
+			continue;
+
 		current_rpool = &rpool_master->rpools[i];
 
 		CAS_DEBUG_PARAM("Destroyed reserve poll [%s] for cpu %d",
@@ -151,7 +154,7 @@ struct cas_reserve_pool *cas_rpool_create(uint32_t limit, char *name,
 		uint32_t entry_size, cas_rpool_new rpool_new,
 		cas_rpool_del rpool_del, void *allocator_ctx)
 {
-	int i, cpu_no = num_online_cpus();
+	int i, max_cpus = num_possible_cpus();
 	struct cas_reserve_pool *rpool_master = NULL;
 	struct _cas_reserve_pool_per_cpu *current_rpool = NULL;
 	struct _cas_rpool_pre_alloc_info info;
@@ -164,7 +167,7 @@ struct cas_reserve_pool *cas_rpool_create(uint32_t limit, char *name,
 	if (!rpool_master)
 		goto error;
 
-	rpool_master->rpools = kzalloc(sizeof(*rpool_master->rpools) * cpu_no,
+	rpool_master->rpools = kzalloc(sizeof(*rpool_master->rpools) * max_cpus,
 			GFP_KERNEL);
 	if (!rpool_master->rpools)
 		goto error;
@@ -177,7 +180,10 @@ struct cas_reserve_pool *cas_rpool_create(uint32_t limit, char *name,
 	info.rpool_new = rpool_new;
 	info.allocator_ctx = allocator_ctx;
 
-	for (i = 0; i < cpu_no; i++) {
+	for (i = 0; i < max_cpus; i++) {
+		if (!cpu_online(i))
+			continue;
+
 		current_rpool = &rpool_master->rpools[i];
 		spin_lock_init(&current_rpool->lock);
 		INIT_LIST_HEAD(&current_rpool->list);
