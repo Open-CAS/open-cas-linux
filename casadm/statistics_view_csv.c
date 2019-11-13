@@ -229,10 +229,10 @@ int csv_process_row(struct view_t *this, int type, int num_fields, char *fields[
 	 * with units, so output every second value,
 	 * and use units to construct column headers.
 	 * For example:
-	 * KV_PAIR,Cache Size,10347970,[4KiB blocks],39.47,[GiB]
+	 * KV_PAIR,Cache Size,10347970,[4KiB Blocks],39.47,[GiB]
 	 * will result in:
 	 * data row:   10347970,39.47
-	 * header row: Cache Size [4KiB blocks],Cache Size [GiB]
+	 * header row: Cache Size [4KiB Blocks],Cache Size [GiB]
 	 */
 	case KV_PAIR:
 		for (i = 1; i < num_fields; i += 2) {
