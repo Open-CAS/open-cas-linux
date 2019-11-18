@@ -339,6 +339,14 @@ def test_cas_config_get_by_id_path_not_found(mock_listdir, mock_realpath):
             ],
             [],
         ),
+        (
+            [
+                "1  /dev/dummy0n1    WT cleaning_policy=acp",
+            ],
+            [
+                "1  1   /dev/dummy1 lazy_startup=true"
+            ],
+        ),
     ],
 )
 @patch("builtins.open", new_callable=h.MockConfigFile)

@@ -1,0 +1,22 @@
+#
+# Copyright(c) 2019 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+[Unit]
+Description=opencas initialization service
+After=systemd-remount-fs.service
+Before=local-fs-pre.target local-fs.target
+Wants=local-fs-pre.target local-fs.target
+DefaultDependencies=no
+OnFailure=emergency.target
+OnFailureJobMode=isolate
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/sbin/casctl settle --timeout 150 --interval 5
+TimeoutStartSec=3min
+
+[Install]
+RequiredBy=local-fs.target local-fs-pre.target

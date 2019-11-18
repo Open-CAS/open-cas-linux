@@ -8,6 +8,7 @@ import csv
 import re
 import os
 import stat
+import time
 
 # Casadm functionality
 
@@ -308,24 +309,35 @@ class cas_config(object):
             return ret
 
     class core_config(object):
-        def __init__(self, cache_id, core_id, path):
+        def __init__(self, cache_id, core_id, path, **params):
             self.cache_id = int(cache_id)
             self.core_id = int(core_id)
             self.device = path
+            self.params = params
 
         @classmethod
         def from_line(cls, line, allow_incomplete=False):
             values = line.split()
-            if len(values) > 3:
-                raise ValueError('Invalid core configuration (too many columns)')
+            if len(values) > 4:
+                raise ValueError("Invalid core configuration (too many columns)")
             elif len(values) < 3:
-                raise ValueError('Invalid core configuration (too few columns)')
+                raise ValueError("Invalid core configuration (too few columns)")
 
             cache_id = int(values[0])
             core_id = int(values[1])
             device = values[2]
 
-            core_config = cls(cache_id, core_id, device)
+            params = dict()
+            if len(values) > 3:
+                for param in values[3].lower().split(","):
+                    param_name, param_value = param.split("=")
+                    if param_name in params:
+                        raise ValueError(
+                            "Invalid core configuration (repeated parameter)"
+                        )
+                    params[param_name] = param_value
+
+            core_config = cls(cache_id, core_id, device, **params)
 
             core_config.validate_config(allow_incomplete)
 
@@ -335,8 +347,23 @@ class cas_config(object):
             self.check_core_id_valid()
             self.check_recursive()
             cas_config.cache_config.check_cache_id_valid(self.cache_id)
+
+            for param_name, param_value in self.params.items():
+                self.validate_parameter(param_name, param_value)
+
             if not allow_incomplete:
                 cas_config.check_block_device(self.device)
+
+        def validate_parameter(self, param_name, param_value):
+            if param_name == "lazy_startup":
+                if param_value.lower() not in ["true", "false"]:
+                    raise ValueError(
+                        "{} is invalid value for '{}' core param".format(
+                            param_value, param_name
+                        )
+                    )
+            else:
+                raise ValueError("'{}' is invalid core param name".format(param_name))
 
         def check_core_id_valid(self):
             if not 0 <= int(self.core_id) <= 4095:
@@ -353,7 +380,14 @@ class cas_config(object):
                 raise ValueError('Recursive configuration detected')
 
         def to_line(self):
-            return '{0}\t{1}\t{2}\n'.format(self.cache_id, self.core_id, self.device)
+            ret = "{0}\t{1}\t{2}".format(self.cache_id, self.core_id, self.device)
+            for i, (param, value) in enumerate(self.params.items()):
+                ret += "," if i > 0 else "\t"
+
+                ret += "{0}={1}".format(param, value)
+            ret += "\n"
+
+            return ret
 
     def __init__(self, caches=None, cores=None, version_tag=None):
         self.caches = caches if caches else dict()
@@ -493,6 +527,13 @@ class cas_config(object):
 
         except:
             raise Exception('Couldn\'t write config file')
+
+    def get_startup_cores(self):
+        return [
+            core
+            for core in self.cores
+            if core.params.get("lazy_startup", "false") == "false"
+        ]
 
 # Config helper functions
 
@@ -689,3 +730,69 @@ def stop(flush):
 
     error.raise_nonempty()
 
+
+def get_devices_state():
+    device_list = get_caches_list()
+
+    devices = {"core_pool": [], "caches": {}, "cores": {}}
+
+    core_pool = False
+    prev_cache_id = -1
+
+    for device in device_list:
+        if device["type"] == "core pool":
+            core_pool = True
+            continue
+
+        if device["type"] == "cache":
+            core_pool = False
+            prev_cache_id = int(device["id"])
+            devices["caches"].update(
+                {
+                    int(device["id"]): {
+                        "device": device["disk"],
+                        "status": device["status"],
+                    }
+                }
+            )
+        elif device["type"] == "core":
+            core = {"device": device["disk"], "status": device["status"]}
+            if core_pool:
+                devices["core_pool"].append(core)
+            else:
+                core.update({"cache_id": prev_cache_id})
+                devices["cores"].update(
+                    {(prev_cache_id, int(device["id"])): core}
+                )
+
+    return devices
+
+
+def wait_for_startup(timeout=300, interval=5):
+    try:
+        config = cas_config.from_file(
+            cas_config.default_location, allow_incomplete=True
+        )
+    except Exception as e:
+        raise Exception("Unable to load opencas config. Reason: {0}".format(str(e)))
+
+    stop_time = time.time() + int(timeout)
+
+    not_initialized = None
+    target_core_state = config.get_startup_cores()
+
+    while stop_time > time.time():
+        not_initialized = []
+        runtime_core_state = get_devices_state()["cores"]
+
+        for core in target_core_state:
+            runtime_state = runtime_core_state.get((core.cache_id, core.core_id), None)
+            if not runtime_state or runtime_state["status"] != "Active":
+                not_initialized.append(core)
+
+        if not not_initialized:
+            break
+
+        time.sleep(interval)
+
+    return not_initialized

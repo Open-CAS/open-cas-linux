@@ -100,6 +100,27 @@ def init(force):
 
     exit(exit_code)
 
+
+def settle(timeout, interval):
+    try:
+        not_initialized = opencas.wait_for_startup(timeout, interval)
+    except Exception as e:
+        eprint(e)
+        exit(1)
+
+    if not_initialized:
+        eprint("Open CAS initialization failed. Couldn't set up all required devices")
+        for device in not_initialized:
+            eprint(
+                "Couldn't add device {} as core {} in cache {}".format(
+                    device.device, device.core_id, device.cache_id
+                )
+            )
+        exit(1)
+
+    exit(0)
+
+
 # Stop - detach cores and stop caches
 def stop(flush):
     try:
@@ -107,36 +128,64 @@ def stop(flush):
     except Exception as e:
         eprint(e)
 
+
 # Command line arguments parsing
+
 
 class cas:
     def __init__(self):
-        parser = argparse.ArgumentParser(prog = 'cas')
-        subparsers = parser.add_subparsers(title = 'actions')
+        parser = argparse.ArgumentParser(prog="casctl")
+        subparsers = parser.add_subparsers(title="actions")
 
-        parser_init = subparsers.add_parser('init', help = 'Setup initial configuration')
-        parser_init.set_defaults(command='init')
-        parser_init.add_argument ('--force', action='store_true', help = 'Force cache start')
+        parser_init = subparsers.add_parser("init", help="Setup initial configuration")
+        parser_init.set_defaults(command="init")
+        parser_init.add_argument(
+            "--force", action="store_true", help="Force cache start"
+        )
 
-        parser_start = subparsers.add_parser('start', help = 'Start cache configuration')
-        parser_start.set_defaults(command='start')
+        parser_start = subparsers.add_parser("start", help="Start cache configuration")
+        parser_start.set_defaults(command="start")
 
-        parser_stop = subparsers.add_parser('stop', help = 'Stop cache configuration')
-        parser_stop.set_defaults(command='stop')
-        parser_stop.add_argument ('--flush', action='store_true', help = 'Flush data before stopping')
+        parser_settle = subparsers.add_parser(
+            "settle", help="Wait for startup of devices"
+        )
+        parser_settle.set_defaults(command="settle")
+        parser_settle.add_argument(
+            "--timeout",
+            action="store",
+            help="How long should command wait [s]",
+            default=270,
+            type=int,
+        )
+        parser_settle.add_argument(
+            "--interval",
+            action="store",
+            help="Polling interval [s]",
+            default=5,
+            type=int,
+        )
+
+        parser_stop = subparsers.add_parser("stop", help="Stop cache configuration")
+        parser_stop.set_defaults(command="stop")
+        parser_stop.add_argument(
+            "--flush", action="store_true", help="Flush data before stopping"
+        )
 
         if len(sys.argv[1:]) == 0:
             parser.print_help()
             return
 
         args = parser.parse_args(sys.argv[1:])
-        getattr(self, 'command_' + args.command)(args)
+        getattr(self, "command_" + args.command)(args)
 
     def command_init(self, args):
         init(args.force)
 
     def command_start(self, args):
         start()
+
+    def command_settle(self, args):
+        settle(args.timeout, args.interval)
 
     def command_stop(self, args):
         stop(args.flush)

@@ -23,6 +23,10 @@ Stop all cache instances.
 .B init
 Initial configuration of caches and core devices.
 
+.TP
+.B settle
+Wait for all core devices to be added to respective caches.
+
 .br
 .B CAUTION
 .br
@@ -50,6 +54,17 @@ Flush data before stopping.
 .TP
 .B --force
 Force cache start even if cache device contains partitions or metadata from previously running cache instances.
+
+.TP
+.SH Options that are valid with settle are:
+
+.TP
+.B --timeout
+How long will command block waiting for devices to start before timing out [s].
+
+.TP
+.B --interval
+How often will command poll for status change [s].
 
 .TP
 .SH Command --help (-h) does not accept any options.
