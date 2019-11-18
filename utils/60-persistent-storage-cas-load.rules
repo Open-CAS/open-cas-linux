@@ -1,4 +1,4 @@
-ACTION!="add", GOTO="cas_loader_end"
+ACTION=="remove", GOTO="cas_loader_end"
 SUBSYSTEM!="block", GOTO="cas_loader_end"
 
 RUN+="/lib/opencas/open-cas-loader /dev/$name"
