@@ -13,8 +13,7 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
-from test_utils.filesystem.file import File
-from test_utils.size import Size, Unit
+from test_utils.prepare import prepare, prepare_with_file_creation
 
 iterations_per_config = 50
 cas_conf_path = "/etc/opencas/opencas.conf"
@@ -160,8 +159,8 @@ def test_stress_reload_cache(cache_mode):
           - No data corruption.
     """
     with TestRun.step("Prepare cache and core. Create test file and count it's checksum."):
-        cache, core, md5_before_load, size_before_load, permissions_before_load = \
-            prepare_with_file_creation(cache_mode)
+        cache, core, md5_before_load, size_before_load, permissions_before_load, core_dev = \
+            prepare_with_file_creation(cache_mode, mount_point, test_file_path, Filesystem.ext3)
 
     for _ in TestRun.iteration(range(0, iterations_per_config),
                                f"Stop and load cache {iterations_per_config} times."):
@@ -198,8 +197,8 @@ def test_stress_add_remove_core(cache_mode):
           - No data corruption.
     """
     with TestRun.step("Prepare cache and core. Create test file and count it's checksum."):
-        cache, core, md5_before_load, size_before_load, permissions_before_load = \
-            prepare_with_file_creation(cache_mode)
+        cache, core, md5_before_load, size_before_load, permissions_before_load, core_dev = \
+            prepare_with_file_creation(cache_mode, mount_point, test_file_path, Filesystem.ext3)
 
     for _ in TestRun.iteration(range(0, iterations_per_config),
                                f"Add and remove core {iterations_per_config} times."):
@@ -239,8 +238,8 @@ def test_stress_reload_module(cache_mode):
           - No data corruption.
     """
     with TestRun.step("Prepare cache and core. Create test file and count it's checksum."):
-        cache, core, md5_before_load, size_before_load, permissions_before_load = \
-            prepare_with_file_creation(cache_mode)
+        cache, core, md5_before_load, size_before_load, permissions_before_load, core_dev = \
+            prepare_with_file_creation(cache_mode, mount_point, test_file_path, Filesystem.ext3)
     with TestRun.step("Save current cache configuration."):
         cache_config = cache.get_cache_config()
 
@@ -296,26 +295,3 @@ def check_files(core, size_before, permissions_before, md5_before):
         TestRun.LOGGER.error(f"Size before ({size_before}) and after ({file_after.size}) "
                              f"are different.")
     core.unmount()
-
-
-def prepare_with_file_creation(config):
-    cache_dev, core_dev = prepare()
-    cache = casadm.start_cache(cache_dev, config, force=True)
-    core = cache.add_core(core_dev)
-    core.create_filesystem(Filesystem.ext3)
-    core.mount(mount_point)
-    file = File.create_file(test_file_path)
-    file.write("Test content")
-    md5_before_load = file.md5sum()
-    size_before_load = file.size
-    permissions_before_load = file.permissions
-    core.unmount()
-    return cache, core, md5_before_load, size_before_load, permissions_before_load
-
-
-def prepare():
-    cache_dev = TestRun.disks['cache']
-    cache_dev.create_partitions([Size(2, Unit.GibiByte)])
-    core_dev = TestRun.disks['core']
-    core_dev.create_partitions([Size(1, Unit.GibiByte)])
-    return cache_dev.partitions[0], core_dev.partitions[0]
