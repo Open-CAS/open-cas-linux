@@ -11,12 +11,6 @@ import sys
 import os
 import syslog as sl
 
-def wait_for_cas_ctrl():
-    for i in range(30): # timeout 30s
-        if os.path.exists('/dev/cas_ctrl'):
-            return
-        time.sleep(1)
-
 try:
     subprocess.call(['/sbin/modprobe', 'cas_cache'])
 except:
@@ -34,7 +28,7 @@ except Exception as e:
 for cache in config.caches.values():
     if sys.argv[1] == os.path.realpath(cache.device):
         try:
-            wait_for_cas_ctrl()
+            opencas.wait_for_cas_ctrl()
             opencas.start_cache(cache, True)
         except opencas.casadm.CasadmError as e:
             sl.syslog(sl.LOG_WARNING,
@@ -45,7 +39,7 @@ for cache in config.caches.values():
     for core in cache.cores.values():
         if sys.argv[1] == os.path.realpath(core.device):
             try:
-                wait_for_cas_ctrl()
+                opencas.wait_for_cas_ctrl()
                 opencas.add_core(core, True)
             except opencas.casadm.CasadmError as e:
                 sl.syslog(sl.LOG_WARNING,

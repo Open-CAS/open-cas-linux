@@ -768,6 +768,13 @@ def get_devices_state():
     return devices
 
 
+def wait_for_cas_ctrl():
+    for i in range(30):  # timeout 30s
+        if os.path.exists('/dev/cas_ctrl'):
+            return
+        time.sleep(1)
+
+
 def wait_for_startup(timeout=300, interval=5):
     try:
         config = cas_config.from_file(

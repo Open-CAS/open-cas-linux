@@ -191,4 +191,5 @@ class cas:
         stop(args.flush)
 
 if __name__ == '__main__':
+    opencas.wait_for_cas_ctrl()
     cas()
