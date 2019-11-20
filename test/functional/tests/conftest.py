@@ -16,6 +16,7 @@ from api.cas import installer
 from api.cas import casadm
 from api.cas import git
 from test_utils.os_utils import Udev
+from test_tools.disk_utils import PartitionTable, create_partition_table
 from log.logger import create_log, Log
 from test_utils.singleton import Singleton
 
@@ -180,6 +181,11 @@ def base_prepare(item):
                 casadm.stop_all_caches()
             except Exception:
                 pass  # TODO: Reboot DUT if test is executed remotely
+
+        for disk in TestRun.dut.disks:
+            disk.umount_all_partitions()
+            if not create_partition_table(disk, PartitionTable.gpt):
+                TestRun.exception(f"Failed to remove partitions from {disk}")
 
         if get_force_param(item) and not TestRun.plugins['opencas'].already_updated:
             installer.reinstall_opencas()
