@@ -254,15 +254,10 @@ def get_param_cleaning_acp(cache_id: int, output_format: OutputFormat = None,
 
 def set_param_cutoff(cache_id: int, core_id: int = None, threshold: Size = None,
                      policy: SeqCutOffPolicy = None):
-    _threshold = None if threshold is None else threshold.get_value(Unit.KibiByte)
-    if core_id is None:
-        command = set_param_cutoff_cmd(
-            cache_id=str(cache_id), threshold=_threshold,
-            policy=policy.name)
-    else:
-        command = set_param_cutoff_cmd(
-            cache_id=str(cache_id), core_id=str(core_id),
-            threshold=_threshold, policy=policy.name)
+    _threshold = None if threshold is None else int(threshold.get_value(Unit.KibiByte))
+    command = set_param_cutoff_cmd(
+        cache_id=cache_id, core_id=core_id,
+        threshold=_threshold, policy=policy)
     output = TestRun.executor.run(command)
     if output.exit_code != 0:
         raise Exception(

@@ -190,11 +190,11 @@ def set_param_cutoff_cmd(cache_id: str, core_id: str = None, threshold: str = No
                          policy: str = None, shortcut: bool = False):
     add_params = ""
     if core_id is not None:
-        add_params += (" -j " if shortcut else " --core-id ") + core_id
+        add_params += (" -j " if shortcut else " --core-id ") + str(core_id)
     if threshold is not None:
-        add_params += (" -t " if shortcut else " --threshold ") + threshold
+        add_params += (" -t " if shortcut else " --threshold ") + str(threshold)
     if policy is not None:
-        add_params += (" -p " if shortcut else " --policy ") + policy
+        add_params += (" -p " if shortcut else " --policy ") + policy.name
     return _set_param_cmd(namespace="seq-cutoff", cache_id=cache_id,
                           additional_params=add_params, shortcut=shortcut)
 

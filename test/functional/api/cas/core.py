@@ -17,6 +17,10 @@ class CoreStatus(Enum):
     detached = 3
 
 
+SEQ_CUTOFF_THRESHOLD_MAX = Size(4194181, Unit.KibiByte)
+SEQ_CUT_OFF_THRESHOLD_DEFAULT = Size(1, Unit.MebiByte)
+
+
 class Core(Device):
     def __init__(self, core_device: str, cache_id: int):
         self.core_device = Device(core_device)
@@ -54,6 +58,12 @@ class Core(Device):
     def get_seq_cut_off_parameters(self):
         return get_seq_cut_off_parameters(self.cache_id, self.core_id)
 
+    def get_seq_cut_off_policy(self):
+        return get_seq_cut_off_parameters(self.cache_id, self.core_id).policy
+
+    def get_seq_cut_off_threshold(self):
+        return get_seq_cut_off_parameters(self.cache_id, self.core_id).threshold
+
     def get_dirty_blocks(self):
         return self.get_core_statistics()["dirty"]
 
@@ -77,5 +87,15 @@ class Core(Device):
         assert self.get_dirty_blocks().get_value(Unit.Blocks4096) == 0
 
     def set_seq_cutoff_parameters(self, seq_cutoff_param: SeqCutOffParameters):
-        casadm.set_param_cutoff(self.cache_id, self.core_id,
-                                seq_cutoff_param.threshold, seq_cutoff_param.policy)
+        return casadm.set_param_cutoff(self.cache_id, self.core_id,
+                                       seq_cutoff_param.threshold, seq_cutoff_param.policy)
+
+    def set_seq_cutoff_threshold(self, threshold: Size):
+        return casadm.set_param_cutoff(self.cache_id, self.core_id,
+                                       threshold=threshold,
+                                       policy=None)
+
+    def set_seq_cutoff_policy(self, policy: SeqCutOffPolicy):
+        return casadm.set_param_cutoff(self.cache_id, self.core_id,
+                                       threshold=None,
+                                       policy=policy)
