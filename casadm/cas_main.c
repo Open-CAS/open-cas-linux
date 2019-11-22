@@ -907,11 +907,14 @@ int handle_set_param()
 		err = core_params_set(command_args_values.cache_id,
 				command_args_values.core_id,
 				cas_core_params);
+		break;
 	case PARAM_TYPE_CACHE:
 		err = cache_params_set(command_args_values.cache_id,
 				cas_cache_params);
+		break;
 	default:
 		err = FAILURE;
+		break;
 	}
 
 	if (err)
@@ -1003,11 +1006,14 @@ int handle_get_param()
 		err = core_params_get(command_args_values.cache_id,
 				command_args_values.core_id,
 				cas_core_params, format);
+		break;
 	case PARAM_TYPE_CACHE:
 		err = cache_params_get(command_args_values.cache_id,
 				cas_cache_params, format);
+		break;
 	default:
 		err = FAILURE;
+		break;
 	}
 
 	if (err)
