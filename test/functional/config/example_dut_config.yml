@@ -8,6 +8,9 @@ type: "local"
 
 # env: "HTTPS_PROXY=myproxy.example:12345"
 
+# By enabling this option framework is allowed to retrieve random non-os disks from DUT.
+# It can lead to data loss!!!
+allow_disk_autoselect: False
 working_dir: "/tmp/open-cas-linux/"
 
 disks:
