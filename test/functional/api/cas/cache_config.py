@@ -132,10 +132,9 @@ class CacheConfig:
         self.eviction_policy = eviction_policy
         self.metadata_mode = metadata_mode
 
-
-def __eq__(self, other):
-    return self.cache_line_size == other.cache_line_size and \
-        self.cache_mode == other.cache_mode and \
-        self.cleaning_policy == other.cleaning_policy and \
-        self.eviction_policy == other.eviction_policy and \
-        self.metadata_mode == other.metadata_mode
+    def __eq__(self, other):
+        return self.cache_line_size == other.cache_line_size and \
+            self.cache_mode == other.cache_mode and \
+            self.cleaning_policy == other.cleaning_policy and \
+            self.eviction_policy == other.eviction_policy and \
+            self.metadata_mode == other.metadata_mode
