@@ -112,7 +112,7 @@ class Cache:
     def reset_counters(self):
         return casadm.reset_counters(self.cache_id)
 
-    def set_cache_mode(self, cache_mode: CacheMode, flush: bool = True):
+    def set_cache_mode(self, cache_mode: CacheMode, flush=None):
         return casadm.set_cache_mode(cache_mode, self.cache_id, flush)
 
     def load_io_class(self, file_path: str):

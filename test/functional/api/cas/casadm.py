@@ -167,10 +167,12 @@ def print_statistics(cache_id: int, core_id: int = None, per_io_class: bool = Fa
 
 
 def set_cache_mode(cache_mode: CacheMode, cache_id: int,
-                   flush: bool = True, shortcut: bool = False):
+                   flush=None, shortcut: bool = False):
     flush_cache = None
-    if cache_mode in [CacheMode.WB, CacheMode.WO]:
-        flush_cache = "yes" if flush else "no"
+    if flush is True:
+        flush_cache = "yes"
+    elif flush is False:
+        flush_cache = "no"
 
     output = TestRun.executor.run(
         set_cache_mode_cmd(cache_mode=cache_mode.name.lower(), cache_id=str(cache_id),
