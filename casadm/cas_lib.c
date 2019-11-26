@@ -1176,8 +1176,8 @@ int core_params_set(unsigned int cache_id, unsigned int core_id,
 
 	if (ocf_cache_mode_pt == cache_mode) {
 		cas_printf(LOG_WARNING, "Changing parameters for core in Pass-Through mode."
-				"New values will be saved but will not be effective"
-				"until switching to another cache mode.\n");
+				" New values will be saved but will not be effective"
+				" until switching to another cache mode.\n");
 	}
 
 	for (i = 0; params[i].name; ++i) {
