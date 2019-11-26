@@ -84,11 +84,29 @@ def pytest_runtest_setup(item):
     TestRun.LOGGER.start_group("Test body")
 
 
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    res = (yield).get_result()
+
+    TestRun.outcome = res.outcome
+
+    from _pytest.outcomes import Failed
+    if res.when == "call" and res.failed:
+        msg = f"{call.excinfo.type.__name__}: {call.excinfo.value}"
+        if call.excinfo.type is Failed:
+            TestRun.LOGGER.error(msg)
+        else:
+            TestRun.LOGGER.exception(msg)
+
+
 def pytest_runtest_teardown():
     """
     This method is executed always in the end of each test, even if it fails or raises exception in
     prepare stage.
     """
+    if TestRun.outcome == "skipped":
+        return
+
     TestRun.LOGGER.end_all_groups()
 
     with TestRun.LOGGER.step("Cleanup after test"):
