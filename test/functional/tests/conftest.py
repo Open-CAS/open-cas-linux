@@ -16,7 +16,7 @@ from core.test_run_utils import TestRun
 from api.cas import installer
 from api.cas import casadm
 from api.cas import git
-from test_utils.os_utils import Udev
+from test_utils.os_utils import Udev, kill_all_io
 from test_tools.disk_utils import PartitionTable, create_partition_table
 from log.logger import create_log, Log
 from test_utils.singleton import Singleton
@@ -176,12 +176,6 @@ def unmount_cas_devices():
                 f"Failed to unmount {cas_device_path}. \
                 stdout: {output.stdout} \n stderr :{output.stderr}"
             )
-
-
-def kill_all_io():
-    TestRun.executor.run("pkill --signal SIGKILL dd")
-    TestRun.executor.run("kill -9 `ps aux | grep -i vdbench.* | awk '{ print $1 }'`")
-    TestRun.executor.run("pkill --signal SIGKILL fio*")
 
 
 def get_force_param(item):
