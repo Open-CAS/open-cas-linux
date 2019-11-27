@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
+import pytest
 import os
 import sys
 import yaml
