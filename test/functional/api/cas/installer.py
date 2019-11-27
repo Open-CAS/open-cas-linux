@@ -15,6 +15,7 @@ def install_opencas():
     TestRun.executor.rsync(
         f"{TestRun.plugins['opencas'].repo_dir}/",
         f"{TestRun.plugins['opencas'].working_dir}/",
+        exclude_list=["test/functional/results/"],
         delete=True)
 
     TestRun.LOGGER.info("Building Open CAS")
