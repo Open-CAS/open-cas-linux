@@ -13,7 +13,6 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
-from test_utils.filesystem.file import File
 from test_utils.size import Size, Unit
 
 iterations_per_config = 50
@@ -160,8 +159,8 @@ def test_stress_reload_cache(cache_mode):
           - No data corruption.
     """
     with TestRun.step("Prepare cache and core. Create test file and count it's checksum."):
-        cache, core, md5_before_load, size_before_load, permissions_before_load = \
-            prepare_with_file_creation(cache_mode)
+        cache, core, file = prepare_with_file_creation(cache_mode)
+        file_before = file.get_properties()
 
     for _ in TestRun.iteration(range(0, iterations_per_config),
                                f"Stop and load cache {iterations_per_config} times."):
@@ -180,7 +179,12 @@ def test_stress_reload_cache(cache_mode):
                 TestRun.fail(f"Expected cores count: 1; Actual cores count: {cores_count}.")
 
     with TestRun.step("Check md5 of test file."):
-        check_files(core, size_before_load, permissions_before_load, md5_before_load)
+        core.mount(mount_point)
+        file_after = file.get_properties()
+        if file_after != file_before:
+            TestRun.LOGGER.error("File properties before and after are different.")
+        core.unmount()
+
     with TestRun.step("Stop all caches."):
         casadm.stop_all_caches()
 
@@ -198,8 +202,8 @@ def test_stress_add_remove_core(cache_mode):
           - No data corruption.
     """
     with TestRun.step("Prepare cache and core. Create test file and count it's checksum."):
-        cache, core, md5_before_load, size_before_load, permissions_before_load = \
-            prepare_with_file_creation(cache_mode)
+        cache, core, file = prepare_with_file_creation(cache_mode)
+        file_before = file.get_properties()
 
     for _ in TestRun.iteration(range(0, iterations_per_config),
                                f"Add and remove core {iterations_per_config} times."):
@@ -221,7 +225,12 @@ def test_stress_add_remove_core(cache_mode):
                 TestRun.fail(f"Expected cores count: 1; Actual cores count: {cores_count}.")
 
     with TestRun.step("Check md5 of test file."):
-        check_files(core, size_before_load, permissions_before_load, md5_before_load)
+        core.mount(mount_point)
+        file_after = file.get_properties()
+        if file_after != file_before:
+            TestRun.LOGGER.error("File properties before and after are different.")
+        core.unmount()
+
     with TestRun.step("Stop all caches."):
         casadm.stop_all_caches()
 
@@ -239,8 +248,9 @@ def test_stress_reload_module(cache_mode):
           - No data corruption.
     """
     with TestRun.step("Prepare cache and core. Create test file and count it's checksum."):
-        cache, core, md5_before_load, size_before_load, permissions_before_load = \
-            prepare_with_file_creation(cache_mode)
+        cache, core, file = prepare_with_file_creation(cache_mode)
+        file_before = file.get_properties()
+
     with TestRun.step("Save current cache configuration."):
         cache_config = cache.get_cache_config()
 
@@ -270,32 +280,14 @@ def test_stress_reload_module(cache_mode):
                 TestRun.fail("Cache configuration is different than before reloading modules.")
 
     with TestRun.step("Check md5 of test file."):
-        check_files(core, size_before_load, permissions_before_load, md5_before_load)
+        core.mount(mount_point)
+        file_after = file.get_properties()
+        if file_after != file_before:
+            TestRun.LOGGER.error("File properties before and after are different.")
+        core.unmount()
+
     with TestRun.step("Stop all caches."):
         casadm.stop_all_caches()
-
-
-def check_files(core, size_before, permissions_before, md5_before):
-    TestRun.LOGGER.info("Checking file md5.")
-    core.mount(mount_point)
-    file_after = fs_utils.parse_ls_output(fs_utils.ls(test_file_path))[0]
-    md5_after = file_after.md5sum()
-    if md5_before != md5_after:
-        TestRun.LOGGER.error(f"Md5 before ({md5_before}) and after ({md5_after}) are different.")
-
-    if permissions_before.user == file_after.permissions.user:
-        TestRun.LOGGER.error(f"User permissions before ({permissions_before.user}) "
-                             f"and after ({file_after.permissions.user}) are different.")
-    if permissions_before.group != file_after.permissions.group:
-        TestRun.LOGGER.error(f"Group permissions before ({permissions_before.group}) "
-                             f"and after ({file_after.permissions.group}) are different.")
-    if permissions_before.other != file_after.permissions.other:
-        TestRun.LOGGER.error(f"Other permissions before ({permissions_before.other}) "
-                             f"and after ({file_after.permissions.other}) are different.")
-    if size_before != file_after.size:
-        TestRun.LOGGER.error(f"Size before ({size_before}) and after ({file_after.size}) "
-                             f"are different.")
-    core.unmount()
 
 
 def prepare_with_file_creation(config):
@@ -304,13 +296,9 @@ def prepare_with_file_creation(config):
     core = cache.add_core(core_dev)
     core.create_filesystem(Filesystem.ext3)
     core.mount(mount_point)
-    file = File.create_file(test_file_path)
-    file.write("Test content")
-    md5_before_load = file.md5sum()
-    size_before_load = file.size
-    permissions_before_load = file.permissions
+    file = fs_utils.create_test_file(test_file_path)
     core.unmount()
-    return cache, core, md5_before_load, size_before_load, permissions_before_load
+    return cache, core, file
 
 
 def prepare():
