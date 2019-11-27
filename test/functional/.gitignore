@@ -1,2 +1,4 @@
 plugins/
 results/
+config/dut_config.yml
+/config/duts_in_use
