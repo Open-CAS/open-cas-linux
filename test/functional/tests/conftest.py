@@ -26,8 +26,7 @@ sys.path.append(plugins_dir)
 try:
     from test_wrapper import plugin as test_wrapper
 except ImportError as e:
-    TestRun.LOGGER.info(str(e))
-    pass
+    print(e)
 
 
 class OpencasPlugin(metaclass=Singleton):
