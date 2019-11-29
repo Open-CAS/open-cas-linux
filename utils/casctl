@@ -9,6 +9,9 @@ import sys
 import re
 import opencas
 
+if sys.version_info < (3, 5):
+    raise RuntimeError('At least Python 3.5 is required')
+
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
