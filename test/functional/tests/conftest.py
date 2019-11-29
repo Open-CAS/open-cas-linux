@@ -64,18 +64,18 @@ def pytest_runtest_setup(item):
                     try:
                         IP(dut_config['ip'])
                     except ValueError:
-                        TestRun.exception(
+                        raise ValueError(
                             "IP address from configuration file is in invalid format.")
                 try:
                     dut_config = test_wrapper.prepare(dut_config)
                 except Exception as ex:
-                    TestRun.LOGGER.exception(f"Exception occurred on test wrapper prepare stage:\n"
-                                             f"{str(ex)}\n{traceback.format_exc()}")
+                    raise Exception(f"Exception occurred on test wrapper prepare stage:\n"
+                                    f"{str(ex)}\n{traceback.format_exc()}")
             try:
                 TestRun.setup(dut_config)
             except Exception as ex:
-                TestRun.LOGGER.exception(f"Exception occurred during test setup:\n"
-                                         f"{str(ex)}\n{traceback.format_exc()}")
+                raise Exception(f"Exception occurred during test setup:\n"
+                                f"{str(ex)}\n{traceback.format_exc()}")
 
             if 'test_wrapper' in sys.modules:
                 test_wrapper.try_setup_serial_log(dut_config)
@@ -85,8 +85,8 @@ def pytest_runtest_setup(item):
                 working_dir=dut_config['working_dir'])
 
         except Exception as exception:
-            TestRun.LOGGER.exception(f"Conftest prepare exception:\n"
-                                     f"{str(exception)}\n{traceback.format_exc()}")
+            raise Exception(f"Conftest prepare exception:\n"
+                            f"{str(exception)}\n{traceback.format_exc()}")
         TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
 
     base_prepare(item)
@@ -97,16 +97,7 @@ def pytest_runtest_setup(item):
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     res = (yield).get_result()
-
-    TestRun.outcome = res.outcome
-
-    from _pytest.outcomes import Failed
-    if res.when == "call" and res.failed:
-        msg = f"{call.excinfo.type.__name__}: {call.excinfo.value}"
-        if call.excinfo.type is Failed:
-            TestRun.LOGGER.error(msg)
-        else:
-            TestRun.LOGGER.exception(msg)
+    TestRun.makereport(item, call, res)
 
 
 def pytest_runtest_teardown():
@@ -197,7 +188,7 @@ def base_prepare(item):
         for disk in TestRun.dut.disks:
             disk.umount_all_partitions()
             if not create_partition_table(disk, PartitionTable.gpt):
-                TestRun.exception(f"Failed to remove partitions from {disk}")
+                raise Exception(f"Failed to remove partitions from {disk}")
 
         if get_force_param(item) and not TestRun.plugins['opencas'].already_updated:
             installer.reinstall_opencas()
