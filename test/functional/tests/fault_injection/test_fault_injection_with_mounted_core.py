@@ -184,3 +184,46 @@ def test_add_occupied_core(cache_mode):
 
     with TestRun.step("Stop all caches."):
         casadm.stop_all_caches()
+
+
+@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_add_twice_same_core(cache_mode):
+    """
+        title: Test if OpenCAS not accepts twice the same device as core.
+        description: |
+          False positive test of the ability to add core twice to OpenCAS.
+        pass_criteria:
+          - No system crash.
+          - The same core device cannot be used twice in CAS.
+    """
+    with TestRun.step("Prepare cache and core."):
+        cache_dev = TestRun.disks['cache']
+        cache_dev.create_partitions([Size(2, Unit.GibiByte)])
+        cache_dev = cache_dev.partitions[0]
+        core_dev = TestRun.disks['core']
+        core_dev.create_partitions([Size(1, Unit.GibiByte)])
+        core_dev = core_dev.partitions[0]
+
+    with TestRun.step("Start OpenCAS"):
+        cache = casadm.start_cache(cache_dev, cache_mode, force=True)
+
+    with TestRun.step("Add core device to OpenCAS."):
+        cache.add_core(core_dev)
+
+    with TestRun.step("Try add second time the same core device to OpenCAS"):
+        try:
+            cache.add_core(core_dev)
+        except Exception:
+            TestRun.LOGGER.info("Can't add twice the same core as expected.")
+        finally:
+            caches_count = len(casadm_parser.get_caches())
+            if caches_count != 1:
+                TestRun.fail(f"Expected caches count: 1 Actual caches count: {caches_count}.")
+            cores_count = len(casadm_parser.get_cores(cache.cache_id))
+            if cores_count != 1:
+                TestRun.fail(f"Expected cores count: 1; Actual cores count: {cores_count}.")
+
+    with TestRun.step("Stop all caches."):
+        casadm.stop_all_caches()
