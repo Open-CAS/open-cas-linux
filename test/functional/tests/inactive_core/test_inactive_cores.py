@@ -5,12 +5,13 @@
 
 
 import pytest
+
+from api.cas import casadm
+from api.cas.cache_config import CacheMode
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.size import Size, Unit
-from api.cas.cache_config import CacheMode
-from api.cas import casadm
 from test_tools.dd import Dd
+from test_utils.size import Size, Unit
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -63,7 +64,6 @@ def test_core_inactive_stats():
 
     cache_device = cache.cache_device
 
-    TestRun.LOGGER.info(cache_device)
     TestRun.LOGGER.info("Switching cache mode to WB")
     cache.set_cache_mode(cache_mode=CacheMode.WB)
     cores = cache.get_core_devices()
@@ -125,7 +125,7 @@ def test_core_inactive_stats():
     inactive_clean_perc = round(100 * inactive_clean_perc, 1)
     inactive_dirty_perc = round(100 * inactive_dirty_perc, 1)
 
-    TestRun.LOGGER.info(cache_stats_percentage)
+    TestRun.LOGGER.info(str(cache_stats_percentage))
     assert inactive_occupancy_perc == cache_stats_percentage["inactive occupancy"]
     assert inactive_clean_perc == cache_stats_percentage["inactive clean"]
     assert inactive_dirty_perc == cache_stats_percentage["inactive dirty"]
