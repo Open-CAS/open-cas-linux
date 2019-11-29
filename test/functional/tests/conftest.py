@@ -97,16 +97,7 @@ def pytest_runtest_setup(item):
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     res = (yield).get_result()
-
-    TestRun.outcome = res.outcome
-
-    from _pytest.outcomes import Failed
-    if res.when == "call" and res.failed:
-        msg = f"{call.excinfo.type.__name__}: {call.excinfo.value}"
-        if call.excinfo.type is Failed:
-            TestRun.LOGGER.error(msg)
-        else:
-            TestRun.LOGGER.exception(msg)
+    TestRun.makereport(item, call, res)
 
 
 def pytest_runtest_teardown():
