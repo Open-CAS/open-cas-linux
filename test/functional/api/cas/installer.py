@@ -8,6 +8,7 @@ import logging
 
 from tests import conftest
 from core.test_run import TestRun
+from test_utils.output import CmdException
 
 
 def install_opencas():
@@ -23,22 +24,19 @@ def install_opencas():
         "./configure && "
         "make -j")
     if output.exit_code != 0:
-        TestRun.exception(
-            f"Make command executed with nonzero status: {output.stdout}\n{output.stderr}")
+        raise CmdException("Make command executed with nonzero status", output)
 
     TestRun.LOGGER.info("Installing Open CAS")
     output = TestRun.executor.run(
         f"cd {TestRun.plugins['opencas'].working_dir} && "
         f"make install")
     if output.exit_code != 0:
-        TestRun.exception(
-            f"Error while installing Open CAS: {output.stdout}\n{output.stderr}")
+        raise CmdException("Error while installing Open CAS", output)
 
     TestRun.LOGGER.info("Check if casadm is properly installed.")
     output = TestRun.executor.run("casadm -V")
     if output.exit_code != 0:
-        TestRun.exception(
-            f"'casadm -V' command returned an error: {output.stdout}\n{output.stderr}")
+        raise CmdException("'casadm -V' command returned an error", output)
     else:
         TestRun.LOGGER.info(output.stdout)
 
@@ -47,14 +45,13 @@ def uninstall_opencas():
     TestRun.LOGGER.info("Uninstalling Open CAS")
     output = TestRun.executor.run("casadm -V")
     if output.exit_code != 0:
-        TestRun.exception("Open CAS is not properly installed")
+        raise CmdException("Open CAS is not properly installed", output)
     else:
         TestRun.executor.run(
             f"cd {TestRun.plugins['opencas'].working_dir} && "
             f"make uninstall")
         if output.exit_code != 0:
-            TestRun.exception(
-                f"There was an error during uninstall process: {output.stdout}\n{output.stderr}")
+            raise CmdException("There was an error during uninstall process", output)
 
 
 def reinstall_opencas():
