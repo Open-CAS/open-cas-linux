@@ -3,14 +3,22 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
-from api.cas import casadm
-from test_utils.size import parse_unit
-from api.cas.cache_config import *
-from api.cas.casadm_params import *
+import json
+import re
 from datetime import timedelta
 from typing import List
+
 from packaging import version
-import re
+
+from api.cas import casadm
+from api.cas.cache_config import *
+from api.cas.casadm_params import *
+from test_utils.size import parse_unit
+
+
+class Stats(dict):
+    def __str__(self):
+        return json.dumps(self, default=lambda o: str(o), indent=2)
 
 
 def parse_stats_unit(unit: str):
@@ -50,7 +58,7 @@ def get_statistics(
     filter: List[casadm.StatsFilter] = None,
     percentage_val: bool = False,
 ):
-    stats = {}
+    stats = Stats()
 
     _filter = get_filter(filter)
 
