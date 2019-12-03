@@ -37,7 +37,7 @@ def parse_stats_unit(unit: str):
         return parse_unit(unit)
 
 
-def get_filter(filter: List[casadm.StatsFilter]):
+def get_filter(filter: List[StatsFilter]):
     """Prepare list of statistic sections which should be retrieved and parsed. """
     if filter is None or StatsFilter.all in filter:
         _filter = [
@@ -55,7 +55,7 @@ def get_statistics(
     cache_id: int,
     core_id: int = None,
     io_class_id: int = None,
-    filter: List[casadm.StatsFilter] = None,
+    filter: List[StatsFilter] = None,
     percentage_val: bool = False,
 ):
     stats = Stats()
