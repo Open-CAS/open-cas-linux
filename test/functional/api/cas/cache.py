@@ -14,8 +14,8 @@ from api.cas.statistics import CacheStats, IoClassStats
 
 
 class Cache:
-    def __init__(self, device_system_path):
-        self.cache_device = Device(device_system_path)
+    def __init__(self, device: Device):
+        self.cache_device = device
         self.cache_id = int(self.__get_cache_id())
         self.__cache_line_size = None
         self.__metadata_mode = None
@@ -36,7 +36,7 @@ class Cache:
         if self.__cache_line_size is None:
             stats = self.get_statistics()
             stats_line_size = stats.config_stats.cache_line_size
-            self.__cache_line_size = CacheLineSize(stats_line_size.get_value(Unit.Byte))
+            self.__cache_line_size = CacheLineSize(stats_line_size)
         return self.__cache_line_size
 
     def get_cleaning_policy(self):
@@ -68,6 +68,10 @@ class Cache:
     def get_status(self):
         status = self.get_statistics().config_stats.status.replace(' ', '_').lower()
         return CacheStatus[status]
+
+    @property
+    def size(self):
+        return self.get_statistics().config_stats.cache_size
 
     def get_cache_mode(self):
         return CacheMode[self.get_statistics().config_stats.write_policy.upper()]
