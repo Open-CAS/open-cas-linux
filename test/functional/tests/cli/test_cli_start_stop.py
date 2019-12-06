@@ -50,25 +50,33 @@ def test_cli_start_stop_default_value(shortcut):
 @pytest.mark.parametrize("shortcut", [True, False])
 def test_cli_add_remove_default_value(shortcut):
     cache_device = TestRun.disks['cache']
-    cache_device.create_partitions([Size(500, Unit.MebiByte)])
+    cache_device.create_partitions([Size(50, Unit.MebiByte)])
     cache_device = cache_device.partitions[0]
     cache = casadm.start_cache(cache_device, shortcut=shortcut, force=True)
 
     core_device = TestRun.disks['core']
+
     casadm.add_core(cache, core_device, shortcut=shortcut)
 
     caches = casadm_parser.get_caches()
-    assert len(caches[0].get_core_devices()) == 1
-    assert caches[0].get_core_devices()[0].core_device.system_path == core_device.system_path
+    if len(caches[0].get_core_devices()) != 1:
+        TestRun.fail("One core should be present in cache")
+    if caches[0].get_core_devices()[0].core_device.system_path != core_device.system_path:
+        TestRun.fail("Core path should equal to path of core added")
+
 
     casadm.remove_core(cache.cache_id, 1, shortcut=shortcut)
     caches = casadm_parser.get_caches()
-    assert len(caches) == 1
-    assert len(caches[0].get_core_devices()) == 0
+    if len(caches) != 1:
+        TestRun.fail("One cache should be present still after removing core")
+    if len(caches[0].get_core_devices()) != 0:
+        TestRun.fail("No core devices should be present after removing core")
 
     casadm.stop_cache(cache_id=cache.cache_id, shortcut=shortcut)
 
     output = casadm.list_caches(shortcut=shortcut)
     caches = casadm_parser.get_caches()
-    assert len(caches) == 0
-    assert output.stdout == "No caches running"
+    if len(caches) != 0:
+        TestRun.fail("No cache should be present after stopping the cache")
+    if output.stdout != "No caches running":
+        TestRun.fail(f"Invalid message, expected 'No caches running', got {output.stdout}")
