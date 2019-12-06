@@ -8,6 +8,7 @@ from api.cas.cli import *
 from api.cas.casadm_parser import *
 from api.cas.cache import Device
 from test_utils.os_utils import *
+from api.cas.statistics import CoreStats, IoClassStats
 
 
 class CoreStatus(Enum):
@@ -45,15 +46,33 @@ class Core(Device):
                         "status": split_line[3],
                         "exp_obj": split_line[5]}
 
-    def get_core_statistics(self,
-                            io_class_id: int = None,
-                            stat_filter: List[StatsFilter] = None,
-                            percentage_val: bool = False):
+    def get_io_class_statistics(self,
+                                io_class_id: int,
+                                stat_filter: List[StatsFilter] = None,
+                                percentage_val: bool = False):
+        stats = get_statistics(self.cache_id, self.core_id, io_class_id,
+                               stat_filter, percentage_val)
+        return IoClassStats(stats)
+
+    def get_statistics(self,
+                       stat_filter: List[StatsFilter] = None,
+                       percentage_val: bool = False):
+        stats = get_statistics(self.cache_id, self.core_id, None,
+                               stat_filter, percentage_val)
+        return CoreStats(stats)
+
+    # TODO: Get rid of this method below by tuning 'stats' and 'io_class' tests
+    # to utilize new statistics API with method above.
+
+    def get_statistics_deprecated(self,
+                                  io_class_id: int = None,
+                                  stat_filter: List[StatsFilter] = None,
+                                  percentage_val: bool = False):
         return get_statistics(self.cache_id, self.core_id, io_class_id,
                               stat_filter, percentage_val)
 
     def get_status(self):
-        return self.__get_core_info()["status"]
+        return CoreStatus[self.__get_core_info()["status"].lower()]
 
     def get_seq_cut_off_parameters(self):
         return get_seq_cut_off_parameters(self.cache_id, self.core_id)
@@ -65,13 +84,13 @@ class Core(Device):
         return get_seq_cut_off_parameters(self.cache_id, self.core_id).threshold
 
     def get_dirty_blocks(self):
-        return self.get_core_statistics()["dirty"]
+        return self.get_statistics().usage_stats.dirty
 
     def get_clean_blocks(self):
-        return self.get_core_statistics()["clean"]
+        return self.get_statistics().usage_stats.clean
 
     def get_occupancy(self):
-        return self.get_core_statistics()["occupancy"]
+        return self.get_statistics().usage_stats.occupancy
 
     # Casadm methods:
 
