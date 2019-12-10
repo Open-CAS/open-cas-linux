@@ -112,8 +112,8 @@ def test_block_stats_write(cache_mode, zero_stats):
         for i in range(iterations):
             dd.seek(dd_seek)
             dd.run()
-            cache_stats = cache.get_cache_statistics(stat_filter=[StatsFilter.blk])
-            core_stats = core.get_core_statistics(stat_filter=[StatsFilter.blk])
+            cache_stats = cache.get_statistics_deprecated(stat_filter=[StatsFilter.blk])
+            core_stats = core.get_statistics_deprecated(stat_filter=[StatsFilter.blk])
 
             # Check cache stats
             assumed_value = (dd_size.get_value(Unit.Blocks4096) * dd_count) * (i + 1)
@@ -237,8 +237,8 @@ def test_block_stats_read(cache_mode, zero_stats):
         for i in range(iterations):
             dd.skip(dd_skip)
             dd.run()
-            cache_stats = cache.get_cache_statistics(stat_filter=[StatsFilter.blk])
-            core_stats = core.get_core_statistics(stat_filter=[StatsFilter.blk])
+            cache_stats = cache.get_statistics_deprecated(stat_filter=[StatsFilter.blk])
+            core_stats = core.get_statistics_deprecated(stat_filter=[StatsFilter.blk])
 
             # Check cache stats
             assumed_value = (dd_size.get_value(Unit.Blocks4096) * dd_count) * (i + 1)
@@ -283,7 +283,7 @@ def test_block_stats_read(cache_mode, zero_stats):
 def flush(cache):
     cache.flush_cache()
     cache.reset_counters()
-    stats = cache.get_cache_statistics(stat_filter=[StatsFilter.blk])
+    stats = cache.get_statistics_deprecated(stat_filter=[StatsFilter.blk])
     for key, value in stats.items():
         assert value.get_value(Unit.Blocks4096) == 0
 

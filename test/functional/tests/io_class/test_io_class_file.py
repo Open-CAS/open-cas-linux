@@ -56,7 +56,7 @@ def test_ioclass_file_extension():
     for i in range(iterations):
         dd.run()
         sync()
-        stats = cache.get_cache_statistics(io_class_id=ioclass_id)
+        stats = cache.get_statistics_deprecated(io_class_id=ioclass_id)
         assert stats["dirty"].get_value(Unit.Blocks4096) == (i + 1) * dd_count
 
     cache.flush_cache()
@@ -73,7 +73,7 @@ def test_ioclass_file_extension():
         )
         dd.run()
         sync()
-        stats = cache.get_cache_statistics(io_class_id=ioclass_id)
+        stats = cache.get_statistics_deprecated(io_class_id=ioclass_id)
         assert stats["dirty"].get_value(Unit.Blocks4096) == 0
 
 
@@ -135,7 +135,7 @@ def test_ioclass_file_extension_preexisting_filesystem():
         )
         dd.run()
         sync()
-        stats = cache.get_cache_statistics(io_class_id=ioclass_id)
+        stats = cache.get_statistics_deprecated(io_class_id=ioclass_id)
         assert (
             stats["dirty"].get_value(Unit.Blocks4096)
             == (extensions.index(ext) + 1) * dd_count
@@ -191,7 +191,7 @@ def test_ioclass_file_offset():
         )
         dd.run()
         sync()
-        stats = cache.get_cache_statistics(io_class_id=ioclass_id)
+        stats = cache.get_statistics_deprecated(io_class_id=ioclass_id)
         assert (
             stats["dirty"].get_value(Unit.Blocks4096) == 1
         ), f"Offset not cached: {file_offset}"
@@ -212,7 +212,7 @@ def test_ioclass_file_offset():
         )
         dd.run()
         sync()
-        stats = cache.get_cache_statistics(io_class_id=ioclass_id)
+        stats = cache.get_statistics_deprecated(io_class_id=ioclass_id)
         assert (
             stats["dirty"].get_value(Unit.Blocks4096) == 0
         ), f"Inappropriately cached offset: {file_offset}"
@@ -271,10 +271,10 @@ def test_ioclass_file_size(filesystem):
         TestRun.LOGGER.info("Creating files belonging to different IO classes "
                             "(classification by writes).")
         for size, ioclass_id in size_to_class.items():
-            occupancy_before = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+            occupancy_before = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
             file_path = f"{mountpoint}/test_file_{size.get_value()}"
             Dd().input("/dev/zero").output(file_path).oflag("sync").block_size(size).count(1).run()
-            occupancy_after = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+            occupancy_after = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
             if occupancy_after != occupancy_before + size:
                 pytest.xfail("File not cached properly!\n"
                              f"Expected {occupancy_before + size}\n"
@@ -288,9 +288,9 @@ def test_ioclass_file_size(filesystem):
                             "(classification by reads).")
         for file in test_files:
             ioclass_id = size_to_class[file.size]
-            occupancy_before = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+            occupancy_before = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
             Dd().input(file.full_path).output("/dev/null").block_size(file.size).run()
-            occupancy_after = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+            occupancy_after = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
             if occupancy_after != occupancy_before + file.size:
                 pytest.xfail("File not reclassified properly!\n"
                              f"Expected {occupancy_before + file.size}\n"
@@ -312,10 +312,10 @@ def test_ioclass_file_size(filesystem):
             ioclass_config_path=ioclass_config_path,
         )
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
-        occupancy_before = cache.get_cache_statistics(io_class_id=0)["occupancy"]
+        occupancy_before = cache.get_statistics_deprecated(io_class_id=0)["occupancy"]
         for file in test_files:
             Dd().input(file.full_path).output("/dev/null").block_size(file.size).run()
-            occupancy_after = cache.get_cache_statistics(io_class_id=0)["occupancy"]
+            occupancy_after = cache.get_statistics_deprecated(io_class_id=0)["occupancy"]
             if occupancy_after != occupancy_before + file.size:
                 pytest.xfail("File not reclassified properly!\n"
                              f"Expected {occupancy_before + file.size}\n"
