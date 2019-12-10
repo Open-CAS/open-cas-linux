@@ -75,11 +75,15 @@ class Time(timedelta):
 
 
 class FlushParametersAlru:
-    def __init__(self):
-        self.activity_threshold = None
-        self.flush_max_buffers = None
-        self.staleness_time = None
-        self.wake_up_time = None
+    def __init__(self,
+                 activity_threshold=None,
+                 flush_max_buffers=None,
+                 staleness_time=None,
+                 wake_up_time=None):
+        self.activity_threshold = activity_threshold
+        self.flush_max_buffers = flush_max_buffers
+        self.staleness_time = staleness_time
+        self.wake_up_time = wake_up_time
 
     @staticmethod
     def default_alru_params():
@@ -92,9 +96,11 @@ class FlushParametersAlru:
 
 
 class FlushParametersAcp:
-    def __init__(self):
-        self.flush_max_buffers = None
-        self.wake_up_time = None
+    def __init__(self,
+                 flush_max_buffers=None,
+                 wake_up_time=None):
+        self.flush_max_buffers = flush_max_buffers
+        self.wake_up_time = wake_up_time
 
     @staticmethod
     def default_acp_params():
@@ -105,9 +111,9 @@ class FlushParametersAcp:
 
 
 class SeqCutOffParameters:
-    def __init__(self):
-        self.policy = None
-        self.threshold = None
+    def __init__(self, policy=None, threshold=None):
+        self.policy = policy
+        self.threshold = threshold
 
     @staticmethod
     def default_seq_cut_off_params():

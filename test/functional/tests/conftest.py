@@ -3,9 +3,10 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
-import pytest
 import os
 import sys
+
+import pytest
 import yaml
 import traceback
 from IPy import IP
@@ -117,7 +118,10 @@ def pytest_runtest_teardown():
                     TestRun.executor.wait_for_connection()
                 Udev.enable()
                 unmount_cas_devices()
+                casadm.remove_all_detached_cores()
                 casadm.stop_all_caches()
+                from api.cas import init_config
+                init_config.create_default_init_config()
         except Exception as ex:
             TestRun.LOGGER.warning(f"Exception occured during platform cleanup.\n"
                                    f"{str(ex)}\n{traceback.format_exc()}")
@@ -182,6 +186,7 @@ def base_prepare(item):
             try:
                 unmount_cas_devices()
                 casadm.stop_all_caches()
+                casadm.remove_all_detached_cores()
             except Exception:
                 pass  # TODO: Reboot DUT if test is executed remotely
 
