@@ -10,6 +10,7 @@ from api.cas.cache_config import *
 from storage_devices.device import Device
 from core.test_run import TestRun
 from api.cas.casadm_params import *
+from api.cas.statistics import CacheStats, IoClassStats
 
 
 class Cache:
@@ -33,52 +34,52 @@ class Cache:
 
     def get_cache_line_size(self):
         if self.__cache_line_size is None:
-            stats = self.get_cache_statistics()
-            stats_line_size = stats["cache line size"]
+            stats = self.get_statistics()
+            stats_line_size = stats.config_stats.cache_line_size
             self.__cache_line_size = CacheLineSize(stats_line_size.get_value(Unit.Byte))
         return self.__cache_line_size
 
     def get_cleaning_policy(self):
-        stats = self.get_cache_statistics()
-        cp = stats["cleaning policy"]
+        stats = self.get_statistics()
+        cp = stats.config_stats.cleaning_policy
         return CleaningPolicy[cp]
 
     def get_eviction_policy(self):
-        stats = self.get_cache_statistics()
-        ep = stats["eviction policy"]
+        stats = self.get_statistics()
+        ep = stats.config_stats.eviction_policy
         return EvictionPolicy[ep]
 
     def get_metadata_mode(self):
         if self.__metadata_mode is None:
-            stats = self.get_cache_statistics()
-            mm = stats["metadata mode"]
+            stats = self.get_statistics()
+            mm = stats.config_stats.metadata_mode
             self.__metadata_mode = MetadataMode[mm]
         return self.__metadata_mode
 
     def get_metadata_size(self):
         if self.__metadata_size is None:
-            stats = self.get_cache_statistics()
-            self.__metadata_size = stats["metadata memory footprint"]
+            stats = self.get_statistics()
+            self.__metadata_size = stats.config_stats.metadata_memory_footprint
         return self.__metadata_size
 
     def get_occupancy(self):
-        return self.get_cache_statistics()["occupancy"]
+        return self.get_statistics().usage_stats.occupancy
 
     def get_status(self):
-        status = self.get_cache_statistics()["status"].replace(' ', '_')
+        status = self.get_statistics().config_stats.status.replace(' ', '_').lower()
         return CacheStatus[status]
 
     def get_cache_mode(self):
-        return CacheMode[self.get_cache_statistics()["write policy"].upper()]
+        return CacheMode[self.get_statistics().config_stats.write_policy.upper()]
 
     def get_dirty_blocks(self):
-        return self.get_cache_statistics()["dirty"]
+        return self.get_statistics().usage_stats.dirty
 
     def get_dirty_for(self):
-        return self.get_cache_statistics()["dirty for"]
+        return self.get_statistics().config_stats.dirty_for
 
     def get_clean_blocks(self):
-        return self.get_cache_statistics()["clean"]
+        return self.get_statistics().usage_stats.clean
 
     def get_flush_parameters_alru(self):
         return get_flush_parameters_alru(self.cache_id)
@@ -88,10 +89,28 @@ class Cache:
 
     # Casadm methods:
 
-    def get_cache_statistics(self,
-                             io_class_id: int = None,
-                             stat_filter: List[StatsFilter] = None,
-                             percentage_val: bool = False):
+    def get_io_class_statistics(self,
+                                io_class_id: int,
+                                stat_filter: List[StatsFilter] = None,
+                                percentage_val: bool = False):
+        stats = get_statistics(self.cache_id, None, io_class_id,
+                               stat_filter, percentage_val)
+        return IoClassStats(stats)
+
+    def get_statistics(self,
+                       stat_filter: List[StatsFilter] = None,
+                       percentage_val: bool = False):
+        stats = get_statistics(self.cache_id, None, None,
+                               stat_filter, percentage_val)
+        return CacheStats(stats)
+
+    # TODO: Get rid of this method below by tuning 'stats' and 'io_class' tests
+    # to utilize new statistics API with method above.
+
+    def get_statistics_deprecated(self,
+                                  io_class_id: int = None,
+                                  stat_filter: List[StatsFilter] = None,
+                                  percentage_val: bool = False):
         return get_statistics(self.cache_id, None, io_class_id,
                               stat_filter, percentage_val)
 
