@@ -72,7 +72,7 @@ def test_ioclass_directory_depth(filesystem):
     )
     casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
-    base_occupancy = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+    base_occupancy = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
     TestRun.LOGGER.info("Reading the file in the nested directory")
     dd = (
         Dd()
@@ -82,7 +82,7 @@ def test_ioclass_directory_depth(filesystem):
     )
     dd.run()
 
-    new_occupancy = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+    new_occupancy = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
     assert new_occupancy == base_occupancy + test_file_1.size, \
         "Wrong occupancy after reading file!\n" \
         f"Expected: {base_occupancy + test_file_1.size}, actual: {new_occupancy}"
@@ -103,7 +103,7 @@ def test_ioclass_directory_depth(filesystem):
     drop_caches(DropCachesMode.ALL)
     test_file_2.refresh_item()
 
-    new_occupancy = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+    new_occupancy = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
     assert new_occupancy == base_occupancy + test_file_2.size, \
         "Wrong occupancy after creating file!\n" \
         f"Expected: {base_occupancy + test_file_2.size}, actual: {new_occupancy}"
@@ -122,7 +122,7 @@ def test_ioclass_directory_dir_operations(filesystem):
     """
     def create_files_with_classification_delay_check(directory: Directory, ioclass_id: int):
         start_time = datetime.now()
-        occupancy_after = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+        occupancy_after = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
         dd_blocks = 10
         dd_size = Size(dd_blocks, Unit.Blocks4096)
         file_counter = 0
@@ -135,7 +135,7 @@ def test_ioclass_directory_dir_operations(filesystem):
             time_from_start = datetime.now() - start_time
             (Dd().input("/dev/zero").output(file_path).oflag("sync")
              .block_size(Size(1, Unit.Blocks4096)).count(dd_blocks).run())
-            occupancy_after = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+            occupancy_after = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
             if occupancy_after - occupancy_before < dd_size:
                 unclassified_files.append(file_path)
 
@@ -151,9 +151,9 @@ def test_ioclass_directory_dir_operations(filesystem):
     def read_files_with_reclassification_check(
             target_ioclass_id: int, source_ioclass_id: int, directory: Directory, with_delay: bool):
         start_time = datetime.now()
-        target_occupancy_after = cache.get_cache_statistics(
+        target_occupancy_after = cache.get_statistics_deprecated(
             io_class_id=target_ioclass_id)["occupancy"]
-        source_occupancy_after = cache.get_cache_statistics(
+        source_occupancy_after = cache.get_statistics_deprecated(
             io_class_id=source_ioclass_id)["occupancy"]
         unclassified_files = []
 
@@ -163,9 +163,9 @@ def test_ioclass_directory_dir_operations(filesystem):
             time_from_start = datetime.now() - start_time
             (Dd().input(file.full_path).output("/dev/null")
              .block_size(Size(1, Unit.Blocks4096)).run())
-            target_occupancy_after = cache.get_cache_statistics(
+            target_occupancy_after = cache.get_statistics_deprecated(
                 io_class_id=target_ioclass_id)["occupancy"]
-            source_occupancy_after = cache.get_cache_statistics(
+            source_occupancy_after = cache.get_statistics_deprecated(
                 io_class_id=source_ioclass_id)["occupancy"]
             if target_occupancy_after < target_occupancy_before:
                 pytest.xfail("Target IO class occupancy lowered!")
@@ -323,7 +323,7 @@ def test_ioclass_directory_file_operations(filesystem):
     drop_caches(DropCachesMode.ALL)
 
     TestRun.LOGGER.info("Creating test file")
-    classified_before = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+    classified_before = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
     file_path = f"{test_dir_path}/test_file"
     (Dd().input("/dev/urandom").output(file_path).oflag("sync")
      .block_size(Size(1, Unit.MebiByte)).count(dd_blocks).run())
@@ -332,21 +332,21 @@ def test_ioclass_directory_file_operations(filesystem):
     test_file = File(file_path).refresh_item()
 
     TestRun.LOGGER.info("Checking classified occupancy")
-    classified_after = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+    classified_after = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
     check_occupancy(classified_before + test_file.size, classified_after)
 
     TestRun.LOGGER.info("Moving test file out of classified directory")
     classified_before = classified_after
-    non_classified_before = cache.get_cache_statistics(io_class_id=0)["occupancy"]
+    non_classified_before = cache.get_statistics_deprecated(io_class_id=0)["occupancy"]
     test_file.move(destination=mountpoint)
     sync()
     drop_caches(DropCachesMode.ALL)
 
     TestRun.LOGGER.info("Checking classified occupancy")
-    classified_after = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+    classified_after = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
     check_occupancy(classified_before, classified_after)
     TestRun.LOGGER.info("Checking non-classified occupancy")
-    non_classified_after = cache.get_cache_statistics(io_class_id=0)["occupancy"]
+    non_classified_after = cache.get_statistics_deprecated(io_class_id=0)["occupancy"]
     check_occupancy(non_classified_before, non_classified_after)
 
     TestRun.LOGGER.info("Reading test file")
@@ -356,10 +356,10 @@ def test_ioclass_directory_file_operations(filesystem):
      .block_size(Size(1, Unit.MebiByte)).run())
 
     TestRun.LOGGER.info("Checking classified occupancy")
-    classified_after = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+    classified_after = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
     check_occupancy(classified_before - test_file.size, classified_after)
     TestRun.LOGGER.info("Checking non-classified occupancy")
-    non_classified_after = cache.get_cache_statistics(io_class_id=0)["occupancy"]
+    non_classified_after = cache.get_statistics_deprecated(io_class_id=0)["occupancy"]
     check_occupancy(non_classified_before + test_file.size, non_classified_after)
 
     TestRun.LOGGER.info(f"Moving test file to {nested_dir_path}")
@@ -370,10 +370,10 @@ def test_ioclass_directory_file_operations(filesystem):
     drop_caches(DropCachesMode.ALL)
 
     TestRun.LOGGER.info("Checking classified occupancy")
-    classified_after = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+    classified_after = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
     check_occupancy(classified_before, classified_after)
     TestRun.LOGGER.info("Checking non-classified occupancy")
-    non_classified_after = cache.get_cache_statistics(io_class_id=0)["occupancy"]
+    non_classified_after = cache.get_statistics_deprecated(io_class_id=0)["occupancy"]
     check_occupancy(non_classified_before, non_classified_after)
 
     TestRun.LOGGER.info("Reading test file")
@@ -383,8 +383,8 @@ def test_ioclass_directory_file_operations(filesystem):
      .block_size(Size(1, Unit.MebiByte)).run())
 
     TestRun.LOGGER.info("Checking classified occupancy")
-    classified_after = cache.get_cache_statistics(io_class_id=ioclass_id)["occupancy"]
+    classified_after = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
     check_occupancy(classified_before + test_file.size, classified_after)
     TestRun.LOGGER.info("Checking non-classified occupancy")
-    non_classified_after = cache.get_cache_statistics(io_class_id=0)["occupancy"]
+    non_classified_after = cache.get_statistics_deprecated(io_class_id=0)["occupancy"]
     check_occupancy(non_classified_before - test_file.size, non_classified_after)

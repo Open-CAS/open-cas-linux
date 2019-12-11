@@ -105,11 +105,11 @@ def test_ioclass_stats_sum():
         core.unmount()
         sync()
 
-        cache_stats = cache.get_cache_statistics(
+        cache_stats = cache.get_statistics_deprecated(
             stat_filter=[StatsFilter.usage, StatsFilter.req, StatsFilter.blk]
         )
         for ioclass_id in ioclass_id_list:
-            ioclass_stats = cache.get_cache_statistics(
+            ioclass_stats = cache.get_statistics_deprecated(
                 stat_filter=[StatsFilter.usage, StatsFilter.req, StatsFilter.blk],
                 io_class_id=ioclass_id,
             )

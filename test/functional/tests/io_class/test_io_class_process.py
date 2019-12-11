@@ -50,7 +50,7 @@ def test_ioclass_process_name():
         dd.run()
         sync()
         time.sleep(0.1)
-        stats = cache.get_cache_statistics(io_class_id=ioclass_id)
+        stats = cache.get_statistics_deprecated(io_class_id=ioclass_id)
         assert stats["dirty"].get_value(Unit.Blocks4096) == (i + 1) * dd_count
 
 
@@ -109,7 +109,7 @@ def test_ioclass_pid():
                 f"stdout: {output.stdout} \n stderr :{output.stderr}"
             )
         sync()
-        stats = cache.get_cache_statistics(io_class_id=ioclass_id)
+        stats = cache.get_statistics_deprecated(io_class_id=ioclass_id)
         assert stats["dirty"].get_value(Unit.Blocks4096) == dd_count
 
         ioclass_config.remove_ioclass(ioclass_id)

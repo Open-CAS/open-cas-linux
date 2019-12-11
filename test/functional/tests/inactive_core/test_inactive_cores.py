@@ -27,10 +27,10 @@ def test_core_inactive():
     cache, core_device = prepare()
 
     cache_device = cache.cache_device
-    stats = cache.get_cache_statistics()
+    stats = cache.get_statistics()
 
-    assert stats["core devices"] == 3
-    assert stats["inactive core devices"] == 0
+    assert stats.config_stats.core_dev == 3
+    assert stats.config_stats.inactive_core_dev == 0
 
     TestRun.LOGGER.info("Stopping cache")
     cache.stop()
@@ -41,10 +41,10 @@ def test_core_inactive():
 
     TestRun.LOGGER.info("Loading cache with missing core device")
     cache = casadm.start_cache(cache_device, load=True)
-    stats = cache.get_cache_statistics()
+    stats = cache.get_statistics()
 
-    assert stats["core devices"] == 3
-    assert stats["inactive core devices"] == 1
+    assert stats.config_stats.core_dev == 3
+    assert stats.config_stats.inactive_core_dev == 1
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -94,31 +94,34 @@ def test_core_inactive_stats():
     cores_dirty = 0
     cores = cache.get_core_devices()
     for core in cores:
-        core_stats = core.get_core_statistics()
-        cores_occupancy += core_stats["occupancy"].value
-        cores_clean += core_stats["clean"].value
-        cores_dirty += core_stats["dirty"].value
+        core_stats = core.get_statistics()
+        cores_occupancy += core_stats.usage_stats.occupancy.value
+        cores_clean += core_stats.usage_stats.clean.value
+        cores_dirty += core_stats.usage_stats.dirty.value
 
-    cache_stats = cache.get_cache_statistics()
+    cache_stats = cache.get_statistics()
     # Add inactive core stats
-    cores_occupancy += cache_stats["inactive occupancy"].value
-    cores_clean += cache_stats["inactive clean"].value
-    cores_dirty += cache_stats["inactive dirty"].value
+    cores_occupancy += cache_stats.inactive_usage_stats.inactive_occupancy.value
+    cores_clean += cache_stats.inactive_usage_stats.inactive_clean.value
+    cores_dirty += cache_stats.inactive_usage_stats.inactive_dirty.value
 
-    assert cache_stats["occupancy"].value == cores_occupancy
-    assert cache_stats["dirty"].value == cores_dirty
-    assert cache_stats["clean"].value == cores_clean
+    assert cache_stats.usage_stats.occupancy.value == cores_occupancy
+    assert cache_stats.usage_stats.dirty.value == cores_dirty
+    assert cache_stats.usage_stats.clean.value == cores_clean
 
-    cache_stats_percentage = cache.get_cache_statistics(percentage_val=True)
+    cache_stats_percentage = cache.get_statistics(percentage_val=True)
     # Calculate expected percentage value of inactive core stats
     inactive_occupancy_perc = (
-        cache_stats["inactive occupancy"].value / cache_stats["cache size"].value
+        cache_stats.inactive_usage_stats.inactive_occupancy.value
+        / cache_stats.config_stats.cache_size.value
     )
     inactive_clean_perc = (
-        cache_stats["inactive clean"].value / cache_stats["occupancy"].value
+        cache_stats.inactive_usage_stats.inactive_clean.value
+        / cache_stats.usage_stats.occupancy.value
     )
     inactive_dirty_perc = (
-        cache_stats["inactive dirty"].value / cache_stats["occupancy"].value
+        cache_stats.inactive_usage_stats.inactive_dirty.value
+        / cache_stats.usage_stats.occupancy.value
     )
 
     inactive_occupancy_perc = round(100 * inactive_occupancy_perc, 1)
@@ -126,14 +129,23 @@ def test_core_inactive_stats():
     inactive_dirty_perc = round(100 * inactive_dirty_perc, 1)
 
     TestRun.LOGGER.info(str(cache_stats_percentage))
-    assert inactive_occupancy_perc == cache_stats_percentage["inactive occupancy"]
-    assert inactive_clean_perc == cache_stats_percentage["inactive clean"]
-    assert inactive_dirty_perc == cache_stats_percentage["inactive dirty"]
+    assert (
+        inactive_occupancy_perc
+        == cache_stats_percentage.inactive_usage_stats.inactive_occupancy
+    )
+    assert (
+        inactive_clean_perc
+        == cache_stats_percentage.inactive_usage_stats.inactive_clean
+    )
+    assert (
+        inactive_dirty_perc
+        == cache_stats_percentage.inactive_usage_stats.inactive_dirty
+    )
 
 
 def prepare():
-    cache_device = TestRun.disks['cache']
-    core_device = TestRun.disks['core']
+    cache_device = TestRun.disks["cache"]
+    core_device = TestRun.disks["core"]
 
     cache_device.create_partitions([Size(500, Unit.MebiByte)])
     core_device.create_partitions(
