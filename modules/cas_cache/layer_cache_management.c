@@ -819,9 +819,12 @@ int _cache_mngt_remove_core_prepare(ocf_cache_t cache, ocf_core_t core,
 			/* Flush core */
 			flush_result = _cache_mngt_core_flush_sync(core,
 					flush_interruptible);
+		} else if (!ocf_mngt_core_is_dirty(core)) {
+			/* Clean core is always "flushed" */
+			flush_result = 0;
 		} else {
 			printk(KERN_WARNING OCF_PREFIX_SHORT
-					"Cannot remove inactive core "
+					"Cannot remove dirty inactive core "
 					"without force option\n");
 			return -OCF_ERR_CORE_IN_INACTIVE_STATE;
 		}
