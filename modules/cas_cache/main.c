@@ -111,13 +111,13 @@ static int __init cas_init_module(void)
 	result = cas_casdisk_lookup_funtions();
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
-				"Could not find inteldisk functions.\n");
+				"Could not find cas_disk functions.\n");
 		return result;
 	}
 
 	if (casdisk_functions.casdsk_get_version() != CASDSK_IFACE_VERSION) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
-				"Incompatible inteldisk module\n");
+				"Incompatible cas_disk module\n");
 		return -EINVAL;
 	}
 
