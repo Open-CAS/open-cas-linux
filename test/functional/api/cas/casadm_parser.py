@@ -214,7 +214,7 @@ def get_cas_devices_dict():
 
 def get_flush_parameters_alru(cache_id: int):
     casadm_output = casadm.get_param_cleaning_alru(cache_id,
-                                                   casadm.OutputFormat.csv).stdout.spltlines()
+                                                   casadm.OutputFormat.csv).stdout.splitlines()
     flush_parameters = FlushParametersAlru()
     for line in casadm_output:
         if 'max buffers' in line:
@@ -222,7 +222,7 @@ def get_flush_parameters_alru(cache_id: int):
         if 'Activity threshold' in line:
             flush_parameters.activity_threshold = Time(milliseconds=int(line.split(',')[1]))
         if 'Stale buffer time' in line:
-            flush_parameters.staneless_time = Time(seconds=int(line.split(',')[1]))
+            flush_parameters.staleness_time = Time(seconds=int(line.split(',')[1]))
         if 'Wake up time' in line:
             flush_parameters.wake_up_time = Time(seconds=int(line.split(',')[1]))
     return flush_parameters
