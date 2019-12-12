@@ -554,7 +554,7 @@ def configure_cache(cache):
         )
     if "promotion_policy" in cache.params:
         casadm.set_param(
-            "promotion", cache_id=cache.cache_id, policy=cache.params["promotion"]
+            "promotion", cache_id=cache.cache_id, policy=cache.params["promotion_policy"]
         )
     if "ioclass_file" in cache.params:
         casadm.io_class_load_config(
