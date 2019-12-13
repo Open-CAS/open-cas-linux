@@ -273,25 +273,152 @@ static int _cache_mngt_core_flush_sync(ocf_core_t core, bool interruption)
 	return result;
 }
 
+static void _cache_mngt_cache_priv_deinit(ocf_cache_t cache)
+{
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+
+	vfree(cache_priv);
+}
+
+static int exit_instance_finish(ocf_cache_t cache, int error)
+{
+	struct cache_priv *cache_priv;
+	ocf_queue_t mngt_queue;
+	bool flush_status;
+
+	flush_status = ocf_mngt_cache_is_dirty(cache);
+	cache_priv = ocf_cache_get_priv(cache);
+	mngt_queue = cache_priv->mngt_queue;
+
+	if (error && error != -OCF_ERR_WRITE_CACHE)
+		goto restore_exp_obj;
+
+	if (!error && flush_status)
+		error = -KCAS_ERR_STOPPED_DIRTY;
+
+	module_put(THIS_MODULE);
+
+	cas_cls_deinit(cache);
+
+	vfree(cache_priv);
+
+	ocf_mngt_cache_unlock(cache);
+	ocf_mngt_cache_put(cache);
+	ocf_queue_put(mngt_queue);
+
+	return error;
+
+restore_exp_obj:
+	if (block_dev_create_all_exported_objects(cache)) {
+		/* Print error msg but do not change return err code to inform user why
+		* stop failed originally. */
+		printk(KERN_WARNING
+			"Failed to restore (create) all exported objects!\n");
+		goto unlock;
+	}
+	if (block_dev_activate_all_exported_objects(cache)) {
+		block_dev_destroy_all_exported_objects(cache);
+		printk(KERN_WARNING
+			"Failed to restore (activate) all exported objects!\n");
+	}
+unlock:
+	ocf_mngt_cache_unlock(cache);
+	ocf_mngt_cache_put(cache);
+	module_put(THIS_MODULE);
+	return error;
+}
+
+struct _cache_mngt_attach_context {
+	struct _cache_mngt_async_context async;
+	struct kcas_start_cache *cmd;
+	struct ocf_mngt_cache_device_config *device_cfg;
+	ocf_cache_t cache;
+	int ocf_start_error;
+	struct work_struct work;
+
+	struct {
+		bool priv_inited:1;
+		bool cls_inited:1;
+	};
+};
+
+
+static void cache_start_rollback(struct work_struct *work)
+{
+	struct cache_priv *cache_priv;
+	ocf_queue_t mngt_queue = NULL;
+	struct _cache_mngt_attach_context *ctx =
+		container_of(work, struct _cache_mngt_attach_context, work);
+	ocf_cache_t cache = ctx->cache;
+	int result;
+
+	if (ctx->cls_inited)
+		cas_cls_deinit(cache);
+
+	if (ctx->priv_inited) {
+		cache_priv = ocf_cache_get_priv(cache);
+		mngt_queue = cache_priv->mngt_queue;
+		_cache_mngt_cache_priv_deinit(cache);
+	}
+
+	ocf_mngt_cache_unlock(cache);
+
+	if (mngt_queue)
+		ocf_queue_put(mngt_queue);
+
+	module_put(THIS_MODULE);
+
+	result = _cache_mngt_async_callee_set_result(&ctx->async,
+			ctx->ocf_start_error);
+
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(ctx);
+}
+
+static void _cache_mngt_cache_stop_rollback_complete(ocf_cache_t cache,
+		void *priv, int error)
+{
+	struct _cache_mngt_attach_context *ctx = priv;
+
+	if (error == -OCF_ERR_WRITE_CACHE)
+		printk(KERN_WARNING "Cannot save cache state\n");
+	else
+		BUG_ON(error);
+
+	INIT_WORK(&ctx->work, cache_start_rollback);
+	schedule_work(&ctx->work);
+}
+
 static void _cache_mngt_cache_stop_complete(ocf_cache_t cache, void *priv,
 		int error)
 {
-	struct _cache_mngt_sync_context *context = priv;
+	struct _cache_mngt_async_context *context = priv;
+	int result = exit_instance_finish(cache, error);
 
-	*context->result = error;
-	complete(&context->compl);
+	result = _cache_mngt_async_callee_set_result(context, result);
+
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
 }
 
 static int _cache_mngt_cache_stop_sync(ocf_cache_t cache)
 {
-	struct _cache_mngt_sync_context context;
-	int result;
+	struct _cache_mngt_async_context *context;
+	int result = 0;
 
-	init_completion(&context.compl);
-	context.result = &result;
+	context = env_malloc(sizeof(*context), GFP_KERNEL);
+	if (!context)
+		return -ENOMEM;
 
-	ocf_mngt_cache_stop(cache, _cache_mngt_cache_stop_complete, &context);
-	wait_for_completion_interruptible(&context.compl);
+	_cache_mngt_async_context_init(context);
+
+	ocf_mngt_cache_stop(cache, _cache_mngt_cache_stop_complete, context);
+	result = wait_for_completion_interruptible(&context->cmpl);
+
+	result = _cache_mngt_async_caller_set_result(context, result);
+
+	if (context->result != -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
 
 	return result;
 }
@@ -1407,17 +1534,86 @@ err:
 	return result;
 }
 
-struct _cache_mngt_attach_context {
-	struct completion compl;
-	int *result;
-};
-
-static void _cache_mngt_attach_complete(ocf_cache_t cache, void *priv, int error)
+static void init_instance_complete(struct _cache_mngt_attach_context *ctx,
+		ocf_cache_t cache)
 {
-	struct _cache_mngt_attach_context *context = priv;
+	ocf_volume_t cache_obj;
+	struct bd_object *bd_cache_obj;
+	struct block_device *bdev;
+	const char *name;
 
-	*context->result = error;
-	complete(&context->compl);
+	cache_obj = ocf_cache_get_volume(cache);
+	BUG_ON(!cache_obj);
+
+	bd_cache_obj = bd_object(cache_obj);
+	bdev = bd_cache_obj->btm_bd;
+
+	/* If we deal with whole device, reread partitions */
+	if (bdev->bd_contains == bdev)
+		ioctl_by_bdev(bdev, BLKRRPART, (unsigned long)NULL);
+
+	/* Set other back information */
+	name = block_dev_get_elevator_name(
+			casdsk_disk_get_queue(bd_cache_obj->dsk));
+	if (name)
+		strlcpy(ctx->cmd->cache_elevator,
+				name, MAX_ELEVATOR_NAME);
+}
+
+static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv,
+		int error);
+
+static void cache_start_finalize(struct work_struct *work)
+{
+	struct _cache_mngt_attach_context *ctx =
+		container_of(work, struct _cache_mngt_attach_context, work);
+	int result;
+	ocf_cache_t cache = ctx->cache;
+
+	result = cache_mngt_initialize_core_objects(cache);
+	if (result) {
+		ctx->ocf_start_error = result;
+		return _cache_mngt_start_complete(cache, ctx, result);
+	}
+
+	ocf_core_visit(cache, _cache_mngt_core_device_loaded_visitor,
+			NULL, false);
+
+	init_instance_complete(ctx, cache);
+
+	if (_cache_mngt_async_callee_set_result(&ctx->async, 0)) {
+		/* caller interrupted */
+		ctx->ocf_start_error = 0;
+		ocf_mngt_cache_stop(cache,
+				_cache_mngt_cache_stop_rollback_complete, ctx);
+		return;
+	}
+
+	ocf_mngt_cache_unlock(cache);
+}
+
+static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv, int error)
+{
+	struct _cache_mngt_attach_context *ctx = priv;
+	int caller_status = _cache_mngt_async_callee_peek_result(&ctx->async);
+
+	if (caller_status || error) {
+		if (error == -OCF_ERR_NO_FREE_RAM) {
+			ocf_mngt_get_ram_needed(cache, ctx->device_cfg,
+					&ctx->cmd->min_free_ram);
+		} else if (caller_status == -KCAS_ERR_WAITING_INTERRUPTED) {
+			printk(KERN_WARNING "Cache added successfully, "
+					"but waiting interrupted. Rollback\n");
+		}
+		ctx->ocf_start_error = error;
+		ocf_mngt_cache_stop(cache, _cache_mngt_cache_stop_rollback_complete,
+				ctx);
+	} else {
+		_cache_mngt_log_cache_device_path(cache, ctx->device_cfg);
+
+		INIT_WORK(&ctx->work, cache_start_finalize);
+		schedule_work(&ctx->work);
+	}
 }
 
 static int _cache_mngt_cache_priv_init(ocf_cache_t cache)
@@ -1435,89 +1631,6 @@ static int _cache_mngt_cache_priv_init(ocf_cache_t cache)
 	ocf_cache_set_priv(cache, cache_priv);
 
 	return 0;
-}
-
-static void _cache_mngt_cache_priv_deinit(ocf_cache_t cache)
-{
-	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
-
-	vfree(cache_priv);
-}
-
-static int _cache_mngt_start(struct ocf_mngt_cache_config *cfg,
-		struct ocf_mngt_cache_device_config *device_cfg,
-		struct kcas_start_cache *cmd, ocf_cache_t *cache)
-{
-	struct _cache_mngt_attach_context context;
-	ocf_cache_t tmp_cache;
-	ocf_queue_t mngt_queue = NULL;
-	struct cache_priv *cache_priv;
-	int result;
-
-	result = ocf_mngt_cache_start(cas_ctx, &tmp_cache, cfg);
-	if (result)
-		return result;
-
-	result = _cache_mngt_cache_priv_init(tmp_cache);
-	BUG_ON(result);
-
-	/* Currently we can't recover without queues setup. OCF doesn't
-	 * support stopping cache when management queue isn't started. */
-
-	result = _cache_mngt_start_queues(tmp_cache);
-	BUG_ON(result);
-
-	/* Ditto */
-
-	cache_priv = ocf_cache_get_priv(tmp_cache);
-	mngt_queue = cache_priv->mngt_queue;
-
-	result = cas_cls_init(tmp_cache);
-	if (result)
-		goto err_classifier;
-
-	init_completion(&context.compl);
-	context.result = &result;
-
-	ocf_mngt_cache_attach(tmp_cache, device_cfg,
-			_cache_mngt_attach_complete, &context);
-
-	wait_for_completion_interruptible(&context.compl);
-	if (result)
-		goto err_attach;
-
-	_cache_mngt_log_cache_device_path(tmp_cache, device_cfg);
-
-	*cache = tmp_cache;
-
-	return 0;
-
-err_attach:
-	if (result == -OCF_ERR_NO_FREE_RAM && cmd) {
-		ocf_mngt_get_ram_needed(tmp_cache, device_cfg,
-				&cmd->min_free_ram);
-	}
-	cas_cls_deinit(tmp_cache);
-err_classifier:
-	_cache_mngt_cache_priv_deinit(tmp_cache);
-	_cache_mngt_cache_stop_sync(tmp_cache);
-	if (mngt_queue)
-		ocf_queue_put(mngt_queue);
-	ocf_mngt_cache_unlock(tmp_cache);
-	return result;
-}
-
-struct _cache_mngt_load_context {
-	struct completion compl;
-	int *result;
-};
-
-static void _cache_mngt_load_complete(ocf_cache_t cache, void *priv, int error)
-{
-	struct _cache_mngt_load_context *context = priv;
-
-	*context->result = error;
-	complete(&context->compl);
 }
 
 struct cache_mngt_check_metadata_context {
@@ -1580,77 +1693,86 @@ out_bdev:
 	return result;
 }
 
-static int _cache_mngt_load(struct ocf_mngt_cache_config *cfg,
+static int _cache_mngt_start(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
-		struct kcas_start_cache *cmd, ocf_cache_t *cache)
+		struct kcas_start_cache *cmd)
 {
-	struct _cache_mngt_load_context context;
-	ocf_cache_t tmp_cache;
+	struct _cache_mngt_attach_context *context;
+	ocf_cache_t cache;
 	ocf_queue_t mngt_queue = NULL;
 	struct cache_priv *cache_priv;
-	int result;
+	int result = 0, rollback_result = 0;
+	bool load = (cmd && cmd->init_cache == CACHE_INIT_LOAD);
 
-	result = _cache_mngt_check_metadata(cfg, cmd->cache_path_name);
-	if (result)
+	if (load)
+		result = _cache_mngt_check_metadata(cfg, cmd->cache_path_name);
+	if (result) {
+		module_put(THIS_MODULE);
 		return result;
+	}
 
-	result = ocf_mngt_cache_start(cas_ctx, &tmp_cache, cfg);
-	if (result)
+	context = kzalloc(sizeof(*context), GFP_KERNEL);
+	if (!context)
+		return -ENOMEM;
+
+	context->device_cfg = device_cfg;
+	context->cmd = cmd;
+	_cache_mngt_async_context_init(&context->async);
+
+	/* Start cache. Returned cache instance will be locked as it was set
+	 * in configuration.
+	 */
+	result = ocf_mngt_cache_start(cas_ctx, &cache, cfg);
+	if (result) {
+		kfree(context);
+		module_put(THIS_MODULE);
 		return result;
+	}
+	context->cache = cache;
 
-	result = _cache_mngt_cache_priv_init(tmp_cache);
-	BUG_ON(result);
+	result = _cache_mngt_cache_priv_init(cache);
+	if (result)
+		goto err;
+	context->priv_inited = true;
 
-	/* Currently we can't recover without queues setup. OCF doesn't
-	 * support stopping cache when management queue isn't started. */
+	result = _cache_mngt_start_queues(cache);
+	if (result)
+		goto err;
 
-	result = _cache_mngt_start_queues(tmp_cache);
-	BUG_ON(result);
-
-	/* Ditto */
-
-	cache_priv = ocf_cache_get_priv(tmp_cache);
+	cache_priv = ocf_cache_get_priv(cache);
 	mngt_queue = cache_priv->mngt_queue;
 
-	init_completion(&context.compl);
-	context.result = &result;
-
-	ocf_mngt_cache_load(tmp_cache, device_cfg,
-			_cache_mngt_load_complete, &context);
-
-	wait_for_completion_interruptible(&context.compl);
+	result = cas_cls_init(cache);
 	if (result)
-		goto err_load;
+		goto err;
+	context->cls_inited = true;
 
-	_cache_mngt_log_cache_device_path(tmp_cache, device_cfg);
-
-	result = cas_cls_init(tmp_cache);
-	if (result)
-		goto err_load;
-
-	result = cache_mngt_initialize_core_objects(tmp_cache);
-	if (result)
-		goto err_core_obj;
-
-	ocf_core_visit(tmp_cache, _cache_mngt_core_device_loaded_visitor,
-			NULL, false);
-
-	*cache = tmp_cache;
-
-	return 0;
-
-err_core_obj:
-	cas_cls_deinit(tmp_cache);
-err_load:
-	if (result == -OCF_ERR_NO_FREE_RAM && cmd) {
-		ocf_mngt_get_ram_needed(tmp_cache, device_cfg,
-				&cmd->min_free_ram);
+	if (load) {
+		ocf_mngt_cache_load(cache, device_cfg,
+				_cache_mngt_start_complete, context);
+	} else {
+		ocf_mngt_cache_attach(cache, device_cfg,
+				_cache_mngt_start_complete, context);
 	}
-	_cache_mngt_cache_priv_deinit(tmp_cache);
-	_cache_mngt_cache_stop_sync(tmp_cache);
-	if (mngt_queue)
-		ocf_queue_put(mngt_queue);
-	ocf_mngt_cache_unlock(tmp_cache);
+	result = wait_for_completion_interruptible(&context->async.cmpl);
+
+	result = _cache_mngt_async_caller_set_result(&context->async, result);
+
+	if (result != -KCAS_ERR_WAITING_INTERRUPTED);
+		kfree(context);
+
+	return result;
+err:
+	ocf_mngt_cache_stop(cache, _cache_mngt_cache_stop_rollback_complete,
+			context);
+	rollback_result = wait_for_completion_interruptible(&context->async.cmpl);
+
+	rollback_result = _cache_mngt_async_caller_set_result(&context->async,
+			rollback_result);
+
+	if (rollback_result != -KCAS_ERR_WAITING_INTERRUPTED);
+		kfree(context);
+
 	return result;
 }
 
@@ -1658,53 +1780,10 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
 		struct kcas_start_cache *cmd)
 {
-	ocf_cache_t cache = NULL;
-	const char *name;
-	bool load = (cmd && cmd->init_cache == CACHE_INIT_LOAD);
-	int result;
-
 	if (!try_module_get(THIS_MODULE))
 		return -KCAS_ERR_SYSTEM;
 
-	/* Start cache. Returned cache instance will be locked as it was set
-	 * in configuration.
-	 */
-	if (!load)
-		result = _cache_mngt_start(cfg, device_cfg, cmd, &cache);
-	else
-		result = _cache_mngt_load(cfg, device_cfg, cmd, &cache);
-
-	if (result) {
-		module_put(THIS_MODULE);
-		return result;
-	}
-
-	if (cmd) {
-		ocf_volume_t cache_obj;
-		struct bd_object *bd_cache_obj;
-		struct block_device *bdev;
-
-		cache_obj = ocf_cache_get_volume(cache);
-		BUG_ON(!cache_obj);
-
-		bd_cache_obj = bd_object(cache_obj);
-		bdev = bd_cache_obj->btm_bd;
-
-		/* If we deal with whole device, reread partitions */
-		if (bdev->bd_contains == bdev)
-			ioctl_by_bdev(bdev, BLKRRPART, (unsigned long)NULL);
-
-		/* Set other back information */
-		name = block_dev_get_elevator_name(
-				casdsk_disk_get_queue(bd_cache_obj->dsk));
-		if (name)
-			strlcpy(cmd->cache_elevator,
-					name, MAX_ELEVATOR_NAME);
-	}
-
-	ocf_mngt_cache_unlock(cache);
-
-	return 0;
+	return _cache_mngt_start(cfg, device_cfg, cmd);
 }
 
 /**
@@ -1884,6 +1963,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 {
 	ocf_cache_t cache;
 	struct cache_priv *cache_priv;
+	ocf_queue_t mngt_queue;
 	int status, flush_status = 0;
 
 	/* Get cache */
@@ -1893,6 +1973,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 		return status;
 
 	cache_priv = ocf_cache_get_priv(cache);
+	mngt_queue = cache_priv->mngt_queue;
 
 	status = _cache_mngt_read_lock_sync(cache);
 	if (status)
@@ -1955,37 +2036,11 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 
 	/* Stop cache device */
 	status = _cache_mngt_cache_stop_sync(cache);
-	if (status && status != -OCF_ERR_WRITE_CACHE)
-		goto restore_exp_obj;
 
-	if (!status && flush_status)
-		status = -KCAS_ERR_STOPPED_DIRTY;
-
-	module_put(THIS_MODULE);
-
-	cas_cls_deinit(cache);
-
-	ocf_queue_put(cache_priv->mngt_queue);
-	vfree(cache_priv);
-
-	ocf_mngt_cache_unlock(cache);
-	ocf_mngt_cache_put(cache);
+	ocf_queue_put(mngt_queue);
 
 	return status;
 
-restore_exp_obj:
-	if (block_dev_create_all_exported_objects(cache)) {
-		/* Print error msg but do not change return err code to inform user why
-		* stop failed originally. */
-		printk(KERN_WARNING
-			"Failed to restore (create) all exported objects!\n");
-		goto unlock;
-	}
-	if (block_dev_activate_all_exported_objects(cache)) {
-		block_dev_destroy_all_exported_objects(cache);
-		printk(KERN_WARNING
-			"Failed to restore (activate) all exported objects!\n");
-	}
 unlock:
 	ocf_mngt_cache_unlock(cache);
 put:
