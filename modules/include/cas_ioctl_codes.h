@@ -578,6 +578,9 @@ enum kcas_error {
 
 	/** Condition token does not identify any known condition */
 	KCAS_ERR_CLS_RULE_UNKNOWN_CONDITION,
+
+	/** Waiting for async operation was interrupted*/
+	KCAS_ERR_WAITING_INTERRUPTED,
 };
 
 #endif
