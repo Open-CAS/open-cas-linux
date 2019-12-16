@@ -32,8 +32,10 @@ class Core(Device):
         self.core_device = Device(core_device)
         self.system_path = None
         core_info = self.__get_core_info()
-        self.core_id = int(core_info["core_id"])
-        Device.__init__(self, core_info["exp_obj"])
+        if core_info["core_id"] != "-":
+            self.core_id = int(core_info["core_id"])
+        if core_info["exp_obj"] != "-":
+            Device.__init__(self, core_info["exp_obj"])
         self.cache_id = cache_id
 
     def __get_core_info(self):
