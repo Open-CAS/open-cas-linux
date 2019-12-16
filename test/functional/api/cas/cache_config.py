@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
-from enum import IntEnum, Enum
+from enum import IntEnum
+from aenum import Enum
 from test_utils.size import Size, Unit
 from datetime import timedelta
 
@@ -18,12 +19,15 @@ class CacheLineSize(IntEnum):
 
 
 class CacheMode(Enum):
-    WT = 0
-    WB = 1
-    WA = 2
-    PT = 3
-    WO = 4
+    WT = "Write-Through"
+    WB = "Write-Back"
+    WA = "Write-Around"
+    PT = "Pass-Through"
+    WO = "Write-Only"
     DEFAULT = WT
+
+    def __str__(self):
+        return self.value
 
 
 class SeqCutOffPolicy(Enum):
