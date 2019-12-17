@@ -93,6 +93,7 @@ def pytest_runtest_teardown():
                 if TestRun.executor.is_active():
                     TestRun.executor.wait_for_connection()
                 Udev.enable()
+                kill_all_io()
                 unmount_cas_devices()
                 casadm.remove_all_detached_cores()
                 casadm.stop_all_caches()
