@@ -165,22 +165,33 @@ static int _cache_mngt_read_lock_sync(ocf_cache_t cache)
 static void _cache_mngt_save_sync_complete(ocf_cache_t cache, void *priv,
 		int error)
 {
-	struct _cache_mngt_sync_context *context = priv;
+	struct _cache_mngt_async_context *context = priv;
+	int result;
 
-	*context->result = error;
-	complete(&context->compl);
+	result = _cache_mngt_async_callee_set_result(context, error);
+
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
 }
 
 static int _cache_mngt_save_sync(ocf_cache_t cache)
 {
-	struct _cache_mngt_sync_context context;
+	struct _cache_mngt_async_context *context;
 	int result;
 
-	init_completion(&context.compl);
-	context.result = &result;
+	context = kmalloc(sizeof(*context), GFP_KERNEL);
+	if (!context)
+		return -ENOMEM;
 
-	ocf_mngt_cache_save(cache, _cache_mngt_save_sync_complete, &context);
-	wait_for_completion_interruptible(&context.compl);
+	_cache_mngt_async_context_init(context);
+
+	ocf_mngt_cache_save(cache, _cache_mngt_save_sync_complete, context);
+	result = wait_for_completion_interruptible(&context->cmpl);
+
+	result = _cache_mngt_async_caller_set_result(context, result);
+
+	if (result != -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
 
 	return result;
 }
