@@ -199,24 +199,36 @@ static int _cache_mngt_save_sync(ocf_cache_t cache)
 static void _cache_mngt_cache_flush_complete(ocf_cache_t cache, void *priv,
 		int error)
 {
-	struct _cache_mngt_sync_context *context = priv;
+	struct _cache_mngt_async_context *context = priv;
+	int result;
 
-	*context->result = error;
-	complete(&context->compl);
+	result = _cache_mngt_async_callee_set_result(context, error);
+
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
 }
 
 static int _cache_mngt_cache_flush_sync(ocf_cache_t cache, bool interruption)
 {
-	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
-	struct _cache_mngt_sync_context context;
 	int result;
+	struct _cache_mngt_async_context *context;
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 
-	init_completion(&context.compl);
-	context.result = &result;
+	context = kmalloc(sizeof(*context), GFP_KERNEL);
+	if (!context)
+		return -ENOMEM;
 
-	atomic_set(&cache_priv->flush_interrupt_enabled, 0);
-	ocf_mngt_cache_flush(cache, _cache_mngt_cache_flush_complete, &context);
-	wait_for_completion_interruptible(&context.compl);
+	_cache_mngt_async_context_init(context);
+	atomic_set(&cache_priv->flush_interrupt_enabled, interruption);
+
+	ocf_mngt_cache_flush(cache, _cache_mngt_cache_flush_complete, context);
+	result = wait_for_completion_interruptible(&context->cmpl);
+
+	result = _cache_mngt_async_caller_set_result(context, result);
+
+	if (result != -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
+
 	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
 
 	return result;
@@ -225,25 +237,37 @@ static int _cache_mngt_cache_flush_sync(ocf_cache_t cache, bool interruption)
 static void _cache_mngt_core_flush_complete(ocf_core_t core, void *priv,
 		int error)
 {
-	struct _cache_mngt_sync_context *context = priv;
+	struct _cache_mngt_async_context *context = priv;
+	int result;
 
-	*context->result = error;
-	complete(&context->compl);
+	result = _cache_mngt_async_callee_set_result(context, error);
+
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
 }
 
 static int _cache_mngt_core_flush_sync(ocf_core_t core, bool interruption)
 {
+	int result;
+	struct _cache_mngt_async_context *context;
 	ocf_cache_t cache = ocf_core_get_cache(core);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
-	struct _cache_mngt_sync_context context;
-	int result;
 
-	init_completion(&context.compl);
-	context.result = &result;
+	context = kmalloc(sizeof(*context), GFP_KERNEL);
+	if (!context)
+		return -ENOMEM;
 
-	atomic_set(&cache_priv->flush_interrupt_enabled, 0);
-	ocf_mngt_core_flush(core, _cache_mngt_core_flush_complete, &context);
-	wait_for_completion_interruptible(&context.compl);
+	_cache_mngt_async_context_init(context);
+	atomic_set(&cache_priv->flush_interrupt_enabled, interruption);
+
+	ocf_mngt_core_flush(core, _cache_mngt_core_flush_complete, context);
+	result = wait_for_completion_interruptible(&context->cmpl);
+
+	result = _cache_mngt_async_caller_set_result(context, result);
+
+	if (result != -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
+
 	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
 
 	return result;
