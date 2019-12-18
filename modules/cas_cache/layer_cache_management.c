@@ -19,6 +19,17 @@ struct _cache_mngt_sync_context {
 	int *result;
 };
 
+struct _cache_mngt_async_context {
+	struct completion compl;
+	atomic_t ref_count;
+	int result;
+};
+
+struct _cache_mngt_async_lock_context {
+	struct completion compl;
+	int *result;
+};
+
 static void _cache_mngt_lock_complete(ocf_cache_t cache, void *priv, int error)
 {
 	struct _cache_mngt_sync_context *context = priv;
@@ -473,7 +484,7 @@ int cache_mngt_core_pool_remove(struct kcas_core_pool_remove *cmd_info)
 }
 
 struct cache_mngt_metadata_probe_context {
-	struct completion compl;
+	struct completion cmpl;
 	struct kcas_cache_check_device *cmd_info;
 	int *result;
 };
@@ -495,7 +506,7 @@ static void cache_mngt_metadata_probe_end(void *priv, int error,
 		cmd_info->cache_dirty = status->cache_dirty;
 	}
 
-	complete(&context->compl);
+	complete(&context->cmpl);
 }
 
 int cache_mngt_cache_check_device(struct kcas_cache_check_device *cmd_info)
@@ -521,13 +532,13 @@ int cache_mngt_cache_check_device(struct kcas_cache_check_device *cmd_info)
 	cmd_info->format_atomic = (ocf_ctx_get_volume_type_id(cas_ctx,
 			ocf_volume_get_type(volume)) == ATOMIC_DEVICE_VOLUME);
 
-	init_completion(&context.compl);
+	init_completion(&context.cmpl);
 	context.cmd_info = cmd_info;
 	context.result = &result;
 
 	ocf_metadata_probe(cas_ctx, volume, cache_mngt_metadata_probe_end,
 			&context);
-	wait_for_completion_interruptible(&context.compl);
+	wait_for_completion(&context.cmpl);
 
 	cas_blk_close_volume(volume);
 out_bdev:
@@ -1379,7 +1390,7 @@ static void _cache_mngt_load_complete(ocf_cache_t cache, void *priv, int error)
 }
 
 struct cache_mngt_check_metadata_context {
-	struct completion compl;
+	struct completion cmpl;
 	char *cache_name;
 	int *result;
 };
@@ -1400,7 +1411,7 @@ static void cache_mngt_check_metadata_end(void *priv, int error,
 				status->cache_name);
 	}
 
-	complete(&context->compl);
+	complete(&context->cmpl);
 }
 
 static int _cache_mngt_check_metadata(struct ocf_mngt_cache_config *cfg,
@@ -1424,13 +1435,13 @@ static int _cache_mngt_check_metadata(struct ocf_mngt_cache_config *cfg,
 	if (result)
 		goto out_bdev;
 
-	init_completion(&context.compl);
+	init_completion(&context.cmpl);
 	context.cache_name = cfg->name;
 	context.result = &result;
 
 	ocf_metadata_probe(cas_ctx, volume, cache_mngt_check_metadata_end,
 			&context);
-	wait_for_completion_interruptible(&context.compl);
+	wait_for_completion(&context.cmpl);
 
 	cas_blk_close_volume(volume);
 out_bdev:
