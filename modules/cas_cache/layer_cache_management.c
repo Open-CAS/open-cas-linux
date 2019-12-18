@@ -686,7 +686,7 @@ static int _cache_mngt_core_device_loaded_visitor(ocf_core_t core, void *cntx)
 }
 
 struct _cache_mngt_add_core_context {
-	struct completion compl;
+	struct completion cmpl;
 	ocf_core_t *core;
 	int *result;
 };
@@ -702,7 +702,7 @@ static void _cache_mngt_add_core_complete(ocf_cache_t cache,
 
 	*context->core = core;
 	*context->result = error;
-	complete(&context->compl);
+	complete(&context->cmpl);
 }
 
 static void _cache_mngt_remove_core_complete(void *priv, int error);
@@ -755,13 +755,13 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 
 	cfg->seq_cutoff_threshold = seq_cut_off_mb * MiB;
 
-	init_completion(&add_context.compl);
+	init_completion(&add_context.cmpl);
 	add_context.core = &core;
 	add_context.result = &result;
 
 	ocf_mngt_cache_add_core(cache, cfg, _cache_mngt_add_core_complete,
 			&add_context);
-	wait_for_completion_interruptible(&add_context.compl);
+	wait_for_completion(&add_context.cmpl);
 	if (result)
 		goto error_affter_lock;
 
@@ -788,11 +788,11 @@ error_after_create_exported_object:
 	block_dev_destroy_exported_object(core);
 
 error_after_add_core:
-	init_completion(&remove_context.compl);
+	init_completion(&remove_context.cmpl);
 	remove_context.result = &remove_core_result;
 	ocf_mngt_cache_remove_core(core, _cache_mngt_remove_core_complete,
 			&remove_context);
-	wait_for_completion_interruptible(&remove_context.compl);
+	wait_for_completion(&remove_context.cmpl);
 
 error_affter_lock:
 	ocf_mngt_cache_unlock(cache);
@@ -856,7 +856,7 @@ static void _cache_mngt_remove_core_complete(void *priv, int error)
 	struct _cache_mngt_sync_context *context = priv;
 
 	*context->result = error;
-	complete(&context->compl);
+	complete(&context->cmpl);
 }
 
 int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
@@ -914,7 +914,7 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 		goto unlock;
 	}
 
-	init_completion(&context.compl);
+	init_completion(&context.cmpl);
 	context.result = &result;
 
 	if (cmd->detach || flush_result) {
@@ -928,7 +928,7 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 	if (!cmd->force_no_flush && !flush_result)
 		BUG_ON(ocf_mngt_core_is_dirty(core));
 
-	wait_for_completion_interruptible(&context.compl);
+	wait_for_completion(&context.cmpl);
 
 	if (!result && !cmd->detach) {
 		cache_priv = ocf_cache_get_priv(cache);
