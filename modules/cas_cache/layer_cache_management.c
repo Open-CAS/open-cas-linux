@@ -15,53 +15,149 @@ extern u32 seq_cut_off_mb;
 extern u32 use_io_scheduler;
 
 struct _cache_mngt_sync_context {
-	struct completion compl;
+	struct completion cmpl;
 	int *result;
 };
 
 struct _cache_mngt_async_context {
-	struct completion compl;
-	atomic_t ref_count;
+	struct completion cmpl;
+	spinlock_t lock;
 	int result;
 };
 
-struct _cache_mngt_async_lock_context {
-	struct completion compl;
-	int *result;
-};
+/*
+ * Value used to mark async call as completed. Used when OCF call already
+ * finished, but complete function still has to be performed.
+ */
+#define ASYNC_CALL_FINISHED 1
 
-static void _cache_mngt_lock_complete(ocf_cache_t cache, void *priv, int error)
+static int _cache_mngt_async_callee_set_result(
+	struct _cache_mngt_async_context *context,
+	int error)
 {
-	struct _cache_mngt_sync_context *context = priv;
+	bool interrupted;
+	int ret;
 
-	*context->result = error;
-	complete(&context->compl);
+	spin_lock(&context->lock);
+
+	interrupted = (context->result == -KCAS_ERR_WAITING_INTERRUPTED);
+	if (!interrupted)
+		context->result = error ?: ASYNC_CALL_FINISHED;
+	complete(&context->cmpl);
+
+	ret = context->result;
+	spin_unlock(&context->lock);
+
+	return ret == ASYNC_CALL_FINISHED ? 0 : ret;
 }
 
-static int _cache_mngt_lock_sync(ocf_cache_t cache)
+static int _cache_mngt_async_callee_peek_result(
+	struct _cache_mngt_async_context *context)
 {
-	struct _cache_mngt_sync_context context;
 	int result;
 
-	init_completion(&context.compl);
-	context.result = &result;
-
-	ocf_mngt_cache_lock(cache, _cache_mngt_lock_complete, &context);
-	wait_for_completion_interruptible(&context.compl);
+	spin_lock(&context->lock);
+	result = context->result;
+	spin_unlock(&context->lock);
 
 	return result;
 }
 
-static int _cache_mngt_read_lock_sync(ocf_cache_t cache)
+static int _cache_mngt_async_caller_set_result(
+	struct _cache_mngt_async_context *context,
+	int error)
 {
-	struct _cache_mngt_sync_context context;
+	unsigned long lock_flags = 0;
+	int result = error;
+
+	spin_lock_irqsave(&context->lock, lock_flags);
+	if (context->result)
+		result = (context->result != ASYNC_CALL_FINISHED) ?
+				context->result : 0;
+	else if (result < 0)
+		result = context->result = -KCAS_ERR_WAITING_INTERRUPTED;
+	spin_unlock_irqrestore(&context->lock, lock_flags);
+
+	return result;
+}
+
+static inline void _cache_mngt_async_context_init(
+		struct _cache_mngt_async_context *context)
+{
+	init_completion(&context->cmpl);
+	spin_lock_init(&context->lock);
+	context->result = 0;
+}
+
+static void _cache_mngt_lock_complete(ocf_cache_t cache, void *priv, int error)
+{
+	struct _cache_mngt_async_context *context = priv;
 	int result;
 
-	init_completion(&context.compl);
-	context.result = &result;
+	result = _cache_mngt_async_callee_set_result(context, error);
 
-	ocf_mngt_cache_read_lock(cache, _cache_mngt_lock_complete, &context);
-	wait_for_completion_interruptible(&context.compl);
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED && error == 0)
+		ocf_mngt_cache_unlock(cache);
+
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
+}
+
+static int _cache_mngt_lock_sync(ocf_cache_t cache)
+{
+	struct _cache_mngt_async_context *context;
+	int result;
+
+	context = kmalloc(sizeof(*context), GFP_KERNEL);
+	if (!context)
+		return -ENOMEM;
+
+	_cache_mngt_async_context_init(context);
+
+	ocf_mngt_cache_lock(cache, _cache_mngt_lock_complete, context);
+	result = wait_for_completion_interruptible(&context->cmpl);
+
+	result = _cache_mngt_async_caller_set_result(context, result);
+
+	if (result != -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
+
+	return result;
+}
+
+static void _cache_mngt_read_lock_complete(ocf_cache_t cache, void *priv,
+		int error)
+{
+	struct _cache_mngt_async_context *context = priv;
+	int result;
+
+	result = _cache_mngt_async_callee_set_result(context, error);
+
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED && error == 0)
+		ocf_mngt_cache_read_unlock(cache);
+
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
+}
+
+static int _cache_mngt_read_lock_sync(ocf_cache_t cache)
+{
+	struct _cache_mngt_async_context *context;
+	int result;
+
+	context = kmalloc(sizeof(*context), GFP_KERNEL);
+	if (!context)
+		return -ENOMEM;
+
+	_cache_mngt_async_context_init(context);
+
+	ocf_mngt_cache_read_lock(cache, _cache_mngt_read_lock_complete, context);
+	result = wait_for_completion_interruptible(&context->cmpl);
+
+	result = _cache_mngt_async_caller_set_result(context, result);
+
+	if (result != -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
 
 	return result;
 }
