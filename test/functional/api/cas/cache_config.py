@@ -54,10 +54,13 @@ class MetadataMode(Enum):
 
 
 class CleaningPolicy(Enum):
-    alru = 0
-    nop = 1
-    acp = 2
+    alru = "ALRU"
+    nop = "NOP"
+    acp = "ACP"
     DEFAULT = alru
+
+    def __str__(self):
+        return self.value
 
 
 class CacheStatus(Enum):
