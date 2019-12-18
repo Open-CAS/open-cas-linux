@@ -71,7 +71,7 @@ class CacheStatus(Enum):
 
 class Time(timedelta):
     def total_milliseconds(self):
-        return self.total_seconds() * 1000
+        return int(self.total_seconds() * 1000)
 
 
 class FlushParametersAlru:
