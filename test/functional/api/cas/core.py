@@ -2,13 +2,18 @@
 # Copyright(c) 2019 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
-from typing import List
+
 
 from api.cas.cli import *
 from api.cas.casadm_parser import *
 from api.cas.cache import Device
+from test_tools import fs_utils
 from test_utils.os_utils import *
 from api.cas.statistics import CoreStats, IoClassStats
+from datetime import timedelta, datetime
+from test_utils.os_utils import wait
+
+import time
 
 
 class CoreStatus(Enum):
@@ -118,3 +123,23 @@ class Core(Device):
         return casadm.set_param_cutoff(self.cache_id, self.core_id,
                                        threshold=None,
                                        policy=policy)
+
+    def check_if_is_present_in_os(self, should_be_visible=True):
+        device_in_system_message = "CAS device exists in OS."
+        device_not_in_system_message = "CAS device does not exist in OS."
+        item = fs_utils.ls_item(f"{self.system_path}")
+        if item is not None:
+            if should_be_visible:
+                TestRun.LOGGER.info(device_in_system_message)
+            else:
+                TestRun.fail(device_in_system_message)
+        else:
+            if should_be_visible:
+                TestRun.fail(device_not_in_system_message)
+            else:
+                TestRun.LOGGER.info(device_not_in_system_message)
+
+    def wait_for_status_change(self, expected_status: CoreStatus):
+        timeout = timedelta(minutes=1)
+        if not wait(lambda: self.get_status() == expected_status, timeout, timedelta(seconds=1)):
+            TestRun.fail(f"Core status did not change after {timeout.total_seconds()}s.")

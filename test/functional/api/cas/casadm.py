@@ -2,7 +2,9 @@
 # Copyright(c) 2019 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
+import csv
 
+from test_utils.output import CmdException
 from typing import List
 
 from api.cas.cache import Cache
@@ -134,6 +136,13 @@ def stop_all_caches():
         raise CmdException("Error while stopping caches.", output)
 
 
+def remove_all_detached_cores():
+    from api.cas import casadm_parser
+    devices = casadm_parser.get_cas_devices_dict()
+    for dev in devices["core_pool"]:
+        TestRun.executor.run(remove_detached_cmd(dev["device"]))
+
+
 def print_statistics(cache_id: int, core_id: int = None, per_io_class: bool = False,
                      io_class_id: int = None, filter: List[StatsFilter] = None,
                      output_format: OutputFormat = None, shortcut: bool = False):
@@ -256,8 +265,11 @@ def set_param_cleaning_alru(cache_id: int, wake_up: int = None, staleness_time: 
                             flush_max_buffers: int = None, activity_threshold: int = None):
     output = TestRun.executor.run(
         set_param_cleaning_alru_cmd(
-            cache_id=str(cache_id), wake_up=str(wake_up), staleness_time=str(staleness_time),
-            flush_max_buffers=str(flush_max_buffers), activity_threshold=str(activity_threshold)))
+            cache_id=str(cache_id),
+            wake_up=str(wake_up) if wake_up else None,
+            staleness_time=str(staleness_time) if staleness_time else None,
+            flush_max_buffers=str(flush_max_buffers) if flush_max_buffers else None,
+            activity_threshold=str(activity_threshold) if activity_threshold else None))
     if output.exit_code != 0:
         raise CmdException("Error while setting alru cleaning policy parameters.", output)
     return output
@@ -265,8 +277,10 @@ def set_param_cleaning_alru(cache_id: int, wake_up: int = None, staleness_time: 
 
 def set_param_cleaning_acp(cache_id: int, wake_up: int = None, flush_max_buffers: int = None):
     output = TestRun.executor.run(
-        set_param_cleaning_acp_cmd(cache_id=str(cache_id), wake_up=str(wake_up),
-                                   flush_max_buffers=str(flush_max_buffers)))
+        set_param_cleaning_acp_cmd(
+            cache_id=str(cache_id),
+            wake_up=str(wake_up) if wake_up else None,
+            flush_max_buffers=str(flush_max_buffers) if flush_max_buffers else None))
     if output.exit_code != 0:
         raise CmdException("Error while setting acp cleaning policy parameters.", output)
     return output

@@ -160,15 +160,22 @@ class Cache:
 
     def set_params_acp(self, acp_params: FlushParametersAcp):
         return casadm.set_param_cleaning_acp(self.cache_id,
-                                             acp_params.wake_up_time.total_milliseconds(),
-                                             acp_params.flush_max_buffers)
+                                             int(acp_params.wake_up_time.total_milliseconds())
+                                             if acp_params.wake_up_time else None,
+                                             int(acp_params.flush_max_buffers)
+                                             if acp_params.flush_max_buffers else None)
 
     def set_params_alru(self, alru_params: FlushParametersAlru):
         return casadm.set_param_cleaning_alru(self.cache_id,
-                                              alru_params.wake_up_time.total_seconds(),
-                                              alru_params.staleness_time.total_seconds(),
-                                              alru_params.flush_max_buffers,
-                                              alru_params.activity_threshold.total_milliseconds())
+                                              int(alru_params.wake_up_time.total_seconds())
+                                              if alru_params.wake_up_time else None,
+                                              int(alru_params.staleness_time.total_seconds())
+                                              if alru_params.staleness_time else None,
+                                              alru_params.flush_max_buffers
+                                              if alru_params.flush_max_buffers else None,
+                                              int(alru_params.activity_threshold.total_seconds()
+                                                  * 1000)
+                                              if alru_params.activity_threshold else None)
 
     def get_cache_config(self):
         return CacheConfig(self.get_cache_line_size(),

@@ -2,6 +2,7 @@
 # Copyright(c) 2019 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
+import csv
 
 import json
 import re
@@ -170,6 +171,40 @@ def get_cores(cache_id: int):
         if args[0] == "cache":
             is_proper_core_line = True if int(args[1]) == cache_id else False
     return cores_list
+
+
+def get_cas_devices_dict():
+    device_list = list(csv.DictReader(casadm.list_caches(OutputFormat.csv).stdout.split('\n')))
+    devices = {"core_pool": [], "caches": {}, "cores": {}}
+    core_pool = False
+    prev_cache_id = -1
+
+    for device in device_list:
+        if device["type"] == "core pool":
+            core_pool = True
+            continue
+
+        if device["type"] == "cache":
+            core_pool = False
+            prev_cache_id = int(device["id"])
+            devices["caches"].update(
+                {
+                    int(device["id"]): {
+                        "device": device["disk"],
+                        "status": device["status"],
+                    }
+                }
+            )
+        elif device["type"] == "core":
+            core = {"device": device["disk"], "status": device["status"]}
+            if core_pool:
+                devices["core_pool"].append(core)
+            else:
+                core.update({"cache_id": prev_cache_id})
+                devices["cores"].update(
+                    {(prev_cache_id, int(device["id"])): core}
+                )
+    return devices
 
 
 def get_flush_parameters_alru(cache_id: int):
