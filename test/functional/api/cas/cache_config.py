@@ -58,10 +58,13 @@ class MetadataMode(Enum):
 
 
 class CleaningPolicy(Enum):
-    alru = 0
-    nop = 1
-    acp = 2
+    alru = "ALRU"
+    nop = "NOP"
+    acp = "ACP"
     DEFAULT = alru
+
+    def __str__(self):
+        return self.value
 
 
 class CacheStatus(Enum):
@@ -75,7 +78,7 @@ class CacheStatus(Enum):
 
 class Time(timedelta):
     def total_milliseconds(self):
-        return self.total_seconds() * 1000
+        return int(self.total_seconds() * 1000)
 
 
 class FlushParametersAlru:
