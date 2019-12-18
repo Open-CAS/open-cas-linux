@@ -190,7 +190,7 @@ def get_flush_parameters_alru(cache_id: int):
 
 def get_flush_parameters_acp(cache_id: int):
     casadm_output = casadm.get_param_cleaning_acp(cache_id,
-                                                  casadm.OutputFormat.csv).stdout.spltlines()
+                                                  casadm.OutputFormat.csv).stdout.splitlines()
     flush_parameters = FlushParametersAcp()
     for line in casadm_output:
         if 'max buffers' in line:
