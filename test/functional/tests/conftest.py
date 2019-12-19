@@ -183,9 +183,12 @@ def base_prepare(item):
     with TestRun.LOGGER.step("Cleanup before test"):
         Udev.enable()
         kill_all_io()
+        DeviceMapper.remove_all()
 
         if installer.check_if_installed():
             try:
+                from api.cas import init_config
+                init_config.create_default_init_config()
                 unmount_cas_devices()
                 casadm.stop_all_caches()
                 casadm.remove_all_detached_cores()
@@ -202,8 +205,6 @@ def base_prepare(item):
         elif not installer.check_if_installed():
             installer.install_opencas()
         TestRun.plugins['opencas'].already_updated = True
-        from api.cas import init_config
-        init_config.create_default_init_config()
         TestRun.LOGGER.add_build_info(f'Commit hash:')
         TestRun.LOGGER.add_build_info(f"{git.get_current_commit_hash()}")
         TestRun.LOGGER.add_build_info(f'Commit message:')
