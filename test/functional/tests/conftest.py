@@ -19,6 +19,7 @@ from api.cas import casadm
 from api.cas import git
 from test_utils.os_utils import Udev, kill_all_io
 from test_tools.disk_utils import PartitionTable, create_partition_table
+from test_tools.device_mapper import DeviceMapper
 from log.logger import create_log, Log
 from test_utils.singleton import Singleton
 
@@ -122,6 +123,7 @@ def pytest_runtest_teardown():
                 casadm.stop_all_caches()
                 from api.cas import init_config
                 init_config.create_default_init_config()
+                DeviceMapper.remove_all()
         except Exception as ex:
             TestRun.LOGGER.warning(f"Exception occured during platform cleanup.\n"
                                    f"{str(ex)}\n{traceback.format_exc()}")

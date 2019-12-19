@@ -27,7 +27,7 @@ def start_cache(cache_dev: Device, cache_mode: CacheMode = None,
                 cache_line_size: CacheLineSize = None, cache_id: int = None,
                 force: bool = False, load: bool = False, shortcut: bool = False):
     _cache_line_size = None if cache_line_size is None else str(
-        CacheLineSize.get_value(Unit.KibiByte))
+        int(cache_line_size.value.get_value(Unit.KibiByte)))
     _cache_id = None if cache_id is None else str(cache_id)
     _cache_mode = None if cache_mode is None else cache_mode.name.lower()
     output = TestRun.executor.run(start_cmd(
@@ -35,7 +35,8 @@ def start_cache(cache_dev: Device, cache_mode: CacheMode = None,
         cache_id=_cache_id, force=force, load=load, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to start cache.", output)
-    return Cache(cache_dev.system_path)
+
+    return Cache(cache_dev)
 
 
 def stop_cache(cache_id: int, no_data_flush: bool = False, shortcut: bool = False):
@@ -97,7 +98,8 @@ def load_cache(device: Device, shortcut: bool = False):
         load_cmd(cache_dev=device.system_path, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to load cache.", output)
-    return Cache(device.system_path)
+
+    return Cache(device)
 
 
 def list_caches(output_format: OutputFormat = None, shortcut: bool = False):

@@ -6,6 +6,11 @@ import csv
 
 import json
 import re
+from api.cas import casadm
+from test_utils.size import parse_unit
+from storage_devices.device import Device
+from api.cas.cache_config import *
+from api.cas.casadm_params import *
 from datetime import timedelta
 from typing import List
 
@@ -151,7 +156,7 @@ def get_caches():  # This method does not return inactive or detached CAS device
     for line in lines:
         args = line.split(',')
         if args[0] == "cache":
-            current_cache = Cache(args[2])
+            current_cache = Cache(Device(args[2]))
             caches_list.append(current_cache)
     return caches_list
 

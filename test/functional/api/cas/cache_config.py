@@ -9,13 +9,16 @@ from test_utils.size import Size, Unit
 from datetime import timedelta
 
 
-class CacheLineSize(IntEnum):
+class CacheLineSize(Enum):
     LINE_4KiB = Size(4, Unit.KibiByte)
     LINE_8KiB = Size(8, Unit.KibiByte)
     LINE_16KiB = Size(16, Unit.KibiByte)
     LINE_32KiB = Size(32, Unit.KibiByte)
     LINE_64KiB = Size(64, Unit.KibiByte)
     DEFAULT = LINE_4KiB
+
+    def __int__(self):
+        return int(self.value.get_value())
 
 
 class CacheMode(Enum):
