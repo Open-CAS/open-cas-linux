@@ -12,40 +12,54 @@ from test_tools import fs_utils
 opencas_conf_path = "/etc/opencas/opencas.conf"
 
 
-def create_init_config_from_running_configuration(load: bool = None, extra_flags=""):
-    cache_lines = []
-    core_lines = []
-    for cache in casadm_parser.get_caches():
-        cache_lines.append(CacheConfigLine(cache.cache_id,
-                                           cache.cache_device,
-                                           cache.get_cache_mode(),
-                                           load,
-                                           extra_flags))
-        for core in casadm_parser.get_cores(cache.cache_id):
-            core_lines.append(CoreConfigLine(cache.cache_id,
-                                             core.core_id,
-                                             core.core_device))
-    config_lines = []
-    create_default_init_config()
-    if len(cache_lines) > 0:
-        config_lines.append(CacheConfigLine.header)
-        for c in cache_lines:
-            config_lines.append(str(c))
-    if len(core_lines) > 0:
-        config_lines.append(CoreConfigLine.header)
-        for c in core_lines:
-            config_lines.append(str(c))
-    fs_utils.write_file(opencas_conf_path, '\n'.join(config_lines), False)
+class InitConfig:
+    def __init__(self):
+        self.cache_config_lines = []
+        self.core_config_lines = []
 
+    def add_cache(self, cache_id, cache_device: Device,
+                  cache_mode: CacheMode = CacheMode.WT, load=None, extra_flags=""):
+        self.cache_config_lines.append(
+            CacheConfigLine(cache_id, cache_device, cache_mode, load, extra_flags))
 
-def create_default_init_config():
-    cas_version = casadm_parser.get_casadm_version()
-    fs_utils.write_file(opencas_conf_path,
-                        f"version={'.'.join(str(x) for x in cas_version.release[0:3])}")
+    def add_core(self, cache_id, core_id, core_device: Device):
+        self.core_config_lines.append(CoreConfigLine(cache_id, core_id, core_device))
+
+    def save_config_file(self):
+        config_lines = []
+        InitConfig.create_default_init_config()
+        if self.cache_config_lines:
+            config_lines.append(CacheConfigLine.header)
+            for c in self.cache_config_lines:
+                config_lines.append(str(c))
+        if self.core_config_lines:
+            config_lines.append(CoreConfigLine.header)
+            for c in self.core_config_lines:
+                config_lines.append(str(c))
+        fs_utils.write_file(opencas_conf_path, '\n'.join(config_lines), False)
+
+    @classmethod
+    def create_init_config_from_running_configuration(cls, load: bool = None, extra_flags=""):
+        init_conf = cls()
+        for cache in casadm_parser.get_caches():
+            init_conf.add_cache(cache.cache_id,
+                                cache.cache_device,
+                                cache.get_cache_mode(),
+                                load,
+                                extra_flags)
+            for core in casadm_parser.get_cores(cache.cache_id):
+                init_conf.add_core(cache.cache_id, core.core_id, core.core_device)
+        init_conf.save_config_file()
+        return init_conf
+
+    @classmethod
+    def create_default_init_config(cls):
+        cas_version = casadm_parser.get_casadm_version()
+        fs_utils.write_file(opencas_conf_path,
+                            f"version={'.'.join(str(x) for x in cas_version.release[0:3])}")
 
 
 class CacheConfigLine:
-
     header = "[caches]"
 
     def __init__(self, cache_id, cache_device: Device,
@@ -69,7 +83,6 @@ class CacheConfigLine:
 
 
 class CoreConfigLine:
-
     header = "[cores]"
 
     def __init__(self, cache_id, core_id, core_device: Device):
