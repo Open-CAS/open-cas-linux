@@ -19,6 +19,11 @@ def add_core_cmd(cache_id: str, core_dev: str, core_id: str = None, shortcut: bo
     return casadm_bin + command
 
 
+def script_try_add_cmd(cache_id: str, core_dev: str):
+    return f"{casadm_bin} --script --add-core --try-add --cache-id {cache_id} " \
+           f"--core-device {core_dev}"
+
+
 def remove_core_cmd(cache_id: str, core_id: str, force: bool = False, shortcut: bool = False):
     command = f" -R -i {cache_id} -j {core_id}" if shortcut \
         else f" --remove-core --cache-id {cache_id} --core-id {core_id}"

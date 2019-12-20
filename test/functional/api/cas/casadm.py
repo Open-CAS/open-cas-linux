@@ -73,6 +73,13 @@ def remove_detached(core_device: Device, shortcut: bool = False):
     return output
 
 
+def try_add(core_device: Device, cache_id: int):
+    output = TestRun.executor.run(script_try_add_cmd(str(cache_id), core_device.system_path))
+    if output.exit_code != 0:
+        raise CmdException("Failed to execute try add script command.", output)
+    return Core(core_device.system_path, cache_id)
+
+
 def reset_counters(cache_id: int, core_id: int = None, shortcut: bool = False):
     _core_id = None if core_id is None else str(core_id)
     output = TestRun.executor.run(
