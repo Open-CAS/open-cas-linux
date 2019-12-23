@@ -1098,7 +1098,7 @@ void cas_atomic_submit_write_zeroes(struct ocf_io *io)
 	}
 
 	ctx->sub_io = ocf_volume_new_io(ocf_io_get_volume(io), io->io_queue,
-			io->addr, min(io->bytes, ctx->step_size),
+			io->addr, min(io->bytes, step_size),
 			OCF_WRITE, 0, 0);
 	if (!ctx->sub_io) {
 		result = -ENOMEM;
