@@ -291,7 +291,7 @@ static int exit_instance_finish(ocf_cache_t cache, int error)
 	mngt_queue = cache_priv->mngt_queue;
 
 	if (error && error != -OCF_ERR_WRITE_CACHE)
-		goto restore_exp_obj;
+		BUG_ON(error);
 
 	if (!error && flush_status)
 		error = -KCAS_ERR_STOPPED_DIRTY;
@@ -306,25 +306,6 @@ static int exit_instance_finish(ocf_cache_t cache, int error)
 	ocf_mngt_cache_put(cache);
 	ocf_queue_put(mngt_queue);
 
-	return error;
-
-restore_exp_obj:
-	if (block_dev_create_all_exported_objects(cache)) {
-		/* Print error msg but do not change return err code to inform user why
-		* stop failed originally. */
-		printk(KERN_WARNING
-			"Failed to restore (create) all exported objects!\n");
-		goto unlock;
-	}
-	if (block_dev_activate_all_exported_objects(cache)) {
-		block_dev_destroy_all_exported_objects(cache);
-		printk(KERN_WARNING
-			"Failed to restore (activate) all exported objects!\n");
-	}
-unlock:
-	ocf_mngt_cache_unlock(cache);
-	ocf_mngt_cache_put(cache);
-	module_put(THIS_MODULE);
 	return error;
 }
 
