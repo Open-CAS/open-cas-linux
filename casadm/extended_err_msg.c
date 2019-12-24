@@ -143,12 +143,16 @@ struct {
 	{
 		OCF_ERR_METADATA_FOUND,
 		"Old metadata found on device.\nPlease load cache metadata using --load"
-		   " option or use --force to\n discard on-disk metadata and"
-		  " start fresh cache instance.\n"
+		" option or use --force to\n discard on-disk metadata and"
+		" start fresh cache instance.\n"
 	},
 	{
 		OCF_ERR_CACHE_NAME_MISMATCH,
 		"Cache id specified by user and loaded from metadata are different"
+	},
+	{
+		OCF_ERR_INVAL_CACHE_DEV,
+		"Device does not meet requirements."
 	},
 
 	/* CAS kernel error mappings*/
