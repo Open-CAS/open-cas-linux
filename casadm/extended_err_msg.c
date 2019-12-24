@@ -150,6 +150,11 @@ struct {
 		OCF_ERR_CACHE_NAME_MISMATCH,
 		"Cache id specified by user and loaded from metadata are different"
 	},
+	{
+		OCF_ERR_INVAL_CACHE_DEV,
+		"Device does not meet requirements.\nParameters of this device"
+		" does not satisfies expectations."
+	},
 
 	/* CAS kernel error mappings*/
 	{
