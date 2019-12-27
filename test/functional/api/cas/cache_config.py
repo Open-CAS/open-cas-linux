@@ -104,6 +104,14 @@ class FlushParametersAlru:
         alru_params.wake_up_time = Time(seconds=20)
         return alru_params
 
+    def __eq__(self, other):
+        return (
+            self.wake_up_time == other.wake_up_time
+            and self.staleness_time == other.staleness_time
+            and self.flush_max_buffers == other.flush_max_buffers
+            and self.activity_threshold == other.activity_threshold
+        )
+
 
 class FlushParametersAcp:
     def __init__(self,
@@ -119,6 +127,11 @@ class FlushParametersAcp:
         acp_params.wake_up_time = Time(milliseconds=10)
         return acp_params
 
+    def __eq__(self, other):
+        return (
+            self.wake_up_time == other.wake_up_time
+            and self.flush_max_buffers == other.flush_max_buffers
+        )
 
 class SeqCutOffParameters:
     def __init__(self, policy=None, threshold=None):
