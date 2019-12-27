@@ -99,8 +99,9 @@ class IoClass:
         return random_list
 
     def set_random_rule(self):
-        rules = ["metadata", "direct", "file_size", "directory", "io_class", "extension", "lba",
-                 "pid", "process_name", "file_offset", "request_size"]
+        rules = ["metadata", "direct", "file_size", "directory", "io_class",
+                 "extension", "file_name_prefix", "lba", "pid", "process_name",
+                 "file_offset", "request_size"]
         if os_utils.get_kernel_version() >= version.Version("4.13"):
             rules.append("wlth")
 
@@ -117,7 +118,7 @@ class IoClass:
             rule += f":{Operator(random.randrange(len(Operator))).name}:{random.randrange(1000000)}"
         elif rule == "io_class":
             rule += f":{random.randrange(MAX_IO_CLASS_PRIORITY + 1)}"
-        elif rule in ["extension", "process_name"]:
+        elif rule in ["extension", "process_name", "file_name_prefix"]:
             rule += f":{random_string(random.randint(1, 10))}"
         if random.randrange(2):
             rule += "&done"

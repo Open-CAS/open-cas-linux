@@ -79,6 +79,84 @@ def test_ioclass_file_extension():
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_ioclass_file_name_prefix():
+    cache, core = prepare()
+    ioclass_id = 1
+    cached_files = ["test", "test.txt", "test1", "test1.txt"]
+    not_cached_files = ["file1", "file2", "file4", "file5", "tes"]
+    dd_size = Size(4, Unit.KibiByte)
+    dd_count = 10
+
+    ioclass_config.remove_ioclass_config()
+    ioclass_config.create_ioclass_config(False)
+
+    # Avoid caching anything else than files with specified prefix
+    ioclass_config.add_ioclass(
+        ioclass_id=0,
+        eviction_priority=255,
+        allocation=False,
+        rule=f"unclassified",
+        ioclass_config_path=ioclass_config_path,
+    )
+    # Enables file with specified prefix to be cached
+    ioclass_config.add_ioclass(
+        ioclass_id=ioclass_id,
+        eviction_priority=1,
+        allocation=True,
+        rule=f"file_name_prefix:test&done",
+        ioclass_config_path=ioclass_config_path,
+    )
+    casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
+
+    TestRun.LOGGER.info(
+        f"Preparing filesystem and mounting {core.system_path} at {mountpoint}"
+    )
+
+    previous_occupancy = cache.get_occupancy()
+
+    core.create_filesystem(Filesystem.ext3)
+    core.mount(mountpoint)
+
+    assert previous_occupancy.get_value() <= cache.get_occupancy().get_value()
+
+    # Filesystem creation caused metadata IO which is not supposed
+    # to be cached
+
+    # Check if files with proper prefix are cached
+    TestRun.LOGGER.info(f"Writing files which are supposed to be cached.")
+    for f in cached_files:
+        dd = (
+            Dd()
+            .input("/dev/zero")
+            .output(f"{mountpoint}/{f}")
+            .count(dd_count)
+            .block_size(dd_size)
+        )
+        dd.run()
+        sync()
+        current_occupancy = cache.get_occupancy()
+        assert current_occupancy == previous_occupancy
+        previous_occupancy = current_occupancy
+
+    cache.flush_cache()
+
+    # Check if file with improper extension is not cached
+    TestRun.LOGGER.info(f"Writing files which are not supposed to be cached.")
+    for f in not_cached_files:
+        dd = (
+            Dd()
+            .input("/dev/zero")
+            .output(f"{mountpoint}/{f}")
+            .count(dd_count)
+            .block_size(dd_size)
+        )
+        dd.run()
+        sync()
+        current_occupancy = cache.get_occupancy()
+        assert current_occupancy != previous_occupancy
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_ioclass_file_extension_preexisting_filesystem():
     """Create files on filesystem, add device with filesystem as a core,
         write data to files and check if they are cached properly"""
