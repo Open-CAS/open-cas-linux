@@ -190,14 +190,21 @@ error:
 static int _cas_cls_string_ctr(struct cas_classifier *cls,
 		struct cas_cls_condition *c, char *data)
 {
+	size_t len;
 	struct cas_cls_string *ctx;
 
-	if (!data || strlen(data) == 0) {
+	if (!data) {
 		CAS_CLS_MSG(KERN_ERR, "Missing string specifier\n");
 		return -EINVAL;
 	}
 
-	if (strlen(data) > MAX_STRING_SPECIFIER_LEN) {
+	len = strlen(data);
+	if (len == 0) {
+		CAS_CLS_MSG(KERN_ERR, "String specifier is empty\n");
+		return -EINVAL;
+	}
+
+	if (len > MAX_STRING_SPECIFIER_LEN) {
 		CAS_CLS_MSG(KERN_ERR, "String specifier to long: %s\n", data);
 		return -EINVAL;
 	}
@@ -207,6 +214,7 @@ static int _cas_cls_string_ctr(struct cas_classifier *cls,
 		return -ENOMEM;
 
 	strcpy(ctx->string, data);
+	ctx->len = len;
 
 	c->context = ctx;
 
@@ -477,6 +485,41 @@ static cas_cls_eval_t _cas_cls_extension_test(
 	return cas_cls_eval_no;
 }
 
+/* File name prefix test function */
+static cas_cls_eval_t _cas_cls_file_name_prefix_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	struct cas_cls_string *ctx;
+	struct inode *inode;
+	struct dentry *dentry;
+	uint32_t len;
+
+	ctx = c->context;
+	inode = io->inode;
+
+	if (!inode)
+		return cas_cls_eval_no;
+
+	/* I/O target inode dentry */
+	dentry = _cas_cls_dir_get_inode_dentry(inode);
+
+	/* Check if dentry and its name is valid */
+	if (!dentry || !dentry->d_name.name)
+		return cas_cls_eval_no;
+
+	/* Check if name is not too short, we expect full prefix in name */
+	if (dentry->d_name.len < ctx->len)
+		return cas_cls_eval_no;
+
+	/* Final string comparison check */
+	len = min(ctx->len, dentry->d_name.len);
+	if (strncmp(dentry->d_name.name, ctx->string, len) == 0)
+		return cas_cls_eval_yes;
+
+	return cas_cls_eval_no;
+}
+
 /* LBA test function */
 static cas_cls_eval_t _cas_cls_lba_test(
 		struct cas_classifier *cls, struct cas_cls_condition *c,
@@ -565,6 +608,8 @@ static struct cas_cls_condition_handler _handlers[] = {
 	{ "directory", _cas_cls_directory_test, _cas_cls_directory_ctr,
 			_cas_cls_directory_dtr },
 	{ "extension", _cas_cls_extension_test, _cas_cls_string_ctr,
+			_cas_cls_generic_dtr },
+	{ "file_name_prefix", _cas_cls_file_name_prefix_test, _cas_cls_string_ctr,
 			_cas_cls_generic_dtr },
 	{ "lba", _cas_cls_lba_test, _cas_cls_numeric_ctr, _cas_cls_generic_dtr },
 	{ "pid", _cas_cls_pid_test, _cas_cls_numeric_ctr, _cas_cls_generic_dtr },

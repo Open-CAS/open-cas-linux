@@ -124,6 +124,9 @@ struct cas_cls_numeric {
 struct cas_cls_string {
 	/* String specifier*/
 	char string[MAX_STRING_SPECIFIER_LEN];
+
+	/* String length */
+	uint32_t len;
 };
 
 /* Directory condition context */
