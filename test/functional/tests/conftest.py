@@ -5,10 +5,11 @@
 
 import os
 import sys
+import traceback
+from time import sleep
 
 import pytest
 import yaml
-import traceback
 from IPy import IP
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../test-framework"))
@@ -17,7 +18,8 @@ from core.test_run_utils import TestRun
 from api.cas import installer
 from api.cas import casadm
 from api.cas import git
-from test_utils.os_utils import Udev, kill_all_io
+from storage_devices.device import Device
+from test_utils.os_utils import Udev, kill_all_io, load_kernel_module, unload_kernel_module
 from test_tools.disk_utils import PartitionTable, create_partition_table
 from test_tools.device_mapper import DeviceMapper
 from log.logger import create_log, Log
@@ -82,6 +84,17 @@ def pytest_runtest_setup(item):
             if 'test_wrapper' in sys.modules:
                 test_wrapper.try_setup_serial_log(dut_config)
 
+            if hasattr(TestRun, 'scsi_params'):
+                unload_kernel_module("scsi_debug")
+                try:
+                    test_wrapper.load_scsi_debug_module(TestRun.scsi_params)
+                except Exception:
+                    load_kernel_module("scsi_debug", TestRun.scsi_params)
+                sleep(10)
+                TestRun.scsi_devices = Device.get_scsi_devices()
+                if not len(TestRun.scsi_devices):
+                    TestRun.block("Failed to create scsi_debug devices")
+
             TestRun.plugins['opencas'] = OpencasPlugin(
                 repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
                 working_dir=dut_config['working_dir'])
@@ -125,14 +138,14 @@ def pytest_runtest_teardown():
                 init_config.create_default_init_config()
                 DeviceMapper.remove_all()
         except Exception as ex:
-            TestRun.LOGGER.warning(f"Exception occured during platform cleanup.\n"
+            TestRun.LOGGER.warning(f"Exception occurred during platform cleanup.\n"
                                    f"{str(ex)}\n{traceback.format_exc()}")
 
         if 'test_wrapper' in sys.modules:
             try:
                 test_wrapper.cleanup()
             except Exception as ex:
-                TestRun.LOGGER.warning(f"Exception occured during test wrapper cleanup.\n{str(ex)}"
+                TestRun.LOGGER.warning(f"Exception occurred during test wrapper cleanup.\n{str(ex)}"
                                        f"\n{traceback.format_exc()}")
 
     TestRun.LOGGER.end()
