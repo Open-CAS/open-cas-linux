@@ -15,7 +15,7 @@ OnFailureJobMode=isolate
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/sbin/casctl settle --timeout 150 --interval 5
+ExecStart=/sbin/casctl settle --timeout 1780 --interval 5
 TimeoutStartSec=30min
 
 [Install]
