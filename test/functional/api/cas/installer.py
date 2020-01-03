@@ -8,6 +8,8 @@ import logging
 
 from tests import conftest
 from core.test_run import TestRun
+from api.cas import cas_module
+from test_utils import os_utils
 from test_utils.output import CmdException
 
 
@@ -64,7 +66,9 @@ def reinstall_opencas():
 def check_if_installed():
     TestRun.LOGGER.info("Check if Open-CAS-Linux is installed")
     output = TestRun.executor.run("which casadm")
-    if output.exit_code == 0:
+    modules_loaded = os_utils.is_kernel_module_loaded(cas_module.CasModule.cache.value)
+
+    if output.exit_code == 0 and modules_loaded:
         TestRun.LOGGER.info("CAS is installed")
 
         return True
