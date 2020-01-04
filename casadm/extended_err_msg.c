@@ -257,6 +257,10 @@ struct {
 		KCAS_ERR_CLS_RULE_INVALID_SYNTAX,
 		"Invalid classification rule syntax"
 	},
+	{
+		KCAS_ERR_WAITING_INTERRUPTED,
+		"Waiting for operation interrupted"
+	},
 
 
 };
