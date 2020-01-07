@@ -1739,7 +1739,7 @@ static int _cache_mngt_start(struct ocf_mngt_cache_config *cfg,
 
 	result = _cache_mngt_async_caller_set_result(&context->async, result);
 
-	if (result != -KCAS_ERR_WAITING_INTERRUPTED);
+	if (result != -KCAS_ERR_WAITING_INTERRUPTED)
 		kfree(context);
 
 	return result;
@@ -1751,7 +1751,7 @@ err:
 	rollback_result = _cache_mngt_async_caller_set_result(&context->async,
 			rollback_result);
 
-	if (rollback_result != -KCAS_ERR_WAITING_INTERRUPTED);
+	if (rollback_result != -KCAS_ERR_WAITING_INTERRUPTED)
 		kfree(context);
 
 	return result;
