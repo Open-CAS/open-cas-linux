@@ -15,8 +15,8 @@ OnFailureJobMode=isolate
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/sbin/casctl settle --timeout 150 --interval 5
-TimeoutStartSec=3min
+ExecStart=/sbin/casctl settle --timeout 1780 --interval 5
+TimeoutStartSec=30min
 
 [Install]
 RequiredBy=local-fs.target local-fs-pre.target
