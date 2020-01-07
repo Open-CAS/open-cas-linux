@@ -14,14 +14,14 @@ from test_utils.output import CmdException
 def install_opencas():
     TestRun.LOGGER.info("Copying Open CAS repository to DUT")
     TestRun.executor.rsync(
-        f"{TestRun.plugins['opencas'].repo_dir}/",
-        f"{TestRun.plugins['opencas'].working_dir}/",
+        f"{TestRun.usr.repo_dir}/",
+        f"{TestRun.usr.working_dir}/",
         exclude_list=["test/functional/results/"],
         delete=True)
 
     TestRun.LOGGER.info("Building Open CAS")
     output = TestRun.executor.run(
-        f"cd {TestRun.plugins['opencas'].working_dir} && "
+        f"cd {TestRun.usr.working_dir} && "
         "./configure && "
         "make -j")
     if output.exit_code != 0:
@@ -29,7 +29,7 @@ def install_opencas():
 
     TestRun.LOGGER.info("Installing Open CAS")
     output = TestRun.executor.run(
-        f"cd {TestRun.plugins['opencas'].working_dir} && "
+        f"cd {TestRun.usr.working_dir} && "
         f"make install")
     if output.exit_code != 0:
         raise CmdException("Error while installing Open CAS", output)
@@ -49,7 +49,7 @@ def uninstall_opencas():
         raise CmdException("Open CAS is not properly installed", output)
     else:
         TestRun.executor.run(
-            f"cd {TestRun.plugins['opencas'].working_dir} && "
+            f"cd {TestRun.usr.working_dir} && "
             f"make uninstall")
         if output.exit_code != 0:
             raise CmdException("There was an error during uninstall process", output)

@@ -9,7 +9,6 @@ import sys
 import pytest
 import yaml
 import traceback
-from IPy import IP
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../test-framework"))
 
@@ -23,15 +22,8 @@ from test_tools.device_mapper import DeviceMapper
 from log.logger import create_log, Log
 from test_utils.singleton import Singleton
 
-plugins_dir = os.path.join(os.path.dirname(__file__), "../plugins")
-sys.path.append(plugins_dir)
-try:
-    from test_wrapper import plugin as test_wrapper
-except ImportError as e:
-    print(e)
 
-
-class OpencasPlugin(metaclass=Singleton):
+class Opencas(metaclass=Singleton):
     def __init__(self, repo_dir, working_dir):
         self.repo_dir = repo_dir
         self.working_dir = working_dir
@@ -48,48 +40,31 @@ def pytest_runtest_setup(item):
     # User can also have own test wrapper, which runs test prepare, cleanup, etc.
     # Then it should be placed in plugins package
 
-    TestRun.prepare(item)
+    try:
+        with open(item.config.getoption('--dut-config')) as cfg:
+            dut_config = yaml.safe_load(cfg)
+    except Exception:
+        raise Exception("You need to specify DUT config. See the example_dut_config.py file.")
 
-    test_name = item.name.split('[')[0]
-    TestRun.LOGGER = create_log(item.config.getoption('--log-path'), test_name)
+    dut_config['plugins_dir'] = os.path.join(os.path.dirname(__file__), "../lib")
+    dut_config['opt_plugins'] = {"test_wrapper": {}}
 
-    with TestRun.LOGGER.step("Dut prepare"):
-        try:
-            try:
-                with open(item.config.getoption('--dut-config')) as cfg:
-                    dut_config = yaml.safe_load(cfg)
-            except Exception:
-                TestRun.block("You need to specify DUT config. See the example_dut_config.py file.")
+    try:
+        TestRun.prepare(item, dut_config)
 
-            if 'test_wrapper' in sys.modules:
-                if 'ip' in dut_config:
-                    try:
-                        IP(dut_config['ip'])
-                    except ValueError:
-                        raise ValueError(
-                            "IP address from configuration file is in invalid format.")
-                try:
-                    dut_config = test_wrapper.prepare(dut_config)
-                except Exception as ex:
-                    raise Exception(f"Exception occurred on test wrapper prepare stage:\n"
-                                    f"{str(ex)}\n{traceback.format_exc()}")
-            try:
-                TestRun.setup(dut_config)
-            except Exception as ex:
-                raise Exception(f"Exception occurred during test setup:\n"
-                                f"{str(ex)}\n{traceback.format_exc()}")
+        test_name = item.name.split('[')[0]
+        TestRun.LOGGER = create_log(item.config.getoption('--log-path'), test_name)
 
-            if 'test_wrapper' in sys.modules:
-                test_wrapper.try_setup_serial_log(dut_config)
+        TestRun.setup()
+    except Exception as ex:
+        raise Exception(f"Exception occurred during test setup:\n"
+                        f"{str(ex)}\n{traceback.format_exc()}")
 
-            TestRun.plugins['opencas'] = OpencasPlugin(
-                repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
-                working_dir=dut_config['working_dir'])
+    TestRun.usr = Opencas(
+        repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
+        working_dir=dut_config['working_dir'])
 
-        except Exception as exception:
-            raise Exception(f"Conftest prepare exception:\n"
-                            f"{str(exception)}\n{traceback.format_exc()}")
-        TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
+    TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
 
     base_prepare(item)
     TestRun.LOGGER.write_to_command_log("Test body")
@@ -128,17 +103,11 @@ def pytest_runtest_teardown():
             TestRun.LOGGER.warning(f"Exception occured during platform cleanup.\n"
                                    f"{str(ex)}\n{traceback.format_exc()}")
 
-        if 'test_wrapper' in sys.modules:
-            try:
-                test_wrapper.cleanup()
-            except Exception as ex:
-                TestRun.LOGGER.warning(f"Exception occured during test wrapper cleanup.\n{str(ex)}"
-                                       f"\n{traceback.format_exc()}")
-
     TestRun.LOGGER.end()
     if TestRun.executor:
         TestRun.LOGGER.get_additional_logs()
     Log.destroy()
+    TestRun.teardown()
 
 
 def pytest_configure(config):
@@ -200,11 +169,11 @@ def base_prepare(item):
             if not create_partition_table(disk, PartitionTable.gpt):
                 raise Exception(f"Failed to remove partitions from {disk}")
 
-        if get_force_param(item) and not TestRun.plugins['opencas'].already_updated:
+        if get_force_param(item) and not TestRun.usr.already_updated:
             installer.reinstall_opencas()
         elif not installer.check_if_installed():
             installer.install_opencas()
-        TestRun.plugins['opencas'].already_updated = True
+        TestRun.usr.already_updated = True
         TestRun.LOGGER.add_build_info(f'Commit hash:')
         TestRun.LOGGER.add_build_info(f"{git.get_current_commit_hash()}")
         TestRun.LOGGER.add_build_info(f'Commit message:')
