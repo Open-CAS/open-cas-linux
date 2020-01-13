@@ -109,7 +109,8 @@ def settle(timeout, interval):
         not_initialized = opencas.wait_for_startup(timeout, interval)
     except Exception as e:
         eprint(e)
-        exit(1)
+        # Don't fail the boot if we're missing the config
+        exit(0)
 
     if not_initialized:
         eprint("Open CAS initialization failed. Couldn't set up all required devices")
