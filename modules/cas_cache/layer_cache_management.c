@@ -954,6 +954,7 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	struct _cache_mngt_sync_context remove_context;
 	ocf_cache_t cache;
 	ocf_core_t core;
+	ocf_core_id_t core_id;
 	int result, remove_core_result;
 	struct cache_priv *cache_priv;
 
@@ -1012,9 +1013,12 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	if (result)
 		goto error_after_create_exported_object;
 
+	result = core_id_from_name(&core_id, cfg->name);
+	if (result)
+		goto error_after_create_exported_object;
 
 	cache_priv = ocf_cache_get_priv(cache);
-	mark_core_id_used(cache_priv->core_id_bitmap, cmd_info->core_id);
+	mark_core_id_used(cache_priv->core_id_bitmap, core_id);
 
 	ocf_mngt_cache_unlock(cache);
 	ocf_mngt_cache_put(cache);
