@@ -960,7 +960,7 @@ static int _cas_upgrade_restore_conf_main(struct cas_properties *cache_props,
 	device_cfg.volume_type = cache_type;
 	device_cfg.cache_line_size = cache_line_size;
 	device_cfg.perform_test = true;
-	device_cfg.force = false;
+	device_cfg.force = true;
 
 	if (device_cfg.volume_type == ATOMIC_DEVICE_VOLUME) {
 		result = cas_blk_identify_type_atomic(device_cfg.uuid.data,
