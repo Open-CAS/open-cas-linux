@@ -7,8 +7,9 @@ import time
 
 import pytest
 
-from api.cas import casadm, casctl, casadm_parser, init_config, cas_module
+from api.cas import casadm, casctl, casadm_parser, cas_module
 from api.cas.cache_config import CacheMode
+from api.cas.init_config import InitConfig
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from test_tools import fs_utils
@@ -84,7 +85,7 @@ def test_stress_service(cache_mode):
                                f"Stop and start CAS service {iterations_per_config} times."):
         with TestRun.step(
                 "Create CAS init config based on current running CAS configuration."):
-            init_config.create_init_config_from_running_configuration()
+            InitConfig.create_init_config_from_running_configuration()
         with TestRun.step("Stop CAS service."):
             casctl.stop()
         with TestRun.step("Check if service stopped successfully."):
@@ -105,7 +106,7 @@ def test_stress_service(cache_mode):
 
     with TestRun.step("Stop caches and create default init config file."):
         casadm.stop_all_caches()
-        init_config.create_default_init_config()
+        InitConfig.create_default_init_config()
 
 
 @pytest.mark.parametrize("cache_mode", CacheMode)
