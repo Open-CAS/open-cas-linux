@@ -94,10 +94,11 @@ def pytest_runtest_teardown():
                     TestRun.executor.wait_for_connection()
                 Udev.enable()
                 unmount_cas_devices()
-                casadm.remove_all_detached_cores()
-                casadm.stop_all_caches()
-                from api.cas.init_config import InitConfig
-                InitConfig.create_default_init_config()
+                if installer.check_if_installed():
+                    casadm.remove_all_detached_cores()
+                    casadm.stop_all_caches()
+                    from api.cas.init_config import InitConfig
+                    InitConfig.create_default_init_config()
                 DeviceMapper.remove_all()
         except Exception as ex:
             TestRun.LOGGER.warning(f"Exception occured during platform cleanup.\n"
