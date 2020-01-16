@@ -1135,7 +1135,7 @@ static void atomic_dev_deinit(void)
 }
 
 const struct ocf_volume_properties cas_object_atomic_properties = {
-	.name = "Atomic Writes NVMe",
+	.name = "Atomic_Writes_NVMe",
 	.io_priv_size = sizeof(struct blkio),
 	.volume_priv_size = sizeof(struct bd_object),
 	.caps = {

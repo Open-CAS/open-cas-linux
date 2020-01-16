@@ -545,7 +545,7 @@ static void block_dev_submit_io(struct ocf_io *io)
 }
 
 const struct ocf_volume_properties cas_object_blk_properties = {
-	.name = "Block Device",
+	.name = "Block_Device",
 	.io_priv_size = sizeof(struct blkio),
 	.volume_priv_size = sizeof(struct bd_object),
 	.caps = {
