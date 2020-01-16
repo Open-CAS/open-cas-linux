@@ -27,7 +27,7 @@ check_util lsblk
 
 if [ ! -e /lib/modules/$(uname -r)/build/ &> /dev/null ]
 then
-	echo >&2 "Error: missing kernel headers"
+	echo >&2 "Error: missing kernel headers and/or kernel devel"
 	MISSING_TOOLS=1
 fi
 
