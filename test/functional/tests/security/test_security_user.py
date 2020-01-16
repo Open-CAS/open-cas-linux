@@ -5,9 +5,10 @@
 
 import pytest
 
-from cas import init_config, cli, casadm
-from cas.cache_config import CacheMode
-from cas.casadm_params import OutputFormat
+from api.cas import casadm, cli
+from api.cas.cache_config import CacheMode
+from api.cas.casadm_params import OutputFormat
+from api.cas.init_config import InitConfig
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from test_tools import fs_utils
@@ -41,15 +42,15 @@ def test_user_cli():
         cache_dev = cache_dev.partitions[0]
         core_dev = TestRun.disks['core']
         core_dev.create_partitions([Size(1, Unit.GibiByte), Size(256, Unit.MebiByte)])
-        core_dev = core_dev.partitions[0]
-        core_dev1 = core_dev.partitions[1]
+        core_part1 = core_dev.partitions[0]
+        core_part2 = core_dev.partitions[1]
 
     with TestRun.step("Start cache."):
         cache = casadm.start_cache(cache_dev, force=True)
 
     with TestRun.step("Add core to cache and mount it."):
-        core_dev.create_filesystem(Filesystem.ext3)
-        core = cache.add_core(core_dev)
+        core_part1.create_filesystem(Filesystem.ext3)
+        core = cache.add_core(core_part1)
         core.mount(mount_point)
 
     with TestRun.step(f"Copy casadm bin from {system_casadm_bin_path} "
@@ -104,7 +105,7 @@ def test_user_cli():
     with TestRun.step("Try to add core to cache."):
         try:
             output = run_as_other_user(cli.add_core_cmd(str(cache.cache_id),
-                                                        core_dev1.system_path), user_name)
+                                                        core_part2.system_path), user_name)
             if output.exit_code == 0:
                 TestRun.LOGGER.error("Adding core to cache should fail!")
         except CmdException:
@@ -233,19 +234,19 @@ def test_user_cli():
 
     with TestRun.step("Add non-root user account to sudoers group."):
         TestRun.executor.run(f'echo "{user_name} ALL = (root) NOPASSWD:ALL" '
-                             f'| sudo tee/etc/sudoers.d/{user_name}')
+                             f'| sudo tee /etc/sudoers.d/{user_name}')
 
     with TestRun.step("Try to stop cache with 'sudo'."):
         try:
             run_as_other_user(cli.stop_cmd(str(cache.cache_id)), user_name, True)
         except CmdException:
-            TestRun.fail("Non-root sudoer user should be able to stop cache.")
+            TestRun.LOGGER.error("Non-root sudoer user should be able to stop cache.")
 
     with TestRun.step("Try to start cache with 'sudo'."):
         try:
             run_as_other_user(cli.start_cmd(cache_dev.system_path, force=True), user_name, True)
         except CmdException:
-            TestRun.fail("Non-root sudoer user should be able to start cache.")
+            TestRun.LOGGER.error("Non-root sudoer user should be able to start cache.")
 
     with TestRun.step("Try to set cache mode with 'sudo'."):
         try:
@@ -253,32 +254,32 @@ def test_user_cli():
                 cli.set_cache_mode_cmd(str(CacheMode.WB.name).lower(), str(cache.cache_id)),
                 user_name, True)
         except CmdException:
-            TestRun.fail("Non-root sudoer user should be able to set cache mode.")
+            TestRun.LOGGER.error("Non-root sudoer user should be able to set cache mode.")
 
     with TestRun.step("Try to add core to cache with 'sudo'."):
         try:
             run_as_other_user(cli.add_core_cmd(str(cache.cache_id),
-                                               core_dev.system_path), user_name, True)
+                                               core_part1.system_path), user_name, True)
         except CmdException:
-            TestRun.fail("Non-root sudoer user should be able to add core to cache.")
+            TestRun.LOGGER.error("Non-root sudoer user should be able to add core to cache.")
 
     with TestRun.step("Try to list caches with 'sudo'."):
         try:
             run_as_other_user(cli.list_cmd(), user_name, True)
         except CmdException:
-            TestRun.fail("Non-root sudoer user should be able to list caches.")
+            TestRun.LOGGER.error("Non-root sudoer user should be able to list caches.")
 
     with TestRun.step("Try to print stats with 'sudo'."):
         try:
             run_as_other_user(cli.print_statistics_cmd(str(cache.cache_id)), user_name, True)
         except CmdException:
-            TestRun.fail("Non-root sudoer user should be able to print stats.")
+            TestRun.LOGGER.error("Non-root sudoer user should be able to print stats.")
 
     with TestRun.step("Try to reset stats with 'sudo'."):
         try:
             run_as_other_user(cli.reset_counters_cmd(str(cache.cache_id)), user_name, True)
         except CmdException:
-            TestRun.fail("Non-root sudoer user should be able to reset stats.")
+            TestRun.LOGGER.error("Non-root sudoer user should be able to reset stats.")
 
     with TestRun.step("Try to flush cache with 'sudo'."):
         try:
@@ -390,7 +391,7 @@ def test_user_service():
         core.mount(mount_point)
 
     with TestRun.step("Create 'opencas.conf' from running configuration."):
-        init_config.create_init_config_from_running_configuration()
+        InitConfig.create_init_config_from_running_configuration()
 
     with TestRun.step(f"Copy casadm bin from {system_casadm_bin_path} "
                       f"to {user_casadm_bin_dest_path}."):
@@ -435,7 +436,7 @@ def test_user_service():
 
     with TestRun.step("Add non-root user account to sudoers group."):
         TestRun.executor.run(f'echo "{user_name} ALL = (root) NOPASSWD:ALL" '
-                             f'| sudo tee/etc/sudoers.d/{user_name}')
+                             f'| sudo tee /etc/sudoers.d/{user_name}')
 
     with TestRun.step("Try to stop OpenCAS service with 'sudo'."):
         try:
