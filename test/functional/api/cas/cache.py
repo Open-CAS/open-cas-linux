@@ -177,7 +177,7 @@ class Cache:
                                               if alru_params.staleness_time else None,
                                               alru_params.flush_max_buffers
                                               if alru_params.flush_max_buffers else None,
-                                              int(alru_params.activity_threshold.total_seconds()
+                                              round(alru_params.activity_threshold.total_seconds()
                                                   * 1000)
                                               if alru_params.activity_threshold else None)
 
