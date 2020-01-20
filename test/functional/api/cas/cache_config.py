@@ -85,21 +85,25 @@ class Time(timedelta):
 
 
 class FlushParametersAlru:
-    def __init__(self,
-                 activity_threshold=None,
-                 flush_max_buffers=None,
-                 staleness_time=None,
-                 wake_up_time=None):
+    def __init__(
+        self,
+        activity_threshold=None,
+        flush_max_buffers=None,
+        staleness_time=None,
+        wake_up_time=None,
+    ):
         self.activity_threshold = activity_threshold
         self.flush_max_buffers = flush_max_buffers
         self.staleness_time = staleness_time
         self.wake_up_time = wake_up_time
 
     def __eq__(self, other):
-        return self.activity_threshold == other.activity_threshold and \
-            self.flush_max_buffers == other.flush_max_buffers and \
-            self.staleness_time == other.staleness_time and \
-            self.wake_up_time == other.wake_up_time
+        return (
+            self.activity_threshold == other.activity_threshold
+            and self.flush_max_buffers == other.flush_max_buffers
+            and self.staleness_time == other.staleness_time
+            and self.wake_up_time == other.wake_up_time
+        )
 
     @staticmethod
     def default_alru_params():
@@ -112,15 +116,15 @@ class FlushParametersAlru:
 
 
 class FlushParametersAcp:
-    def __init__(self,
-                 flush_max_buffers=None,
-                 wake_up_time=None):
+    def __init__(self, flush_max_buffers=None, wake_up_time=None):
         self.flush_max_buffers = flush_max_buffers
         self.wake_up_time = wake_up_time
 
     def __eq__(self, other):
-        return self.flush_max_buffers == other.flush_max_buffers and \
-            self.wake_up_time == other.wake_up_time
+        return (
+            self.flush_max_buffers == other.flush_max_buffers
+            and self.wake_up_time == other.wake_up_time
+        )
 
     @staticmethod
     def default_acp_params():
@@ -146,12 +150,14 @@ class SeqCutOffParameters:
 # TODO: Use case for this will be to iterate over configurations (kernel params such as
 # TODO: io scheduler, metadata layout) and prepare env before starting cache
 class CacheConfig:
-    def __init__(self,
-                 cache_line_size=CacheLineSize.DEFAULT,
-                 cache_mode=CacheMode.DEFAULT,
-                 cleaning_policy=CleaningPolicy.DEFAULT,
-                 eviction_policy=EvictionPolicy.DEFAULT,
-                 metadata_mode=MetadataMode.normal):
+    def __init__(
+        self,
+        cache_line_size=CacheLineSize.DEFAULT,
+        cache_mode=CacheMode.DEFAULT,
+        cleaning_policy=CleaningPolicy.DEFAULT,
+        eviction_policy=EvictionPolicy.DEFAULT,
+        metadata_mode=MetadataMode.normal,
+    ):
         self.cache_line_size = cache_line_size
         self.cache_mode = cache_mode
         self.cleaning_policy = cleaning_policy
@@ -159,8 +165,10 @@ class CacheConfig:
         self.metadata_mode = metadata_mode
 
     def __eq__(self, other):
-        return self.cache_line_size == other.cache_line_size and \
-            self.cache_mode == other.cache_mode and \
-            self.cleaning_policy == other.cleaning_policy and \
-            self.eviction_policy == other.eviction_policy and \
-            self.metadata_mode == other.metadata_mode
+        return (
+            self.cache_line_size == other.cache_line_size
+            and self.cache_mode == other.cache_mode
+            and self.cleaning_policy == other.cleaning_policy
+            and self.eviction_policy == other.eviction_policy
+            and self.metadata_mode == other.metadata_mode
+        )
