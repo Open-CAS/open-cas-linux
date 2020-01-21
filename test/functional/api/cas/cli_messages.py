@@ -25,10 +25,23 @@ stop_cache_incomplete = [
     r"Cache is in incomplete state - at least one core is inactive"
 ]
 
+add_cached_core = [
+    r"Error while adding core device to cache instance \d+",
+    r"Core device \'/dev/\S+\' is already cached\."
+]
+
+remove_mounted_core = [
+    r"Can\'t remove core \d+ from cache \d+\. Device /dev/cas\d+-\d+ is mounted\!"
+]
+
+stop_cache_mounted_core = [
+    r"Can\'t stop cache instance \d+\. Device /dev/cas\d+-\d+ is mounted\!"
+]
+
 
 def check_msg(output: Output, expected_messages):
     result = '\n'.join([output.stdout, output.stderr])
     for msg in expected_messages:
         matches = re.search(msg, result)
         if not matches:
-            TestRun.fail(f"Message is incorrect, expected: {msg}\n actual: {result}.")
+            TestRun.LOGGER.error(f"Message is incorrect, expected: {msg}\n actual: {result}.")
