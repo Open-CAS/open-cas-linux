@@ -430,7 +430,8 @@ void cache_stats_inactive_usage(int ctrl_fd, const struct kcas_cache_info *cache
  * print statistics regarding single io class (partition)
  */
 void print_stats_ioclass(struct kcas_io_class *io_class,
-		struct kcas_get_stats *stats, FILE *outfile, unsigned int stats_filters)
+		struct kcas_get_stats *stats, bool cache_stats,
+		FILE *outfile, unsigned int stats_filters)
 {
 	if (stats_filters & STATS_FILTER_CONF)
 		print_stats_ioclass_conf(io_class, outfile);
@@ -442,7 +443,7 @@ void print_stats_ioclass(struct kcas_io_class *io_class,
 		print_req_stats(&stats->req, outfile);
 
 	if (stats_filters & STATS_FILTER_BLK)
-		print_blk_stats(&stats->blocks, true, outfile);
+		print_blk_stats(&stats->blocks, cache_stats, outfile);
 }
 
 /**
@@ -457,6 +458,8 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 	struct kcas_io_class info = {};
 	struct kcas_get_stats stats = {};
 	int part_iter_id;
+	bool cache_stats = (core_id == OCF_CORE_ID_INVALID);
+	int ret;
 
 	if (io_class_id != OCF_IO_CLASS_INVALID) {
 		info.cache_id = cache_id;
@@ -465,21 +468,27 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		stats.core_id = core_id;
 		stats.part_id = io_class_id;
 
-		if (ioctl(ctrl_fd, KCAS_IOCTL_PARTITION_INFO, &info) < 0)
+		ret = ioctl(ctrl_fd, KCAS_IOCTL_PARTITION_INFO, &info);
+		if (info.ext_err_code  == OCF_ERR_IO_CLASS_NOT_EXIST) {
+			cas_printf(LOG_ERR, "IO class %d is not configured.\n",
+					io_class_id);
 			return FAILURE;
+		} else if (ret) {
+			return FAILURE;
+		}
 
 		if (ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &stats) < 0)
 			return FAILURE;
 
 		begin_record(outfile);
 
-		print_stats_ioclass(&info, &stats, outfile, stats_filters);
+		print_stats_ioclass(&info, &stats, cache_stats,
+				outfile, stats_filters);
 
 		return SUCCESS;
 	}
 
 	for (part_iter_id = 0; part_iter_id < OCF_IO_CLASS_MAX; part_iter_id++) {
-		int ret;
 		info.cache_id = cache_id;
 		info.class_id = part_iter_id;
 		stats.cache_id = cache_id;
@@ -498,7 +507,8 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 
 		begin_record(outfile);
 
-		print_stats_ioclass(&info, &stats, outfile, stats_filters);
+		print_stats_ioclass(&info, &stats, cache_stats,
+				outfile, stats_filters);
 
 		memset(&stats, 0, sizeof(stats));
 		memset(&info, 0, sizeof(info));
