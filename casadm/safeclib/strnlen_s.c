@@ -55,7 +55,7 @@
  * INPUT PARAMETERS
  *    dest      pointer to string
  *
- *    dmax      restricted maximum length (including null character).
+ *    dmax      restricted maximum length.
  *
  * OUTPUT PARAMETERS
  *    none
@@ -64,15 +64,16 @@
  *    dest shall not be a null pointer
  *    dmax shall not be greater than RSIZE_MAX_STR
  *    dmax shall not equal zero
- *    null character shall be in first dmax characters of dest
  *
  * RETURN VALUE
  *    The function returns the string length, excluding  the terminating
  *    null character.  If dest is NULL, then strnlen_s returns 0.
  *
  *    Otherwise, the strnlen_s function returns the number of characters
- *    that precede the terminating null character.
- *    At most the first dmax characters of dest are accessed by strnlen_s.
+ *    that precede the terminating null character. If there is no null
+ *    character in the first dmax characters of dest then strnlen_s returns
+ *    dmax. At most the first dmax characters of dest are accessed
+ *    by strnlen_s.
  *
  * ALSO SEE
  *    strnterminate_s()
@@ -82,7 +83,6 @@ rsize_t
 strnlen_s (const char *dest, rsize_t dmax)
 {
     rsize_t count;
-    rsize_t orig_dmax = dmax;
 
     if (dest == NULL) {
         return RCNEGATE(0);
@@ -106,12 +106,7 @@ strnlen_s (const char *dest, rsize_t dmax)
         dmax--;
         dest++;
     }
-    if (count == orig_dmax) {
-        invoke_safe_str_constraint_handler("strnlen_s: string length exceeds dmax",
-					   NULL, ESLEMAX);
-        return RCNEGATE(0);
-    }
 
     return RCNEGATE(count);
 }
-EXPORT_SYMBOL(strnlen_s);
+EXPORT_SYMBOL(strnlen_s)
