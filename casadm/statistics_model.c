@@ -459,6 +459,7 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 	struct kcas_get_stats stats = {};
 	int part_iter_id;
 	bool cache_stats = (core_id == OCF_CORE_ID_INVALID);
+	int ret;
 
 	if (io_class_id != OCF_IO_CLASS_INVALID) {
 		info.cache_id = cache_id;
@@ -467,8 +468,14 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		stats.core_id = core_id;
 		stats.part_id = io_class_id;
 
-		if (ioctl(ctrl_fd, KCAS_IOCTL_PARTITION_INFO, &info) < 0)
+		ret = ioctl(ctrl_fd, KCAS_IOCTL_PARTITION_INFO, &info);
+		if (info.ext_err_code  == OCF_ERR_IO_CLASS_NOT_EXIST) {
+			cas_printf(LOG_ERR, "IO class %d is not configured.\n",
+					io_class_id);
 			return FAILURE;
+		} else if (ret) {
+			return FAILURE;
+		}
 
 		if (ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &stats) < 0)
 			return FAILURE;
@@ -482,7 +489,6 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 	}
 
 	for (part_iter_id = 0; part_iter_id < OCF_IO_CLASS_MAX; part_iter_id++) {
-		int ret;
 		info.cache_id = cache_id;
 		info.class_id = part_iter_id;
 		stats.cache_id = cache_id;
