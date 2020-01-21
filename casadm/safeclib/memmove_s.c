@@ -34,6 +34,7 @@
 #include "mem_primitives_lib.h"
 #include "safe_mem_lib.h"
 
+
 /**
  * NAME
  *    memmove_s
@@ -47,7 +48,7 @@
  * DESCRIPTION
  *    The memmove_s function copies smax bytes from the region pointed
  *    to by src into the region pointed to by dest. This copying takes place
- *    as if the smax bytes from the region pointed to by src are ﬁrst copied
+ *    as if the smax bytes from the region pointed to by src are first copied
  *    into a temporary array of smax bytes that does not overlap the region
  *    pointed to by dest or src, and then the smax bytes from the temporary
  *    array are copied into the object region to by dest.
@@ -76,9 +77,9 @@
  *    dmax shall not be greater than RSIZE_MAX_MEM.
  *    smax shall not be greater than dmax.
  *    If there is a runtime-constraint violation, the memmove_s function
- *      stores zeros in the ﬁrst dmax characters of the regionpointed to
- *      by dest if dest is not a null pointer and dmax is not greater
- *      than RSIZE_MAX_MEM.
+ *    stores zeros in the first dmax characters of the regionpointed to
+ *    by dest if dest is not a null pointer and dmax is not greater
+ *    than RSIZE_MAX_MEM.
  *
  * RETURN VALUE
  *    EOK        successful operation
@@ -145,4 +146,4 @@ memmove_s (void *dest, rsize_t dmax, const void *src, rsize_t smax)
 
     return (RCNEGATE(EOK));
 }
-EXPORT_SYMBOL(memmove_s);
+EXPORT_SYMBOL(memmove_s)
