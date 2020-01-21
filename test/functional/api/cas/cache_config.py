@@ -6,7 +6,7 @@
 from enum import IntEnum
 from aenum import Enum
 from test_utils.size import Size, Unit
-from datetime import timedelta
+from attotime import attotimedelta
 
 
 class CacheLineSize(Enum):
@@ -79,7 +79,7 @@ class CacheStatus(Enum):
     incomplete = 5
 
 
-class Time(timedelta):
+class Time(attotimedelta):
     def total_milliseconds(self):
         return int(self.total_seconds() * 1000)
 
