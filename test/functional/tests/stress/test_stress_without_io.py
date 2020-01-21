@@ -4,7 +4,6 @@
 #
 
 import time
-
 import pytest
 
 from api.cas import casadm, casctl, casadm_parser, cas_module
@@ -160,7 +159,7 @@ def test_stress_reload_cache(cache_mode):
           - No data corruption.
     """
     with TestRun.step("Prepare cache and core. Create test file and count its checksum."):
-        cache, core, file, file_before = prepare_with_file_creation(cache_mode)
+        cache, core, file, file_md5sum_before = prepare_with_file_creation(cache_mode)
 
     for _ in TestRun.iteration(range(0, iterations_per_config),
                                f"Stop and load cache {iterations_per_config} times."):
@@ -178,11 +177,11 @@ def test_stress_reload_cache(cache_mode):
             if cores_count != 1:
                 TestRun.fail(f"Expected cores count: 1; Actual cores count: {cores_count}.")
 
-    with TestRun.step("Check md5 of test file."):
+    with TestRun.step("Check md5 sum of test file."):
         core.mount(mount_point)
-        file_after = file.get_properties()
-        if file_after != file_before:
-            TestRun.LOGGER.error("File properties before and after are different.")
+        file_md5sum_after = file.md5sum()
+        if file_md5sum_after != file_md5sum_before:
+            TestRun.LOGGER.error("Md5 sum of test file is different.")
         core.unmount()
 
     with TestRun.step("Stop all caches."):
@@ -202,7 +201,7 @@ def test_stress_add_remove_core(cache_mode):
           - No data corruption.
     """
     with TestRun.step("Prepare cache and core. Create test file and count its checksum."):
-        cache, core, file, file_before = prepare_with_file_creation(cache_mode)
+        cache, core, file, file_md5sum_before = prepare_with_file_creation(cache_mode)
 
     for _ in TestRun.iteration(range(0, iterations_per_config),
                                f"Add and remove core {iterations_per_config} times."):
@@ -223,11 +222,11 @@ def test_stress_add_remove_core(cache_mode):
             if cores_count != 1:
                 TestRun.fail(f"Expected cores count: 1; Actual cores count: {cores_count}.")
 
-    with TestRun.step("Check md5 of test file."):
+    with TestRun.step("Check md5 sum of test file."):
         core.mount(mount_point)
-        file_after = file.get_properties()
-        if file_after != file_before:
-            TestRun.LOGGER.error("File properties before and after are different.")
+        file_md5sum_after = file.md5sum()
+        if file_md5sum_after != file_md5sum_before:
+            TestRun.LOGGER.error("Md5 sum of test file is different.")
         core.unmount()
 
     with TestRun.step("Stop all caches."):
@@ -247,7 +246,7 @@ def test_stress_reload_module(cache_mode):
           - No data corruption.
     """
     with TestRun.step("Prepare cache and core. Create test file and count its checksum."):
-        cache, core, file, file_before = prepare_with_file_creation(cache_mode)
+        cache, core, file, file_md5sum_before = prepare_with_file_creation(cache_mode)
 
     with TestRun.step("Save current cache configuration."):
         cache_config = cache.get_cache_config()
@@ -277,11 +276,11 @@ def test_stress_reload_module(cache_mode):
             if cache.get_cache_config() != cache_config:
                 TestRun.fail("Cache configuration is different than before reloading modules.")
 
-    with TestRun.step("Check md5 of test file."):
+    with TestRun.step("Check md5 sum of test file."):
         core.mount(mount_point)
-        file_after = file.get_properties()
-        if file_after != file_before:
-            TestRun.LOGGER.error("File properties before and after are different.")
+        file_md5sum_after = file.md5sum()
+        if file_md5sum_after != file_md5sum_before:
+            TestRun.LOGGER.error("Md5 sum of test file is different.")
         core.unmount()
 
     with TestRun.step("Stop all caches."):
@@ -295,9 +294,9 @@ def prepare_with_file_creation(config):
     core.create_filesystem(Filesystem.ext3)
     core.mount(mount_point)
     file = fs_utils.create_test_file(test_file_path)
-    file_properties = file.get_properties()
+    file_md5sum = file.md5sum()
     core.unmount()
-    return cache, core, file, file_properties
+    return cache, core, file, file_md5sum
 
 
 def prepare():
