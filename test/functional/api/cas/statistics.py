@@ -196,7 +196,7 @@ class CoreStats:
 class IoClassStats:
     stats_list = ["config_stats", "usage_stats", "request_stats", "block_stats"]
 
-    def __init__(self, stats):
+    def __init__(self, stats, for_cache: bool):
         try:
             self.config_stats = IoClassConfigStats(
                 stats["io class id"],
@@ -230,16 +230,17 @@ class IoClassStats:
         except KeyError:
             pass
         try:
+            plural = "(s)" if for_cache else ""
             self.block_stats = BlockStats(
-                stats["reads from core(s)"],
-                stats["writes to core(s)"],
-                stats["total to/from core(s)"],
+                stats["reads from core" + plural],
+                stats["writes to core" + plural],
+                stats["total to/from core" + plural],
                 stats["reads from cache"],
                 stats["writes to cache"],
                 stats["total to/from cache"],
-                stats["reads from exported object(s)"],
-                stats["writes to exported object(s)"],
-                stats["total to/from exported object(s)"],
+                stats["reads from exported object" + plural],
+                stats["writes to exported object" + plural],
+                stats["total to/from exported object" + plural],
             )
         except KeyError:
             pass

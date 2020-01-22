@@ -4,16 +4,15 @@
 #
 
 
-from api.cas.cli import *
-from api.cas.casadm_parser import *
+from datetime import timedelta
+
 from api.cas.cache import Device
+from api.cas.casadm_parser import *
+from api.cas.cli import *
+from api.cas.statistics import CoreStats, IoClassStats
 from test_tools import fs_utils
 from test_utils.os_utils import *
-from api.cas.statistics import CoreStats, IoClassStats
-from datetime import timedelta, datetime
 from test_utils.os_utils import wait
-
-import time
 
 
 class CoreStatus(Enum):
@@ -59,7 +58,7 @@ class Core(Device):
                                 percentage_val: bool = False):
         stats = get_statistics(self.cache_id, self.core_id, io_class_id,
                                stat_filter, percentage_val)
-        return IoClassStats(stats)
+        return IoClassStats(stats, for_cache=False)
 
     def get_statistics(self,
                        stat_filter: List[StatsFilter] = None,
