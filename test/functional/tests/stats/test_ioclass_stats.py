@@ -5,17 +5,18 @@
 
 
 import pytest
-from api.cas.casadm import StatsFilter
+
 from api.cas import casadm
-from api.cas import ioclass_config
 from api.cas import casadm_parser
+from api.cas import ioclass_config
 from api.cas.cache_config import CleaningPolicy
+from api.cas.casadm import StatsFilter
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.disk_utils import Filesystem
-from test_utils.size import Size, Unit
-from test_utils.os_utils import sync, Udev
 from test_utils.filesystem.file import File
+from test_utils.os_utils import sync, Udev
+from test_utils.size import Size, Unit
 
 ioclass_config_path = "/tmp/opencas_ioclass.conf"
 mountpoint = "/tmp/cas1-1"
@@ -105,11 +106,11 @@ def test_ioclass_stats_sum():
         core.unmount()
         sync()
 
-        cache_stats = cache.get_statistics_deprecated(
+        cache_stats = cache.get_statistics_flat(
             stat_filter=[StatsFilter.usage, StatsFilter.req, StatsFilter.blk]
         )
         for ioclass_id in ioclass_id_list:
-            ioclass_stats = cache.get_statistics_deprecated(
+            ioclass_stats = cache.get_statistics_flat(
                 stat_filter=[StatsFilter.usage, StatsFilter.req, StatsFilter.blk],
                 io_class_id=ioclass_id,
             )

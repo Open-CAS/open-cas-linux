@@ -5,15 +5,16 @@
 
 
 import pytest
-from api.cas.casadm import StatsFilter
+
 from api.cas import casadm
 from api.cas import ioclass_config
-from test_tools.dd import Dd
 from api.cas.cache_config import CacheMode, CleaningPolicy
+from api.cas.casadm import StatsFilter
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.size import Size, Unit
+from test_tools.dd import Dd
 from test_utils.os_utils import Udev
+from test_utils.size import Size, Unit
 
 ioclass_config_path = "/tmp/opencas_ioclass.conf"
 mountpoint = "/tmp/cas1-1"
@@ -112,8 +113,8 @@ def test_block_stats_write(cache_mode, zero_stats):
         for i in range(iterations):
             dd.seek(dd_seek)
             dd.run()
-            cache_stats = cache.get_statistics_deprecated(stat_filter=[StatsFilter.blk])
-            core_stats = core.get_statistics_deprecated(stat_filter=[StatsFilter.blk])
+            cache_stats = cache.get_statistics_flat(stat_filter=[StatsFilter.blk])
+            core_stats = core.get_statistics_flat(stat_filter=[StatsFilter.blk])
 
             # Check cache stats
             assumed_value = (dd_size.get_value(Unit.Blocks4096) * dd_count) * (i + 1)
@@ -237,8 +238,8 @@ def test_block_stats_read(cache_mode, zero_stats):
         for i in range(iterations):
             dd.skip(dd_skip)
             dd.run()
-            cache_stats = cache.get_statistics_deprecated(stat_filter=[StatsFilter.blk])
-            core_stats = core.get_statistics_deprecated(stat_filter=[StatsFilter.blk])
+            cache_stats = cache.get_statistics_flat(stat_filter=[StatsFilter.blk])
+            core_stats = core.get_statistics_flat(stat_filter=[StatsFilter.blk])
 
             # Check cache stats
             assumed_value = (dd_size.get_value(Unit.Blocks4096) * dd_count) * (i + 1)
@@ -283,7 +284,7 @@ def test_block_stats_read(cache_mode, zero_stats):
 def flush(cache):
     cache.flush_cache()
     cache.reset_counters()
-    stats = cache.get_statistics_deprecated(stat_filter=[StatsFilter.blk])
+    stats = cache.get_statistics_flat(stat_filter=[StatsFilter.blk])
     for key, value in stats.items():
         assert value.get_value(Unit.Blocks4096) == 0
 
