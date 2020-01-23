@@ -3,8 +3,7 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
-from enum import IntEnum
-from aenum import Enum
+from aenum import Enum, IntFlag
 from test_utils.size import Size, Unit
 from attotime import attotimedelta
 
@@ -27,10 +26,33 @@ class CacheMode(Enum):
     WA = "Write-Around"
     PT = "Pass-Through"
     WO = "Write-Only"
+    WI = "Write-Invalidate"
     DEFAULT = WT
 
     def __str__(self):
         return self.value
+
+    @staticmethod
+    def get_traits(cache_mode):
+        if cache_mode == CacheMode.PT:
+            return 0
+        elif cache_mode == CacheMode.WT:
+            return CacheModeTrait.InsertRead | CacheModeTrait.InsertWrite
+        elif cache_mode == CacheMode.WB:
+            return CacheModeTrait.InsertRead | CacheModeTrait.InsertWrite | CacheModeTrait.LazyFlush
+        elif cache_mode == CacheMode.WO:
+            return CacheModeTrait.InsertWrite | CacheModeTrait.LazyFlush
+        elif cache_mode == CacheMode.WA:
+            return CacheModeTrait.InsertRead
+        elif cache_mode == CacheMode.WI:
+            return CacheModeTrait.InsertRead | CacheModeTrait.WriteInvalidate
+
+
+class CacheModeTrait(IntFlag):
+    InsertWrite = 1
+    InsertRead = 2
+    LazyFlush = 4
+    WriteInvalidate = 8
 
 
 class SeqCutOffPolicy(Enum):
