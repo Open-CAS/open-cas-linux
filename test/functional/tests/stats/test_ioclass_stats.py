@@ -2,18 +2,21 @@
 # Copyright(c) 2019-2020 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
-
+import random
 
 import pytest
 
 from api.cas import casadm
 from api.cas import ioclass_config
-from api.cas.cache_config import CleaningPolicy
+from api.cas.cache_config import CleaningPolicy, CacheMode, CacheLineSize
 from api.cas.casadm import StatsFilter
 from api.cas.cli_messages import (
     check_stderr_msg,
     get_stats_ioclass_id_not_configured,
     get_stats_ioclass_id_out_of_range
+)
+from api.cas.statistics import (
+    config_stats_ioclass, usage_stats, request_stats, block_stats_core, block_stats_cache
 )
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
@@ -31,7 +34,8 @@ cache_id = 1
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_ioclass_stats_basic():
+@pytest.mark.parametrize("random_cls", [random.choice(list(CacheLineSize))])
+def test_ioclass_stats_basic(random_cls):
     """
         title: Basic test for retrieving IO class statistics.
         description: |
@@ -46,7 +50,7 @@ def test_ioclass_stats_basic():
     max_ioclass_id = 21
 
     with TestRun.step("Test prepare"):
-        prepare()
+        prepare(random_cls)
 
     with TestRun.step("Prepare IO class config file"):
         ioclass_list = []
@@ -89,7 +93,8 @@ def test_ioclass_stats_basic():
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_ioclass_stats_sum():
+@pytest.mark.parametrize("random_cls", [random.choice(list(CacheLineSize))])
+def test_ioclass_stats_sum(random_cls):
     """
         title: Test for sum of IO class statistics.
         description: |
@@ -104,7 +109,8 @@ def test_ioclass_stats_sum():
     file_size_base = Unit.Blocks4096.value
 
     with TestRun.step("Test prepare"):
-        cache, core = prepare()
+        caches, cores = prepare(random_cls)
+        cache, core = caches[0], cores[0]
 
     with TestRun.step("Prepare IO class config file"):
         ioclass_list = []
@@ -200,28 +206,125 @@ def test_ioclass_stats_sum():
                 f.remove()
 
 
-def prepare():
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.parametrize("stat_filter", [StatsFilter.req, StatsFilter.usage, StatsFilter.conf,
+                                         StatsFilter.blk])
+@pytest.mark.parametrize("per_core", [True, False])
+@pytest.mark.parametrize("random_cls", [random.choice(list(CacheLineSize))])
+def test_ioclass_stats_sections(stat_filter, per_core, random_cls):
+    """
+        title: Test for cache/core IO class statistics sections.
+        description: |
+            Check if IO class statistics sections for cache/core print all required entries and
+            no additional ones.
+        pass_criteria:
+          - Section statistics contain all required entries.
+          - Section statistics do not contain any additional entries.
+    """
+    with TestRun.step("Test prepare"):
+        caches, cores = prepare(random_cls, cache_count=4, cores_per_cache=3)
+
+    with TestRun.step(f"Validate displayed {stat_filter.name} statistics for default IO class for "
+                      f"{'cores' if per_core else 'caches'}"):
+        for cache in caches:
+            with TestRun.group(f"Cache {cache.cache_id}"):
+                for core in cache.get_core_devices():
+                    if per_core:
+                        TestRun.LOGGER.info(f"Core {core.cache_id}-{core.core_id}")
+                    statistics = (
+                        core.get_statistics_flat(
+                            io_class_id=0, stat_filter=[stat_filter]) if per_core
+                        else cache.get_statistics_flat(
+                            io_class_id=0, stat_filter=[stat_filter]))
+                    validate_statistics(statistics, stat_filter, per_core)
+                    if not per_core:
+                        break
+
+    with TestRun.step("Load random IO class configuration for each cache"):
+        for cache in caches:
+            random_list = IoClass.generate_random_ioclass_list(ioclass_config.MAX_IO_CLASS_ID + 1)
+            IoClass.save_list_to_config_file(random_list, add_default_rule=False)
+            cache.load_io_class(ioclass_config.default_config_file_path)
+
+    with TestRun.step(f"Validate displayed {stat_filter.name} statistics for every configured IO "
+                      f"class for all {'cores' if per_core else 'caches'}"):
+        for cache in caches:
+            with TestRun.group(f"Cache {cache.cache_id}"):
+                for core in cache.get_core_devices():
+                    core_info = f"Core {core.cache_id}-{core.core_id} ," if per_core else ""
+                    for class_id in range(ioclass_config.MAX_IO_CLASS_ID + 1):
+                        with TestRun.group(core_info + f"IO class id {class_id}"):
+                            statistics = (
+                                core.get_statistics_flat(class_id, [stat_filter]) if per_core
+                                else cache.get_statistics_flat(class_id, [stat_filter]))
+                            validate_statistics(statistics, stat_filter, per_core)
+                            if stat_filter == StatsFilter.conf:  # no percentage statistics for conf
+                                continue
+                            statistics_percents = (
+                                core.get_statistics_flat(
+                                    class_id, [stat_filter], percentage_val=True) if per_core
+                                else cache.get_statistics_flat(
+                                    class_id, [stat_filter], percentage_val=True))
+                            validate_statistics(statistics_percents, stat_filter, per_core)
+                    if not per_core:
+                        break
+
+
+def get_checked_statistics(stat_filter: StatsFilter, per_core: bool):
+    if stat_filter == StatsFilter.conf:
+        return config_stats_ioclass
+    if stat_filter == StatsFilter.usage:
+        return usage_stats
+    if stat_filter == StatsFilter.blk:
+        return block_stats_core if per_core else block_stats_cache
+    if stat_filter == StatsFilter.req:
+        return request_stats
+
+
+def validate_statistics(statistics: dict, stat_filter: StatsFilter, per_core: bool):
+    for stat_name in get_checked_statistics(stat_filter, per_core):
+        if stat_name not in statistics.keys():
+            TestRun.LOGGER.error(f"Value for {stat_name} not displayed in output")
+        else:
+            del statistics[stat_name]
+    if len(statistics.keys()):
+        TestRun.LOGGER.error(f"Additional statistics found: {', '.join(statistics.keys())}")
+
+
+def prepare(random_cls, cache_count=1, cores_per_cache=1):
+    cache_modes = [CacheMode.WT, CacheMode.WB, CacheMode.WA, CacheMode.WO]
     ioclass_config.remove_ioclass_config()
 
     cache_device = TestRun.disks['cache']
     core_device = TestRun.disks['core']
 
-    cache_device.create_partitions([Size(500, Unit.MebiByte)])
-    core_device.create_partitions([Size(2, Unit.GibiByte)])
+    cache_device.create_partitions([Size(500, Unit.MebiByte)] * cache_count)
+    core_device.create_partitions([Size(2, Unit.GibiByte)] * cache_count * cores_per_cache)
 
-    cache_device = cache_device.partitions[0]
-    core_device = core_device.partitions[0]
-    core_device.create_filesystem(Filesystem.ext4)
+    cache_devices = cache_device.partitions
+    core_devices = core_device.partitions
+    for core_device in core_devices:
+        core_device.create_filesystem(Filesystem.ext4)
 
     Udev.disable()
-
-    TestRun.LOGGER.info(f"Starting cache")
-    cache = casadm.start_cache(cache_device, force=True)
-    TestRun.LOGGER.info(f"Setting cleaning policy to NOP")
-    cache.set_cleaning_policy(CleaningPolicy.nop)
-    TestRun.LOGGER.info(f"Adding core device")
-    core = cache.add_core(core_dev=core_device)
+    caches, cores = [], []
+    for i, cache_device in enumerate(cache_devices):
+        TestRun.LOGGER.info(f"Starting cache on {cache_device.system_path}")
+        cache = casadm.start_cache(cache_device,
+                                   force=True,
+                                   cache_mode=cache_modes[i],
+                                   cache_line_size=random_cls)
+        caches.append(cache)
+        TestRun.LOGGER.info("Setting cleaning policy to NOP")
+        cache.set_cleaning_policy(CleaningPolicy.nop)
+        for core_device in core_devices[i * cores_per_cache:(i + 1) * cores_per_cache]:
+            TestRun.LOGGER.info(
+                f"Adding core device {core_device.system_path} to cache {cache.cache_id}")
+            core = cache.add_core(core_dev=core_device)
+            core.reset_counters()
+            cores.append(core)
 
     TestRun.executor.run_expect_success(f"mkdir -p {mountpoint}")
 
-    return cache, core
+    return caches, cores
