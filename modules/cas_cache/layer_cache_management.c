@@ -1372,7 +1372,8 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	uint16_t cache_id;
 	bool is_part;
 
-	BUG_ON(!cmd);
+	if (!cmd)
+		return -OCF_ERR_INVAL;
 
 	if (strnlen(cmd->cache_path_name, MAX_STR_LEN) >= MAX_STR_LEN)
 		return -OCF_ERR_INVAL;
