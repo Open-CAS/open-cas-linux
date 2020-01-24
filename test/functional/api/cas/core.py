@@ -6,7 +6,7 @@
 
 from api.cas.casadm_parser import *
 from api.cas.cli import *
-from api.cas.statistics import CoreStats, IoClassStats
+from api.cas.statistics import CoreStats, CoreIoClassStats
 from test_tools import fs_utils
 from test_utils.os_utils import *
 from test_utils.os_utils import wait
@@ -55,7 +55,7 @@ class Core(Device):
                                 percentage_val: bool = False):
         stats = get_statistics(self.cache_id, self.core_id, io_class_id,
                                stat_filter, percentage_val)
-        return IoClassStats(stats, for_cache=False)
+        return CoreIoClassStats(stats)
 
     def get_statistics(self,
                        stat_filter: List[StatsFilter] = None,
