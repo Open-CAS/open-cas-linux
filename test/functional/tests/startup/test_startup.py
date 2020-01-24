@@ -5,9 +5,10 @@
 
 import pytest
 
-from api.cas import casadm, init_config
+from api.cas import casadm
 from api.cas.casadm_parser import get_caches, get_cores
 from api.cas.cache_config import CacheMode
+from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.filesystem.file import File
@@ -67,7 +68,7 @@ def test_cas_startup(cache_mode, filesystem):
         fstab.add_mountpoint(device=core,
                              mount_point=mountpoint,
                              fs_type=filesystem)
-        init_config.create_init_config_from_running_configuration()
+        InitConfig.create_init_config_from_running_configuration()
 
     with TestRun.step("Reboot"):
         TestRun.executor.reboot()
@@ -98,5 +99,5 @@ def test_cas_startup(cache_mode, filesystem):
     with TestRun.step("Test cleanup"):
         fstab.remove_mountpoint(device=core)
         core.unmount()
-        init_config.create_default_init_config()
+        InitConfig.create_default_init_config()
         casadm.stop_all_caches()
