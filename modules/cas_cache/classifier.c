@@ -198,14 +198,9 @@ static int _cas_cls_string_ctr(struct cas_classifier *cls,
 		return -EINVAL;
 	}
 
-	len = strlen(data);
+	len = strnlen(data, MAX_STRING_SPECIFIER_LEN);
 	if (len == 0) {
 		CAS_CLS_MSG(KERN_ERR, "String specifier is empty\n");
-		return -EINVAL;
-	}
-
-	if (len > MAX_STRING_SPECIFIER_LEN) {
-		CAS_CLS_MSG(KERN_ERR, "String specifier to long: %s\n", data);
 		return -EINVAL;
 	}
 
