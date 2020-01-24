@@ -288,7 +288,7 @@ def set_param_cleaning_acp(cache_id: int, wake_up: int = None, flush_max_buffers
     output = TestRun.executor.run(
         set_param_cleaning_acp_cmd(
             cache_id=str(cache_id),
-            wake_up=str(wake_up) if wake_up else None,
+            wake_up=str(wake_up) if wake_up is not None else None,
             flush_max_buffers=str(flush_max_buffers) if flush_max_buffers else None))
     if output.exit_code != 0:
         raise CmdException("Error while setting acp cleaning policy parameters.", output)

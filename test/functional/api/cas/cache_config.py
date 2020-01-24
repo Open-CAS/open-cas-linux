@@ -106,6 +106,15 @@ class FlushParametersAlru:
         )
 
     @staticmethod
+    def alru_params_range():
+        alru_params = FlushParametersAlru()
+        alru_params.activity_threshold = (500, 1000000)
+        alru_params.flush_max_buffers = (1, 10000)
+        alru_params.staleness_time = (1, 3600)
+        alru_params.wake_up_time = (1, 3600)
+        return alru_params
+
+    @staticmethod
     def default_alru_params():
         alru_params = FlushParametersAlru()
         alru_params.activity_threshold = Time(milliseconds=10000)
@@ -127,6 +136,13 @@ class FlushParametersAcp:
         )
 
     @staticmethod
+    def acp_params_range():
+        acp_params = FlushParametersAcp()
+        acp_params.flush_max_buffers = (1, 10000)
+        acp_params.wake_up_time = (0, 10000)
+        return acp_params
+
+    @staticmethod
     def default_acp_params():
         acp_params = FlushParametersAcp()
         acp_params.flush_max_buffers = 128
@@ -138,6 +154,12 @@ class SeqCutOffParameters:
     def __init__(self, policy=None, threshold=None):
         self.policy = policy
         self.threshold = threshold
+
+    def __eq__(self, other):
+        return (
+            self.policy == other.policy
+            and self.threshold == other.threshold
+        )
 
     @staticmethod
     def default_seq_cut_off_params():
