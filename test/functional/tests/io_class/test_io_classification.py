@@ -64,9 +64,9 @@ def test_ioclass_lba():
         sync()
         dirty_count += 1
 
-        stats = cache.get_statistics_deprecated(io_class_id=ioclass_id)
-        if stats["dirty"].get_value(Unit.Blocks4096) != dirty_count:
-            TestRun.fail(f"LBA {lba} not cached")
+        dirty = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.dirty
+        if dirty.get_value(Unit.Blocks4096) != dirty_count:
+            TestRun.LOGGER.error(f"LBA {lba} not cached")
 
     cache.flush_cache()
 
@@ -87,9 +87,9 @@ def test_ioclass_lba():
         dd.run()
         sync()
 
-        stats = cache.get_statistics_deprecated(io_class_id=ioclass_id)
-        if stats["dirty"].get_value(Unit.Blocks4096) != 0:
-            TestRun.fail(f"Inappropriately cached lba: {rand_lba}")
+        dirty = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.dirty
+        if dirty.get_value(Unit.Blocks4096) != 0:
+            TestRun.LOGGER.error(f"Inappropriately cached lba: {rand_lba}")
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -128,8 +128,8 @@ def test_ioclass_request_size():
             .oflag("direct")
         )
         dd.run()
-        stats = cache.get_statistics_deprecated(io_class_id=ioclass_id)
-        if stats["dirty"].get_value(Unit.Blocks4096) != req_size.value / Unit.Blocks4096.value:
+        dirty = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.dirty
+        if dirty.get_value(Unit.Blocks4096) != req_size.value / Unit.Blocks4096.value:
             TestRun.fail("Incorrect number of dirty blocks!")
 
     cache.flush_cache()
@@ -154,8 +154,8 @@ def test_ioclass_request_size():
             .oflag("direct")
         )
         dd.run()
-        stats = cache.get_statistics_deprecated(io_class_id=ioclass_id)
-        if stats["dirty"].get_value(Unit.Blocks4096) != 0:
+        dirty = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.dirty
+        if dirty.get_value(Unit.Blocks4096) != 0:
             TestRun.fail("Dirty data present!")
 
 
@@ -205,12 +205,12 @@ def test_ioclass_direct(filesystem):
     else:
         TestRun.LOGGER.info("Testing on raw exported object")
 
-    base_occupancy = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
+    base_occupancy = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.occupancy
 
     TestRun.LOGGER.info(f"Buffered writes to {'file' if filesystem else 'device'}")
     fio.run()
     sync()
-    new_occupancy = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
+    new_occupancy = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.occupancy
     if new_occupancy != base_occupancy:
         TestRun.fail("Buffered writes were cached!\n"
                      f"Expected: {base_occupancy}, actual: {new_occupancy}")
@@ -219,7 +219,7 @@ def test_ioclass_direct(filesystem):
     fio.direct()
     fio.run()
     sync()
-    new_occupancy = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
+    new_occupancy = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.occupancy
     if new_occupancy != base_occupancy + io_size:
         TestRun.fail("Wrong number of direct writes was cached!\n"
                      f"Expected: {base_occupancy + io_size}, actual: {new_occupancy}")
@@ -229,7 +229,7 @@ def test_ioclass_direct(filesystem):
     fio.read_write(ReadWrite.read)
     fio.run()
     sync()
-    new_occupancy = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
+    new_occupancy = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.occupancy
     if new_occupancy != base_occupancy:
         TestRun.fail("Buffered reads did not cause reclassification!"
                      f"Expected occupancy: {base_occupancy}, actual: {new_occupancy}")
@@ -238,7 +238,7 @@ def test_ioclass_direct(filesystem):
     fio.direct()
     fio.run()
     sync()
-    new_occupancy = cache.get_statistics_deprecated(io_class_id=ioclass_id)["occupancy"]
+    new_occupancy = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.occupancy
     if new_occupancy != base_occupancy + io_size:
         TestRun.fail("Wrong number of direct reads was cached!\n"
                      f"Expected: {base_occupancy + io_size}, actual: {new_occupancy}")
@@ -273,8 +273,8 @@ def test_ioclass_metadata(filesystem):
     core.mount(mountpoint)
     sync()
 
-    requests_to_metadata_before = cache.get_statistics_deprecated(
-        io_class_id=ioclass_id)["write total"]
+    requests_to_metadata_before = cache.get_io_class_statistics(
+        io_class_id=ioclass_id).request_stats.write
     TestRun.LOGGER.info("Creating 20 test files")
     files = []
     for i in range(1, 21):
@@ -291,10 +291,10 @@ def test_ioclass_metadata(filesystem):
         files.append(File(file_path))
 
     TestRun.LOGGER.info("Checking requests to metadata")
-    requests_to_metadata_after = cache.get_statistics_deprecated(
-        io_class_id=ioclass_id)["write total"]
+    requests_to_metadata_after = cache.get_io_class_statistics(
+        io_class_id=ioclass_id).request_stats.write
     if requests_to_metadata_after == requests_to_metadata_before:
-        pytest.xfail("No requests to metadata while creating files!")
+        TestRun.fail("No requests to metadata while creating files!")
 
     requests_to_metadata_before = requests_to_metadata_after
     TestRun.LOGGER.info("Renaming all test files")
@@ -303,10 +303,10 @@ def test_ioclass_metadata(filesystem):
     sync()
 
     TestRun.LOGGER.info("Checking requests to metadata")
-    requests_to_metadata_after = cache.get_statistics_deprecated(
-        io_class_id=ioclass_id)["write total"]
+    requests_to_metadata_after = cache.get_io_class_statistics(
+        io_class_id=ioclass_id).request_stats.write
     if requests_to_metadata_after == requests_to_metadata_before:
-        pytest.xfail("No requests to metadata while renaming files!")
+        TestRun.fail("No requests to metadata while renaming files!")
 
     requests_to_metadata_before = requests_to_metadata_after
     test_dir_path = f"{mountpoint}/test_dir"
@@ -319,19 +319,19 @@ def test_ioclass_metadata(filesystem):
     sync()
 
     TestRun.LOGGER.info("Checking requests to metadata")
-    requests_to_metadata_after = cache.get_statistics_deprecated(
-        io_class_id=ioclass_id)["write total"]
+    requests_to_metadata_after = cache.get_io_class_statistics(
+        io_class_id=ioclass_id).request_stats.write
     if requests_to_metadata_after == requests_to_metadata_before:
-        pytest.xfail("No requests to metadata while moving files!")
+        TestRun.fail("No requests to metadata while moving files!")
 
     TestRun.LOGGER.info(f"Removing {test_dir_path}")
     fs_utils.remove(path=test_dir_path, force=True, recursive=True)
 
     TestRun.LOGGER.info("Checking requests to metadata")
-    requests_to_metadata_after = cache.get_statistics_deprecated(
-        io_class_id=ioclass_id)["write total"]
+    requests_to_metadata_after = cache.get_io_class_statistics(
+        io_class_id=ioclass_id).request_stats.write
     if requests_to_metadata_after == requests_to_metadata_before:
-        pytest.xfail("No requests to metadata while deleting directory with files!")
+        TestRun.fail("No requests to metadata while deleting directory with files!")
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -408,7 +408,7 @@ def test_ioclass_id_as_condition(filesystem):
 
     # IO fulfilling IO class 1 condition (and not IO class 2)
     # Should be classified as IO class 4
-    base_occupancy = cache.get_statistics_deprecated(io_class_id=4)["occupancy"]
+    base_occupancy = cache.get_io_class_statistics(io_class_id=4).usage_stats.occupancy
     non_ioclass_file_size = Size(random.randrange(1, 25), Unit.MebiByte)
     (Fio().create_command()
           .io_engine(IoEngine.libaio)
@@ -417,7 +417,7 @@ def test_ioclass_id_as_condition(filesystem):
           .target(f"{base_dir_path}/test_file_1")
           .run())
     sync()
-    new_occupancy = cache.get_statistics_deprecated(io_class_id=4)["occupancy"]
+    new_occupancy = cache.get_io_class_statistics(io_class_id=4).usage_stats.occupancy
 
     if new_occupancy != base_occupancy + non_ioclass_file_size:
         TestRun.fail("Writes were not properly cached!\n"
@@ -425,7 +425,7 @@ def test_ioclass_id_as_condition(filesystem):
 
     # IO fulfilling IO class 2 condition (and not IO class 1)
     # Should be classified as IO class 5
-    base_occupancy = cache.get_statistics_deprecated(io_class_id=5)["occupancy"]
+    base_occupancy = cache.get_io_class_statistics(io_class_id=5).usage_stats.occupancy
     (Fio().create_command()
           .io_engine(IoEngine.libaio)
           .size(ioclass_file_size)
@@ -433,7 +433,7 @@ def test_ioclass_id_as_condition(filesystem):
           .target(f"{mountpoint}/test_file_2")
           .run())
     sync()
-    new_occupancy = cache.get_statistics_deprecated(io_class_id=5)["occupancy"]
+    new_occupancy = cache.get_io_class_statistics(io_class_id=5).usage_stats.occupancy
 
     if new_occupancy != base_occupancy + ioclass_file_size:
         TestRun.fail("Writes were not properly cached!\n"
@@ -449,7 +449,7 @@ def test_ioclass_id_as_condition(filesystem):
           .target(f"{base_dir_path}/test_file_3")
           .run())
     sync()
-    new_occupancy = cache.get_statistics_deprecated(io_class_id=5)["occupancy"]
+    new_occupancy = cache.get_io_class_statistics(io_class_id=5).usage_stats.occupancy
 
     if new_occupancy != base_occupancy + ioclass_file_size:
         TestRun.fail("Writes were not properly cached!\n"
@@ -457,7 +457,7 @@ def test_ioclass_id_as_condition(filesystem):
 
     # Same IO but direct
     # Should be classified as IO class 6
-    base_occupancy = cache.get_statistics_deprecated(io_class_id=6)["occupancy"]
+    base_occupancy = cache.get_io_class_statistics(io_class_id=6).usage_stats.occupancy
     (Fio().create_command()
           .io_engine(IoEngine.libaio)
           .size(ioclass_file_size)
@@ -466,7 +466,7 @@ def test_ioclass_id_as_condition(filesystem):
           .direct()
           .run())
     sync()
-    new_occupancy = cache.get_statistics_deprecated(io_class_id=6)["occupancy"]
+    new_occupancy = cache.get_io_class_statistics(io_class_id=6).usage_stats.occupancy
 
     if new_occupancy != base_occupancy + ioclass_file_size:
         TestRun.fail("Writes were not properly cached!\n"
@@ -506,7 +506,7 @@ def test_ioclass_conditions_or(filesystem):
     # Perform IO fulfilling each condition and check if occupancy raises
     for i in range(1, 6):
         file_size = Size(random.randint(25, 50), Unit.MebiByte)
-        base_occupancy = cache.get_statistics_deprecated(io_class_id=1)["occupancy"]
+        base_occupancy = cache.get_io_class_statistics(io_class_id=1).usage_stats.occupancy
         (Fio().create_command()
               .io_engine(IoEngine.libaio)
               .size(file_size)
@@ -514,7 +514,7 @@ def test_ioclass_conditions_or(filesystem):
               .target(f"{mountpoint}/dir{i}/test_file")
               .run())
         sync()
-        new_occupancy = cache.get_statistics_deprecated(io_class_id=1)["occupancy"]
+        new_occupancy = cache.get_io_class_statistics(io_class_id=1).usage_stats.occupancy
 
         if new_occupancy != base_occupancy + file_size:
             TestRun.fail("Occupancy has not increased correctly!\n"
@@ -553,7 +553,7 @@ def test_ioclass_conditions_and(filesystem):
     core.mount(mountpoint)
     sync()
 
-    base_occupancy = cache.get_statistics_deprecated(io_class_id=1)["occupancy"]
+    base_occupancy = cache.get_io_class_statistics(io_class_id=1).usage_stats.occupancy
     # Perform IO
     for size in [file_size, file_size + Size(1, Unit.MebiByte), file_size - Size(1, Unit.MebiByte)]:
         (Fio().create_command()
@@ -563,7 +563,7 @@ def test_ioclass_conditions_and(filesystem):
               .target(f"{mountpoint}/test_file")
               .run())
         sync()
-        new_occupancy = cache.get_statistics_deprecated(io_class_id=1)["occupancy"]
+        new_occupancy = cache.get_io_class_statistics(io_class_id=1).usage_stats.occupancy
 
         if new_occupancy != base_occupancy:
             TestRun.fail("Unexpected occupancy increase!\n"

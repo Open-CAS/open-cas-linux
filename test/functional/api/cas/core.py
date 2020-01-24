@@ -4,9 +4,6 @@
 #
 
 
-from datetime import timedelta
-
-from api.cas.cache import Device
 from api.cas.casadm_parser import *
 from api.cas.cli import *
 from api.cas.statistics import CoreStats, IoClassStats
@@ -67,13 +64,10 @@ class Core(Device):
                                stat_filter, percentage_val)
         return CoreStats(stats)
 
-    # TODO: Get rid of this method below by tuning 'stats' and 'io_class' tests
-    # to utilize new statistics API with method above.
-
-    def get_statistics_deprecated(self,
-                                  io_class_id: int = None,
-                                  stat_filter: List[StatsFilter] = None,
-                                  percentage_val: bool = False):
+    def get_statistics_flat(self,
+                            io_class_id: int = None,
+                            stat_filter: List[StatsFilter] = None,
+                            percentage_val: bool = False):
         return get_statistics(self.cache_id, self.core_id, io_class_id,
                               stat_filter, percentage_val)
 

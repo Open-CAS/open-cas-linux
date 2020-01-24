@@ -3,12 +3,9 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
-from api.cas.cache_config import *
-from api.cas.casadm_params import *
 from api.cas.casadm_parser import *
 from api.cas.cli import *
 from api.cas.statistics import CacheStats, IoClassStats
-from core.test_run import TestRun
 from storage_devices.device import Device
 from test_utils.os_utils import *
 
@@ -108,13 +105,10 @@ class Cache:
                                stat_filter, percentage_val)
         return CacheStats(stats)
 
-    # TODO: Get rid of this method below by tuning 'stats' and 'io_class' tests
-    # to utilize new statistics API with method above.
-
-    def get_statistics_deprecated(self,
-                                  io_class_id: int = None,
-                                  stat_filter: List[StatsFilter] = None,
-                                  percentage_val: bool = False):
+    def get_statistics_flat(self,
+                            io_class_id: int = None,
+                            stat_filter: List[StatsFilter] = None,
+                            percentage_val: bool = False):
         return get_statistics(self.cache_id, None, io_class_id,
                               stat_filter, percentage_val)
 

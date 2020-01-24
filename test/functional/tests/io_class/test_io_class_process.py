@@ -7,9 +7,9 @@ import time
 
 import pytest
 
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
 from test_utils.os_utils import sync, Udev
-from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from .io_class_common import *
 
 
@@ -50,8 +50,9 @@ def test_ioclass_process_name():
         dd.run()
         sync()
         time.sleep(0.1)
-        stats = cache.get_statistics_deprecated(io_class_id=ioclass_id)
-        assert stats["dirty"].get_value(Unit.Blocks4096) == (i + 1) * dd_count
+        dirty = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.dirty
+        if dirty.get_value(Unit.Blocks4096) != (i + 1) * dd_count:
+            TestRun.LOGGER.error(f"Wrong amount of dirty data ({dirty}).")
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -109,7 +110,7 @@ def test_ioclass_pid():
                 f"stdout: {output.stdout} \n stderr :{output.stderr}"
             )
         sync()
-        stats = cache.get_statistics_deprecated(io_class_id=ioclass_id)
-        assert stats["dirty"].get_value(Unit.Blocks4096) == dd_count
-
+        dirty = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.dirty
+        if dirty.get_value(Unit.Blocks4096) != dd_count:
+            TestRun.LOGGER.error(f"Wrong amount of dirty data ({dirty}).")
         ioclass_config.remove_ioclass(ioclass_id)
