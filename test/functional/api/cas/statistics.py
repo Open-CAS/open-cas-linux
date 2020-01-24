@@ -1,3 +1,41 @@
+#
+# Copyright(c) 2019-2020 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+# Order in arrays is important!
+config_stats_cache = [
+    "cache id", "cache size", "cache device", "core devices", "inactive core devices",
+    "write policy", "eviction policy", "cleaning policy", "promotion policy", "cache line size",
+    "metadata memory footprint", "dirty for", "metadata mode", "status"
+]
+config_stats_core = [
+    "core id", "core device", "exported object", "core size", "dirty for", "status",
+    "seq cutoff threshold", "seq cutoff policy"
+]
+config_stats_ioclass = ["io class id", "io class name", "eviction priority", "selective allocation"]
+usage_stats = ["occupancy", "free", "clean", "dirty"]
+inactive_usage_stats = ["inactive occupancy", "inactive clean", "inactive dirty"]
+request_stats = [
+    "read hits", "read partial misses", "read full misses", "read total",
+    "write hits", "write partial misses", "write full misses", "write total",
+    "pass-through reads", "pass-through writes",
+    "serviced requests", "total requests"
+]
+block_stats_cache = [
+    "reads from core(s)", "writes to core(s)", "total to/from core(s)",
+    "reads from cache", "writes to cache", "total to/from cache",
+    "reads from exported object(s)", "writes to exported object(s)",
+    "total to/from exported object(s)"
+]
+block_stats_core = [stat.replace("(s)", "") for stat in block_stats_cache]
+error_stats = [
+    "cache read errors", "cache write errors", "cache total errors",
+    "core read errors", "core write errors", "core total errors",
+    "total errors"
+]
+
+
 class CacheStats:
     stats_list = [
         "config_stats",
@@ -11,77 +49,37 @@ class CacheStats:
     def __init__(self, stats):
         try:
             self.config_stats = CacheConfigStats(
-                stats["cache id"],
-                stats["cache size"],
-                stats["cache device"],
-                stats["core devices"],
-                stats["inactive core devices"],
-                stats["write policy"],
-                stats["eviction policy"],
-                stats["cleaning policy"],
-                stats["promotion policy"],
-                stats["cache line size"],
-                stats["metadata memory footprint"],
-                stats["dirty for"],
-                stats["metadata mode"],
-                stats["status"],
+                *[stats[stat] for stat in config_stats_cache]
             )
         except KeyError:
             pass
         try:
             self.usage_stats = UsageStats(
-                stats["occupancy"], stats["free"], stats["clean"], stats["dirty"]
+                *[stats[stat] for stat in usage_stats]
             )
         except KeyError:
             pass
         try:
             self.inactive_usage_stats = InactiveUsageStats(
-                stats["inactive occupancy"],
-                stats["inactive clean"],
-                stats["inactive dirty"],
+                *[stats[stat] for stat in inactive_usage_stats]
             )
         except KeyError:
             pass
         try:
             self.request_stats = RequestStats(
-                stats["read hits"],
-                stats["read partial misses"],
-                stats["read full misses"],
-                stats["read total"],
-                stats["write hits"],
-                stats["write partial misses"],
-                stats["write full misses"],
-                stats["write total"],
-                stats["pass-through reads"],
-                stats["pass-through writes"],
-                stats["serviced requests"],
-                stats["total requests"],
+                *[stats[stat] for stat in request_stats]
             )
         except KeyError:
             pass
         try:
             self.block_stats = BlockStats(
-                stats["reads from core(s)"],
-                stats["writes to core(s)"],
-                stats["total to/from core(s)"],
-                stats["reads from cache"],
-                stats["writes to cache"],
-                stats["total to/from cache"],
-                stats["reads from exported object(s)"],
-                stats["writes to exported object(s)"],
-                stats["total to/from exported object(s)"],
+                *[stats[stat] for stat in block_stats_cache]
             )
         except KeyError:
             pass
         try:
             self.error_stats = ErrorStats(
-                stats["cache read errors"],
-                stats["cache write errors"],
-                stats["cache total errors"],
-                stats["core read errors"],
-                stats["core write errors"],
-                stats["core total errors"],
-                stats["total errors"],
+                *[stats[stat] for stat in error_stats]
             )
         except KeyError:
             pass
@@ -115,63 +113,31 @@ class CoreStats:
     def __init__(self, stats):
         try:
             self.config_stats = CoreConfigStats(
-                stats["core id"],
-                stats["core device"],
-                stats["exported object"],
-                stats["core size"],
-                stats["dirty for"],
-                stats["status"],
-                stats["seq cutoff threshold"],
-                stats["seq cutoff policy"],
+                *[stats[stat] for stat in config_stats_core]
             )
         except KeyError:
             pass
         try:
             self.usage_stats = UsageStats(
-                stats["occupancy"], stats["free"], stats["clean"], stats["dirty"]
+                *[stats[stat] for stat in usage_stats]
             )
         except KeyError:
             pass
         try:
             self.request_stats = RequestStats(
-                stats["read hits"],
-                stats["read partial misses"],
-                stats["read full misses"],
-                stats["read total"],
-                stats["write hits"],
-                stats["write partial misses"],
-                stats["write full misses"],
-                stats["write total"],
-                stats["pass-through reads"],
-                stats["pass-through writes"],
-                stats["serviced requests"],
-                stats["total requests"],
+                *[stats[stat] for stat in request_stats]
             )
         except KeyError:
             pass
         try:
             self.block_stats = BlockStats(
-                stats["reads from core"],
-                stats["writes to core"],
-                stats["total to/from core"],
-                stats["reads from cache"],
-                stats["writes to cache"],
-                stats["total to/from cache"],
-                stats["reads from exported object"],
-                stats["writes to exported object"],
-                stats["total to/from exported object"],
+                *[stats[stat] for stat in block_stats_core]
             )
         except KeyError:
             pass
         try:
             self.error_stats = ErrorStats(
-                stats["cache read errors"],
-                stats["cache write errors"],
-                stats["cache total errors"],
-                stats["core read errors"],
-                stats["core write errors"],
-                stats["core total errors"],
-                stats["total errors"],
+                *[stats[stat] for stat in error_stats]
             )
         except KeyError:
             pass
@@ -194,53 +160,35 @@ class CoreStats:
 
 
 class IoClassStats:
-    stats_list = ["config_stats", "usage_stats", "request_stats", "block_stats"]
+    stats_list = [
+        "config_stats",
+        "usage_stats",
+        "request_stats",
+        "block_stats",
+    ]
 
-    def __init__(self, stats, for_cache: bool):
+    def __init__(self, stats, block_stats_list):
         try:
             self.config_stats = IoClassConfigStats(
-                stats["io class id"],
-                stats["io class name"],
-                stats["eviction priority"],
-                stats["selective allocation"],
+                *[stats[stat] for stat in config_stats_ioclass]
             )
         except KeyError:
             pass
         try:
             self.usage_stats = UsageStats(
-                stats["occupancy"], stats["free"], stats["clean"], stats["dirty"]
+                *[stats[stat] for stat in usage_stats]
             )
         except KeyError:
             pass
         try:
             self.request_stats = RequestStats(
-                stats["read hits"],
-                stats["read partial misses"],
-                stats["read full misses"],
-                stats["read total"],
-                stats["write hits"],
-                stats["write partial misses"],
-                stats["write full misses"],
-                stats["write total"],
-                stats["pass-through reads"],
-                stats["pass-through writes"],
-                stats["serviced requests"],
-                stats["total requests"],
+                *[stats[stat] for stat in request_stats]
             )
         except KeyError:
             pass
         try:
-            plural = "(s)" if for_cache else ""
             self.block_stats = BlockStats(
-                stats["reads from core" + plural],
-                stats["writes to core" + plural],
-                stats["total to/from core" + plural],
-                stats["reads from cache"],
-                stats["writes to cache"],
-                stats["total to/from cache"],
-                stats["reads from exported object" + plural],
-                stats["writes to exported object" + plural],
-                stats["total to/from exported object" + plural],
+                *[stats[stat] for stat in block_stats_list]
             )
         except KeyError:
             pass
@@ -260,6 +208,16 @@ class IoClassStats:
             if getattr(self, stats_item, None) != getattr(other, stats_item, None):
                 return False
         return True
+
+
+class CacheIoClassStats(IoClassStats):
+    def __init__(self, stats):
+        super().__init__(stats, block_stats_cache)
+
+
+class CoreIoClassStats(IoClassStats):
+    def __init__(self, stats):
+        super().__init__(stats, block_stats_core)
 
 
 class CacheConfigStats:

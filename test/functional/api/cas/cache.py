@@ -5,7 +5,7 @@
 
 from api.cas.casadm_parser import *
 from api.cas.cli import *
-from api.cas.statistics import CacheStats, IoClassStats
+from api.cas.statistics import CacheStats, CacheIoClassStats
 from storage_devices.device import Device
 from test_utils.os_utils import *
 
@@ -96,7 +96,7 @@ class Cache:
                                 percentage_val: bool = False):
         stats = get_statistics(self.cache_id, None, io_class_id,
                                stat_filter, percentage_val)
-        return IoClassStats(stats, for_cache=True)
+        return CacheIoClassStats(stats)
 
     def get_statistics(self,
                        stat_filter: List[StatsFilter] = None,
