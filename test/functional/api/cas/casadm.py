@@ -2,9 +2,7 @@
 # Copyright(c) 2019 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
-import csv
 
-from test_utils.output import CmdException
 from typing import List
 
 from api.cas.cache import Cache
@@ -54,7 +52,8 @@ def add_core(cache: Cache, core_dev: Device, core_id: int = None, shortcut: bool
                      core_id=_core_id, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to add core.", output)
-    return Core(core_dev.system_path, cache.cache_id)
+    core = Core(core_dev.system_path, cache.cache_id)
+    return core
 
 
 def remove_core(cache_id: int, core_id: int, force: bool = False, shortcut: bool = False):
@@ -252,10 +251,11 @@ def get_param_cleaning_acp(cache_id: int, output_format: OutputFormat = None,
 
 def set_param_cutoff(cache_id: int, core_id: int = None, threshold: Size = None,
                      policy: SeqCutOffPolicy = None):
-    _threshold = None if threshold is None else int(threshold.get_value(Unit.KibiByte))
+    _core_id = None if core_id is None else str(core_id)
+    _threshold = None if threshold is None else str(int(threshold.get_value(Unit.KibiByte)))
+    _policy = None if policy is None else policy.name
     command = set_param_cutoff_cmd(
-        cache_id=cache_id, core_id=core_id,
-        threshold=_threshold, policy=policy)
+        cache_id=str(cache_id), core_id=_core_id, threshold=_threshold, policy=_policy)
     output = TestRun.executor.run(command)
     if output.exit_code != 0:
         raise CmdException("Error while setting sequential cut-off params.", output)
