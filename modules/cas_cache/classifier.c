@@ -208,7 +208,7 @@ static int _cas_cls_string_ctr(struct cas_classifier *cls,
 	if (!ctx)
 		return -ENOMEM;
 
-	strcpy(ctx->string, data);
+	strncpy(ctx->string, data, MAX_STRING_SPECIFIER_LEN);
 	ctx->len = len;
 
 	c->context = ctx;
@@ -457,6 +457,7 @@ static cas_cls_eval_t _cas_cls_extension_test(
 	struct inode *inode;
 	struct dentry *dentry;
 	char *extension;
+	uint32_t len;
 
 	ctx = c->context;
 	inode = io->inode;
@@ -474,7 +475,9 @@ static cas_cls_eval_t _cas_cls_extension_test(
 		return cas_cls_eval_no;
 
 	/* First character of @extension is '.', which we don't want to compare */
-	if (strcmp(ctx->string, extension + 1) == 0)
+	len = strnlen(extension + 1, dentry->d_name.len);
+	len = min(ctx->len, len);
+	if (strncmp(ctx->string, extension + 1, len) == 0)
 		return cas_cls_eval_yes;
 
 	return cas_cls_eval_no;
@@ -547,12 +550,15 @@ static cas_cls_eval_t _cas_cls_process_name_test(
 	   currently executing task */
 	struct task_struct *ti = current;
 	char comm[TASK_COMM_LEN];
+	uint32_t len;
 
 	ctx = c->context;
 
 	get_task_comm(comm, ti);
 
-	if (strcmp(ctx->string, comm) == 0)
+	len = strnlen(comm, TASK_COMM_LEN);
+	len = min(ctx->len, len);
+	if (strncmp(ctx->string, comm, len) == 0)
 		return cas_cls_eval_yes;
 
 	return cas_cls_eval_no;
