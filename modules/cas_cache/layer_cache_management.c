@@ -23,6 +23,7 @@ struct _cache_mngt_async_context {
 	struct completion cmpl;
 	spinlock_t lock;
 	int result;
+	void (*compl_func)(ocf_cache_t cache);
 };
 
 /*
@@ -87,6 +88,7 @@ static inline void _cache_mngt_async_context_init(
 	init_completion(&context->cmpl);
 	spin_lock_init(&context->lock);
 	context->result = 0;
+	context->compl_func = NULL;
 }
 
 static void _cache_mngt_lock_complete(ocf_cache_t cache, void *priv, int error)
@@ -196,11 +198,46 @@ static int _cache_mngt_save_sync(ocf_cache_t cache)
 	return result;
 }
 
+static void _cache_mngt_cache_flush_uninterruptible_complete(ocf_cache_t cache,
+		void *priv, int error)
+{
+	struct _cache_mngt_sync_context *context = priv;
+
+	*context->result = error;
+	complete(&context->cmpl);
+}
+
+/*
+ * Since wait_for_completion() is used, hang tasks may occure if flush would
+ * take long time.
+ */
+static int _cache_mngt_cache_flush_uninterruptible(ocf_cache_t cache)
+{
+	int result;
+	struct _cache_mngt_sync_context context;
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+
+	init_completion(&context.cmpl);
+	context.result = &result;
+	atomic_set(&cache_priv->flush_interrupt_enabled, 0);
+
+	ocf_mngt_cache_flush(cache, _cache_mngt_cache_flush_uninterruptible_complete,
+			&context);
+	wait_for_completion(&context.cmpl);
+
+	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
+
+	return result;
+}
+
 static void _cache_mngt_cache_flush_complete(ocf_cache_t cache, void *priv,
 		int error)
 {
 	struct _cache_mngt_async_context *context = priv;
 	int result;
+
+	if (context->compl_func)
+		context->compl_func(cache);
 
 	result = _cache_mngt_async_callee_set_result(context, error);
 
@@ -208,7 +245,8 @@ static void _cache_mngt_cache_flush_complete(ocf_cache_t cache, void *priv,
 		kfree(context);
 }
 
-static int _cache_mngt_cache_flush_sync(ocf_cache_t cache, bool interruption)
+static int _cache_mngt_cache_flush_sync(ocf_cache_t cache, bool interruption,
+		void (*compl)(ocf_cache_t cache))
 {
 	int result;
 	struct _cache_mngt_async_context *context;
@@ -219,6 +257,7 @@ static int _cache_mngt_cache_flush_sync(ocf_cache_t cache, bool interruption)
 		return -ENOMEM;
 
 	_cache_mngt_async_context_init(context);
+	context->compl_func = compl;
 	atomic_set(&cache_priv->flush_interrupt_enabled, interruption);
 
 	ocf_mngt_cache_flush(cache, _cache_mngt_cache_flush_complete, context);
@@ -228,6 +267,8 @@ static int _cache_mngt_cache_flush_sync(ocf_cache_t cache, bool interruption)
 
 	if (result != -KCAS_ERR_WAITING_INTERRUPTED)
 		kfree(context);
+	else if (result == -KCAS_ERR_WAITING_INTERRUPTED && interruption)
+		ocf_mngt_cache_flush_interrupt(cache);
 
 	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
 
@@ -496,6 +537,12 @@ out:
 	return result;
 }
 
+static void _cache_read_unlock_put_cmpl(ocf_cache_t cache)
+{
+	ocf_mngt_cache_read_unlock(cache);
+	ocf_mngt_cache_put(cache);
+}
+
 int cache_mngt_flush_device(const char *cache_name, size_t name_len)
 {
 	int result;
@@ -506,16 +553,15 @@ int cache_mngt_flush_device(const char *cache_name, size_t name_len)
 	if (result)
 		return result;
 
-	result = _cache_mngt_lock_sync(cache);
+	result = _cache_mngt_read_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
 		return result;
 	}
 
-	result = _cache_mngt_cache_flush_sync(cache, true);
+	result = _cache_mngt_cache_flush_sync(cache, true,
+			_cache_read_unlock_put_cmpl);
 
-	ocf_mngt_cache_unlock(cache);
-	ocf_mngt_cache_put(cache);
 	return result;
 }
 
@@ -1921,7 +1967,7 @@ int cache_mngt_set_cache_mode(const char *cache_name, size_t name_len,
 		goto out;
 
 	if (flush) {
-		result = _cache_mngt_cache_flush_sync(cache, true);
+		result = _cache_mngt_cache_flush_sync(cache, true, NULL);
 		if (result) {
 			ocf_mngt_cache_set_mode(cache, old_mode);
 			goto out;
@@ -1952,7 +1998,6 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	ocf_queue_t mngt_queue;
 	int status, flush_status = 0;
 
-	/* Get cache */
 	status = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
 					name_len, &cache);
 	if (status)
@@ -1961,9 +2006,6 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	cache_priv = ocf_cache_get_priv(cache);
 	mngt_queue = cache_priv->mngt_queue;
 
-	status = _cache_mngt_read_lock_sync(cache);
-	if (status)
-		goto put;
 	/*
 	 * Flush cache. Flushing may take a long time, so we allow user
 	 * to interrupt this operation. Hence we do first flush before
@@ -1974,19 +2016,30 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	 * exported object. The second flush should be much faster.
 	 */
 	if (flush) {
-		status = _cache_mngt_cache_flush_sync(cache, true);
+		/* Getting cache twice is workaround to make flush error handling easier
+		   and avoid dealing with synchronizing issues */
+		status = ocf_mngt_cache_get(cache);
+		if (status)
+			goto put;
+
+		status = _cache_mngt_read_lock_sync(cache);
+		if (status) {
+			ocf_mngt_cache_put(cache);
+			goto put;
+		}
+
+		status = _cache_mngt_cache_flush_sync(cache, true,
+				_cache_read_unlock_put_cmpl);
 		switch (status) {
 		case -OCF_ERR_CACHE_IN_INCOMPLETE_STATE:
 		case -OCF_ERR_FLUSHING_INTERRUPTED:
-			ocf_mngt_cache_read_unlock(cache);
+		case -KCAS_ERR_WAITING_INTERRUPTED:
 			goto put;
 		default:
 			flush_status = status;
 			break;
 		}
 	}
-
-	ocf_mngt_cache_read_unlock(cache);
 
 	/* get cache write lock */
 	status = _cache_mngt_lock_sync(cache);
@@ -2015,7 +2068,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 
 	/* Flush cache again. This time we don't allow interruption. */
 	if (flush)
-		flush_status = _cache_mngt_cache_flush_sync(cache, false);
+		flush_status = _cache_mngt_cache_flush_uninterruptible(cache);
 
 	if (flush && !flush_status)
 		BUG_ON(ocf_mngt_cache_is_dirty(cache));
