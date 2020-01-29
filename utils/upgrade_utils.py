@@ -162,9 +162,10 @@ class UpgradeState:
 def insert_module(name, installed=True, **params):
     cmd_params = [f"{param}={val}" for param, val in params.items()]
 
-    cmd = "modprobe --first-time" if installed else "insmod"
+    cmd = ["modprobe", "--first-time"] if installed else ["insmod"]
+    cmd += [name] + cmd_params
 
-    p = subprocess.run([cmd, name] + cmd_params, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     if p.returncode:
         raise Exception(p.stderr.decode("ascii").rstrip("\n"))
