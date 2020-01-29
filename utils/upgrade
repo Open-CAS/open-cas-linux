@@ -35,6 +35,8 @@ CAS_CACHE_KEY = "CAS Cache Kernel Module"
 CAS_DISK_KEY = "CAS Disk Kernel Module"
 CAS_CLI_KEY = "CAS CLI Utility"
 
+CAS_DISK_MIN_VER = 20
+
 OCL_BUILD_ROOT = f"{os.path.dirname(__file__)}/.."
 
 
@@ -57,6 +59,11 @@ class InitUpgrade(UpgradeState):
             return self.NotInstalled(f"Couldn't detect current CAS version")
         except Exception as e:
             return Failure(f"Failed to get current version of CAS {e}")
+
+        # Although there shouldn't be any problem with upgrade from CAS 19.9 to newer, this feature
+        # is not full validated so it is disabled by default.
+        if (int(version[CAS_DISK_KEY].split('.')[0]) < CAS_DISK_MIN_VER):
+            return Failure(f"Minimal cas_disk version required to perform upgrade is 20.01!")
 
         if version[CAS_CLI_KEY] != version[CAS_CACHE_KEY]:
             return Failure("Mismatch between CLI and cas_cache version")
