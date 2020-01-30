@@ -5,8 +5,9 @@
 
 from api.cas import casadm
 from api.cas import ioclass_config
-from api.cas.cache_config import CacheMode, CleaningPolicy
+from api.cas.cache_config import CacheMode, CleaningPolicy, SeqCutOffPolicy
 from core.test_run import TestRun
+from test_utils.os_utils import Udev
 from test_utils.size import Size, Unit
 
 ioclass_config_path = "/tmp/opencas_ioclass.conf"
@@ -26,11 +27,13 @@ def prepare():
 
     TestRun.LOGGER.info(f"Starting cache")
     cache = casadm.start_cache(cache_device, cache_mode=CacheMode.WB, force=True)
+
+    Udev.disable()
     TestRun.LOGGER.info(f"Setting cleaning policy to NOP")
     casadm.set_param_cleaning(cache_id=cache.cache_id, policy=CleaningPolicy.nop)
     TestRun.LOGGER.info(f"Adding core device")
     core = casadm.add_core(cache, core_dev=core_device)
-
+    core.set_seq_cutoff_policy(SeqCutOffPolicy.never)
     ioclass_config.create_ioclass_config(
         add_default_rule=False, ioclass_config_path=ioclass_config_path
     )

@@ -119,7 +119,10 @@ def test_ioclass_file_name_prefix():
     core.create_filesystem(Filesystem.ext3)
     core.mount(mountpoint)
 
-    assert previous_occupancy.get_value() <= cache.get_occupancy().get_value()
+    current_occupancy = cache.get_occupancy()
+    if previous_occupancy.get_value() > current_occupancy.get_value():
+        TestRun.fail(f"Current occupancy ({str(current_occupancy)}) is lower "
+                     f"than before ({str(previous_occupancy)}).")
 
     # Filesystem creation caused metadata IO which is not supposed
     # to be cached
@@ -137,7 +140,10 @@ def test_ioclass_file_name_prefix():
         dd.run()
         sync()
         current_occupancy = cache.get_occupancy()
-        assert current_occupancy == previous_occupancy
+        expected_occupancy = previous_occupancy + (dd_size * dd_count)
+        if current_occupancy != expected_occupancy:
+            TestRun.fail(f"Current occupancy value is not valid. "
+                         f"(Expected: {str(expected_occupancy)}, actual: {str(current_occupancy)})")
         previous_occupancy = current_occupancy
 
     cache.flush_cache()
@@ -155,7 +161,10 @@ def test_ioclass_file_name_prefix():
         dd.run()
         sync()
         current_occupancy = cache.get_occupancy()
-        assert current_occupancy != previous_occupancy
+        if current_occupancy != previous_occupancy:
+            TestRun.fail(f"Current occupancy value is not valid. "
+                         f"(Expected: {str(previous_occupancy)}, actual: {str(current_occupancy)})")
+
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
@@ -354,7 +363,7 @@ def test_ioclass_file_size(filesystem):
             occupancy_after = cache.get_io_class_statistics(
                 io_class_id=ioclass_id).usage_stats.occupancy
             if occupancy_after != occupancy_before + size:
-                pytest.xfail("File not cached properly!\n"
+                TestRun.fail("File not cached properly!\n"
                              f"Expected {occupancy_before + size}\n"
                              f"Actual {occupancy_after}")
             test_files.append(File(file_path).refresh_item())
@@ -371,8 +380,10 @@ def test_ioclass_file_size(filesystem):
             Dd().input(file.full_path).output("/dev/null").block_size(file.size).run()
             occupancy_after = cache.get_io_class_statistics(
                 io_class_id=ioclass_id).usage_stats.occupancy
-            if occupancy_after != occupancy_before + file.size:
-                pytest.xfail("File not reclassified properly!\n"
+            actual_blocks = occupancy_after.get_value(Unit.Blocks4096)
+            expected_blocks = (occupancy_before + file.size).get_value(Unit.Blocks4096)
+            if actual_blocks != expected_blocks:
+                TestRun.fail("File not reclassified properly!\n"
                              f"Expected {occupancy_before + file.size}\n"
                              f"Actual {occupancy_after}")
         sync()
@@ -397,7 +408,7 @@ def test_ioclass_file_size(filesystem):
             Dd().input(file.full_path).output("/dev/null").block_size(file.size).run()
             occupancy_after = cache.get_io_class_statistics(io_class_id=0).usage_stats.occupancy
             if occupancy_after != occupancy_before + file.size:
-                pytest.xfail("File not reclassified properly!\n"
+                TestRun.fail("File not reclassified properly!\n"
                              f"Expected {occupancy_before + file.size}\n"
                              f"Actual {occupancy_after}")
             occupancy_before = occupancy_after
@@ -420,7 +431,6 @@ def test_ioclass_file_size(filesystem):
         load_file_size_io_classes()
 
     cache, core = prepare()
-    Udev.disable()
     base_size = Size(random.randint(50, 1000) * 2, Unit.Blocks4096)
     size_to_class = {
         base_size: 1,
@@ -448,4 +458,9 @@ def test_ioclass_file_size(filesystem):
     remove_files_classification()
 
     restore_classification_config()
+
+    # CAS device should be unmounted and mounted because data can be sometimes still cached by
+    # OS cache so occupancy statistics will not match
+    core.unmount()
+    core.mount(mountpoint)
     reclassify_files()
