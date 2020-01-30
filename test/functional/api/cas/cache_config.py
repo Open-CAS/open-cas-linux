@@ -82,15 +82,20 @@ class SeqCutOffPolicy(Enum):
 
 
 class EvictionPolicy(Enum):
-    lru = 0
-    lmp = 1
-    nop = 2
+    lru = "LRU"
     DEFAULT = lru
+
+    def __str__(self):
+        return self.value
 
 
 class MetadataMode(Enum):
-    normal = 0
-    atomic = 1
+    normal = "normal"
+    atomic = "atomic"
+    DEFAULT = normal
+
+    def __str__(self):
+        return self.value
 
 
 class CleaningPolicy(Enum):
@@ -103,13 +108,25 @@ class CleaningPolicy(Enum):
         return self.value
 
 
+class PromotionPolicy(Enum):
+    always = "always"
+    nhit = "nhit"
+    DEFAULT = always
+
+    def __str__(self):
+        return self.value
+
+
 class CacheStatus(Enum):
-    not_running = 0
-    running = 1
-    stopping = 2
-    initializing = 3
-    flushing = 4
-    incomplete = 5
+    not_running = "not running"
+    running = "running"
+    stopping = "stopping"
+    initializing = "initializing"
+    flushing = "flushing"
+    incomplete = "incomplete"
+
+    def __str__(self):
+        return self.value
 
 
 class Time(attotimedelta):
@@ -200,6 +217,32 @@ class SeqCutOffParameters:
         seq_cut_off_params.policy = SeqCutOffPolicy.full
         seq_cut_off_params.threshold = Size(1024, Unit.KibiByte)
         return seq_cut_off_params
+
+
+class PromotionParametersNhit:
+    def __init__(self, threshold=None, trigger=None):
+        self.threshold = threshold
+        self.trigger = trigger
+
+    def __eq__(self, other):
+        return (
+            self.threshold == other.threshold
+            and self.trigger == other.trigger
+        )
+
+    @staticmethod
+    def nhit_params_range():
+        nhit_params = PromotionParametersNhit()
+        nhit_params.threshold = (2, 1000)
+        nhit_params.trigger = (0, 100)
+        return nhit_params
+
+    @staticmethod
+    def default_nhit_params():
+        nhit_params = PromotionParametersNhit()
+        nhit_params.threshold = 3
+        nhit_params.trigger = 80
+        return nhit_params
 
 
 # TODO: Use case for this will be to iterate over configurations (kernel params such as
