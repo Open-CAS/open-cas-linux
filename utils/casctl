@@ -44,7 +44,7 @@ def add_core_recursive(core, config):
             .format(core.device, core.cache_id))
         exit(3)
     core.marked = True
-    match = re.match(r'/dev/cas(\d)-(\d).*', core.device)
+    match = re.match(r'/dev/cas(\d{1,5})-(\d{1,4})', core.device)
     if match:
         cache_id,core_id = match.groups()
         with_error = add_core_recursive(config.caches[int(cache_id)].cores[int(core_id)], config)
