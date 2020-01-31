@@ -12,10 +12,13 @@ from api.cas import cas_module, installer, casadm
 from core.test_run import TestRun
 from test_utils import os_utils
 from test_utils.size import Size, Unit
+from test_tools.disk_utils import Filesystem
+from test_utils.os_utils import sync
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 
+mountpoint = "/tmp/cas1-1"
 
 @pytest.fixture(scope="module")
 def install_kedr():
@@ -149,7 +152,7 @@ def test_kedr_start_cache(module, unload_modules, install_kedr):
 @pytest.mark.parametrize("module", cas_module.CasModule)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_kedr_basic_io(module, unload_modules, install_kedr):
+def test_kedr_basic_io_raw(module, unload_modules, install_kedr):
     """
     title: Basic IO test with kedr started with memory leaks profile
     description: |
@@ -193,6 +196,77 @@ def test_kedr_basic_io(module, unload_modules, install_kedr):
               .target(f"{core.system_path}")
               .direct()
          ).run()
+
+    with TestRun.step("Stopping cache"):
+        cache.stop()
+
+    with TestRun.step(f"Unloading CAS modules"):
+        cas_module.unload_all_cas_modules()
+
+    with TestRun.step(f"Checking for memory leaks for {module.value}"):
+        try:
+            Kedr.check_for_mem_leaks(module.value)
+        except Exception as e:
+            TestRun.LOGGER.error(f"{e}")
+
+    with TestRun.step(f"Stopping kedr"):
+        Kedr.stop()
+
+
+@pytest.mark.parametrize("module", cas_module.CasModule)
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_kedr_basic_io_fs(module, unload_modules, install_kedr):
+    """
+    title: Basic IO test on core with ext4 filesystem with kedr started with memory leaks profile
+    description: |
+        Load CAS modules, start kedr against one of them, create filesystem on core, start cache
+        and add core, run simple random IO, stop cache and unload modules
+    pass_criteria:
+      - No memory leaks observed
+    """
+    with TestRun.step("Preparing cache device"):
+        cache_device = TestRun.disks['cache']
+        cache_device.create_partitions([Size(500, Unit.MebiByte)])
+        cache_part = cache_device.partitions[0]
+
+    with TestRun.step("Preparing core device (creating partition, "
+                      "filesystem and mounting core)"):
+        core_device = TestRun.disks['core']
+        core_device.create_partitions([Size(1, Unit.GibiByte)])
+        core_part = core_device.partitions[0]
+        core_part.create_filesystem(Filesystem.ext4)
+        sync()
+
+    with TestRun.step("Unload CAS modules if needed"):
+        if os_utils.is_kernel_module_loaded(module.value):
+            cas_module.unload_all_cas_modules()
+
+    with TestRun.step(f"Starting kedr against {module.value}"):
+        Kedr.start(module.value)
+
+    with TestRun.step(f"Loading CAS modules"):
+        os_utils.load_kernel_module(cas_module.CasModule.cache.value)
+
+    with TestRun.step("Starting cache"):
+        cache = casadm.start_cache(cache_part, force=True)
+
+    with TestRun.step("Adding core"):
+        core = cache.add_core(core_part)
+
+    with TestRun.step("Mounting core"):
+        core.mount(mountpoint)
+
+    with TestRun.step(f"Running IO"):
+        (Fio().create_command()
+              .io_engine(IoEngine.libaio)
+              .size(cache.size * 2)
+              .read_write(ReadWrite.randrw)
+              .target(f"{core.mount_point}/test_file")
+         ).run()
+
+    with TestRun.step("Unmounting core"):
+        core.unmount()
 
     with TestRun.step("Stopping cache"):
         cache.stop()
