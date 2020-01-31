@@ -168,6 +168,14 @@ class FlushParametersAcp:
             and self.wake_up_time == other.wake_up_time
         )
 
+    def __str__(self):
+        ret = ""
+        if self.flush_max_buffers is not None:
+            ret += f"acp flush max buffers value: {self.flush_max_buffers} "
+        if self.wake_up_time is not None:
+            ret += f"acp wake up time value: {self.wake_up_time.total_milliseconds()}"
+        return ret
+
     @staticmethod
     def acp_params_range():
         acp_params = FlushParametersAcp()
