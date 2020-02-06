@@ -33,6 +33,8 @@ class Core(Device):
         if core_info["exp_obj"] != "-":
             Device.__init__(self, core_info["exp_obj"])
         self.cache_id = cache_id
+        self.partitions = []
+        self.block_size = None
 
     def __get_core_info(self):
         output = TestRun.executor.run(
