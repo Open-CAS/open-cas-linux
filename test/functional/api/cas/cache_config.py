@@ -1,11 +1,12 @@
 #
-# Copyright(c) 2019 Intel Corporation
+# Copyright(c) 2019-2020 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
 from aenum import Enum, IntFlag
-from test_utils.size import Size, Unit
 from attotime import attotimedelta
+
+from test_utils.size import Size, Unit
 
 
 class CacheLineSize(Enum):
@@ -18,6 +19,12 @@ class CacheLineSize(Enum):
 
     def __int__(self):
         return int(self.value.get_value())
+
+
+class CacheModeTrait(IntFlag):
+    InsertWrite = 1
+    InsertRead = 2
+    LazyFlush = 4
 
 
 class CacheMode(Enum):
@@ -34,7 +41,7 @@ class CacheMode(Enum):
     @staticmethod
     def get_traits(cache_mode):
         if cache_mode == CacheMode.PT:
-            return 0
+            return CacheModeTrait(0)
         elif cache_mode == CacheMode.WT:
             return CacheModeTrait.InsertRead | CacheModeTrait.InsertWrite
         elif cache_mode == CacheMode.WB:
@@ -44,11 +51,11 @@ class CacheMode(Enum):
         elif cache_mode == CacheMode.WA:
             return CacheModeTrait.InsertRead
 
-
-class CacheModeTrait(IntFlag):
-    InsertWrite = 1
-    InsertRead = 2
-    LazyFlush = 4
+    @staticmethod
+    def with_traits(flags: CacheModeTrait):
+        return [
+            m for m in CacheMode if all(map(lambda t: t in CacheMode.get_traits(m), flags))
+        ]
 
 
 class SeqCutOffPolicy(Enum):
