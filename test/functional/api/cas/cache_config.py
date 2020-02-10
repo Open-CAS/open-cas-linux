@@ -57,6 +57,12 @@ class CacheMode(Enum):
             m for m in CacheMode if all(map(lambda t: t in CacheMode.get_traits(m), flags))
         ]
 
+    @staticmethod
+    def with_any_trait(flags: CacheModeTrait):
+        return [
+            m for m in CacheMode if any(map(lambda t: t in CacheMode.get_traits(m), flags))
+        ]
+
 
 class SeqCutOffPolicy(Enum):
     full = 0
