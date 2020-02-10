@@ -24,7 +24,7 @@ class CacheLineSize(Enum):
 class CacheModeTrait(IntFlag):
     InsertWrite = 1
     InsertRead = 2
-    LazyFlush = 4
+    LazyWrites = 4
 
 
 class CacheMode(Enum):
@@ -45,9 +45,11 @@ class CacheMode(Enum):
         elif cache_mode == CacheMode.WT:
             return CacheModeTrait.InsertRead | CacheModeTrait.InsertWrite
         elif cache_mode == CacheMode.WB:
-            return CacheModeTrait.InsertRead | CacheModeTrait.InsertWrite | CacheModeTrait.LazyFlush
+            return (
+                CacheModeTrait.InsertRead | CacheModeTrait.InsertWrite | CacheModeTrait.LazyWrites
+            )
         elif cache_mode == CacheMode.WO:
-            return CacheModeTrait.InsertWrite | CacheModeTrait.LazyFlush
+            return CacheModeTrait.InsertWrite | CacheModeTrait.LazyWrites
         elif cache_mode == CacheMode.WA:
             return CacheModeTrait.InsertRead
 

@@ -153,7 +153,7 @@ def check_io_stats(cache_disk, cache, io_stats_before, io_size, blocksize, skip_
     expected_writes = io_size * (blocksize / (blocksize + skip_size))
 
     cache_mode_traits = CacheMode.get_traits(cache.get_cache_mode())
-    if CacheModeTrait.InsertWrite | CacheModeTrait.LazyFlush in cache_mode_traits:
+    if CacheModeTrait.InsertWrite | CacheModeTrait.LazyWrites in cache_mode_traits:
         # Metadata size is 4KiB per each cache line
         metadata_size = (io_size / cache.get_cache_line_size().value) * Size(4, Unit.KibiByte)
         expected_writes += metadata_size
