@@ -131,26 +131,31 @@ clean:
 distclean: clean
 	@rm -f $(VERSION_FILE)
 
-install:
+install: install_files
+
+install_files:
 	@echo "Installing casadm"
-	@install -m 755 $(TARGET) $(BINARY_PATH)/$(TARGET)
-	@install -m 644 $(UTILS_DIR)/$(TARGET).8 /usr/share/man/man8/$(TARGET).8
+	@mkdir -p $(DESTDIR)$(BINARY_PATH)
+	@install -m 755 $(TARGET) $(DESTDIR)$(BINARY_PATH)/$(TARGET)
+	@mkdir -p $(DESTDIR)/usr/share/man/man8
+	@install -m 644 $(UTILS_DIR)/$(TARGET).8 $(DESTDIR)/usr/share/man/man8/$(TARGET).8
 
-	@install -m 755 -d /etc/opencas
-	@install -m 644 $(UTILS_DIR)/opencas.conf /etc/opencas/opencas.conf
-	@install -m 444 $(UTILS_DIR)/ioclass-config.csv /etc/opencas/ioclass-config.csv
+	@install -m 755 -d $(DESTDIR)/etc/opencas
+	@install -m 644 $(UTILS_DIR)/opencas.conf $(DESTDIR)/etc/opencas/opencas.conf
+	@install -m 444 $(UTILS_DIR)/ioclass-config.csv $(DESTDIR)/etc/opencas/ioclass-config.csv
 
-	@install -m 644 $(UTILS_DIR)/opencas.conf.5 /usr/share/man/man5/opencas.conf.5
+	@mkdir -p $(DESTDIR)/usr/share/man/man5
+	@install -m 644 $(UTILS_DIR)/opencas.conf.5 $(DESTDIR)/usr/share/man/man5/opencas.conf.5
 
 uninstall:
 	@echo "Uninstalling casadm"
-	@rm $(BINARY_PATH)/$(TARGET)
-	@rm /usr/share/man/man8/$(TARGET).8
+	@rm $(DESTDIR)$(BINARY_PATH)/$(TARGET)
+	@rm $(DESTDIR)/usr/share/man/man8/$(TARGET).8
 
-	@rm /etc/opencas/opencas.conf
-	@rm /etc/opencas/ioclass-config.csv
-	@rm -rf /etc/opencas
+	@rm $(DESTDIR)/etc/opencas/opencas.conf
+	@rm $(DESTDIR)/etc/opencas/ioclass-config.csv
+	@rm -rf $(DESTDIR)/etc/opencas
 
-	@rm /usr/share/man/man5/opencas.conf.5
+	@rm $(DESTDIR)/usr/share/man/man5/opencas.conf.5
 
 .PHONY: clean distclean all sync build install uninstall
