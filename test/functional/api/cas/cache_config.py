@@ -158,7 +158,7 @@ class FlushParametersAlru:
 
 
 class FlushParametersAcp:
-    def __init__(self, flush_max_buffers=None, wake_up_time=None):
+    def __init__(self, flush_max_buffers: int = None, wake_up_time: Time = None):
         self.flush_max_buffers = flush_max_buffers
         self.wake_up_time = wake_up_time
 
