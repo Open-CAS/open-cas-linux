@@ -139,8 +139,6 @@ install:
 	@install -m 755 -d /etc/opencas
 	@install -m 644 $(UTILS_DIR)/opencas.conf /etc/opencas/opencas.conf
 	@install -m 444 $(UTILS_DIR)/ioclass-config.csv /etc/opencas/ioclass-config.csv
-	@install -m 444 $(UTILS_DIR)/ext3-config.csv /etc/opencas/ext3-config.csv
-	@install -m 444 $(UTILS_DIR)/ext4-config.csv /etc/opencas/ext4-config.csv
 
 	@install -m 644 $(UTILS_DIR)/opencas.conf.5 /usr/share/man/man5/opencas.conf.5
 
@@ -151,8 +149,6 @@ uninstall:
 
 	@rm /etc/opencas/opencas.conf
 	@rm /etc/opencas/ioclass-config.csv
-	@rm /etc/opencas/ext3-config.csv
-	@rm /etc/opencas/ext4-config.csv
 	@rm -rf /etc/opencas
 
 	@rm /usr/share/man/man5/opencas.conf.5
