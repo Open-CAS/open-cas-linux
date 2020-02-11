@@ -431,3 +431,56 @@ def test_start_cas_with_load(cache_mode):
     with TestRun.step("Stop cache."):
         casadm.stop_all_caches()
 
+
+@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_start_cas_without_load(cache_mode):
+    """
+        title: Initialize test for starting CAS from conf without load.
+        description: |
+          Start OpenCAS service and check if caches defined in conf file are started properly
+          without loading parameter.
+        pass_criteria:
+          - Cache starts in correct mode.
+    """
+    with TestRun.step("Prepare cache and core devices."):
+        cache_dev = TestRun.disks['cache']
+        cache_dev.create_partitions([Size(64, Unit.MebiByte)])
+        core_dev = TestRun.disks['core']
+        core_dev.create_partitions([Size(256, Unit.MebiByte)])
+
+    with TestRun.step("Start cache and add core."):
+        cache = casadm.start_cache(cache_dev.partitions[0], cache_mode, force=True)
+        core = cache.add_core(core_dev.partitions[0])
+
+    with TestRun.step("Stop cache service."):
+        casctl.stop()
+        if len(casadm_parser.get_caches()) != 0:
+            TestRun.LOGGER.error("Cache did not stop successfully.")
+
+    with TestRun.step("Create configuration for OpenCAS."):
+        conf = InitConfig()
+        conf.add_cache(cache.cache_id, cache_dev.partitions[0], cache_mode, False)
+        conf.add_core(cache.cache_id, core.core_id, core_dev.partitions[0])
+        conf.save_config_file()
+
+    with TestRun.step("Start cache service with configuration from conf."):
+        casctl.start()
+        if len(casadm_parser.get_caches()) != 1:
+            TestRun.LOGGER.error("Cache did not started successfully.")
+
+    with TestRun.step("Check cache mode."):
+        if cache_mode != cache.get_cache_config().cache_mode:
+            TestRun.fail(
+                f"Cache mode {cache.get_cache_config().cache_mode} are wrong.")
+        caches_count = len(casadm_parser.get_caches())
+        if caches_count != 1:
+            TestRun.fail(
+                f"Cache did not load successfully - wrong amount of caches: {caches_count}.")
+        cores_count = len(casadm_parser.get_cores(cache.cache_id))
+        if cores_count != 1:
+            TestRun.LOGGER.error(f"Cache loaded with wrong cores amount: {cores_count}.")
+
+    with TestRun.step("Stop cache."):
+        casadm.stop_all_caches()
