@@ -228,7 +228,7 @@ def get_flushing_progress(cache_id: int, core_id: int = None):
             except Exception:
                 break
     raise CmdException(f"There is no flushing progress in casadm list output. (cache {cache_id}"
-                       f"{' core ' + core_id if core_id is not None else ''})",
+                       f"{' core ' + str(core_id) if core_id is not None else ''})",
                        casadm_output)
 
 
