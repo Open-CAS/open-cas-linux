@@ -7,6 +7,7 @@ import csv
 import json
 import re
 from api.cas import casadm
+from test_utils.output import CmdException
 from test_utils.size import parse_unit
 from storage_devices.device import Device
 from api.cas.cache_config import *
@@ -210,6 +211,25 @@ def get_cas_devices_dict():
                     {(prev_cache_id, int(device["id"])): core}
                 )
     return devices
+
+
+def get_flushing_progress(cache_id: int, core_id: int = None):
+    casadm_output = casadm.list_caches(OutputFormat.csv).stdout.splitlines()
+    for line in casadm_output:
+        line_elements = line.split(',')
+        if core_id is not None and line_elements[0] == "core" \
+                and int(line_elements[1]) == core_id \
+                or core_id is None and line_elements[0] == "cache" \
+                and int(line_elements[1]) == cache_id:
+            try:
+                flush_line_elements = line_elements[3].split()
+                flush_percent = flush_line_elements[1][1:]
+                return float(flush_percent)
+            except Exception:
+                break
+    raise CmdException(f"There is no flushing progress in casadm list output. (cache {cache_id}"
+                       f"{' core ' + core_id if core_id is not None else ''})",
+                       casadm_output)
 
 
 def get_flush_parameters_alru(cache_id: int):
