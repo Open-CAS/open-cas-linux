@@ -125,6 +125,99 @@ def test_acp_param_flush_max_buffers(cache_line_size, cache_mode):
         casadm.stop_all_caches()
 
 
+@pytest.mark.parametrize(
+    "cache_line_size",
+    [CacheLineSize.LINE_4KiB, CacheLineSize.LINE_16KiB, CacheLineSize.LINE_64KiB],
+)
+@pytest.mark.parametrize(
+    "cache_mode", CacheMode.with_any_trait(CacheModeTrait.LazyWrites)
+)
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_acp_param_wake_up_time(cache_line_size, cache_mode):
+    """
+        title: Functional test for ACP wake-up parameter.
+        description: |
+          Verify if interval between ACP cleaning iterations is not longer than
+          wake-up time parameter value.
+        pass_criteria:
+          - ACP flush iterations are triggered with defined frequency.
+    """
+    with TestRun.step("Test prepare."):
+        error_threshold_ms = 50
+        generated_vals = get_random_list(
+            min_val=FlushParametersAcp.acp_params_range().wake_up_time[0],
+            max_val=FlushParametersAcp.acp_params_range().wake_up_time[1],
+            n=10,
+        )
+        acp_configs = []
+        for config in generated_vals:
+            acp_configs.append(
+                FlushParametersAcp(wake_up_time=Time(milliseconds=config))
+            )
+        acp_configs.append(FlushParametersAcp.default_acp_params())
+
+    with TestRun.step("Prepare partitions."):
+        core_size = Size(10, Unit.GibiByte)
+        cache_device = TestRun.disks["cache"]
+        core_device = TestRun.disks["core"]
+        cache_device.create_partitions([Size(5, Unit.GibiByte)])
+        core_device.create_partitions([core_size])
+
+    with TestRun.step(
+        f"Start cache in {cache_mode} with {cache_line_size} and add core."
+    ):
+        cache = casadm.start_cache(
+            cache_device.partitions[0], cache_mode, cache_line_size
+        )
+        core = cache.add_core(core_device.partitions[0])
+
+    with TestRun.step("Set cleaning policy to NOP."):
+        cache.set_cleaning_policy(CleaningPolicy.nop)
+
+    with TestRun.step("Start IO in background."):
+        fio = get_fio_cmd(core, core_size)
+        fio_pid = fio.run_in_background()
+        time.sleep(10)
+
+    with TestRun.step("Set cleaning policy to ACP."):
+        cache.set_cleaning_policy(CleaningPolicy.acp)
+
+    with TestRun.group("Verify IO number for different wake_up_time values."):
+        for acp_config in acp_configs:
+            with TestRun.step(f"Setting {acp_config}"):
+                cache.set_params_acp(acp_config)
+                accepted_interval_threshold = (
+                    acp_config.wake_up_time.total_milliseconds() + error_threshold_ms
+                )
+            with TestRun.step(
+                "Using blktrace verify if interval between ACP cleaning iterations "
+                f"is shorter or equal than wake-up parameter value "
+                f"(including {error_threshold_ms}ms error threshold)"
+            ):
+                blktrace = BlkTrace(core.core_device, BlkTraceMask.write)
+                blktrace.start_monitoring()
+                time.sleep(15)
+                blktrace_output = blktrace.stop_monitoring()
+
+                for (prev, curr) in zip(blktrace_output, blktrace_output[1:]):
+                    if not new_acp_iteration(prev, curr):
+                        continue
+
+                    interval_ms = (curr.timestamp - prev.timestamp) / 10 ** 6
+
+                    if interval_ms > accepted_interval_threshold:
+                        TestRun.LOGGER.error(
+                            f"{interval_ms} is not within accepted range for "
+                            f"{acp_config.wake_up_time.total_milliseconds()} "
+                            f"wake_up_time param value."
+                        )
+
+    with TestRun.step("Stop all caches"):
+        kill_all_io()
+        casadm.stop_all_caches()
+
+
 def get_random_list(min_val, max_val, n):
     # Split given range into n parts and get one random number from each
     step = int((max_val - min_val + 1) / n)
