@@ -15,6 +15,14 @@ load_inactive_core_missing = [
     r"Successfully added cache instance \d+"
 ]
 
+start_cache_with_existing_metadata = [
+    r"Error inserting cache \d+",
+    r"Old metadata found on device\.",
+    r"Please load cache metadata using --load option or use --force to",
+    r" discard on-disk metadata and start fresh cache instance\.",
+    r"Error occurred, please see syslog \(/var/log/messages\) for details\."
+]
+
 remove_inactive_core = [
     r"Error while removing core device \d+ from cache instance \d+",
     r"Core device is in inactive state"
