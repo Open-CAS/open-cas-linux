@@ -7,7 +7,7 @@
 from api.cas.casadm_parser import *
 from api.cas.cli import *
 from api.cas.statistics import CoreStats, CoreIoClassStats
-from test_tools import fs_utils
+from test_tools import fs_utils, disk_utils
 from test_utils.os_utils import *
 from test_utils.os_utils import wait
 
@@ -50,6 +50,10 @@ class Core(Device):
                         "core_device": split_line[2],
                         "status": split_line[3],
                         "exp_obj": split_line[5]}
+
+    def create_filesystem(self, fs_type: disk_utils.Filesystem, force=True, blocksize=None):
+        super().create_filesystem(fs_type, force, blocksize)
+        self.core_device.filesystem = self.filesystem
 
     def get_io_class_statistics(self,
                                 io_class_id: int,
