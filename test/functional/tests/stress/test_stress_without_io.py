@@ -293,7 +293,7 @@ def prepare_with_file_creation(config):
     core = cache.add_core(core_dev)
     core.create_filesystem(Filesystem.ext3)
     core.mount(mount_point)
-    file = fs_utils.create_test_file(test_file_path)
+    file = fs_utils.create_random_test_file(test_file_path)
     file_md5sum = file.md5sum()
     core.unmount()
     return cache, core, file, file_md5sum
