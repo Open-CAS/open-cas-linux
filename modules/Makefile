@@ -49,22 +49,23 @@ clean:
 distclean: clean distsync
 	@rm -f $(PWD)/generated_defines.h
 
-install:
-	@echo "Installing Open-CAS modules"
-	@install -m 755 -d $(MODULES_DIR)
-	@install -m 744 cas_disk/$(DISK_MODULE).ko $(MODULES_DIR)/$(DISK_MODULE).ko
-	@install -m 744 cas_cache/$(CACHE_MODULE).ko $(MODULES_DIR)/$(CACHE_MODULE).ko
-
+install: install_files
 	@$(DEPMOD)
 	@$(MODPROBE) $(CACHE_MODULE)
+
+install_files:
+	@echo "Installing Open-CAS modules"
+	@install -m 755 -d $(DESTDIR)$(MODULES_DIR)
+	@install -m 744 cas_disk/$(DISK_MODULE).ko $(DESTDIR)$(MODULES_DIR)/$(DISK_MODULE).ko
+	@install -m 744 cas_cache/$(CACHE_MODULE).ko $(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko
 
 uninstall:
 	@echo "Uninstalling Open-CAS modules"
 	@$(RMMOD) $(CACHE_MODULE)
 	@$(RMMOD) $(DISK_MODULE)
 
-	@rm $(MODULES_DIR)/$(CACHE_MODULE).ko
-	@rm $(MODULES_DIR)/$(DISK_MODULE).ko
+	@rm $(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko
+	@rm $(DESTDIR)$(MODULES_DIR)/$(DISK_MODULE).ko
 
 	@$(DEPMOD)
 
