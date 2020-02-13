@@ -4,19 +4,20 @@
 #
 
 
-import pytest
 import random
 from enum import Enum, auto
-from api.cas import casadm
-from api.cas.core import SEQ_CUTOFF_THRESHOLD_MAX
-from api.cas.cache_config import SeqCutOffPolicy, CacheMode, CacheLineSize
-from core.test_run import TestRun
 
+import pytest
+
+from api.cas import casadm
+from api.cas.cache_config import SeqCutOffPolicy, CacheMode, CacheLineSize
+from api.cas.core import SEQ_CUTOFF_THRESHOLD_MAX
+from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.size import Size, Unit
-from test_utils.os_utils import Udev, sync
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
+from test_utils.os_utils import Udev, sync
+from test_utils.size import Size, Unit
 
 
 class VerifyType(Enum):
@@ -59,7 +60,7 @@ def test_seq_cutoff_multi_core(thresholds_list, cache_mode, io_type, io_type_las
         fio_additional_size = Size(10, Unit.Blocks4096)
         for i in range(len(thresholds_list)):
             thresholds.append(Size(thresholds_list[i], Unit.KibiByte))
-            io_sizes.append((thresholds[i] + fio_additional_size).align(0x1000))
+            io_sizes.append((thresholds[i] + fio_additional_size).align_down(0x1000))
 
     with TestRun.step(f"Setting cache mode to {cache_mode}"):
         cache.set_cache_mode(cache_mode)
@@ -133,7 +134,7 @@ def test_seq_cutoff_thresh(threshold_param, cls, io_dir, policy, verify_type):
         cache, cores = prepare(cores_count=1, cache_line_size=cls)
         fio_additional_size = Size(10, Unit.Blocks4096)
         threshold = Size(threshold_param, Unit.KibiByte)
-        io_size = (threshold + fio_additional_size).align(0x1000)
+        io_size = (threshold + fio_additional_size).align_down(0x1000)
 
     with TestRun.step(f"Setting cache sequential cut off policy mode to {policy}"):
         cache.set_seq_cutoff_policy(policy)
@@ -181,7 +182,7 @@ def test_seq_cutoff_thresh_fill(threshold_param, cls, io_dir):
         cache, cores = prepare(cores_count=1, cache_line_size=cls)
         fio_additional_size = Size(10, Unit.Blocks4096)
         threshold = Size(threshold_param, Unit.KibiByte)
-        io_size = (threshold + fio_additional_size).align(0x1000)
+        io_size = (threshold + fio_additional_size).align_down(0x1000)
 
     with TestRun.step(f"Setting cache sequential cut off policy mode to "
                       f"{SeqCutOffPolicy.never}"):
@@ -246,9 +247,10 @@ def verify_writes_count(core, writes_before, threshold, io_size, ver_type=Verify
 def prepare(cores_count=1, cache_line_size: CacheLineSize = None):
     cache_device = TestRun.disks['cache']
     core_device = TestRun.disks['core']
-    cache_device.create_partitions([(SEQ_CUTOFF_THRESHOLD_MAX * cores_count
-                                    + Size(5, Unit.GibiByte)).align(0x1000)])
-    partitions = [(SEQ_CUTOFF_THRESHOLD_MAX + Size(10, Unit.GibiByte)).align(0x1000)] * cores_count
+    cache_device.create_partitions(
+        [(SEQ_CUTOFF_THRESHOLD_MAX * cores_count + Size(5, Unit.GibiByte)).align_down(0x1000)])
+    partitions = \
+        [(SEQ_CUTOFF_THRESHOLD_MAX + Size(10, Unit.GibiByte)).align_down(0x1000)] * cores_count
     core_device.create_partitions(partitions)
     cache_part = cache_device.partitions[0]
     core_parts = core_device.partitions
