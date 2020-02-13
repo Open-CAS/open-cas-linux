@@ -85,3 +85,66 @@ def test_one_core_remove(cache_mode):
     with TestRun.step("Stop cache."):
         casadm.stop_all_caches()
 
+
+@pytest.mark.parametrize("cache_mode", CacheMode.with_any_trait(CacheModeTrait.InsertRead
+                                                                | CacheModeTrait.InsertWrite))
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_one_core_release(cache_mode):
+    """
+        title: Test if OpenCAS dynamically allocates space according to core devices needs.
+        description: |
+          When one or more core devices are unused in a single cache instance all blocks
+          previously occupied should be available to other core devices.
+          Test is without pass through mode.
+        pass_criteria:
+          - No system crash.
+          - The remaining core is able to use cache.
+          - OpenCAS frees blocks occupied by unused core and allocates it to the remaining core.
+    """
+    with TestRun.step("Prepare two cache and one core devices."):
+        cache_dev = TestRun.disks['cache']
+        cache_dev.create_partitions([Size(512, Unit.MebiByte)])
+        cache_part = cache_dev.partitions[0]
+        core_dev = TestRun.disks['core']
+        core_dev.create_partitions([Size(1, Unit.GibiByte)] * 2)
+        core_part1 = core_dev.partitions[0]
+        core_part2 = core_dev.partitions[1]
+        Udev.disable()
+
+    with TestRun.step("Start cache"):
+        cache = casadm.start_cache(cache_part, cache_mode, force=True)
+        caches_count = len(casadm_parser.get_caches())
+        if caches_count != 1:
+            TestRun.fail(f"Expected caches count: 1; Actual caches count: {caches_count}.")
+
+    with TestRun.step("Add both core devices to cache."):
+        core1 = cache.add_core(core_part1)
+        core2 = cache.add_core(core_part2)
+        cores_count = len(casadm_parser.get_cores(cache.cache_id))
+        if cores_count != 2:
+            TestRun.fail(f"Expected cores count: 2; Actual cores count: {cores_count}.")
+
+    with TestRun.step("Change sequential cutoff policy to 'never'."):
+        cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+
+    with TestRun.step("Fill cache with pages from the first core."):
+        dd_builder(cache_mode, core1, cache.size).run()
+        core1_occupied_blocks_before = core1.get_occupancy()
+
+    with TestRun.step("Check if the remaining core is able to use cache."):
+        dd_builder(cache_mode, core2, Size(100, Unit.MebiByte)).run()
+        core1_occupied_blocks_after = core1.get_occupancy()
+
+    with TestRun.step("Check if occupancy from the first core is removed from cache."):
+        # The first core's occupancy should be lower than cache's occupancy
+        # by the value of the remaining core's occupancy because cache
+        # should reallocate blocks from unused core to used core.
+        if core1_occupied_blocks_after >= core1_occupied_blocks_before \
+                or cache.get_occupancy() <= core1_occupied_blocks_after \
+                or not float(core2.get_occupancy().get_value()) > 0:
+            TestRun.LOGGER.error("Blocks previously occupied by the first core aren't released.")
+
+    with TestRun.step("Stop cache."):
+        casadm.stop_all_caches()
+
