@@ -39,14 +39,24 @@ static inline void env_free(const void *ptr)
 	kfree(ptr);
 }
 
+static inline void *env_vmalloc_flags(size_t size, int flags)
+{
+	return __vmalloc(size, flags | __GFP_HIGHMEM, PAGE_KERNEL);
+}
+
+static inline void *env_vzalloc_flags(size_t size, int flags)
+{
+	return env_vmalloc_flags(size, flags | __GFP_ZERO);
+}
+
 static inline void *env_vmalloc(size_t size)
 {
-	return vmalloc(size);
+	return env_vmalloc_flags(size, GFP_KERNEL);
 }
 
 static inline void *env_vzalloc(size_t size)
 {
-	return vzalloc(size);
+	return env_vzalloc_flags(size, GFP_KERNEL);
 }
 
 static inline void env_vfree(const void *ptr)
