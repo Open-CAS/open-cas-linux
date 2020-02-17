@@ -33,6 +33,11 @@ stop_cache_incomplete = [
     r"Cache is in incomplete state - at least one core is inactive"
 ]
 
+remove_multilevel_core = [
+    r"Error while removing core device \d+ from cache instance \d+",
+    r"Device opens or mount are pending to this cache"
+]
+
 add_cached_core = [
     r"Error while adding core device to cache instance \d+",
     r"Core device \'/dev/\S+\' is already cached\."
