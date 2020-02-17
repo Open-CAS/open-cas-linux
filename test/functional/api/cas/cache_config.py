@@ -158,7 +158,7 @@ class FlushParametersAlru:
 
 
 class FlushParametersAcp:
-    def __init__(self, flush_max_buffers=None, wake_up_time=None):
+    def __init__(self, flush_max_buffers: int = None, wake_up_time: Time = None):
         self.flush_max_buffers = flush_max_buffers
         self.wake_up_time = wake_up_time
 
@@ -167,6 +167,14 @@ class FlushParametersAcp:
             self.flush_max_buffers == other.flush_max_buffers
             and self.wake_up_time == other.wake_up_time
         )
+
+    def __str__(self):
+        ret = ""
+        if self.flush_max_buffers is not None:
+            ret += f"acp flush max buffers value: {self.flush_max_buffers} "
+        if self.wake_up_time is not None:
+            ret += f"acp wake up time value: {self.wake_up_time.total_milliseconds()}"
+        return ret
 
     @staticmethod
     def acp_params_range():
