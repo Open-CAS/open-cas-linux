@@ -1,25 +1,31 @@
 #
-# Copyright(c) 2019 Intel Corporation
+# Copyright(c) 2019-2020 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
 import pytest
 
-from api.cas import casadm, casadm_parser
-from api.cas.cache_config import *
+from api.cas import casctl, casadm, casadm_parser
+from api.cas.cache_config import (CleaningPolicy,
+                                  CacheMode,
+                                  CacheLineSize,
+                                  FlushParametersAlru,
+                                  Time,
+                                  FlushParametersAcp)
+from api.cas.init_config import InitConfig
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import *
 from test_utils.size import Size, Unit
 
 
-@pytest.mark.parametrize("core_number", [4, 1])
+@pytest.mark.parametrize("cores_amount", [1, 4])
 @pytest.mark.parametrize("cleaning_policy", CleaningPolicy)
 @pytest.mark.parametrize("cache_mode", CacheMode)
 @pytest.mark.parametrize("cache_line_size", CacheLineSize)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_load_x_to_one_without_params(cache_mode, cleaning_policy, cache_line_size, core_number):
+def test_load_x_to_one_without_params(cache_mode, cleaning_policy, cache_line_size, cores_amount):
     """
         title: Test for loading CAS with 1 cache and 1 or 4 cores without extra params.
         description: |
@@ -30,27 +36,28 @@ def test_load_x_to_one_without_params(cache_mode, cleaning_policy, cache_line_si
           - Cache loads successfully.
           - No errors in cache are found.
     """
-    with TestRun.step(f"Prepare 1 cache and {core_number} core devices"):
+    with TestRun.step(f"Prepare 1 cache and {cores_amount} core devices"):
         cache_dev = TestRun.disks['cache']
         cache_dev.create_partitions([Size(512, Unit.MebiByte)])
         cache_dev = cache_dev.partitions[0]
         core_dev = TestRun.disks['core']
         core_size = []
-        for i in range(core_number):
+        for i in range(cores_amount):
             core_size.append(Size(1, Unit.GibiByte))
         core_dev.create_partitions(core_size)
 
-    with TestRun.step(f"Start cache with {core_number} cores."):
+    with TestRun.step(f"Start cache with {cores_amount} cores."):
         cache = casadm.start_cache(cache_dev, cache_mode, cache_line_size, force=True)
         cores = []
-        for i in range(core_number):
+        for i in range(cores_amount):
             cores.append(cache.add_core(core_dev.partitions[i]))
         caches_count = len(casadm_parser.get_caches())
         if caches_count != 1:
             TestRun.fail(f"Expected caches count: 1; Actual caches count: {caches_count}.")
         cores_count = len(casadm_parser.get_cores(cache.cache_id))
-        if cores_count != core_number:
-            TestRun.fail(f"Expected cores count: {core_number}; Actual cores count: {cores_count}.")
+        if cores_count != cores_amount:
+            TestRun.fail(
+                f"Expected cores count: {cores_amount}; Actual cores count: {cores_count}.")
 
     with TestRun.step("Configure cleaning policy."):
         cache.set_cleaning_policy(cleaning_policy)
@@ -68,15 +75,19 @@ def test_load_x_to_one_without_params(cache_mode, cleaning_policy, cache_line_si
             cache.set_params_acp(acp)
 
     with TestRun.step("Run FIO on exported object"):
+        fio = (Fio().create_command()
+               .io_engine(IoEngine.libaio)
+               .io_depth(64)
+               .direct()
+               .read_write(ReadWrite.randrw)
+               .size(Size(1, Unit.GibiByte))
+               .block_size(cache_line_size)
+               .read_write(ReadWrite.randrw)
+               .num_jobs(cores_amount)
+               .cpus_allowed_policy(CpusAllowedPolicy.split))
         for core in cores:
-            Fio().create_command() \
-                .io_engine(IoEngine.libaio) \
-                .io_depth(64) \
-                .size(Size(1, Unit.GibiByte)) \
-                .read_write(ReadWrite.randrw) \
-                .block_size(cache_line_size) \
-                .target(f"{core.system_path}") \
-                .run()
+            fio.add_job(f"job_{core.core_id}").target(core.system_path)
+        fio.run()
 
     with TestRun.step("Stop cache."):
         cache.stop()
@@ -93,8 +104,9 @@ def test_load_x_to_one_without_params(cache_mode, cleaning_policy, cache_line_si
         if caches_count != 1:
             TestRun.fail(f"Expected caches count: 1; Actual caches count: {caches_count}.")
         cores_count = len(casadm_parser.get_cores(cache.cache_id))
-        if cores_count != core_number:
-            TestRun.fail(f"Expected cores count: {core_number}; Actual cores count: {cores_count}.")
+        if cores_count != cores_amount:
+            TestRun.fail(
+                f"Expected cores count: {cores_amount}; Actual cores count: {cores_count}.")
 
     with TestRun.step("Compare cache configuration before and after load."):
         if cache_mode != cache.get_cache_mode():
@@ -111,15 +123,19 @@ def test_load_x_to_one_without_params(cache_mode, cleaning_policy, cache_line_si
                 TestRun.fail("Cleaning policy parameters are different.")
 
     with TestRun.step("Run FIO again on exported object"):
+        fio = (Fio().create_command()
+               .io_engine(IoEngine.libaio)
+               .io_depth(64)
+               .direct()
+               .read_write(ReadWrite.randrw)
+               .size(Size(1, Unit.GibiByte))
+               .block_size(cache_line_size)
+               .read_write(ReadWrite.randrw)
+               .num_jobs(cores_amount)
+               .cpus_allowed_policy(CpusAllowedPolicy.split))
         for core in cores:
-            Fio().create_command() \
-                .io_engine(IoEngine.libaio) \
-                .io_depth(64) \
-                .size(Size(1, Unit.GibiByte)) \
-                .read_write(ReadWrite.randrw) \
-                .block_size(cache_line_size) \
-                .target(f"{core.system_path}") \
-                .run()
+            fio.add_job(f"job_{core.core_id}").target(core.system_path)
+        fio.run()
 
     with TestRun.step("Check if there are no error statistics."):
         if cache.get_statistics().error_stats.total_errors != 0:
@@ -129,13 +145,13 @@ def test_load_x_to_one_without_params(cache_mode, cleaning_policy, cache_line_si
         casadm.stop_all_caches()
 
 
-@pytest.mark.parametrize("core_number", [1, 4])
+@pytest.mark.parametrize("cores_amount", [1, 4])
 @pytest.mark.parametrize("cleaning_policy", CleaningPolicy)
 @pytest.mark.parametrize("cache_mode", CacheMode)
 @pytest.mark.parametrize("cache_line_size", CacheLineSize)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_load_x_to_one_with_params(cache_mode, cleaning_policy, cache_line_size, core_number):
+def test_load_x_to_one_with_params(cache_mode, cleaning_policy, cache_line_size, cores_amount):
     """
         title: Test for loading CAS with 1 cache and 1 or 4 cores with maximum extra params.
         description: |
@@ -146,28 +162,29 @@ def test_load_x_to_one_with_params(cache_mode, cleaning_policy, cache_line_size,
           - Cache loads successfully.
           - No errors in cache are found.
     """
-    with TestRun.step(f"Prepare 1 cache and {core_number} core devices"):
+    with TestRun.step(f"Prepare 1 cache and {cores_amount} core devices"):
         cache_dev = TestRun.disks['cache']
         cache_dev.create_partitions([Size(512, Unit.MebiByte)])
         cache_dev = cache_dev.partitions[0]
         core_dev = TestRun.disks['core']
         core_size = []
-        for i in range(core_number):
+        for i in range(cores_amount):
             core_size.append(Size(1, Unit.GibiByte))
         core_dev.create_partitions(core_size)
 
-    with TestRun.step(f"Start cache with {core_number} cores."):
+    with TestRun.step(f"Start cache with {cores_amount} cores."):
         cache = casadm.start_cache(cache_dev, cache_mode, cache_line_size, force=True)
         id_cache = cache.cache_id
         cores = []
-        for i in range(core_number):
+        for i in range(cores_amount):
             cores.append(cache.add_core(core_dev.partitions[i]))
         caches_count = len(casadm_parser.get_caches())
         if caches_count != 1:
             TestRun.fail(f"Expected caches count: 1; Actual caches count: {caches_count}.")
         cores_count = len(casadm_parser.get_cores(cache.cache_id))
-        if cores_count != core_number:
-            TestRun.fail(f"Expected cores count: {core_number}; Actual cores count: {cores_count}.")
+        if cores_count != cores_amount:
+            TestRun.fail(
+                f"Expected cores count: {cores_amount}; Actual cores count: {cores_count}.")
 
     with TestRun.step("Configure cleaning policy."):
         cache.set_cleaning_policy(cleaning_policy)
@@ -185,15 +202,19 @@ def test_load_x_to_one_with_params(cache_mode, cleaning_policy, cache_line_size,
             cache.set_params_acp(acp)
 
     with TestRun.step("Run FIO on exported object"):
+        fio = (Fio().create_command()
+               .io_engine(IoEngine.libaio)
+               .io_depth(64)
+               .direct()
+               .read_write(ReadWrite.randrw)
+               .size(Size(1, Unit.GibiByte))
+               .block_size(cache_line_size)
+               .read_write(ReadWrite.randrw)
+               .num_jobs(cores_amount)
+               .cpus_allowed_policy(CpusAllowedPolicy.split))
         for core in cores:
-            Fio().create_command() \
-                .io_engine(IoEngine.libaio) \
-                .io_depth(64) \
-                .size(Size(1, Unit.GibiByte)) \
-                .read_write(ReadWrite.randrw) \
-                .block_size(cache_line_size) \
-                .target(f"{core.system_path}") \
-                .run()
+            fio.add_job(f"job_{core.core_id}").target(core.system_path)
+        fio.run()
 
     with TestRun.step("Stop cache."):
         cache.stop()
@@ -210,8 +231,9 @@ def test_load_x_to_one_with_params(cache_mode, cleaning_policy, cache_line_size,
         if caches_count != 1:
             TestRun.fail(f"Expected caches count: 1; Actual caches count: {caches_count}.")
         cores_count = len(casadm_parser.get_cores(cache.cache_id))
-        if cores_count != core_number:
-            TestRun.fail(f"Expected cores count: {core_number}; Actual cores count: {cores_count}.")
+        if cores_count != cores_amount:
+            TestRun.fail(
+                f"Expected cores count: {cores_amount}; Actual cores count: {cores_count}.")
 
     with TestRun.step("Compare cache configuration before and after load."):
         if cache_mode != cache.get_cache_mode():
@@ -228,15 +250,19 @@ def test_load_x_to_one_with_params(cache_mode, cleaning_policy, cache_line_size,
                 TestRun.fail("Cleaning policy parameters are different.")
 
     with TestRun.step("Run FIO again on exported object"):
+        fio = (Fio().create_command()
+               .io_engine(IoEngine.libaio)
+               .io_depth(64)
+               .direct()
+               .read_write(ReadWrite.randrw)
+               .size(Size(1, Unit.GibiByte))
+               .block_size(cache_line_size)
+               .read_write(ReadWrite.randrw)
+               .num_jobs(cores_amount)
+               .cpus_allowed_policy(CpusAllowedPolicy.split))
         for core in cores:
-            Fio().create_command() \
-                .io_engine(IoEngine.libaio) \
-                .io_depth(64) \
-                .size(Size(1, Unit.GibiByte)) \
-                .read_write(ReadWrite.randrw) \
-                .block_size(cache_line_size) \
-                .target(f"{core.system_path}") \
-                .run()
+            fio.add_job(f"job_{core.core_id}").target(core.system_path)
+        fio.run()
 
     with TestRun.step("Check if there are no error statistics."):
         if cache.get_statistics().error_stats.total_errors != 0:
@@ -246,7 +272,7 @@ def test_load_x_to_one_with_params(cache_mode, cleaning_policy, cache_line_size,
         casadm.stop_all_caches()
 
 
-@pytest.mark.parametrize("core_number", [1, 4])
+@pytest.mark.parametrize("cores_amount", [1, 4])
 @pytest.mark.parametrize("cleaning_policy", CleaningPolicy)
 @pytest.mark.parametrize("cache_mode", [[CacheMode.WT, CacheMode.WB],
                                         [CacheMode.WB, CacheMode.WA],
@@ -260,7 +286,7 @@ def test_load_x_to_one_with_params(cache_mode, cleaning_policy, cache_line_size,
                                              [CacheLineSize.LINE_64KiB, CacheLineSize.LINE_4KiB]])
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_load_x_to_one_diff_params(cache_mode, cleaning_policy, cache_line_size, core_number):
+def test_load_x_to_one_diff_params(cache_mode, cleaning_policy, cache_line_size, cores_amount):
     f"""
         title: Test for loading CAS with 1 cache and 1 or 4 cores with different params.
         description: |
@@ -270,28 +296,29 @@ def test_load_x_to_one_diff_params(cache_mode, cleaning_policy, cache_line_size,
           - OpenCAS should load successfully but with saved configuration.
           - No errors in cache are found.
     """
-    with TestRun.step(f"Prepare 1 cache and {core_number} core devices"):
+    with TestRun.step(f"Prepare 1 cache and {cores_amount} core devices"):
         cache_dev = TestRun.disks['cache']
         cache_dev.create_partitions([Size(512, Unit.MebiByte)])
         cache_dev = cache_dev.partitions[0]
         core_dev = TestRun.disks['core']
         core_size = []
-        for i in range(core_number):
+        for i in range(cores_amount):
             core_size.append(Size(1, Unit.GibiByte))
         core_dev.create_partitions(core_size)
 
-    with TestRun.step(f"Start cache with {core_number} cores."):
+    with TestRun.step(f"Start cache with {cores_amount} cores."):
         cache = casadm.start_cache(cache_dev, cache_mode[0], cache_line_size[0], force=True)
         id_cache = cache.cache_id
         cores = []
-        for i in range(core_number):
+        for i in range(cores_amount):
             cores.append(cache.add_core(core_dev.partitions[i]))
         caches_count = len(casadm_parser.get_caches())
         if caches_count != 1:
             TestRun.fail(f"Expected caches count: 1; Actual caches count: {caches_count}.")
         cores_count = len(casadm_parser.get_cores(cache.cache_id))
-        if cores_count != core_number:
-            TestRun.fail(f"Expected cores count: {core_number}; Actual cores count: {cores_count}.")
+        if cores_count != cores_amount:
+            TestRun.fail(
+                f"Expected cores count: {cores_amount}; Actual cores count: {cores_count}.")
 
     with TestRun.step("Configure cleaning policy."):
         cache.set_cleaning_policy(cleaning_policy)
@@ -309,15 +336,19 @@ def test_load_x_to_one_diff_params(cache_mode, cleaning_policy, cache_line_size,
             cache.set_params_acp(acp)
 
     with TestRun.step("Run FIO on exported object"):
+        fio = (Fio().create_command()
+               .io_engine(IoEngine.libaio)
+               .io_depth(64)
+               .direct()
+               .read_write(ReadWrite.randrw)
+               .size(Size(1, Unit.GibiByte))
+               .block_size(cache_line_size[0])
+               .read_write(ReadWrite.randrw)
+               .num_jobs(cores_amount)
+               .cpus_allowed_policy(CpusAllowedPolicy.split))
         for core in cores:
-            Fio().create_command() \
-                .io_engine(IoEngine.libaio) \
-                .io_depth(64) \
-                .size(Size(1, Unit.GibiByte)) \
-                .read_write(ReadWrite.randrw) \
-                .block_size(cache_line_size[0]) \
-                .target(f"{core.system_path}") \
-                .run()
+            fio.add_job(f"job_{core.core_id}").target(core.system_path)
+        fio.run()
 
     with TestRun.step("Stop cache."):
         cache.stop()
@@ -340,8 +371,9 @@ def test_load_x_to_one_diff_params(cache_mode, cleaning_policy, cache_line_size,
         if caches_count != 1:
             TestRun.fail(f"Expected caches count: 1; Actual caches count: {caches_count}.")
         cores_count = len(casadm_parser.get_cores(cache.cache_id))
-        if cores_count != core_number:
-            TestRun.fail(f"Expected cores count: {core_number}; Actual cores count: {cores_count}.")
+        if cores_count != cores_amount:
+            TestRun.fail(
+                f"Expected cores count: {cores_amount}; Actual cores count: {cores_count}.")
 
     with TestRun.step("Compare cache configuration before and after load."):
         if cache_mode[0] != cache.get_cache_mode():
@@ -360,15 +392,19 @@ def test_load_x_to_one_diff_params(cache_mode, cleaning_policy, cache_line_size,
                 TestRun.fail("Cleaning policy parameters are different.")
 
     with TestRun.step("Run FIO again on exported object"):
+        fio = (Fio().create_command()
+               .io_engine(IoEngine.libaio)
+               .io_depth(64)
+               .direct()
+               .read_write(ReadWrite.randrw)
+               .size(Size(1, Unit.GibiByte))
+               .block_size(cache_line_size[1])
+               .read_write(ReadWrite.randrw)
+               .num_jobs(cores_amount)
+               .cpus_allowed_policy(CpusAllowedPolicy.split))
         for core in cores:
-            Fio().create_command() \
-                .io_engine(IoEngine.libaio) \
-                .io_depth(64) \
-                .size(Size(1, Unit.GibiByte)) \
-                .read_write(ReadWrite.randrw) \
-                .block_size(cache_line_size[1]) \
-                .target(f"{core.system_path}") \
-                .run()
+            fio.add_job(f"job_{core.core_id}").target(core.system_path)
+        fio.run()
 
     with TestRun.step("Check if there are no error statistics."):
         if cache.get_statistics().error_stats.total_errors != 0:

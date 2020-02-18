@@ -147,6 +147,12 @@ class FlushParametersAlru:
         alru_params.wake_up_time = (1, 3600)
         return alru_params
 
+    def __eq__(self, other):
+        return self.activity_threshold == other.activity_threshold and \
+            self.flush_max_buffers == other.flush_max_buffers and \
+            self.staleness_time == other.staleness_time and \
+            self.wake_up_time == other.wake_up_time
+
     @staticmethod
     def default_alru_params():
         alru_params = FlushParametersAlru()
@@ -182,6 +188,10 @@ class FlushParametersAcp:
         acp_params.flush_max_buffers = (1, 10000)
         acp_params.wake_up_time = (0, 10000)
         return acp_params
+
+    def __eq__(self, other):
+        return self.flush_max_buffers == other.flush_max_buffers and \
+            self.wake_up_time == other.wake_up_time
 
     @staticmethod
     def default_acp_params():
