@@ -1650,6 +1650,13 @@ static void cache_start_finalize(struct work_struct *work)
 	int result;
 	ocf_cache_t cache = ctx->cache;
 
+	result = cas_cls_init(cache);
+	if (result) {
+		ctx->ocf_start_error = result;
+		return _cache_mngt_start_complete(cache, ctx, result);
+	}
+	ctx->cls_inited = true;
+
 	result = cache_mngt_initialize_core_objects(cache);
 	if (result) {
 		ctx->ocf_start_error = result;
@@ -1821,11 +1828,6 @@ static int _cache_mngt_start(struct ocf_mngt_cache_config *cfg,
 
 	cache_priv = ocf_cache_get_priv(cache);
 	mngt_queue = cache_priv->mngt_queue;
-
-	result = cas_cls_init(cache);
-	if (result)
-		goto err;
-	context->cls_inited = true;
 
 	if (load) {
 		ocf_mngt_cache_load(cache, device_cfg,
