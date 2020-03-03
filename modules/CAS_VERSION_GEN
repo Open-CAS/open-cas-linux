@@ -1,27 +1,24 @@
 #!/bin/bash
 #
-# Copyright(c) 2012-2019 Intel Corporation
+# Copyright(c) 2012-2020 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
 VER_FILE=CAS_VERSION
 
 if [ -f ${VER_FILE} ]; then
-	echo "Using existing ${VER_FILE} version file."
-	echo ""
+    echo -e "Using existing ${VER_FILE} version file.\n"
     exit 0
-else
-	echo "No ${VER_FILE} found. Preparing default version file."
-	echo ""
-
-	CAS_VERSION_MAIN=20
-	CAS_VERSION_MAJOR=1
-	CAS_VERSION_MINOR=0
-	CAS_BUILD_NO=0000`date +%m%d`
-
-	touch ${VER_FILE}
-
 fi
+
+echo -e "No ${VER_FILE} found. Preparing default version file.\n"
+
+CAS_VERSION_MAIN=20
+CAS_VERSION_MAJOR=3
+CAS_VERSION_MINOR=0
+CAS_BUILD_NO=0000`date +%m%d`
+
+touch ${VER_FILE}
 
 CAS_VERSION=$(printf "%02d.%02d.%02d.%s" $CAS_VERSION_MAIN $CAS_VERSION_MAJOR \
         $CAS_VERSION_MINOR $CAS_BUILD_NO)
