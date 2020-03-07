@@ -1780,7 +1780,7 @@ out_bdev:
 	return result;
 }
 
-static int _cache_mngt_start(struct ocf_mngt_cache_config *cfg,
+int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
 		struct kcas_start_cache *cmd)
 {
@@ -1791,6 +1791,9 @@ static int _cache_mngt_start(struct ocf_mngt_cache_config *cfg,
 	int result = 0, rollback_result = 0;
 	bool load = (cmd && cmd->init_cache == CACHE_INIT_LOAD);
 
+	if (!try_module_get(THIS_MODULE))
+		return -KCAS_ERR_SYSTEM;
+
 	if (load)
 		result = _cache_mngt_check_metadata(cfg, cmd->cache_path_name);
 	if (result) {
@@ -1799,8 +1802,10 @@ static int _cache_mngt_start(struct ocf_mngt_cache_config *cfg,
 	}
 
 	context = kzalloc(sizeof(*context), GFP_KERNEL);
-	if (!context)
+	if (!context) {
+		module_put(THIS_MODULE);
 		return -ENOMEM;
+	}
 
 	context->device_cfg = device_cfg;
 	context->cmd = cmd;
@@ -1856,16 +1861,6 @@ err:
 		kfree(context);
 
 	return result;
-}
-
-int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
-		struct ocf_mngt_cache_device_config *device_cfg,
-		struct kcas_start_cache *cmd)
-{
-	if (!try_module_get(THIS_MODULE))
-		return -KCAS_ERR_SYSTEM;
-
-	return _cache_mngt_start(cfg, device_cfg, cmd);
 }
 
 /**
