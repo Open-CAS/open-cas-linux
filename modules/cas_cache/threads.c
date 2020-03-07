@@ -207,7 +207,7 @@ static void _cas_start_thread(struct cas_thread_info *info)
 
 static void _cas_stop_thread(struct cas_thread_info *info)
 {
-	if (info->running && info->thread) {
+	if (info && info->running && info->thread) {
 		reinit_completion(&info->compl);
 		atomic_set(&info->stop, 1);
 		wake_up(&info->wq);
