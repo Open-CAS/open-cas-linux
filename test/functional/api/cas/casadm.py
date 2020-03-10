@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019 Intel Corporation
+# Copyright(c) 2019-2020 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
@@ -274,11 +274,11 @@ def set_param_cleaning_alru(cache_id: int, wake_up: int = None, staleness_time: 
                             flush_max_buffers: int = None, activity_threshold: int = None):
     output = TestRun.executor.run(
         set_param_cleaning_alru_cmd(
-            cache_id=str(cache_id),
-            wake_up=str(wake_up) if wake_up else None,
-            staleness_time=str(staleness_time) if staleness_time else None,
-            flush_max_buffers=str(flush_max_buffers) if flush_max_buffers else None,
-            activity_threshold=str(activity_threshold) if activity_threshold else None))
+            cache_id=cache_id,
+            wake_up=wake_up,
+            staleness_time=staleness_time,
+            flush_max_buffers=flush_max_buffers,
+            activity_threshold=activity_threshold))
     if output.exit_code != 0:
         raise CmdException("Error while setting alru cleaning policy parameters.", output)
     return output

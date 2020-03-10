@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019 Intel Corporation
+# Copyright(c) 2019-2020 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
@@ -164,15 +164,16 @@ class Cache:
                                              if acp_params.flush_max_buffers else None)
 
     def set_params_alru(self, alru_params: FlushParametersAlru):
-        return casadm.set_param_cleaning_alru(self.cache_id,
-                                              int(alru_params.wake_up_time.total_seconds())
-                                              if alru_params.wake_up_time else None,
-                                              int(alru_params.staleness_time.total_seconds())
-                                              if alru_params.staleness_time else None,
-                                              alru_params.flush_max_buffers
-                                              if alru_params.flush_max_buffers else None,
-                                              alru_params.activity_threshold.total_milliseconds()
-                                              if alru_params.activity_threshold else None)
+        return casadm.set_param_cleaning_alru(
+            self.cache_id,
+            int(alru_params.wake_up_time.total_seconds())
+            if alru_params.wake_up_time is not None else None,
+            int(alru_params.staleness_time.total_seconds())
+            if alru_params.staleness_time is not None else None,
+            alru_params.flush_max_buffers
+            if alru_params.flush_max_buffers is not None else None,
+            alru_params.activity_threshold.total_milliseconds()
+            if alru_params.activity_threshold is not None else None)
 
     def get_cache_config(self):
         return CacheConfig(self.get_cache_line_size(),
