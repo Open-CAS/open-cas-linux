@@ -17,7 +17,6 @@ struct cas_thread_info {
 	atomic_t kicked;
 	struct task_struct *thread;
 	char name[MAX_THREAD_NAME_SIZE];
-	bool running;
 };
 
 static int _cas_io_queue_thread(void *data)
@@ -200,14 +199,12 @@ static void _cas_start_thread(struct cas_thread_info *info)
 	wake_up_process(info->thread);
 	wait_for_completion(&info->compl);
 
-	info->running = true;
-
 	printk(KERN_DEBUG "Thread %s started\n", info->name);
 }
 
 static void _cas_stop_thread(struct cas_thread_info *info)
 {
-	if (info->running && info->thread) {
+	if (info && info->thread) {
 		reinit_completion(&info->compl);
 		atomic_set(&info->stop, 1);
 		wake_up(&info->wq);
