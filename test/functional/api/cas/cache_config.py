@@ -158,10 +158,10 @@ class FlushParametersAlru:
     @staticmethod
     def alru_params_range():
         alru_params = FlushParametersAlru()
-        alru_params.activity_threshold = (500, 1000000)
+        alru_params.activity_threshold = (0, 1000000)
         alru_params.flush_max_buffers = (1, 10000)
         alru_params.staleness_time = (1, 3600)
-        alru_params.wake_up_time = (1, 3600)
+        alru_params.wake_up_time = (0, 3600)
         return alru_params
 
     def __eq__(self, other):

@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019 Intel Corporation
+# Copyright(c) 2019-2020 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
@@ -210,18 +210,19 @@ def set_param_cleaning_cmd(cache_id: str, policy: str, shortcut: bool = False):
                           additional_params=add_params, shortcut=shortcut)
 
 
-def set_param_cleaning_alru_cmd(cache_id: str, wake_up: str, staleness_time: str,
-                                flush_max_buffers: str, activity_threshold: str,
+def set_param_cleaning_alru_cmd(cache_id, wake_up, staleness_time,
+                                flush_max_buffers, activity_threshold,
                                 shortcut: bool = False):
     add_param = ""
     if wake_up is not None:
-        add_param += (" -w " if shortcut else " --wake-up ") + wake_up
+        add_param += (" -w " if shortcut else " --wake-up ") + str(wake_up)
     if staleness_time is not None:
-        add_param += (" -s " if shortcut else " --staleness-time ") + staleness_time
+        add_param += (" -s " if shortcut else " --staleness-time ") + str(staleness_time)
     if flush_max_buffers is not None:
-        add_param += (" -b " if shortcut else " --flush-max-buffers ") + flush_max_buffers
+        add_param += (" -b " if shortcut else " --flush-max-buffers ") + str(flush_max_buffers)
     if activity_threshold is not None:
-        add_param += (" -t " if shortcut else " --activity-threshold ") + activity_threshold
+        add_param += (" -t " if shortcut else " --activity-threshold ") + str(activity_threshold)
+
     return _set_param_cmd(namespace="cleaning-alru", cache_id=cache_id,
                           additional_params=add_param, shortcut=shortcut)
 
