@@ -15,7 +15,7 @@ from test_utils.output import CmdException
 
 def install_opencas():
     TestRun.LOGGER.info("Copying Open CAS repository to DUT")
-    TestRun.executor.rsync(
+    TestRun.executor.rsync_to(
         f"{TestRun.usr.repo_dir}/",
         f"{TestRun.usr.working_dir}/",
         exclude_list=["test/functional/results/"],
