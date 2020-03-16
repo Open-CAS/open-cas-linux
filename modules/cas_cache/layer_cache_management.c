@@ -366,7 +366,7 @@ struct _cache_mngt_stop_context {
 	struct _cache_mngt_async_context async;
 	int error;
 	ocf_cache_t cache;
-	struct work_struct work;
+	struct task_struct *finish_thread;
 };
 
 static int exit_instance_finish(void *data)
@@ -410,6 +410,7 @@ struct _cache_mngt_attach_context {
 	ocf_cache_t cache;
 	int ocf_start_error;
 	struct work_struct work;
+	struct task_struct *rollback_thread;
 
 	struct {
 		bool priv_inited:1;
@@ -425,6 +426,9 @@ static int cache_start_rollback(void *data)
 	struct _cache_mngt_attach_context *ctx = data;
 	ocf_cache_t cache = ctx->cache;
 	int result;
+
+	if (kthread_should_stop())
+		return 0;
 
 	if (ctx->cls_inited)
 		cas_cls_deinit(cache);
@@ -455,28 +459,22 @@ static void _cache_mngt_cache_stop_rollback_complete(ocf_cache_t cache,
 		void *priv, int error)
 {
 	struct _cache_mngt_attach_context *ctx = priv;
-	struct task_struct *thread;
 
 	if (error == -OCF_ERR_WRITE_CACHE)
 		printk(KERN_WARNING "Cannot save cache state\n");
 	else
 		BUG_ON(error);
 
-	thread = kthread_run(cache_start_rollback, ctx,
-			"cas_cache_rollback_complete");
-	BUG_ON(IS_ERR(thread));
+	BUG_ON(!wake_up_process(ctx->rollback_thread));
 }
 
 static void _cache_mngt_cache_stop_complete(ocf_cache_t cache, void *priv,
 		int error)
 {
 	struct _cache_mngt_stop_context *context = priv;
-	struct task_struct *thread;
 	context->error = error;
 
-	thread = kthread_run(exit_instance_finish, context,
-			"cas_cache_stop_complete");
-	BUG_ON(IS_ERR(thread));
+	BUG_ON(!wake_up_process(context->finish_thread));
 }
 
 static int _cache_mngt_cache_stop_sync(ocf_cache_t cache)
@@ -487,6 +485,13 @@ static int _cache_mngt_cache_stop_sync(ocf_cache_t cache)
 	context = env_malloc(sizeof(*context), GFP_KERNEL);
 	if (!context)
 		return -ENOMEM;
+
+	context->finish_thread = kthread_create(exit_instance_finish, context,
+			"cas_cache_stop_complete");
+	if (!context->finish_thread) {
+		kfree(context);
+		return -ENOMEM;
+	}
 
 	_cache_mngt_async_context_init(&context->async);
 	context->error = 0;
@@ -1693,6 +1698,8 @@ static void cache_start_finalize(struct work_struct *work)
 		return;
 	}
 
+	kthread_stop(ctx->rollback_thread);
+
 	ocf_mngt_cache_unlock(cache);
 }
 
@@ -1728,7 +1735,7 @@ static int _cache_mngt_cache_priv_init(ocf_cache_t cache)
 	cache_priv = vzalloc(sizeof(*cache_priv) +
 			cpus_no * sizeof(*cache_priv->io_queues));
 	if (!cache_priv)
-		return -OCF_ERR_NO_MEM;
+		return -ENOMEM;
 
 	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
 
@@ -1823,6 +1830,14 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		return -ENOMEM;
 	}
 
+	context->rollback_thread = kthread_create(cache_start_rollback, context,
+			"cas_cache_rollback_complete");
+	if (!context->rollback_thread) {
+		kfree(context);
+		module_put(THIS_MODULE);
+		return -ENOMEM;
+	}
+
 	context->device_cfg = device_cfg;
 	context->cmd = cmd;
 	_cache_mngt_async_context_init(&context->async);
@@ -1832,6 +1847,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	 */
 	result = ocf_mngt_cache_start(cas_ctx, &cache, cfg);
 	if (result) {
+		kthread_stop(context->rollback_thread);
 		kfree(context);
 		module_put(THIS_MODULE);
 		return result;
