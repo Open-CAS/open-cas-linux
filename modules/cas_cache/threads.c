@@ -54,7 +54,7 @@ static int _cas_io_queue_thread(void *data)
 	wait_for_completion(&info->compl);
 	printk(KERN_DEBUG "Thread %s stopped\n", info->name);
 	kfree(info);
-	do_exit(0);
+	module_put_and_exit(0);
 
 	return 0;
 }
@@ -115,7 +115,7 @@ static int _cas_cleaner_thread(void *data)
 
 	wait_for_completion(&info->compl);
 	kfree(info);
-	do_exit(0);
+	module_put_and_exit(0);
 
 	return 0;
 }
@@ -149,7 +149,7 @@ static int _cas_metadata_updater_thread(void *data)
 
 	wait_for_completion(&info->compl);
 	kfree(info);
-	do_exit(0);
+	module_put_and_exit(0);
 
 	return 0;
 }
@@ -182,6 +182,8 @@ static int _cas_create_thread(struct cas_thread_info **pinfo,
 		return PTR_ERR(thread);
 	}
 	info->thread = thread;
+
+	BUG_ON(!try_module_get(THIS_MODULE));
 
 	/* Affinitize thread to core */
 	if (cpu != CAS_CPUS_ALL)
