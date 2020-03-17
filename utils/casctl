@@ -5,8 +5,9 @@
 #
 
 import argparse
-import sys
 import re
+import sys
+
 import opencas
 
 if sys.version_info < (3, 5):
@@ -131,6 +132,9 @@ def stop(flush):
         opencas.stop(flush)
     except Exception as e:
         eprint(e)
+        exit(1)
+
+    exit(0)
 
 
 # Command line arguments parsing
