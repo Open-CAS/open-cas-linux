@@ -279,7 +279,7 @@ int cas_create_metadata_updater_thread(ocf_metadata_updater_t mu)
 	int result;
 
 	result = _cas_create_thread(&info, _cas_metadata_updater_thread,
-			mu, CAS_CPUS_ALL, "ocf_metadata_updater_%s",
+			mu, CAS_CPUS_ALL, "cas_mu_%s",
 			ocf_cache_get_name(ocf_metadata_updater_get_cache(mu)));
 	if (!result) {
 		ocf_metadata_updater_set_priv(mu, info);
