@@ -538,13 +538,23 @@ static uint16_t find_free_core_id(uint64_t *bitmap)
 	return ret;
 }
 
-static void mark_core_id_used(uint64_t *bitmap, uint16_t core_id)
+static void mark_core_id_used(ocf_cache_t cache, uint16_t core_id)
 {
+	uint64_t *bitmap;
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+
+	bitmap = cache_priv->core_id_bitmap;
+
 	set_bit(core_id, (unsigned long *)bitmap);
 }
 
-static void mark_core_id_free(uint64_t *bitmap, uint16_t core_id)
+static void mark_core_id_free(ocf_cache_t cache, uint16_t core_id)
 {
+	uint64_t *bitmap;
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+
+	bitmap = cache_priv->core_id_bitmap;
+
 	clear_bit(core_id, (unsigned long *)bitmap);
 }
 
@@ -998,16 +1008,14 @@ static void _cache_mngt_log_core_device_path(ocf_core_t core)
 
 static int _cache_mngt_core_device_loaded_visitor(ocf_core_t core, void *cntx)
 {
-	struct cache_priv *cache_priv;
 	uint16_t core_id = OCF_CORE_ID_INVALID;
 	ocf_cache_t cache = ocf_core_get_cache(core);
-	cache_priv = ocf_cache_get_priv(cache);
 
 	_cache_mngt_log_core_device_path(core);
 
 	core_id_from_name(&core_id, ocf_core_get_name(core));
 
-	mark_core_id_used(cache_priv->core_id_bitmap, core_id);
+	mark_core_id_used(cache, core_id);
 
 	return 0;
 }
@@ -1044,7 +1052,6 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	ocf_core_t core;
 	ocf_core_id_t core_id;
 	int result, remove_core_result;
-	struct cache_priv *cache_priv;
 
 	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
 					name_len, &cache);
@@ -1105,8 +1112,7 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	if (result)
 		goto error_after_create_exported_object;
 
-	cache_priv = ocf_cache_get_priv(cache);
-	mark_core_id_used(cache_priv->core_id_bitmap, core_id);
+	mark_core_id_used(cache, core_id);
 
 	ocf_mngt_cache_unlock(cache);
 	ocf_mngt_cache_put(cache);
@@ -1227,7 +1233,6 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 	int result, prepare_result = 0;
 	ocf_cache_t cache;
 	ocf_core_t core;
-	struct cache_priv *cache_priv;
 
 	result = mngt_get_cache_by_id(cas_ctx, cmd->cache_id, &cache);
 	if (result)
@@ -1273,8 +1278,7 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 	wait_for_completion(&context.cmpl);
 
 	if (!result && !cmd->detach) {
-		cache_priv = ocf_cache_get_priv(cache);
-		mark_core_id_free(cache_priv->core_id_bitmap, cmd->core_id);
+		mark_core_id_free(cache, cmd->core_id);
 	}
 
 	if (!result && prepare_result)
