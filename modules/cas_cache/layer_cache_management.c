@@ -1132,14 +1132,29 @@ error_affter_lock:
 	return result;
 }
 
-/* Flush cache and destroy exported object */
-int _cache_mngt_remove_core_prepare(ocf_cache_t cache, ocf_core_t core,
-		struct kcas_remove_core *cmd, bool destroy)
+static int _cache_mngt_remove_core_flush(ocf_cache_t cache,
+		struct kcas_remove_core *cmd)
 {
 	int result = 0;
-	int flush_result = 0;
+	ocf_core_t core;
 	bool core_active;
-	bool flush_interruptible = !destroy;
+
+	if (cmd->force_no_flush)
+		return 0;
+
+	/* Getting cache for the second time is workaround to make flush error
+	   handling easier and avoid dealing with synchronizing issues */
+	result = ocf_mngt_cache_get(cache);
+	if (result)
+		return result;
+
+	result = _cache_mngt_read_lock_sync(cache);
+	if (result)
+		goto put;
+
+	result = get_core_by_id(cache, cmd->core_id, &core);
+	if (result < 0)
+		goto unlock;
 
 	core_active = (ocf_core_get_state(core) == ocf_core_state_active);
 
@@ -1150,40 +1165,53 @@ int _cache_mngt_remove_core_prepare(ocf_cache_t cache, ocf_core_t core,
 		return -OCF_ERR_CORE_IN_INACTIVE_STATE;
 	}
 
-	if (core_active && destroy) {
+	if (core_active) {
+		return _cache_mngt_core_flush_sync(core,
+				true, _cache_read_unlock_put_cmpl);
+	} else if (!ocf_mngt_core_is_dirty(core)) {
+		result = 0;
+		goto unlock;
+	} else {
+		printk(KERN_WARNING OCF_PREFIX_SHORT
+				"Cannot remove dirty inactive core "
+				"without force option\n");
+		result = -OCF_ERR_CORE_IN_INACTIVE_STATE;
+		goto unlock;
+	}
+
+unlock:
+	ocf_mngt_cache_read_unlock(cache);
+put:
+	ocf_mngt_cache_put(cache);
+	return result;
+}
+
+static int _cache_mngt_remove_core_prepare(ocf_cache_t cache, ocf_core_t core,
+		struct kcas_remove_core *cmd)
+{
+	int result = 0;
+	bool core_active;
+
+	core_active = ocf_core_get_state(core) == ocf_core_state_active;
+
+	if (cmd->detach && !core_active) {
+		printk(KERN_WARNING OCF_PREFIX_SHORT
+				"Cannot detach core which "
+				"is already inactive!\n");
+		return -OCF_ERR_CORE_IN_INACTIVE_STATE;
+	}
+
+	if (core_active) {
 		result = block_dev_destroy_exported_object(core);
 		if (result)
 			return result;
 	}
 
-	if (!cmd->force_no_flush) {
-		if (core_active) {
-			/* Flush core */
-			if (flush_interruptible)
-				flush_result = _cache_mngt_core_flush_sync(core,
-						flush_interruptible, _cache_read_unlock_put_cmpl);
-			else
-				flush_result = _cache_mngt_core_flush_uninterruptible(core);
-		} else if (!ocf_mngt_core_is_dirty(core)) {
-			/* Clean core is always "flushed" */
-			flush_result = 0;
-		} else {
-			printk(KERN_WARNING OCF_PREFIX_SHORT
-					"Cannot remove dirty inactive core "
-					"without force option\n");
-			return -OCF_ERR_CORE_IN_INACTIVE_STATE;
-		}
-	}
+	if (!cmd->force_no_flush)
+		result = _cache_mngt_core_flush_uninterruptible(core);
 
-	if (flush_result)
-		result = destroy ? -KCAS_ERR_REMOVED_DIRTY : flush_result;
-
-	return result;
+	return result ? -KCAS_ERR_REMOVED_DIRTY : 0;
 }
-
-/****************************************************************
- * Function for removing a CORE object from the cache instance
- ****************************************************************/
 
 static void _cache_mngt_remove_core_complete(void *priv, int error)
 {
@@ -1196,7 +1224,7 @@ static void _cache_mngt_remove_core_complete(void *priv, int error)
 int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 {
 	struct _cache_mngt_sync_context context;
-	int result, flush_result = 0;
+	int result, prepare_result = 0;
 	ocf_cache_t cache;
 	ocf_core_t core;
 	struct cache_priv *cache_priv;
@@ -1205,34 +1233,10 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 	if (result)
 		return result;
 
-	if (!cmd->force_no_flush) {
-		/* First check state and flush data (if requested by user)
-		   under read lock */
-		/* Getting cache twice is workaround to make flush error handling easier
-		   and avoid dealing with synchronizing issues */
-		result = ocf_mngt_cache_get(cache);
-		if (result)
-			goto put;
-		result = _cache_mngt_read_lock_sync(cache);
-		if (result) {
-			ocf_mngt_cache_put(cache);
-			goto put;
-		}
+	result = _cache_mngt_remove_core_flush(cache, cmd);
+	if (result)
+		goto put;
 
-		result = get_core_by_id(cache, cmd->core_id, &core);
-		if (result < 0) {
-			ocf_mngt_cache_unlock(cache);
-			ocf_mngt_cache_put(cache);
-			goto put;
-		}
-
-		result = _cache_mngt_remove_core_prepare(cache, core, cmd,
-				false);
-		if (result)
-			goto put;
-	}
-
-	/* Acquire write lock */
 	result = _cache_mngt_lock_sync(cache);
 	if (result)
 		goto put;
@@ -1248,18 +1252,14 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 	 * destroyed, instead of trying rolling this back we rather detach core
 	 * and then inform user about error.
 	 */
-	result = _cache_mngt_remove_core_prepare(cache, core, cmd, true);
-	if (result == -KCAS_ERR_REMOVED_DIRTY) {
-		flush_result = result;
-		result = 0;
-	} else if (result) {
+	prepare_result = _cache_mngt_remove_core_prepare(cache, core, cmd);
+	if (prepare_result && prepare_result != -KCAS_ERR_REMOVED_DIRTY)
 		goto unlock;
-	}
 
 	init_completion(&context.cmpl);
 	context.result = &result;
 
-	if (cmd->detach || flush_result) {
+	if (cmd->detach || prepare_result == -KCAS_ERR_REMOVED_DIRTY) {
 		ocf_mngt_cache_detach_core(core,
 				_cache_mngt_remove_core_complete, &context);
 	} else {
@@ -1267,7 +1267,7 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 				_cache_mngt_remove_core_complete, &context);
 	}
 
-	if (!cmd->force_no_flush && !flush_result)
+	if (!cmd->force_no_flush && !prepare_result)
 		BUG_ON(ocf_mngt_core_is_dirty(core));
 
 	wait_for_completion(&context.cmpl);
@@ -1277,8 +1277,8 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 		mark_core_id_free(cache_priv->core_id_bitmap, cmd->core_id);
 	}
 
-	if (!result && flush_result)
-		result = flush_result;
+	if (!result && prepare_result)
+		result = prepare_result;
 
 unlock:
 	ocf_mngt_cache_unlock(cache);
