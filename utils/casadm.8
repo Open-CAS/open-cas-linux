@@ -7,7 +7,7 @@ casadm \- create, and manage Open CAS instances
 \fBcasadm\fR <command> [options...]
 
 .SH COPYRIGHT
-Copyright(c) 2012-2019 by the Intel Corporation.
+Copyright(c) 2012-2020 by the Intel Corporation.
 
 .SH DESCRIPTION
 Open Cache Acceleration Software (CAS) accelerates Linux applications by caching
@@ -24,6 +24,12 @@ storage migration effort or application changes are required.
 \fBCache device\fR is a faster drive (e.g. SSD-type) used for speeding-up core device.
 .br
 \fBCore device\fR is a slower drive (e.g. HDD-type) that will be accelerated by Open CAS.
+.PP
+Open CAS creates a new device in the /dev directory with the following name format:
+.br
+cas<cache ID>-<core #> for example: \fI/dev/cas1-1\fR.
+.br
+This new device can be treated as a regular block device.
 
 .SH MODES
 Open CAS caching software has several modes of operation:
