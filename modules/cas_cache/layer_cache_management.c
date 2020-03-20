@@ -355,19 +355,22 @@ static int _cache_mngt_core_flush_uninterruptible(ocf_core_t core)
 	return result;
 }
 
-static void _cache_mngt_cache_priv_deinit(ocf_cache_t cache)
-{
-	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
-
-	vfree(cache_priv);
-}
-
 struct _cache_mngt_stop_context {
 	struct _cache_mngt_async_context async;
 	int error;
 	ocf_cache_t cache;
 	struct task_struct *finish_thread;
 };
+
+static void _cache_mngt_cache_priv_deinit(ocf_cache_t cache)
+{
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+
+	kthread_stop(cache_priv->stop_context->finish_thread);
+	kfree(cache_priv->stop_context);
+
+	vfree(cache_priv);
+}
 
 static int exit_instance_finish(void *data)
 {
@@ -376,6 +379,9 @@ static int exit_instance_finish(void *data)
 	ocf_queue_t mngt_queue;
 	bool flush_status;
 	int result = 0;
+
+	if (kthread_should_stop())
+		return 0;
 
 	flush_status = ocf_mngt_cache_is_dirty(ctx->cache);
 	cache_priv = ocf_cache_get_priv(ctx->cache);
@@ -479,19 +485,12 @@ static void _cache_mngt_cache_stop_complete(ocf_cache_t cache, void *priv,
 
 static int _cache_mngt_cache_stop_sync(ocf_cache_t cache)
 {
+	struct cache_priv *cache_priv;
 	struct _cache_mngt_stop_context *context;
 	int result = 0;
 
-	context = env_malloc(sizeof(*context), GFP_KERNEL);
-	if (!context)
-		return -ENOMEM;
-
-	context->finish_thread = kthread_create(exit_instance_finish, context,
-			"cas_cache_stop_complete");
-	if (!context->finish_thread) {
-		kfree(context);
-		return -ENOMEM;
-	}
+	cache_priv = ocf_cache_get_priv(cache);
+	context = cache_priv->stop_context;
 
 	_cache_mngt_async_context_init(&context->async);
 	context->error = 0;
@@ -1736,6 +1735,21 @@ static int _cache_mngt_cache_priv_init(ocf_cache_t cache)
 			cpus_no * sizeof(*cache_priv->io_queues));
 	if (!cache_priv)
 		return -ENOMEM;
+
+	cache_priv->stop_context =
+		env_malloc(sizeof(*cache_priv->stop_context), GFP_KERNEL);
+	if (!cache_priv->stop_context) {
+		kfree(cache_priv);
+		return -ENOMEM;
+	}
+
+	cache_priv->stop_context->finish_thread = kthread_create(
+			exit_instance_finish, cache_priv->stop_context, "cas_cache_stop_complete");
+	if (!cache_priv->stop_context->finish_thread) {
+		kfree(cache_priv->stop_context);
+		kfree(cache_priv);
+		return -ENOMEM;
+	}
 
 	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
 
