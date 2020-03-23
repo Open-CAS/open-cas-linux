@@ -58,6 +58,7 @@ struct cas_classifier;
 struct cache_priv {
 	uint64_t core_id_bitmap[DIV_ROUND_UP(OCF_CORE_MAX, 8*sizeof(uint64_t))];
 	struct cas_classifier *classifier;
+	struct _cache_mngt_stop_context *stop_context;
 	atomic_t flush_interrupt_enabled;
 	ocf_queue_t mngt_queue;
 	ocf_queue_t io_queues[];
