@@ -2124,7 +2124,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	ocf_cache_t cache;
 	struct cache_priv *cache_priv;
 	ocf_queue_t mngt_queue;
-	int status, flush_status = 0;
+	int status = 0, flush_status = 0;
 
 	status = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
 					name_len, &cache);
@@ -2142,34 +2142,19 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	 * in cache during flush operation which will not be flushed
 	 * this time, so we need to flush cache again after disabling
 	 * exported object. The second flush should be much faster.
-	 */
-	if (flush) {
-		/* Getting cache twice is workaround to make flush error handling easier
-		   and avoid dealing with synchronizing issues */
-		status = ocf_mngt_cache_get(cache);
-		if (status)
-			goto put;
-
-		status = _cache_mngt_read_lock_sync(cache);
-		if (status) {
-			ocf_mngt_cache_put(cache);
-			goto put;
-		}
-
-		status = _cache_mngt_cache_flush_sync(cache, true,
-				_cache_read_unlock_put_cmpl);
-		switch (status) {
-		case -OCF_ERR_CACHE_IN_INCOMPLETE_STATE:
-		case -OCF_ERR_FLUSHING_INTERRUPTED:
-		case -KCAS_ERR_WAITING_INTERRUPTED:
-			goto put;
-		default:
-			flush_status = status;
-			break;
-		}
+	*/
+	if (flush)
+		status = _cache_flush_with_lock(cache);
+	switch (status) {
+	case -OCF_ERR_CACHE_IN_INCOMPLETE_STATE:
+	case -OCF_ERR_FLUSHING_INTERRUPTED:
+	case -KCAS_ERR_WAITING_INTERRUPTED:
+		goto put;
+	default:
+		flush_status = status;
+		break;
 	}
 
-	/* get cache write lock */
 	status = _cache_mngt_lock_sync(cache);
 	if (status)
 		goto put;
