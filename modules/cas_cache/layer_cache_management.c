@@ -2026,6 +2026,26 @@ int cache_mngt_get_seq_cutoff_policy(ocf_core_t core,
 	return result;
 }
 
+static int _cache_flush_with_lock(ocf_cache_t cache)
+{
+	int result = 0;
+
+	result = ocf_mngt_cache_get(cache);
+	if (result)
+		return result;
+
+	result = _cache_mngt_read_lock_sync(cache);
+	if (result) {
+		ocf_mngt_cache_put(cache);
+		return result;
+	}
+
+	result = _cache_mngt_cache_flush_sync(cache, true,
+			_cache_read_unlock_put_cmpl);
+
+	return result;
+}
+
 /**
  * @brief routine implementing dynamic cache mode switching
  * @param cache_name name of cache to which operation applies
@@ -2045,32 +2065,49 @@ int cache_mngt_set_cache_mode(const char *cache_name, size_t name_len,
 	if (result)
 		return result;
 
-	result = _cache_mngt_lock_sync(cache);
-	if (result) {
-		ocf_mngt_cache_put(cache);
-		return result;
+	old_mode = ocf_cache_get_mode(cache);
+	if (old_mode == mode) {
+		printk(KERN_INFO "%s is in requested cache mode already\n", cache_name);
+		result = 0;
+		goto put;
 	}
 
-	old_mode = ocf_cache_get_mode(cache);
+	if (flush) {
+		result = _cache_flush_with_lock(cache);
+		if (result)
+			goto put;
+	}
+
+	result = _cache_mngt_lock_sync(cache);
+	if (result)
+		goto put;
+
+	if (old_mode != ocf_cache_get_mode(cache)) {
+		printk(KERN_WARNING "%s cache mode changed during flush\n",
+				ocf_cache_get_name(cache));
+		goto unlock;
+	}
+
+	if (flush) {
+		result = _cache_mngt_cache_flush_uninterruptible(cache);
+		if (result)
+			goto unlock;
+	}
 
 	result = ocf_mngt_cache_set_mode(cache, mode);
 	if (result)
-		goto out;
-
-	if (flush) {
-		result = _cache_mngt_cache_flush_sync(cache, true, NULL);
-		if (result) {
-			ocf_mngt_cache_set_mode(cache, old_mode);
-			goto out;
-		}
-	}
+		goto unlock;
 
 	result = _cache_mngt_save_sync(cache);
-	if (result)
+	if (result) {
+		printk(KERN_ERR "%s: Failed to save new cache mode. "
+				"Restoring old one!\n", cache_name);
 		ocf_mngt_cache_set_mode(cache, old_mode);
+	}
 
-out:
+unlock:
 	ocf_mngt_cache_unlock(cache);
+put:
 	ocf_mngt_cache_put(cache);
 	return result;
 }
