@@ -245,6 +245,13 @@ static void _cache_mngt_cache_flush_complete(ocf_cache_t cache, void *priv,
 		kfree(context);
 }
 
+/*
+ * Possible return values:
+ * 0 - completion was called and operation succeded
+ * -KCAS_ERR_WAITING_INTERRUPTED - operation was canceled, caller must
+ *		propagate error, completion will be called asynchronously
+ * other values - completion was called and operation failed
+ */
 static int _cache_mngt_cache_flush_sync(ocf_cache_t cache, bool interruption,
 		void (*compl)(ocf_cache_t cache))
 {
@@ -253,8 +260,11 @@ static int _cache_mngt_cache_flush_sync(ocf_cache_t cache, bool interruption,
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 
 	context = kmalloc(sizeof(*context), GFP_KERNEL);
-	if (!context)
+	if (!context) {
+		if (compl)
+			compl(cache);
 		return -ENOMEM;
+	}
 
 	_cache_mngt_async_context_init(context);
 	context->compl_func = compl;
@@ -291,6 +301,13 @@ static void _cache_mngt_core_flush_complete(ocf_core_t core, void *priv,
 		kfree(context);
 }
 
+/*
+ * Possible return values:
+ * 0 - completion was called and operation succeded
+ * -KCAS_ERR_WAITING_INTERRUPTED - operation was canceled, caller must
+ *		propagate error, completion will be called asynchronously
+ * other values - completion was called and operation failed
+ */
 static int _cache_mngt_core_flush_sync(ocf_core_t core, bool interruption,
 		void (*compl)(ocf_cache_t cache))
 {
@@ -300,8 +317,11 @@ static int _cache_mngt_core_flush_sync(ocf_core_t core, bool interruption,
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 
 	context = kmalloc(sizeof(*context), GFP_KERNEL);
-	if (!context)
+	if (!context) {
+		if (compl)
+			compl(cache);
 		return -ENOMEM;
+	}
 
 	_cache_mngt_async_context_init(context);
 	context->compl_func = compl;
