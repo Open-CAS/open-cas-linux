@@ -366,7 +366,6 @@ static void _cache_mngt_cache_priv_deinit(ocf_cache_t cache)
 {
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 
-	kthread_stop(cache_priv->stop_context->finish_thread);
 	kfree(cache_priv->stop_context);
 
 	vfree(cache_priv);
@@ -491,6 +490,12 @@ static int _cache_mngt_cache_stop_sync(ocf_cache_t cache)
 
 	cache_priv = ocf_cache_get_priv(cache);
 	context = cache_priv->stop_context;
+
+	context->finish_thread = kthread_create(
+			exit_instance_finish, cache_priv->stop_context, "cas_%s_stop",
+			ocf_cache_get_name(cache));
+	if (!context->finish_thread)
+		return -ENOMEM;
 
 	_cache_mngt_async_context_init(&context->async);
 	context->error = 0;
@@ -1747,14 +1752,6 @@ static int _cache_mngt_cache_priv_init(ocf_cache_t cache)
 		return -ENOMEM;
 	}
 
-	cache_priv->stop_context->finish_thread = kthread_create(
-			exit_instance_finish, cache_priv->stop_context, "cas_cache_stop_complete");
-	if (!cache_priv->stop_context->finish_thread) {
-		kfree(cache_priv->stop_context);
-		kfree(cache_priv);
-		return -ENOMEM;
-	}
-
 	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
 
 	ocf_cache_set_priv(cache, cache_priv);
@@ -2169,6 +2166,8 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 
 	/* Stop cache device */
 	status = _cache_mngt_cache_stop_sync(cache);
+	if (status == -ENOMEM)
+		goto unlock;
 
 	ocf_queue_put(mngt_queue);
 
