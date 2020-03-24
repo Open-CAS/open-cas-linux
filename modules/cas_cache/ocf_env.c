@@ -34,8 +34,9 @@ static inline size_t env_allocator_align(size_t size)
 }
 
 struct _env_allocator_item {
-	uint32_t from_rpool;
 	uint32_t cpu;
+	uint8_t from_rpool : 1;
+	uint8_t used : 1;
 	char data[];
 };
 
@@ -48,12 +49,14 @@ void *env_allocator_new(env_allocator *allocator)
 	if (item) {
 		memset(item->data, 0, allocator->item_size -
 			sizeof(struct _env_allocator_item));
+		BUG_ON(item->used);
 	} else {
 		item = kmem_cache_zalloc(allocator->kmem_cache, GFP_NOIO);
 	}
 
 	if (item) {
 		item->cpu = cpu;
+		item->used = 1;
 		atomic_inc(&allocator->count);
 		return &item->data;
 	} else {
@@ -61,7 +64,7 @@ void *env_allocator_new(env_allocator *allocator)
 	}
 }
 
-void *env_allocator_new_rpool(void *allocator_ctx, int cpu)
+static void *env_allocator_new_rpool(void *allocator_ctx, int cpu)
 {
 	env_allocator *allocator = (env_allocator*) allocator_ctx;
 	struct _env_allocator_item *item;
@@ -76,9 +79,12 @@ void *env_allocator_new_rpool(void *allocator_ctx, int cpu)
 	return item;
 }
 
-void env_allocator_del_rpool(void *allocator_ctx, void *item)
+static void env_allocator_del_rpool(void *allocator_ctx, void *_item)
 {
+	struct _env_allocator_item *item = _item;
 	env_allocator *allocator = (env_allocator* ) allocator_ctx;
+
+	BUG_ON(item->used);
 
 	kmem_cache_free(allocator->kmem_cache, item);
 }
@@ -174,6 +180,9 @@ void env_allocator_del(env_allocator *allocator, void *obj)
 		container_of(obj, struct _env_allocator_item, data);
 
 	atomic_dec(&allocator->count);
+
+	BUG_ON(!item->used);
+	item->used = 0;
 
 	if (item->from_rpool && !cas_rpool_try_put(allocator->rpool, item,
 			item->cpu)) {
