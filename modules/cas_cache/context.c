@@ -55,7 +55,7 @@ void *_cas_alloc_page_rpool(void *allocator_ctx, int cpu)
 {
 	struct page *page;
 
-	page = alloc_page(GFP_KERNEL);
+	page = alloc_page(GFP_NOIO | __GFP_NORETRY);
 	if (!page)
 		return NULL;
 

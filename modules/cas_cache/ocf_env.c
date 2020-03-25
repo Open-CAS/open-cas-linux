@@ -69,7 +69,7 @@ static void *env_allocator_new_rpool(void *allocator_ctx, int cpu)
 	env_allocator *allocator = (env_allocator*) allocator_ctx;
 	struct _env_allocator_item *item;
 
-	item = kmem_cache_zalloc(allocator->kmem_cache, GFP_KERNEL);
+	item = kmem_cache_zalloc(allocator->kmem_cache, GFP_NOIO | __GFP_NORETRY);
 
 	if (item) {
 		item->from_rpool = 1;
