@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
+PWD:=$(shell pwd)
+
 default: all
 
 DIRS:=modules casadm utils
@@ -12,4 +14,19 @@ DIRS:=modules casadm utils
 all $(MAKECMDGOALS): $(DIRS)
 
 $(DIRS):
+ifneq ($(MAKECMDGOALS),archives)
+ifneq ($(MAKECMDGOALS),rpm)
+ifneq ($(MAKECMDGOALS),srpm)
 	cd $@ && $(MAKE) $(MAKECMDGOALS)
+endif
+endif
+endif
+
+archives:
+	@utils/pckgen $(PWD) tar zip
+
+rpm:
+	@utils/pckgen $(PWD) rpm
+
+srpm:
+	@utils/pckgen $(PWD) srpm

@@ -1,0 +1,144 @@
+#
+# Copyright(c) 2020 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+#
+# This is a base SPEC file for generating OpenCAS RPMs automatically.
+# It contains tags in form of <TAG> which are substituted with particular
+# values in the build time.
+#
+
+
+%define debug_package %{nil}
+%define kver %(uname -r)
+%define kver_filename k%{expand:%(kname="%{kver}"; echo "${kname%.*}" | sed -r "y/-/_/;")}
+
+
+Name:		open-cas-linux
+Version:	<CAS_VERSION>
+Release:	<RPM_RELEASE>
+Summary:	Open Cache Acceleration Software
+Group:		System
+License:	BSD-3-Clause
+URL:		https://open-cas.github.io/
+Source0:	https://github.com/Open-CAS/open-cas-linux/releases/download/v%{version}/%{name}-v%{version}.tar.gz
+BuildRequires:	gcc
+BuildRequires:	kernel-devel
+BuildRequires:	kernel-headers
+BuildRequires:	make
+BuildRequires:	elfutils-libelf-devel
+BuildRequires:	coreutils
+BuildRequires:	gawk
+Requires:	python3
+Requires:	sed
+Requires:   open-cas-linux-modules-%{version}
+%description
+Open Cache Acceleration Software (Open CAS) is an open source project
+encompassing block caching software libraries, adapters, tools and more.
+The main goal of this cache acceleration software is to accelerate a
+backend block device(s) by utilizing a higher performance device(s).
+This package contains tools and utilities for managing CAS and monitor
+running cache instances.
+
+
+%package    modules_%{kver_filename}
+Summary:	Open Cache Acceleration Software kernel modules
+Group:		System
+Requires:	kmod
+Provides:   open-cas-linux-modules-%{version}
+%description    modules_%{kver_filename}
+Open Cache Acceleration Software (Open CAS) is an open source project
+encompassing block caching software libraries, adapters, tools and more.
+The main goal of this cache acceleration software is to accelerate a
+backend block device(s) by utilizing a higher performance device(s).
+This package contains CAS kernel modules.
+
+
+%prep
+%setup -q -n %{name}-v%{version}
+
+
+%build
+./configure
+%make_build
+
+
+%install
+rm -rf $RPM_BUILD_ROOT
+/usr/bin/make install_files DESTDIR=$RPM_BUILD_ROOT
+
+
+%post
+systemctl daemon-reload
+systemctl -q enable open-cas-shutdown
+systemctl -q enable open-cas
+
+%preun
+if [ $1 -eq 0 ]; then
+    systemctl -q disable open-cas-shutdown
+    systemctl -q disable open-cas
+fi
+
+%postun
+if [ $1 -eq 0 ]; then
+    systemctl daemon-reload
+fi
+
+
+%post modules_%{kver_filename}
+ls /lib/modules/%{kver}/extra/cas_disk.ko | weak-modules --no-initramfs --add-modules
+ls /lib/modules/%{kver}/extra/cas_cache.ko | weak-modules --no-initramfs --add-modules
+depmod
+
+%preun modules_%{kver_filename}
+if [ $1 -eq 0 ]; then
+    rmmod cas_cache
+    rmmod cas_disk
+    ls /lib/modules/%{kver}/extra/cas_disk.ko | weak-modules --no-initramfs --remove-modules
+    ls /lib/modules/%{kver}/extra/cas_cache.ko | weak-modules --no-initramfs --remove-modules
+fi
+
+%postun modules_%{kver_filename}
+if [ $1 -eq 0 ]; then
+    depmod
+fi
+
+
+%files
+%defattr(-, root, root)
+%license LICENSE
+%doc README.md
+%dir /etc/opencas/
+%dir /lib/opencas/
+%config /etc/opencas/opencas.conf
+/etc/opencas/ioclass-config.csv
+/lib/opencas/casctl
+/lib/opencas/open-cas-loader
+/lib/opencas/opencas.py
+/lib/udev/rules.d/60-persistent-storage-cas-load.rules
+/lib/udev/rules.d/60-persistent-storage-cas.rules
+/sbin/casadm
+/sbin/casctl
+/usr/lib/systemd/system-shutdown/open-cas.shutdown
+/usr/lib/systemd/system/open-cas-shutdown.service
+/usr/lib/systemd/system/open-cas.service
+/usr/share/man/man5/opencas.conf.5.gz
+/usr/share/man/man8/casadm.8.gz
+/usr/share/man/man8/casctl.8.gz
+%ghost /var/log/opencas.log
+%ghost /lib/opencas/opencas.pyc
+%ghost /lib/opencas/opencas.pyo
+
+%files  modules_%{kver_filename}
+%defattr(-, root, root)
+/lib/modules/%{kver}/extra/cas_cache.ko
+/lib/modules/%{kver}/extra/cas_disk.ko
+
+
+%changelog
+* Tue Feb 25 2020 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.3-1
+- Minor improvements in SPEC file
+- Update files list for releases > 20.1
+* Thu Feb 06 2020 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.1-1
+- Create this SPEC file for OpenCAS release 20.1
