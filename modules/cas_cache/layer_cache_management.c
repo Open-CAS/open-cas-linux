@@ -414,7 +414,6 @@ struct _cache_mngt_attach_context {
 	struct ocf_mngt_cache_device_config *device_cfg;
 	ocf_cache_t cache;
 	int ocf_start_error;
-	struct work_struct work;
 	struct task_struct *rollback_thread;
 
 	struct {
@@ -1675,8 +1674,9 @@ static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv,
 
 static void cache_start_finalize(struct work_struct *work)
 {
-	struct _cache_mngt_attach_context *ctx =
-		container_of(work, struct _cache_mngt_attach_context, work);
+	struct cache_priv *cache_priv =
+		container_of(work, struct cache_priv, start_worker);
+	struct _cache_mngt_attach_context *ctx = cache_priv->attach_context;
 	int result;
 	ocf_cache_t cache = ctx->cache;
 
@@ -1714,6 +1714,7 @@ static void cache_start_finalize(struct work_struct *work)
 static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv, int error)
 {
 	struct _cache_mngt_attach_context *ctx = priv;
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	int caller_status = _cache_mngt_async_callee_peek_result(&ctx->async);
 
 	if (caller_status || error) {
@@ -1730,8 +1731,7 @@ static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv, int error)
 	} else {
 		_cache_mngt_log_cache_device_path(cache, ctx->device_cfg);
 
-		INIT_WORK(&ctx->work, cache_start_finalize);
-		schedule_work(&ctx->work);
+		schedule_work(&cache_priv->start_worker);
 	}
 }
 
@@ -1753,6 +1753,7 @@ static int _cache_mngt_cache_priv_init(ocf_cache_t cache)
 	}
 
 	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
+	INIT_WORK(&cache_priv->start_worker , cache_start_finalize);
 
 	ocf_cache_set_priv(cache, cache_priv);
 
@@ -1879,6 +1880,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		goto err;
 
 	cache_priv = ocf_cache_get_priv(cache);
+	cache_priv->attach_context = context;
 
 	if (load) {
 		ocf_mngt_cache_load(cache, device_cfg,
@@ -1893,6 +1895,9 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 
 	if (result != -KCAS_ERR_WAITING_INTERRUPTED)
 		kfree(context);
+
+	if (!result)
+		cache_priv->attach_context = NULL;
 
 	return result;
 err:
@@ -2096,6 +2101,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 
 	cache_priv = ocf_cache_get_priv(cache);
 	mngt_queue = cache_priv->mngt_queue;
+	cancel_work_sync(&cache_priv->start_worker);
 
 	/*
 	 * Flush cache. Flushing may take a long time, so we allow user
