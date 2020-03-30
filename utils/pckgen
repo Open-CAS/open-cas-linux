@@ -6,7 +6,7 @@
 
 # To make additional packages creation possible
 # through this script all you need to do is:
-# - add 'case' command to set variable 'GENERATE_<NAME>=1'
+# - add 'case' command to set variable GENERATE_<NAME>="generate_<name>"
 # - add function 'generate_<name>' to handle the task
 # - add 'DEPENDENCIES_<NAME>' array if needed
 # - update help!
@@ -30,6 +30,10 @@ SUBMODULES=(
     "ocf"
     "test/functional/test-framework"
 )
+
+# Unset all variables that may be checked for existence:
+unset ${!GENERATE_*} ARCHIVE_PREPARED DEBUG FAILED_DEPS OUTPUT_DIR RPM_BUILT\
+      SOURCES_DIR SUBMODULES_MISSING TAR_CREATED VERSION_ONLY
 
 
 usage() {
@@ -68,7 +72,7 @@ print_help() {
 }
 
 invalid_usage() {
-    >&2 echo -e "$THIS: $*\nTry './$THIS --help' for more information."
+    echo -e "$THIS: $*\nTry './$THIS --help' for more information." >&2
     exit 2
 }
 
@@ -81,7 +85,7 @@ success() {
 }
 
 error() {
-    >&2 echo -e "\e[31mERROR\e[0m: $THIS: $*"
+    echo -e "\e[31mERROR\e[0m: $THIS: $*" >&2
     exit 1
 }
 
@@ -91,14 +95,14 @@ clean() {
         # Print only warning to not confuse the user by an error here
         # if packages were created successfully and everything else
         # went fine except cleaning temp directory at the end.
-        info "WARNING: Cleanup failed"
+        info "WARNING: Cleanup failed" >&2
     fi
 }
 
 clean_all() {
     info "Removing all temp files and dirs that may have been left around..."
-    rm -rf /tmp/${TEMP_TEMPLATE}.*
-    if [[ $(ls -A /tmp/${TEMP_TEMPLATE}.* 2>/dev/null) ]]; then
+    rm -rf "/tmp/${TEMP_TEMPLATE}."*
+    if ls "/tmp/${TEMP_TEMPLATE}."* &>/dev/null; then
         # This function on the other hand is called only by a '-c' option
         # so we may throw an error here and exit.
         error "Cleanup failed"
@@ -108,28 +112,25 @@ clean_all() {
 check_options() {
     if [ ! "$SOURCES_DIR" ]; then
         invalid_usage "No mandatory SOURCES_PATH provided"
-    elif [[ $(head -n 1 "$SOURCES_DIR/README.md" 2> /dev/null) != *Open*CAS*Linux* ]]; then
+    elif [[ $(head -n 1 "$SOURCES_DIR/README.md" 2>/dev/null) != *Open*CAS*Linux* ]]; then
         invalid_usage "'$SOURCES_DIR' does not point to the root directory of CAS sources"
-    elif [ ! "${!GENERATE_*}" ] && [ ! $VERSION_ONLY ]; then
+    elif [ ! "${!GENERATE_*}" ] && [ ! "$VERSION_ONLY" ]; then
         invalid_usage "Nothing to do - no command provided"
     fi
 }
 
 check_version() {
-    cd "$TEMP_DIR"
-    sh "$CAS_VERSION_GEN" > /dev/null
-    if [ ! -f "$CAS_VERSION_GEN_FILE" ]; then
+    (cd "$TEMP_DIR" && sh "$CAS_VERSION_GEN" >/dev/null)
+    if [ ! -f "$TEMP_DIR/$CAS_VERSION_GEN_FILE" ]; then
         error "Couldn't create CAS_VERSION file"
     fi
-    while read -r line; do
+    while IFS= read -r line; do
         case "$line" in
             CAS_VERSION_MAIN*) CAS_VERSION_MAIN="${line##*=}";;
             CAS_VERSION_MAJOR*) CAS_VERSION_MAJOR="${line##*=}";;
             CAS_VERSION_MINOR*) CAS_VERSION_MINOR="${line##*=}";;
         esac
-    done < "$CAS_VERSION_GEN_FILE"
-    rm "$CAS_VERSION_GEN_FILE"
-    cd - > /dev/null
+    done < "$TEMP_DIR/$CAS_VERSION_GEN_FILE"
 
     VERSION_SHORT="${CAS_VERSION_MAIN}.${CAS_VERSION_MAJOR}"
     if [ $CAS_VERSION_MINOR -ne 0 ]; then
@@ -142,7 +143,7 @@ check_version() {
     fi
 
     for SUBMOD in ${SUBMODULES[@]}; do
-        if [[ ! $(ls -A "$SOURCES_DIR/$SUBMOD") ]]; then
+        if ! ls -A "$SOURCES_DIR/$SUBMOD/"* &>/dev/null; then
             local SUBMODULES_MISSING+="'$SUBMOD'\n"
         fi
     done
@@ -151,32 +152,32 @@ check_version() {
     fi
 
     if [ -d "$SOURCES_DIR/.git" ]; then
-        CAS_VERSION_BUILD=$(printf %04d $(git -C "$SOURCES_DIR" log --merges --oneline | wc -l))
-        LAST_COMMIT_HASH=$(git -C "$SOURCES_DIR" log -1 --pretty=format:%H)
-        LAST_COMMIT_HASH_ABBR=$(git -C "$SOURCES_DIR" log -1 --pretty=format:%h)
-        LAST_COMMIT_DATE=$(git -C "$SOURCES_DIR" log -1 --pretty=format:%ci |\
+        CAS_VERSION_BUILD=$(printf %04d $(cd "$SOURCES_DIR" && git log --merges --oneline | wc -l))
+        LAST_COMMIT_HASH=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%H)
+        LAST_COMMIT_HASH_ABBR=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%h)
+        LAST_COMMIT_DATE=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%ci |\
                            sed "s/ /T/" | sed "s/ //" | sed "s/00$/:00/")
-        LAST_COMMIT_TIMESTAMP=$(git -C "$SOURCES_DIR" log -1 --pretty=format:%ct)
+        LAST_COMMIT_TIMESTAMP=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%ct)
         for SUBMOD in ${SUBMODULES[@]}; do
-            LAST_SUB_COMMIT_HASHES+=($(git -C "$SOURCES_DIR/$SUBMOD" log -1 --pretty=format:%H))
-            LAST_SUB_COMMIT_HASHES_ABBR+=($(git -C "$SOURCES_DIR/$SUBMOD" log -1 --pretty=format:%h))
+            LAST_SUB_COMMIT_HASHES+=($(cd "$SOURCES_DIR/$SUBMOD" && git log -1 --pretty=format:%H))
+            LAST_SUB_COMMIT_HASHES_ABBR+=($(cd "$SOURCES_DIR/$SUBMOD" && git log -1 --pretty=format:%h))
         done
+
+        if [ $(cd "$SOURCES_DIR" && git tag --points-at HEAD) ]; then
+            CAS_RELEASE="release"
+        elif [ $(cd "$SOURCES_DIR" && git log -1 --pretty=format:%H)\
+               == $(cd "$SOURCES_DIR" && git log -1 --merges --pretty=format:%H) ]; then
+            CAS_RELEASE="master"
+        else
+            CAS_RELEASE="devel.${LAST_COMMIT_TIMESTAMP}"
+        fi
     elif [ -f "$VERSION_FILE" ]; then
-        source "$VERSION_FILE" &> /dev/null
+        source "$VERSION_FILE" &>/dev/null
     else
         error "Couldn't obtain CAS version - no git tree nor version file within given sources"
     fi
 
     VERSION="${CAS_VERSION_MAIN}.${CAS_VERSION_MAJOR}.${CAS_VERSION_MINOR}.${CAS_VERSION_BUILD}"
-
-    if [ $(git -C "$SOURCES_DIR" tag --points-at HEAD) ]; then
-        RELEASE="release"
-    elif [ $(git -C "$SOURCES_DIR" log -1 --pretty=format:%H)\
-           == $(git -C "$SOURCES_DIR" log -1 --merges --pretty=format:%H) ]; then
-        RELEASE="master"
-    else
-        RELEASE="devel.${LAST_COMMIT_TIMESTAMP}"
-    fi
 }
 
 check_dependencies() {
@@ -186,8 +187,7 @@ check_dependencies() {
         DEPENDENCIES+=(${!DEP_NAME})
     done
     for DEP in ${DEPENDENCIES[@]}; do
-        which $DEP &> /dev/null
-        if [ $? -ne 0 ]; then
+        if ! which $DEP &>/dev/null; then
             local FAILED_DEPS+="$DEP "
         fi
     done
@@ -214,8 +214,7 @@ create_temp() {
 create_version_file() {
     echo "--- Creating version file"
     mkdir -p $(dirname "$VERSION_FILE")
-    touch "$VERSION_FILE"
-    if [ $? -ne 0 ]; then
+    if ! touch "$VERSION_FILE"; then
         error "Couldn't create version file"
     fi
 
@@ -227,6 +226,7 @@ create_version_file() {
     echo "CAS_VERSION_MAJOR=$CAS_VERSION_MAJOR" >> "$VERSION_FILE"
     echo "CAS_VERSION_MINOR=$CAS_VERSION_MINOR" >> "$VERSION_FILE"
     echo "CAS_VERSION_BUILD=$CAS_VERSION_BUILD" >> "$VERSION_FILE"
+    echo "CAS_RELEASE=$CAS_RELEASE" >> "$VERSION_FILE"
     echo "LAST_COMMIT_HASH=$LAST_COMMIT_HASH" >> "$VERSION_FILE"
     echo "LAST_COMMIT_HASH_ABBR=$LAST_COMMIT_HASH_ABBR" >> "$VERSION_FILE"
     echo "LAST_COMMIT_DATE=$LAST_COMMIT_DATE" >> "$VERSION_FILE"
@@ -236,7 +236,7 @@ create_version_file() {
 }
 
 archive_prepare() {
-    if [ $ARCHIVE_PREPARED ]; then
+    if [ "$ARCHIVE_PREPARED" ]; then
         return 0
     fi
 
@@ -244,14 +244,13 @@ archive_prepare() {
     local TEMP_SOURCES_DIR="$TEMP_DIR/$CAS_FILENAME"
     rm -rf "$TEMP_SOURCES_DIR"
     mkdir -p "$TEMP_SOURCES_DIR"
-    rsync -a --exclude="/packages" --exclude=".git*" --exclude=".pep8speaks.yml"\
-        "$SOURCES_DIR/" "$TEMP_SOURCES_DIR"
+    rsync -a --exclude={/packages,.git*,.pep8speaks.yml} "$SOURCES_DIR/" "$TEMP_SOURCES_DIR"
 
-    ARCHIVE_PREPARED=1
+    ARCHIVE_PREPARED="archive_prepared"
 }
 
 generate_tar() {
-    if [ ! $TAR_CREATED ]; then
+    if [ ! "$TAR_CREATED" ]; then
         archive_prepare
         echo "--- Creating tar archive from current sources"
         tar -C "$TEMP_DIR" -zcf "$TEMP_DIR/$SOURCES_TAR_NAME" "$CAS_FILENAME"
@@ -260,7 +259,7 @@ generate_tar() {
             error "Couldn't create tar archive"
         fi
 
-        TAR_CREATED=1
+        TAR_CREATED="tar_created"
     fi
 
     if [ "$1" != "temp" ]; then
@@ -280,8 +279,7 @@ generate_zip() {
 
 rpm_create_tree() {
     echo "--- Creating directory tree for building RPMs"
-    mkdir -p "$RPM_BUILD_DIR/BUILD" "$RPM_BUILD_DIR/RPMS" "$RPM_BUILD_DIR/SOURCES"\
-             "$RPM_BUILD_DIR/SPECS" "$RPM_BUILD_DIR/SRPMS"
+    mkdir -p "$RPM_BUILD_DIR/"{BUILD,RPMS,SOURCES,SPECS,SRPMS}
     if [ $? -ne 0 ] || [ ! -w "$RPM_BUILD_DIR" ]; then
         error "Couldn't create directory tree for building RPMs"
     fi
@@ -305,8 +303,8 @@ rpm_spec_prepare() {
 
     cp -v "$BASE_SPEC" "$RPM_SPECS_DIR/$NAME.spec"
     sed -i "s/<CAS_VERSION>/$VERSION/g" "$RPM_SPECS_DIR/$NAME.spec"
-    sed -i "s/<RPM_RELEASE>/$RELEASE/g" "$RPM_SPECS_DIR/$NAME.spec"
-    if [ $DEBUG ]; then
+    sed -i "s/<RPM_RELEASE>/$CAS_RELEASE/g" "$RPM_SPECS_DIR/$NAME.spec"
+    if [ "$DEBUG" ]; then
         echo "---   Debug RPMs will be built as well"
         sed -i "s/%define debug_package %{nil}//g" "$RPM_SPECS_DIR/$NAME.spec"
     fi
@@ -317,7 +315,7 @@ rpm_spec_prepare() {
 }
 
 generate_rpm() {
-    if [ $RPM_BUILT ]; then
+    if [ "$RPM_BUILT" ]; then
         return 0
     fi
 
@@ -325,7 +323,7 @@ generate_rpm() {
     rpm_obtain_sources
     rpm_spec_prepare
 
-    if [ ! $GENERATE_SRPM ] && [ $GENERATE_RPM ]; then
+    if [ ! "$GENERATE_SRPM" ] && [ "$GENERATE_RPM" ]; then
         echo "--- Building binary RPM packages"
         (HOME="$TEMP_DIR"; rpmbuild -bb "$RPM_SPECS_DIR/$NAME.spec")
         if [ $? -ne 0 ]; then
@@ -333,7 +331,7 @@ generate_rpm() {
         fi
         mv -t "$OUTPUT_DIR" "$RPM_RPMS_DIR/$ARCH"/*
     fi
-    if [ $GENERATE_SRPM ] && [ ! $GENERATE_RPM ]; then
+    if [ "$GENERATE_SRPM" ] && [ ! "$GENERATE_RPM" ]; then
         echo "--- Building source SRPM package"
         (HOME="$TEMP_DIR"; rpmbuild -bs "$RPM_SPECS_DIR/$NAME.spec")
         if [ $? -ne 0 ]; then
@@ -341,7 +339,7 @@ generate_rpm() {
         fi
         mv -t "$OUTPUT_DIR" "$RPM_SRPMS_DIR"/*
     fi
-    if [ $GENERATE_SRPM ] && [ $GENERATE_RPM ]; then
+    if [ "$GENERATE_SRPM" ] && [ "$GENERATE_RPM" ]; then
         echo "--- Building source and binary RPM packages"
         (HOME="$TEMP_DIR"; rpmbuild -ba "$RPM_SPECS_DIR/$NAME.spec")
         if [ $? -ne 0 ]; then
@@ -351,7 +349,7 @@ generate_rpm() {
         mv -t "$OUTPUT_DIR" "$RPM_RPMS_DIR/$ARCH"/*
     fi
 
-    RPM_BUILT=1
+    RPM_BUILT="rpm_built"
 }
 
 generate_srpm() {
@@ -366,30 +364,29 @@ fi
 while (( $# )); do
     case "$1" in
         tar)
-            GENERATE_TAR=1
+            GENERATE_TAR="generate_tar"
             ;;
         zip)
-            GENERATE_ZIP=1
+            GENERATE_ZIP="generate_zip"
             ;;
         rpm)
-            GENERATE_RPM=1
+            GENERATE_RPM="generate_rpm"
             ;;
         srpm)
-            GENERATE_SRPM=1
+            GENERATE_SRPM="generate_srpm"
             ;;
         version-only)
-            VERSION_ONLY=1
+            VERSION_ONLY="version_only"
             ;;
         --output-dir|-o)
             OUTPUT_DIR="$2"
-            dirname $OUTPUT_DIR &> /dev/null
-            if [ $? -ne 0 ]; then
+            if ! dirname $OUTPUT_DIR &>/dev/null; then
                 invalid_usage "no output directory given after the '--output-dir' option"
             fi
             shift
             ;;
         --debug|-d)
-            DEBUG=1
+            DEBUG="debug"
             ;;
         --clean|-c)
             clean_all
@@ -446,9 +443,9 @@ SOURCES_ZIP_NAME="$CAS_FILENAME.zip"
 # Run the package generator script
 #
 
-info "\n=== Running OpenCAS '$VERSION-$RELEASE' package generator ===\n"
+info "\n=== Running OpenCAS '$VERSION-$CAS_RELEASE' package generator ===\n"
 
-if [ $VERSION_ONLY ]; then
+if [ "$VERSION_ONLY" ]; then
     create_version_file
     exit 0
 fi
