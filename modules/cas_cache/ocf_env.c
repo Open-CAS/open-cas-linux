@@ -34,10 +34,10 @@ static inline size_t env_allocator_align(size_t size)
 }
 
 struct _env_allocator_item {
-	uint32_t cpu;
-	uint8_t from_rpool : 1;
-	uint8_t used : 1;
-	char data[];
+	uint32_t cpu : order_base_2(NR_CPUS);
+	uint32_t from_rpool : 1;
+	uint32_t used : 1;
+	char data[] __attribute__ ((aligned (__alignof__(uint64_t))));
 };
 
 void *env_allocator_new(env_allocator *allocator)
