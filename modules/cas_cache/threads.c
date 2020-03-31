@@ -49,12 +49,9 @@ static int _cas_io_queue_thread(void *data)
 	WARN(ocf_queue_pending_io(q), "Still pending IO requests\n");
 
 	/* If we get here, then thread was signalled to terminate.
-	 * So, let's free memory and exit.
+	 * So, let's complete and exit.
 	 */
-	wait_for_completion(&info->compl);
-	printk(KERN_DEBUG "Thread %s stopped\n", info->name);
-	kfree(info);
-	module_put_and_exit(0);
+	complete_and_exit(&info->compl, 0);
 
 	return 0;
 }
@@ -113,9 +110,7 @@ static int _cas_cleaner_thread(void *data)
 		}
 	} while (true);
 
-	wait_for_completion(&info->compl);
-	kfree(info);
-	module_put_and_exit(0);
+	complete_and_exit(&info->compl, 0);
 
 	return 0;
 }
@@ -147,9 +142,7 @@ static int _cas_metadata_updater_thread(void *data)
 				atomic_read(&info->kicked));
 	} while (true);
 
-	wait_for_completion(&info->compl);
-	kfree(info);
-	module_put_and_exit(0);
+	complete_and_exit(&info->compl, 0);
 
 	return 0;
 }
@@ -183,8 +176,6 @@ static int _cas_create_thread(struct cas_thread_info **pinfo,
 	}
 	info->thread = thread;
 
-	BUG_ON(!try_module_get(THIS_MODULE));
-
 	/* Affinitize thread to core */
 	if (cpu != CAS_CPUS_ALL)
 		kthread_bind(thread, cpu);
@@ -210,8 +201,10 @@ static void _cas_stop_thread(struct cas_thread_info *info)
 		reinit_completion(&info->compl);
 		atomic_set(&info->stop, 1);
 		wake_up(&info->wq);
-		complete(&info->compl);
+		wait_for_completion(&info->compl);
+		printk(KERN_DEBUG "Thread %s stopped\n", info->name);
 	}
+	kfree(info);
 }
 
 int cas_create_queue_thread(ocf_queue_t q, int cpu)
