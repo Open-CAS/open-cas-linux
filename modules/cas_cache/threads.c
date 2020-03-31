@@ -49,10 +49,9 @@ static int _cas_io_queue_thread(void *data)
 	WARN(ocf_queue_pending_io(q), "Still pending IO requests\n");
 
 	/* If we get here, then thread was signalled to terminate.
-	 * So, let's free memory and exit.
+	 * So, let's complete and exit.
 	 */
-	printk(KERN_DEBUG "Thread %s stopped\n", info->name);
-	kfree(info);
+	complete_and_exit(&info->compl, 0);
 
 	return 0;
 }
@@ -199,9 +198,13 @@ static void _cas_start_thread(struct cas_thread_info *info)
 static void _cas_stop_thread(struct cas_thread_info *info)
 {
 	if (info && info->thread) {
+		reinit_completion(&info->compl);
 		atomic_set(&info->stop, 1);
 		wake_up(&info->wq);
+		wait_for_completion(&info->compl);
+		printk(KERN_DEBUG "Thread %s stopped\n", info->name);
 	}
+	kfree(info);
 }
 
 int cas_create_queue_thread(ocf_queue_t q, int cpu)
