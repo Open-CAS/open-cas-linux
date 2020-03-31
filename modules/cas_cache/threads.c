@@ -51,10 +51,8 @@ static int _cas_io_queue_thread(void *data)
 	/* If we get here, then thread was signalled to terminate.
 	 * So, let's free memory and exit.
 	 */
-	wait_for_completion(&info->compl);
 	printk(KERN_DEBUG "Thread %s stopped\n", info->name);
 	kfree(info);
-	do_exit(0);
 
 	return 0;
 }
@@ -113,9 +111,7 @@ static int _cas_cleaner_thread(void *data)
 		}
 	} while (true);
 
-	wait_for_completion(&info->compl);
-	kfree(info);
-	do_exit(0);
+	complete_and_exit(&info->compl, 0);
 
 	return 0;
 }
@@ -147,9 +143,7 @@ static int _cas_metadata_updater_thread(void *data)
 				atomic_read(&info->kicked));
 	} while (true);
 
-	wait_for_completion(&info->compl);
-	kfree(info);
-	do_exit(0);
+	complete_and_exit(&info->compl, 0);
 
 	return 0;
 }
@@ -205,10 +199,8 @@ static void _cas_start_thread(struct cas_thread_info *info)
 static void _cas_stop_thread(struct cas_thread_info *info)
 {
 	if (info && info->thread) {
-		reinit_completion(&info->compl);
 		atomic_set(&info->stop, 1);
 		wake_up(&info->wq);
-		complete(&info->compl);
 	}
 }
 
