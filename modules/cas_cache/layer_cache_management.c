@@ -1326,10 +1326,10 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 		mark_core_id_free(cache, cmd->core_id);
 	}
 
+unlock:
 	if (!result && prepare_result)
 		result = prepare_result;
 
-unlock:
 	ocf_mngt_cache_unlock(cache);
 put:
 	ocf_mngt_cache_put(cache);
