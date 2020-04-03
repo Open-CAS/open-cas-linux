@@ -109,6 +109,10 @@ struct {
 		"Flushing of core interrupted"
 	},
 	{
+		OCF_ERR_FLUSH_IN_PROGRESS,
+		"Another flush operation in progress"
+	},
+	{
 		OCF_ERR_CANNOT_ADD_CORE_TO_POOL,
 		"Error occurred during adding core device to core pool"
 	},
