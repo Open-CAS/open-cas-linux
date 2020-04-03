@@ -13,7 +13,7 @@
 
 
 NAME="open-cas-linux"
-SUPPORTED_FROM_VERSION="20.3"
+SUPPORTED_FROM_VERSION="20.03"
 THIS="$(basename $0)"
 ARCH="$(uname -i)"
 SCRIPT_BASE_DIR="$(dirname $(realpath $0))"
@@ -127,7 +127,7 @@ check_version() {
     while IFS= read -r line; do
         case "$line" in
             CAS_VERSION_MAIN*) CAS_VERSION_MAIN="${line##*=}";;
-            CAS_VERSION_MAJOR*) CAS_VERSION_MAJOR="${line##*=}";;
+            CAS_VERSION_MAJOR*) CAS_VERSION_MAJOR="$(printf %02d ${line##*=})";;
             CAS_VERSION_MINOR*) CAS_VERSION_MINOR="${line##*=}";;
         esac
     done < "$TEMP_DIR/$CAS_VERSION_GEN_FILE"
