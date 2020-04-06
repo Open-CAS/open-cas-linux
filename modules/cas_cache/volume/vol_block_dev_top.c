@@ -900,27 +900,27 @@ int block_dev_create_all_exported_objects(ocf_cache_t cache)
 
 int block_dev_destroy_exported_object(ocf_core_t core)
 {
-	int ret = 0;
+	int result = 0;
 	ocf_volume_t obj = ocf_core_get_volume(core);
 	struct bd_object *bvol = bd_object(obj);
 
 	if (!bvol->expobj_valid)
 		return 0;
 
-	ret = casdisk_functions.casdsk_exp_obj_lock(bvol->dsk);
-	if (ret) {
-		if (-EBUSY == ret)
-			ret = -KCAS_ERR_DEV_PENDING;
-		return ret;
+	result = casdisk_functions.casdsk_exp_obj_lock(bvol->dsk);
+	if (result) {
+		if (EBUSY == abs(result))
+			result = -KCAS_ERR_DEV_PENDING;
+		return result;
 	}
 
-	ret = casdisk_functions.casdsk_exp_obj_destroy(bvol->dsk);
+	result = casdisk_functions.casdsk_exp_obj_destroy(bvol->dsk);
 	casdisk_functions.casdsk_exp_obj_unlock(bvol->dsk);
 
-	if (!ret)
+	if (!result)
 		bvol->expobj_valid = false;
 
-	return ret;
+	return result;
 }
 
 static int _block_dev_lock_exported_object(ocf_core_t core, void *cntx)
