@@ -5,7 +5,7 @@
 
 import pytest
 import subprocess
-import mock
+import unittest.mock as mock
 
 from opencas import casadm
 from helpers import get_process_mock

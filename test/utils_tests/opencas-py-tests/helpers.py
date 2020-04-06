@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
-import mock
+import unittest.mock as mock
 import re
 import os
 from io import StringIO
