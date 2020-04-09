@@ -469,12 +469,23 @@ int run_ioctl_interruptible(int fd, int command, void *cmd,
 }
 
 /*
- * @brief ioctl wrapper that retries ioctl attempts within one second timeouts
+ * @brief ioctl wrapper
  * @param[in] fd as for IOCTL(2)
  * @param[in] command as for IOCTL(2)
  * @param[inout] cmd_info as for IOCTL(2)
  */
 int run_ioctl(int fd, int command, void *cmd)
+{
+	return ioctl(fd, command, cmd);
+}
+
+/*
+ * @brief ioctl wrapper that retries ioctl attempts within one second timeouts
+ * @param[in] fd as for IOCTL(2)
+ * @param[in] command as for IOCTL(2)
+ * @param[inout] cmd_info as for IOCTL(2)
+ */
+int run_ioctl_retry(int fd, int command, void *cmd)
 {
 	int i, ret;
 	struct timespec timeout = {
