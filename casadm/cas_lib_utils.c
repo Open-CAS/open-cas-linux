@@ -433,9 +433,10 @@ void *print_command_progress(void *th_arg)
  * Catch SIGINT signal.
  * @param friendly_name name of management operation that shall
  * be displayed in command prompt
+ * @param retry decide if ioctl attepmts should retry
  */
-int run_ioctl_interruptible(int fd, int command, void *cmd,
-		char *friendly_name, int cache_id, int core_id)
+static int run_ioctl_interruptible_retry_option(int fd, int command, void *cmd,
+		char *friendly_name, int cache_id, int core_id, bool retry)
 {
 	pthread_t thread;
 	int ioctl_res;
@@ -472,6 +473,33 @@ int run_ioctl_interruptible(int fd, int command, void *cmd,
 	pthread_join(thread, 0);
 
 	return ioctl_res;
+}
+
+/*
+ * Run ioctl in a way that displays progressbar (if flushing operation takes longer)
+ * Catch SIGINT signal.
+ * @param friendly_name name of management operation that shall
+ * be displayed in command prompt
+ */
+int run_ioctl_interruptible(int fd, int command, void *cmd,
+		char *friendly_name, int cache_id, int core_id)
+{
+	return run_ioctl_interruptible_retry_option(fd, command, cmd, friendly_name, 
+				cache_id, core_id, false);
+}
+
+/*
+ * Run ioctl in a way that displays progressbar (if flushing operation 
+ * takes longer) with retries.
+ * Catch SIGINT signal.
+ * @param friendly_name name of management operation that shall
+ * be displayed in command prompt
+ */
+int run_ioctl_interruptible_retry(int fd, int command, void *cmd,
+		char *friendly_name, int cache_id, int core_id)
+{
+	return run_ioctl_interruptible_retry_option(fd, command, cmd, friendly_name, 
+				cache_id, core_id, true);
 }
 
 /*
