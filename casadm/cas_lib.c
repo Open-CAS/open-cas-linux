@@ -940,7 +940,7 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	cmd.line_size = line_size;
 	cmd.force = (uint8_t)force;
 
-	if (run_ioctl_interruptible(fd, KCAS_IOCTL_START_CACHE, &cmd,
+	if (run_ioctl_interruptible_retry(fd, KCAS_IOCTL_START_CACHE, &cmd,
 			"Starting cache", cache_id, OCF_CORE_ID_INVALID) < 0) {
 		close(fd);
 		if (cmd.ext_err_code == OCF_ERR_NO_FREE_RAM) {
@@ -1035,7 +1035,7 @@ int stop_cache(uint16_t cache_id, int flush)
 	cmd.cache_id = cache_id;
 	cmd.flush_data = flush;
 
-	if(run_ioctl_interruptible(fd, KCAS_IOCTL_STOP_CACHE, &cmd, "Stopping cache",
+	if(run_ioctl_interruptible_retry(fd, KCAS_IOCTL_STOP_CACHE, &cmd, "Stopping cache",
 			cache_id, OCF_CORE_ID_INVALID) < 0) {
 		close(fd);
 		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
@@ -1122,7 +1122,7 @@ int set_cache_mode(unsigned int cache_mode, unsigned int cache_id, int flush)
 	cmd.caching_mode = cache_mode;
 	cmd.flush_data = flush;
 
-	if (run_ioctl_interruptible(fd, KCAS_IOCTL_SET_CACHE_STATE, &cmd, "Setting mode",
+	if (run_ioctl_interruptible_retry(fd, KCAS_IOCTL_SET_CACHE_STATE, &cmd, "Setting mode",
 			cache_id, OCF_CORE_ID_INVALID) < 0) {
 		close(fd);
 		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
@@ -1951,7 +1951,7 @@ int flush_cache(unsigned int cache_id)
 	memset(&cmd, 0, sizeof(cmd));
 	cmd.cache_id = cache_id;
 	/* synchronous flag */
-	if (run_ioctl_interruptible(fd, KCAS_IOCTL_FLUSH_CACHE, &cmd, "Flushing cache",
+	if (run_ioctl_interruptible_retry(fd, KCAS_IOCTL_FLUSH_CACHE, &cmd, "Flushing cache",
 			cache_id, OCF_CORE_ID_INVALID) < 0) {
 		close(fd);
 		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
@@ -2004,7 +2004,7 @@ int flush_core(unsigned int cache_id, unsigned int core_id)
 		return FAILURE;
 
 	/* synchronous flag */
-	if (run_ioctl_interruptible(fd, KCAS_IOCTL_FLUSH_CORE, &cmd, "Flushing core", cache_id, core_id) < 0) {
+	if (run_ioctl_interruptible_retry(fd, KCAS_IOCTL_FLUSH_CORE, &cmd, "Flushing core", cache_id, core_id) < 0) {
 		close(fd);
 		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
 			cas_printf(LOG_ERR, DIRTY_FLUSHING_WARNING);

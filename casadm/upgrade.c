@@ -23,7 +23,7 @@ int upgrade_start()
 		return -1;
 	}
 
-	if (run_ioctl_interruptible(fd, KCAS_IOCTL_UPGRADE, &cmd_info,
+	if (run_ioctl_interruptible_retry(fd, KCAS_IOCTL_UPGRADE, &cmd_info,
 				    "Starting upgrade", 0, OCF_CORE_ID_INVALID) < 0) {
 		close(fd);
 		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd_info.ext_err_code) {
