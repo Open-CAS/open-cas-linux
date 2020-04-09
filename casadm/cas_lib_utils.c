@@ -457,7 +457,13 @@ int run_ioctl_interruptible(int fd, int command, void *cmd,
 	pthread_sigmask(SIG_BLOCK, &sigset, NULL);
 
 	pthread_create(&thread, 0, print_command_progress, &ps);
-	ioctl_res = run_ioctl(fd, command, cmd);
+
+	if (retry) {
+		ioctl_res = run_ioctl_retry(fd, command, cmd);
+	} else {
+		ioctl_res = run_ioctl(fd, command, cmd);
+	}
+	
 	if (!interrupted) {
 		close(fdspipe[1]);
 	}
