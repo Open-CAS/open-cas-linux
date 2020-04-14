@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
+SOURCES_DIR="$(pwd)/.."
 VER_FILE=CAS_VERSION
 
 if [ -f ${VER_FILE} ]; then
@@ -26,6 +27,79 @@ CAS_VERSION=$(printf "%02d.%02d.%02d.%s" $CAS_VERSION_MAIN $CAS_VERSION_MAJOR \
 echo "CAS_VERSION_MAIN=${CAS_VERSION_MAIN}" >> ${VER_FILE}
 echo "CAS_VERSION_MAJOR=${CAS_VERSION_MAJOR}" >> ${VER_FILE}
 echo "CAS_VERSION_MINOR=${CAS_VERSION_MINOR}" >> ${VER_FILE}
+echo "CAS_VERSION=${CAS_VERSION}" >> ${VER_FILE}
+
+cat ${VER_FILE}
+
+if [ ! -f "$VER_FILE" ]; then
+    echo -e "Couldn't create CAS_VERSION file"
+fi
+while IFS= read -r line; do
+    case "$line" in
+        CAS_VERSION_MAIN*) CAS_VERSION_MAIN="${line##*=}";;
+        CAS_VERSION_MAJOR*) CAS_VERSION_MAJOR="$(printf %02d ${line##*=})";;
+        CAS_VERSION_MINOR*) CAS_VERSION_MINOR="$(printf %02d ${line##*=})";;
+    esac
+done < "$VER_FILE"
+
+VERSION_SHORT="${CAS_VERSION_MAIN}.${CAS_VERSION_MAJOR}"
+if [ $CAS_VERSION_MINOR -ne 0 ]; then
+    VERSION_SHORT+=".${CAS_VERSION_MINOR}"
+fi
+if [[ "$VERSION_SHORT" < "$SUPPORTED_FROM_VERSION" ]]; then
+    echo "Sorry... this version of $NAME ($VERSION_SHORT) is not supported"\
+            "by $THIS. Use $NAME >= $SUPPORTED_FROM_VERSION"
+    exit 1
+fi
+
+for SUBMOD in ${SUBMODULES[@]}; do
+    if ! ls -A "$SOURCES_DIR/$SUBMOD/"* &>/dev/null; then
+        local SUBMODULES_MISSING+="'$SUBMOD'\n"
+    fi
+done
+if [ "$SUBMODULES_MISSING" ]; then
+    echo -e "There are missing submodules:\n${SUBMODULES_MISSING}\nUpdate submodules and try again!"
+fi
+
+if [ -d "$SOURCES_DIR/.git" ]; then
+    CAS_VERSION_BUILD=$(printf %06d $(cd "$SOURCES_DIR" && git log --merges --oneline | wc -l))
+    LAST_COMMIT_HASH=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%H)
+    LAST_COMMIT_HASH_ABBR=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%h)
+    LAST_COMMIT_DATE=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%ci |\
+                        sed "s/ /T/" | sed "s/ //" | sed "s/00$/:00/")
+    LAST_COMMIT_TIMESTAMP=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%ct)
+    for SUBMOD in ${SUBMODULES[@]}; do
+        LAST_SUB_COMMIT_HASHES+=($(cd "$SOURCES_DIR/$SUBMOD" && git log -1 --pretty=format:%H))
+        LAST_SUB_COMMIT_HASHES_ABBR+=($(cd "$SOURCES_DIR/$SUBMOD" && git log -1 --pretty=format:%h))
+    done
+
+    if [ $(cd "$SOURCES_DIR" && git tag --points-at HEAD) ]; then
+        CAS_RELEASE="release"
+    elif [ $(cd "$SOURCES_DIR" && git log -1 --pretty=format:%H)\
+            == $(cd "$SOURCES_DIR" && git log -1 --merges --pretty=format:%H) ]; then
+        CAS_RELEASE="master"
+    else
+        CAS_RELEASE="devel.${LAST_COMMIT_TIMESTAMP}"
+    fi
+elif [ -f "$VERSION_FILE" ]; then
+    source "$VERSION_FILE" &>/dev/null
+else
+    echo -e "Couldn't obtain CAS version - no git tree nor version file within given sources"
+fi
+
+CAS_VERSION="${CAS_VERSION_MAIN}.${CAS_VERSION_MAJOR}.${CAS_VERSION_MINOR}.${CAS_VERSION_BUILD}"
+
+touch ${VER_FILE}
+
+CREATION_DATE=$(date --iso-8601=seconds)
+CREATION_TIMESTAMP=$(date +%s)
+echo "CREATION_DATE=${CREATION_DATE}" > "${VER_FILE}"
+echo "CREATION_TIMESTAMP=${CREATION_TIMESTAMP}" >> "${VER_FILE}"
+echo "CAS_VERSION_MAIN=${CAS_VERSION_MAIN}" >> "${VER_FILE}"
+echo "CAS_VERSION_MAJOR=${CAS_VERSION_MAJOR}" >> "${VER_FILE}"
+echo "CAS_VERSION_MINOR=${CAS_VERSION_MINOR}" >> "${VER_FILE}"
+echo "CAS_VERSION_BUILD=${CAS_VERSION_BUILD}" >> "${VER_FILE}"
+echo "CAS_RELEASE=${CAS_RELEASE}" >> "${VER_FILE}"
 echo "CAS_VERSION=${CAS_VERSION}" >> ${VER_FILE}
 
 cat ${VER_FILE}
