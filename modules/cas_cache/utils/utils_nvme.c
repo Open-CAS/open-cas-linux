@@ -12,6 +12,7 @@
 #include <linux/ioctl.h>
 #include <linux/file.h>
 
+#define NVME_FORMAT_TIMEOUT 600000
 
 int cas_nvme_get_nsid(struct block_device *bdev, unsigned int *nsid)
 {
@@ -153,7 +154,7 @@ static int _cas_nvme_format_bdev(struct block_device *bdev, unsigned int nsid,
 	cmd.opcode = nvme_admin_format_nvm;
 	cmd.nsid = nsid;
 	cmd.cdw10 = lbaf | ms<<4;
-	cmd.timeout_ms = 1200000;
+	cmd.timeout_ms = NVME_FORMAT_TIMEOUT;
 	return ioctl_by_bdev(bdev, NVME_IOCTL_ADMIN_CMD, (unsigned long)&cmd);
 }
 
@@ -193,7 +194,7 @@ static int _cas_nvme_format_controller(struct file *character_device_file,
 	cmd.opcode = nvme_admin_format_nvm;
 	cmd.nsid = 0xFFFFFFFF;
 	cmd.cdw10 = lbaf | sbnsupp << 4;
-	cmd.timeout_ms = 120000;
+	cmd.timeout_ms = NVME_FORMAT_TIMEOUT;
 	cmd.addr = 0;
 
 	set_fs(KERNEL_DS);
