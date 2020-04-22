@@ -14,7 +14,7 @@ fi
 echo -e "No ${VER_FILE} found. Preparing default version file.\n"
 
 CAS_VERSION_MAIN=20
-CAS_VERSION_MAJOR=3
+CAS_VERSION_MAJOR=6
 CAS_VERSION_MINOR=0
 CAS_BUILD_NO=0000`date +%m%d`
 
