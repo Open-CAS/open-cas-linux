@@ -104,4 +104,6 @@ int cache_mngt_set_cache_params(struct kcas_set_cache_param *info);
 
 int cache_mngt_get_cache_params(struct kcas_get_cache_param *info);
 
+int cache_mngt_zero_metadata(struct kcas_zero_cache *cmd_info);
+
 #endif

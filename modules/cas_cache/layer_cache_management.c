@@ -2662,3 +2662,8 @@ int cache_mngt_get_cache_params(struct kcas_get_cache_param *info)
 	ocf_mngt_cache_put(cache);
 	return result;
 }
+
+int cache_mngt_zero_metadata(struct kcas_zero_cache *cmd_info){
+	return 0;
+
+}

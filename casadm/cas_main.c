@@ -1916,6 +1916,73 @@ void io_class_help(app *app_values, cli_command *cmd)
 
 static int handle_help();
 
+struct {
+	const char *device;
+	uint8_t force;
+	uint16_t cache_id;
+} static zero_params = {
+	.device = "",
+	.force = 0,
+	.cache_id = 0
+};
+
+static cli_option zero_options[] = {
+	{'d', "device", "Path to device on which metadata would be cleared", 1, "DEVICE", CLI_OPTION_REQUIRED},
+	{'f', "force", "Force the purgation of cache's metadata"},
+	{'i', "cache id", "Identifier of cache instance\n\trequired only when used with 'force'", 1, "ID", CLI_OPTION_OPTIONAL_ARG},
+	{0}
+};
+
+/* Parser of option for zeroing metadata command */
+int zero_handle_option(char *opt, const char **arg)
+{
+	if (!strcmp(opt, "force")) {
+		zero_params.force = 1;
+
+	} else if (!strcmp(opt, "device")) {
+		if(validate_device_name(arg[0]) == FAILURE)
+			return FAILURE;
+		zero_params.device = arg[0];
+
+			// only if the 'force' flag is in use, we're interested in the cache id
+	} else if (zero_params.force == 1 && !strcmp(opt, "cache-id")) {
+		if (validate_str_num(arg[0], "cache id", OCF_CACHE_ID_MIN,
+				OCF_CACHE_ID_MAX) == FAILURE)
+			return FAILURE;
+		zero_params.cache_id = atoi(arg[0]);
+
+	} else {
+		return FAILURE;
+	}
+
+	return 0;
+}
+
+int handle_zero()
+{
+	int cache_device = 0;
+
+	cache_device = open(zero_params.device, O_RDONLY);
+
+	if (cache_device < 0) {
+		cas_printf(LOG_ERR, "Couldn't open cache device %s.\n", zero_params.device);
+		return FAILURE;
+	}
+
+	if (close(cache_device) < 0) {
+		cas_printf(LOG_ERR, "Couldn't close the cache device.\n");
+		return FAILURE;
+	}
+
+	if (zero_params.force) {
+		if (!zero_params.cache_id > 0) {
+			return FAILURE;
+		}
+	} 
+
+	return zero_cache(zero_params.device, zero_params.force, zero_params.cache_id);
+}
+
 static cli_command cas_commands[] = {
 		{
 			.name = "start-cache",
@@ -2101,6 +2168,16 @@ static cli_command cas_commands[] = {
 			.command_handle_opts = NULL,
 			.flags = 0,
 			.handle = handle_help,
+			.help = NULL
+		},
+		{
+			.name = "zero-metadata",
+			.desc = "Clear metadata from caching device",
+			.long_desc = NULL,
+			.options = zero_options,
+			.command_handle_opts = zero_handle_option,
+			.handle = handle_zero,
+			.flags = CLI_SU_REQUIRED,
 			.help = NULL
 		},
 		{

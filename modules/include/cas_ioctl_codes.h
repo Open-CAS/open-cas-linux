@@ -375,6 +375,14 @@ struct kcas_get_cache_param {
 	int ext_err_code;
 };
 
+struct kcas_zero_cache {
+	char device_path_name[MAX_STR_LEN]; /**< path to device with metadata to clear */
+	uint16_t force : 1; /**< should force option be used? */
+	uint16_t cache_id : 15; /**< id of cache to be stopped */
+
+	int ext_err_code;
+};
+
 /*******************************************************************************
  *   CODE   *              NAME             *               STATUS             *
  *******************************************************************************
@@ -410,6 +418,7 @@ struct kcas_get_cache_param {
  *    32    *    KCAS_IOCTL_SET_CACHE_PARAM                 *    OK            *
  *    33    *    KCAS_IOCTL_GET_CACHE_PARAM                 *    OK            *
  *    34    *    KCAS_IOCTL_GET_STATS                       *    OK            *
+ *    35    *    KCAS_IOCTL_ZERO_CACHE                      *    OK            *
  *******************************************************************************
  */
 
@@ -499,6 +508,9 @@ struct kcas_get_cache_param {
 
 /** Get stats of particular OCF object */
 #define KCAS_IOCTL_GET_STATS _IOR(KCAS_IOCTL_MAGIC, 34, struct kcas_get_stats)
+
+/** Get stats of particular OCF object */
+#define KCAS_IOCTL_ZERO_CACHE _IOR(KCAS_IOCTL_MAGIC, 35, struct kcas_zero_cache)
 
 /**
  * Extended kernel CAS error codes

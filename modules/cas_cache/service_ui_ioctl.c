@@ -388,6 +388,17 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
 
+	case KCAS_IOCTL_ZERO_CACHE: {
+		int retval;
+		struct kcas_zero_cache *cmd_info;
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		retval = cache_mngt_zero_metadata(cmd_info);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+
 	default:
 		return -EINVAL;
 	}

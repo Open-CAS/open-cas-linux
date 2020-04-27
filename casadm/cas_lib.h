@@ -265,6 +265,16 @@ int validate_str_output_format(const char* s);
 int validate_str_metadata_mode(const char* s);
 
 /**
+ * @brief zero metadata
+ *
+ * @param[in] cache_device device to which zeroing cache's metadata applies
+ * @param[in] force force flag
+ * @param[in] cache_id cache to which metadata zeroing applies
+ * @return 0 if succeed, 1 if failed
+ */
+int zero_cache(const char *cache_device, uint8_t force, uint16_t cache_id);
+
+/**
  * @brief calculate flush progress
  *
  * @param[in] dirty number of dirty blocks

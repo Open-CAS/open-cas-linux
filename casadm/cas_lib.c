@@ -2880,3 +2880,47 @@ int check_cache_device(const char *device_path)
 
 	return SUCCESS;
 }
+
+int zero_cache(const char *cache_device, uint8_t force, uint16_t cache_id){
+	struct kcas_zero_cache cmd;
+	int fd = 0;
+
+	/* check if cache device given exists */
+	fd = open(cache_device, 0);
+	if (fd < 0) {
+		cas_printf(LOG_ERR, "Device %s not found.\n", cache_device);
+		return FAILURE;
+	}
+	close(fd);
+
+	/* don't even attempt ioctl if cache is in use */
+	if (check_cache_already_added(cache_device) == FAILURE && !force) {
+		cas_printf(LOG_ERR, "Cache device '%s' is already used as cache.\n"
+				"Use 'force' flag if You're pretty sure You want to stop cache and clear metadata.\n",
+				cache_device);
+		return FAILURE;
+	}
+
+	memset(&cmd, 0, sizeof(cmd));
+
+	strncpy_s(cmd.device_path_name,
+		sizeof(cmd.device_path_name),
+		cache_device,
+		strnlen_s(cache_device,
+			sizeof(cmd.device_path_name)));
+	cmd.force = force;
+	cmd.cache_id = cache_id;
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	if(run_ioctl(fd, KCAS_IOCTL_ZERO_CACHE, &cmd) < 0) {
+		close(fd);
+		cas_printf(LOG_ERR, "Error while wiping out metadata on device %s\n", cache_device);
+		print_err(cmd.ext_err_code);
+		return FAILURE;
+	}
+	close(fd);
+	return SUCCESS;
+}
