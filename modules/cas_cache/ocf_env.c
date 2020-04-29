@@ -266,7 +266,7 @@ void env_sort(void *base, size_t num, size_t size,
 
 	/* heapify */
 	for ( ; i >= 0; i -= size) {
-		for (r = i; r * 2 + size < n; r  = c) {
+		for (r = i; r * 2 + size < n; r = c) {
 			c = r * 2 + size;
 			if (c < n - size &&
 				cmp_fn(base + c, base + c + size) < 0)
@@ -275,6 +275,7 @@ void env_sort(void *base, size_t num, size_t size,
 				break;
 			swap_fn(base + r, base + c, size);
 		}
+		env_cond_resched();
 	}
 
 	/* sort */
@@ -289,5 +290,6 @@ void env_sort(void *base, size_t num, size_t size,
 				break;
 			swap_fn(base + r, base + c, size);
 		}
+		env_cond_resched();
 	}
 }
