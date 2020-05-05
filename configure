@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright(c) 2012-2019 Intel Corporation
+# Copyright(c) 2012-2020 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
@@ -25,6 +25,24 @@ check_util make
 check_util gcc
 check_util lsblk
 
+SCRIPTPATH=`dirname $0`
+SCRIPTPATH=`realpath $SCRIPTPATH`
+SUBMODULES=(
+	"ocf"
+	"test/functional/test-framework"
+)
+
+for SUBMOD in ${SUBMODULES[@]}; do
+	if ! ls -A "$SCRIPTPATH/$SUBMOD/"* &>/dev/null; then
+		SUBMODULES_MISSING+="'$SUBMOD' "
+	fi
+done
+if [ "$SUBMODULES_MISSING" ]; then
+	echo "Error: missing submodules: ${SUBMODULES_MISSING}" >&2
+	echo "Please run 'git submodule update --init' and try again!" >&2
+	MISSING_TOOLS=1
+fi
+
 if [ ! -e /lib/modules/$(uname -r)/build/ &> /dev/null ]
 then
 	echo >&2 "Error: missing kernel headers and/or kernel devel"
@@ -42,9 +60,6 @@ if [ "$MISSING_TOOLS" -ne "0" ]
 then
 	exit 1
 fi
-
-SCRIPTPATH=`dirname $0`
-SCRIPTPATH=`realpath $SCRIPTPATH`
 
 CONFIG_FILES=`ls $SCRIPTPATH/configure.d/*.conf | sort`
 FILES_COUNT=`echo $CONFIG_FILES | wc -w`
