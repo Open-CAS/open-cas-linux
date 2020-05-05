@@ -15,6 +15,7 @@ from test_utils.output import CmdException
 from test_utils.size import Size, Unit
 
 cache_size = Size(2, Unit.GibiByte)
+caches_number = 3
 
 
 @pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
@@ -118,3 +119,76 @@ def test_concurrent_cores_flush(cache_mode):
 
     with TestRun.step("Stop cache."):
         cache.stop()
+
+
+@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_concurrent_caches_flush(cache_mode):
+    """
+        title: Success to flush two caches simultaneously.
+        description: |
+          CAS should successfully flush multiple caches if there is already other flush in progress.
+        pass_criteria:
+          - No system crash.
+          - Flush for each cache should finish successfully.
+    """
+    with TestRun.step("Prepare caches and cores."):
+        cache_dev = TestRun.disks['cache']
+        cache_dev.create_partitions([cache_size] * caches_number)
+        core_dev = TestRun.disks['core']
+        core_dev.create_partitions([cache_size * 2] * caches_number)
+
+    with TestRun.step(f"Start {caches_number} caches."):
+        caches = []
+        for part in cache_dev.partitions:
+            caches.append(casadm.start_cache(part, cache_mode, force=True))
+
+    with TestRun.step("Disable cleaning and sequential cutoff."):
+        for cache in caches:
+            cache.set_cleaning_policy(CleaningPolicy.nop)
+            cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+
+    with TestRun.step(f"Add core devices to caches."):
+        cores = []
+        for i, cache in enumerate(caches):
+            cores.append(cache.add_core(core_dev.partitions[i]))
+
+    with TestRun.step("Run workload on each OpenCAS device."):
+        # Each cache has one core fully saturated with dirty blocks.
+        block_size = Size(4, Unit.MebiByte)
+        count = int(cache_size.value / block_size.value)
+        total_saturation = block_size * count
+        for core in cores:
+            Dd().output(core.system_path) \
+                .input("/dev/urandom") \
+                .block_size(block_size) \
+                .count(count) \
+                .run()
+
+    with TestRun.step("Check if each cache is full of dirty blocks."):
+        for cache in caches:
+            if not int(cache.get_dirty_blocks()) != total_saturation.get_value(Unit.Blocks4096):
+                TestRun.fail(f"The cache {cache.cache_id} does not contain dirty blocks.")
+
+    with TestRun.step("Start flushing all caches simultaneously."):
+        flush_pids = []
+        for cache in caches:
+            flush_pids.append(
+                TestRun.executor.run_in_background(cli.flush_cache_cmd(str(cache.cache_id)))
+            )
+
+    with TestRun.step("Wait for all caches to finish flushing."):
+        is_flushing = [True] * len(flush_pids)
+        while any(is_flushing):
+            for i, pid in enumerate(flush_pids):
+                is_flushing[i] = (TestRun.executor.run(f"ls /proc/{pid}").exit_code == 0)
+
+    with TestRun.step("Check number of dirty data on each cache."):
+        for cache in caches:
+            if int(cache.get_dirty_blocks()) > 0:
+                TestRun.LOGGER.error(f"The quantity of dirty cache lines on the cache "
+                                     f"{str(cache.cache_id)} after complete flush should be zero.")
+
+    with TestRun.step("Stop all caches."):
+        casadm.stop_all_caches()
