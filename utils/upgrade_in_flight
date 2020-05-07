@@ -1,0 +1,415 @@
+#!/bin/bash
+#
+# Copyright(c) 2020 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause-Clear
+#
+
+
+THIS=$(basename "$0")
+CAS_NAME="open-cas-linux"
+UPGRADED_MODULE="cas_cache"
+DEPENDENCIES=(realpath basename dirname uname lsmod rmmod modprobe mktemp md5sum)
+SCRIPT_BASE_DIR=$(dirname $(realpath "$0"))
+CAS_SOURCES_DIR=$(realpath "$SCRIPT_BASE_DIR/..")
+PCKGEN="$CAS_SOURCES_DIR/utils/pckgen"
+TEMP_TEMPLATE="opencas-${THIS}"
+SYS_INFO="/etc/os-release"
+
+unset MAKE_PACKAGE FORCE FAIL_REASON FILE_FAIL_REASON RPM_DB_FAIL_REASON FILES_SECTION
+
+
+usage() {
+    echo "Usage:"
+    echo "  ./$THIS [options] [CAS_PACKAGE ... ]"
+}
+
+print_help() {
+    echo "OpenCAS upgrade in flight"
+    echo "$(usage)"
+    echo
+    echo "This script performs an upgrade in flight for OpenCAS packages. It must be"
+    echo "run with root privileges in order to upgrade system state."
+    echo "If no packages were given, they will be built based on OpenCAS sources"
+    echo "$THIS were run from."
+    echo
+    echo "Options:"
+    echo "  -f, --force         perform an upgrade in flight even if there are no"
+    echo "                      running caches"
+    echo "  -c, --clean         clean all temporary files and folders that may have"
+    echo "                      been left around if $THIS ended unexpectedly"
+    echo "                      in the previous run"
+    echo "  -h, --help          print this help message"
+    echo
+}
+
+info() {
+    echo -e "\e[33m$*\e[0m"
+}
+
+success() {
+    echo -e "\n\e[32m=== ALL DONE ===\e[0m\n\nYour OpenCAS version is now"\
+            "$($INST_VERSION_COMMAND "$CAS_NAME")-$($INST_RELEASE_COMMAND "$CAS_NAME")\n"
+}
+
+warning() {
+    echo -e "\e[33mWARNING\e[0m: $*" >&2
+}
+
+error() {
+    echo -e "\e[31mERROR\e[0m: $THIS: $*" >&2
+
+    exit 1
+}
+
+invalid_usage() {
+    echo -e "$THIS: $*\nTry './$THIS --help' for more information." >&2
+
+    exit 2
+}
+
+cleanup() {
+    rm -rf "$TEMP_DIR"
+    if [ -d "$TEMP_DIR" ]; then
+        warning "cleanup failed"
+    fi
+}
+
+cleanup_all() {
+    info "Removing all temp files and dirs that may have been left around..."
+    rm -rf "/tmp/${TEMP_TEMPLATE}."*
+    if ls "/tmp/${TEMP_TEMPLATE}."* &>/dev/null; then
+        error "cleanup failed"
+    fi
+}
+
+create_temp() {
+    TEMP_DIR=$(mktemp -d -t ${TEMP_TEMPLATE}.XXXXXXXXXX)
+    if [[ $? -ne 0 ]]; then
+        error "couldn't create temporary directory"
+    fi
+}
+
+check_packages() {
+    echo "--- Checking packages"
+
+    for PCKG in ${PACKAGE[@]}; do
+        PACKAGE_NAME+=($($PACKAGE_NAME_COMMAND "$PCKG"))
+        if [[ ${#PACKAGE_NAME[@]} -eq 0 ]]; then
+            error "given files are not OpenCAS packages"
+        elif [[ ! "${PACKAGE_NAME[-1]}" =~ ^${CAS_NAME} ]]; then
+            error "given files are not OpenCAS packages"
+        fi
+        PACKAGE_VERSION+=($($PACKAGE_VERSION_COMMAND "$PCKG"))
+        PACKAGE_RELEASE+=($($PACKAGE_RELEASE_COMMAND "$PCKG"))
+    done
+
+    for VERSION in ${PACKAGE_VERSION[@]:1}; do
+        if [[ "$VERSION" != "${PACKAGE_VERSION[0]}" ]]; then
+            error "packages versions mismatch"
+        fi
+    done
+
+    for RELEASE in ${PACKAGE_RELEASE[@]:1}; do
+        if [[ "$RELEASE" != "${PACKAGE_RELEASE[0]}" ]]; then
+            error "packages versions mismatch"
+        fi
+    done
+}
+
+check_dependencies() {
+    echo "--- Checking for dependencies"
+
+    for DEP in ${DEPENDENCIES[@]}; do
+        if ! which $DEP &>/dev/null; then
+            local FAILED_DEPS+="$DEP "
+        fi
+    done
+
+    if [ "$FAILED_DEPS" ]; then
+        error "missing dependencies - you need to provide these programs first: $FAILED_DEPS"
+    fi
+}
+
+check_installed() {
+    echo "--- Looking for installed OpenCAS packages"
+
+    if ! $LIST_INST_COMMAND | grep $CAS_NAME &>/dev/null; then
+        error "OpenCAS is not installed - nothing to upgrade"
+    fi
+
+    INSTALLED_VERSION=$($INST_VERSION_COMMAND "$CAS_NAME")
+    INSTALLED_RELEASE=$($INST_RELEASE_COMMAND "$CAS_NAME")
+    UPGRADE_VERSION=${PACKAGE_VERSION[0]}
+    UPGRADE_RELEASE=${PACKAGE_RELEASE[0]}
+    if [[ "$INSTALLED_VERSION" > "$UPGRADE_VERSION" ]]; then
+        error "installed OpenCAS version is greater then the upgrade"
+    fi
+}
+
+backup_installed() {
+    echo "--- Making a backup of installed OpenCAS"
+
+    CAS_BACKUP="$TEMP_DIR/cas_backup"
+
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^%files ]]; then
+            local FILES_SECTION="files_section"
+        fi
+        if [[ "$line" == "" ]]; then
+            local FILES_SECTION=
+        fi
+        if [[ "$FILES_SECTION" ]] && [[ ! "$line" =~ ^%files|^%defattr|^%dir|^%ghost ]]; then
+            if [[ "$line" =~ ^%doc ]]; then
+                if [[ -d "/usr/share/doc/${CAS_NAME}-${INSTALLED_VERSION}" ]]; then
+                    local FILE="/usr/share/doc/${CAS_NAME}-${INSTALLED_VERSION}/${line#* }"
+                elif [[ -d "/usr/share/doc/${CAS_NAME}" ]]; then
+                    local FILE="/usr/share/doc/${CAS_NAME}/${line#* }"
+                else
+                    continue
+                fi
+            elif [[ "$line" =~ ^%license ]]; then
+                if [[ -d "/usr/share/licenses/${CAS_NAME}-${INSTALLED_VERSION}" ]]; then
+                    local FILE="/usr/share/licenses/${CAS_NAME}-${INSTALLED_VERSION}/${line#* }"
+                elif [[ -d "/usr/share/licenses/${CAS_NAME}" ]]; then
+                    local FILE="/usr/share/licenses/${CAS_NAME}/${line#* }"
+                else
+                    continue
+                fi
+            elif [[ "$line" =~ ^% ]]; then
+                local FILE="${line#* }"
+            else
+                local FILE="$line"
+            fi
+            if [[ "$FILE" =~ %\{kver\}.*ko ]]; then
+                FILE="${FILE/\%\{kver\}/$(uname -r)}"
+                MODULES+=("$FILE")
+                if [[ ! -f "$FILE" && -f "${FILE/extra/weak-updates}" ]]; then
+                    FILE="${FILE/extra/weak-updates}"
+                fi
+            fi
+
+            mkdir -p $CAS_BACKUP/$(dirname "$FILE")
+            cp --preserve=all -L "$FILE" "$CAS_BACKUP/$FILE"
+            if [[ "$FILE" =~ weak-updates.*ko ]]; then
+                    FILE="${FILE/weak-updates/extra}"
+                    mkdir -p $CAS_BACKUP/$(dirname "$FILE")
+                    cp --preserve=all "$CAS_BACKUP/${FILE/extra/weak-updates}" "$CAS_BACKUP/$FILE"
+                    rm -rf $(dirname "$CAS_BACKUP/${FILE/extra/weak-updates}")
+            fi
+
+            if [[ ! -f "$CAS_BACKUP/$FILE" ]];then
+                error "couldn't make a backup of $FILE"
+            fi
+        fi
+    done < "$RPM_SPEC"
+}
+
+restore_backup() {
+    echo "--- Restoring backup"
+
+    for FILE in $(find "$CAS_BACKUP" -type f -print); do
+        FILE="${FILE/${CAS_BACKUP}}"
+        mkdir -p $(dirname "$FILE")
+        cp --preserve=all "$CAS_BACKUP/$FILE" "$FILE"
+        if [[ $? -ne 0 ]]; then
+            local FILE_FAIL_REASON="couldn't restore file $FILE"
+            warning "$FILE_FAIL_REASON"
+            cp --preserve=all "$CAS_BACKUP/$FILE"\
+               "$FILE.backup-$INSTALLED_VERSION-$INSTALLED_RELEASE"
+            if [[ $? -ne 0 ]]; then
+                echo "Couldn't create backup copy in"\
+                     "$FILE.backup-$INSTALLED_VERSION-$INSTALLED_RELEASE for manual restore"
+            else
+                echo "Backed up copy was saved to"\
+                     "$FILE.backup-$INSTALLED_VERSION-$INSTALLED_RELEASE for manual restore"
+            fi
+        fi
+    done
+
+    modprobe "$UPGRADED_MODULE"
+
+    # Run weak-modules twice as there might be some modules dependent on other modules
+    for i in {1..2}; do
+        for MODULE in ${MODULES[@]}; do
+            echo "$MODULE" | weak-modules --no-initramfs --add-modules
+        done
+    done
+
+    # Try to load module again in case it interferes somehow with weak-modules update
+    modprobe "$UPGRADED_MODULE"
+
+    local BACKUP_VERSION=$INSTALLED_VERSION
+    # In order to cheat RPM database, we need to restore release name with the exact same length
+    if [[ "${#INSTALLED_RELEASE}" -gt "${#PACKAGE_RELEASE[0]}" ]]; then
+        local BACKUP_RELEASE=${INSTALLED_RELEASE::${#PACKAGE_RELEASE[0]}}
+    else
+        local BACKUP_RELEASE=$INSTALLED_RELEASE
+        while [[ "${#BACKUP_RELEASE}" -lt "${#PACKAGE_RELEASE[0]}" ]]; do
+            BACKUP_RELEASE=${BACKUP_RELEASE}_
+        done
+    fi
+    # Let's mark backed up release name with something like '_B' at the end
+    # just as an indicator that this is a restored backup
+    BACKUP_RELEASE=${BACKUP_RELEASE::-2}; BACKUP_RELEASE=${BACKUP_RELEASE}_B
+
+    cp --preserve=all "$RPM_DB/Packages" "$TEMP_DIR"
+    local ORYG_RPM_DB_MD5=$(md5sum -b "$RPM_DB/Packages"); ORYG_RPM_DB_MD5=${ORYG_RPM_DB_MD5%% *}
+    local BCKP_RPM_DB_MD5=$(md5sum -b "$TEMP_DIR/Packages"); BCKP_RPM_DB_MD5=${BCKP_RPM_DB_MD5%% *}
+    if [[ "$ORYG_RPM_DB_MD5" != "$BCKP_RPM_DB_MD5" ]]; then
+        local RPM_DB_FAIL_REASON="couldn't make a copy of RPM database"
+        warning "$RPM_DB_FAIL_REASON"
+    else
+        sed -i "/${CAS_NAME}/ s/${PACKAGE_VERSION[0]}/${BACKUP_VERSION}/g" "$RPM_DB/Packages"
+        sed -i "/${CAS_NAME}/ s/${PACKAGE_RELEASE[0]}/${BACKUP_RELEASE}/g" "$RPM_DB/Packages"
+        if ! $RPM_DB_VERIFY_TOOL "$RPM_DB/Packages" &>/dev/null ||\
+           [[ "$(rpm -qa 2>&1 >/dev/null)" ]]; then
+            local RPM_DB_FAIL_REASON="couldn't update RPM database"
+            warning "$RPM_DB_FAIL_REASON"
+            cp --preserve=all "$TEMP_DIR/Packages" "$RPM_DB"
+        fi
+        rpm --rebuilddb
+    fi
+
+    echo
+    warning "Upgrade in flight failed because we $1 and OpenCAS was restored to the"\
+            "version before the upgrade ($INSTALLED_VERSION-$INSTALLED_RELEASE)"
+    if [[ "$FILE_FAIL_REASON" ]]; then
+        echo "But we couldn't restore all files to their previous versions"
+    fi
+    if [[ "$RPM_DB_FAIL_REASON" ]]; then
+        echo "Also we $RPM_DB_FAIL_REASON, so version of OpenCAS visible"\
+             "for the system will be the one from the attempted upgrade"\
+             "(${PACKAGE_VERSION[0]}-${PACKAGE_RELEASE[0]})" >&2
+    fi
+    echo
+
+    exit 1
+}
+
+make_package() {
+    echo "--- Making packages"
+
+    mkdir -p "$TEMP_DIR/packages"
+    $PCKGEN $PACKAGE_TYPE --output-dir "$TEMP_DIR/packages" "$CAS_SOURCES_DIR" >/dev/null
+    if [[ $? -ne 0 ]] || ! ls -A "$TEMP_DIR/packages/"* &>/dev/null; then
+        error "couldn't create OpenCAS packages"
+    fi
+    echo
+
+    for PCKG in $(find "$TEMP_DIR/packages" -type f -print | grep ${CAS_NAME}.*${PACKAGE_TYPE}$); do
+        PACKAGE+=($PCKG)
+    done
+}
+
+upgrade_package() {
+    echo "--- Upgrading OpenCAS"
+
+    $UPGRADE_COMMAND "${PACKAGE[@]}"
+    if [[ $? -ne 0 ]]; then
+        local FAIL_REASON="couldn't upgrade packages"
+        warning "$FAIL_REASON"
+        restore_backup "$FAIL_REASON"
+    fi
+}
+
+reload_module() {
+    echo "--- Reloading module"
+
+    casadm --script --upgrade-in-flight
+
+    rmmod "$UPGRADED_MODULE"
+    if lsmod | grep ^${UPGRADED_MODULE} &>/dev/null; then
+        local FAIL_REASON="couldn't unload $UPGRADED_MODULE module"
+        warning "$FAIL_REASON"
+        restore_backup "$FAIL_REASON"
+    fi
+    modprobe "$UPGRADED_MODULE"
+    if [[ $? -ne 0 ]] || ! lsmod | grep ^${UPGRADED_MODULE} &>/dev/null; then
+        local FAIL_REASON="couldn't load new $UPGRADED_MODULE module"
+        warning "$FAIL_REASON"
+        restore_backup "$FAIL_REASON"
+    fi
+}
+
+restore_on_interrupt() {
+    local FAIL_REASON="received an interruption signal"
+    warning "$FAIL_REASON"
+    restore_backup "$FAIL_REASON"
+}
+
+
+[[ $EUID == 0 || "$1" =~ ^-h$|^--help$ ]] || invalid_usage "you must be root to run this script"
+
+source $SYS_INFO
+if [[ "$ID_LIKE" =~ fedora|rhel ]]; then
+    PACKAGE_TYPE="rpm"
+    RPM_SPEC="$CAS_SOURCES_DIR/utils/$CAS_NAME.spec.base"
+    RPM_DB="/var/lib/rpm"
+    RPM_DB_VERIFY_TOOL="/usr/lib/rpm/rpmdb_verify"
+    DEPENDENCIES+=(rpm $RPM_DB_VERIFY_TOOL)
+    PACKAGE_NAME_COMMAND='rpm -qp --qf %{NAME}'
+    INST_VERSION_COMMAND='rpm -q --qf %{VERSION}'
+    PACKAGE_VERSION_COMMAND='rpm -qp --qf %{VERSION}'
+    INST_RELEASE_COMMAND='rpm -q --qf %{RELEASE}'
+    PACKAGE_RELEASE_COMMAND='rpm -qp --qf %{RELEASE}'
+    LIST_INST_COMMAND='rpm -qa'
+    UPGRADE_COMMAND='rpm -Uvh --replacepkgs'
+    PACKAGE_COUNT=$(grep -c ^%package "$RPM_SPEC"); ((PACKAGE_COUNT++))
+else
+    invalid_usage "unsupported system - only RPM based systems"\
+                  "are supported by this script at the moment"
+fi
+
+while (( $# )); do
+    case "$1" in
+        --force|-f)
+            FORCE="force"
+            ;;
+        --clean|-c)
+            cleanup_all
+            exit 0
+            ;;
+        --help|-h)
+            print_help
+            exit 0
+            ;;
+        *)
+            if [[ -f "$1" && ${#PACKAGE[@]} -lt "$PACKAGE_COUNT" ]]; then
+                PACKAGE+=("$1")
+            else
+                invalid_usage "option '$1' not recognized"
+            fi
+            ;;
+    esac
+    shift
+done
+
+[[ ${#PACKAGE[@]} -eq 0 ]] && MAKE_PACKAGE="make_pckg"
+
+[[ "$MAKE_PACKAGE" || ${#PACKAGE[@]} -eq $PACKAGE_COUNT ]] ||\
+    invalid_usage "you need to provide complete set of OpenCAS packages for the upgrade"
+
+[[ "$(casadm -L 2>/dev/null)" =~ No.caches.running|Error.getting.caches.list && ! "$FORCE" ]] &&\
+    invalid_usage "Seems like no caches are running - you can upgrade OpenCAS normally."\
+                  "If you would like to upgrade in flight anyway, add --force option."
+
+
+info "\n=== Running OpenCAS upgrade in flight for ${PACKAGE_TYPE^^} ===\n"
+
+check_dependencies
+trap cleanup EXIT
+create_temp
+[[ "$MAKE_PACKAGE" ]] && make_package
+check_packages
+check_installed
+backup_installed
+
+info "\n--- OpenCAS $INSTALLED_VERSION-$INSTALLED_RELEASE will be upgraded to"\
+     "version $UPGRADE_VERSION-$UPGRADE_RELEASE"
+read -p "Continue? (y/N): " confirm && [[ "$confirm" == [yY] ]] || exit 1
+echo
+
+trap restore_on_interrupt 1 2 3 6 9 15
+upgrade_package
+reload_module
+success
