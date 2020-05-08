@@ -220,6 +220,8 @@ int get_core_pool_count(int fd);
 
 int reset_counters(unsigned int cache_id, unsigned int core_id);
 
+int purge_cache(unsigned int cache_id);
+
 int flush_cache(unsigned int cache_id);
 int flush_core(unsigned int cache_id, unsigned int core_id);
 

@@ -82,6 +82,8 @@ int cache_mngt_flush_object(const char *cache_name, size_t cache_name_len,
 
 int cache_mngt_flush_device(const char *cache_name, size_t name_len);
 
+int cache_mngt_purge_device(const char *cache_name, size_t name_len);
+
 int cache_mngt_list_caches(struct kcas_cache_list *list);
 
 int cache_mngt_interrupt_flushing(const char *cache_name, size_t name_len);
