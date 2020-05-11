@@ -79,6 +79,20 @@ def try_add(core_device: Device, cache_id: int):
     return Core(core_device.system_path, cache_id)
 
 
+def purge_cache(cache_id: int):
+    output = TestRun.executor.run(script_purge_cache(str(cache_id)))
+    if output.exit_code != 0:
+        raise CmdException("Purge cache failed.", output)
+    return output
+
+
+def purge_core(cache_id: int, core_id: int):
+    output = TestRun.executor.run(script_purge_core(str(cache_id), str(core_id)))
+    if output.exit_code != 0:
+        raise CmdException("Purge core failed.", output)
+    return output
+
+
 def reset_counters(cache_id: int, core_id: int = None, shortcut: bool = False):
     _core_id = None if core_id is None else str(core_id)
     output = TestRun.executor.run(
