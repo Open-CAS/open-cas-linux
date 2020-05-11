@@ -1967,6 +1967,29 @@ int flush_cache(unsigned int cache_id)
 	return SUCCESS;
 }
 
+int purge_core(unsigned int cache_id, unsigned int core_id)
+{
+	int fd = 0;
+	struct kcas_flush_core cmd;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.cache_id = cache_id;
+	cmd.core_id = core_id;
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	/* synchronous flag */
+	if (run_ioctl_interruptible(fd, KCAS_IOCTL_PURGE_CORE, &cmd, "Purging core", cache_id, core_id) < 0) {
+		close(fd);
+		print_err(cmd.ext_err_code);
+		return FAILURE;
+	}
+	close(fd);
+	return SUCCESS;
+}
+
 int flush_core(unsigned int cache_id, unsigned int core_id)
 {
 	int fd = 0;

@@ -77,6 +77,9 @@ int cache_mngt_get_seq_cutoff_policy(ocf_core_t core,
 int cache_mngt_set_cache_mode(const char *cache_name, size_t name_len,
 			ocf_cache_mode_t mode, uint8_t flush);
 
+int cache_mngt_purge_object(const char *cache_name, size_t cache_name_len,
+			const char *core_name, size_t core_name_len);
+
 int cache_mngt_flush_object(const char *cache_name, size_t cache_name_len,
 			const char *core_name, size_t core_name_len);
 
