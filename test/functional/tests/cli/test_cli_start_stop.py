@@ -6,7 +6,8 @@
 
 import pytest
 
-from api.cas import casadm, casadm_parser
+from api.cas import casadm, casadm_parser, cli_messages
+from api.cas.cli import start_cmd
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.size import Unit, Size
@@ -80,3 +81,32 @@ def test_cli_add_remove_default_value(shortcut):
         TestRun.fail("No cache should be present after stopping the cache")
     if output.stdout != "No caches running":
         TestRun.fail(f"Invalid message, expected 'No caches running', got {output.stdout}")
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+def test_cli_load_and_force():
+    """
+        title: Test if it is possible to use start command with 'load' and 'force' flag at once
+        description: |
+          Try to start cache with 'load' and 'force' options at the same time
+          and check if it is not possible to do
+        pass_criteria:
+          - Start cache command with both 'force' and 'load' options should fail
+          - Proper message should be received
+    """
+    with TestRun.step("Prepare cache."):
+        cache_device = TestRun.disks['cache']
+        cache_device.create_partitions([Size(50, Unit.MebiByte)])
+        cache_device = cache_device.partitions[0]
+        cache = casadm.start_cache(cache_device)
+
+    with TestRun.step("Stop cache."):
+        cache.stop()
+
+    with TestRun.step("Try to load cache with 'force'."):
+        output = TestRun.executor.run(
+            start_cmd(cache_dev=cache_device.system_path, force=True, load=True)
+        )
+        if output.exit_code == 0:
+            TestRun.fail("Loading cache with 'force' option should fail.")
+        cli_messages.check_stderr_msg(output, cli_messages.load_and_force)
