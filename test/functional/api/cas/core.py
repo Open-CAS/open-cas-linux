@@ -111,6 +111,10 @@ class Core(Device):
         sync()
         assert self.get_dirty_blocks().get_value(Unit.Blocks4096) == 0
 
+    def purge_core(self):
+        casadm.purge_core(self.cache_id, self.core_id)
+        sync()
+
     def set_seq_cutoff_parameters(self, seq_cutoff_param: SeqCutOffParameters):
         return casadm.set_param_cutoff(self.cache_id, self.core_id,
                                        seq_cutoff_param.threshold, seq_cutoff_param.policy)

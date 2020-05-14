@@ -410,6 +410,8 @@ struct kcas_get_cache_param {
  *    32    *    KCAS_IOCTL_SET_CACHE_PARAM                 *    OK            *
  *    33    *    KCAS_IOCTL_GET_CACHE_PARAM                 *    OK            *
  *    34    *    KCAS_IOCTL_GET_STATS                       *    OK            *
+ *    35    *    KCAS_IOCTL_PURGE_CACHE                     *    OK            *
+ *    36    *    KCAS_IOCTL_PURGE_CORE                      *    OK            *
  *******************************************************************************
  */
 
@@ -499,6 +501,14 @@ struct kcas_get_cache_param {
 
 /** Get stats of particular OCF object */
 #define KCAS_IOCTL_GET_STATS _IOR(KCAS_IOCTL_MAGIC, 34, struct kcas_get_stats)
+
+/* Flush dirty data from running cache
+ * and invalidate all valid cache lines */
+#define KCAS_IOCTL_PURGE_CACHE _IOWR(KCAS_IOCTL_MAGIC, 35, struct kcas_flush_cache)
+
+/* Flush dirty data from running core object
+ * and invalidate all valid cache lines associated with given core. */
+#define KCAS_IOCTL_PURGE_CORE _IOWR(KCAS_IOCTL_MAGIC, 36, struct kcas_flush_core)
 
 /**
  * Extended kernel CAS error codes

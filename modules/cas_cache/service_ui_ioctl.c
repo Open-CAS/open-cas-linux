@@ -154,6 +154,19 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
 
+	case KCAS_IOCTL_PURGE_CACHE: {
+		struct kcas_flush_cache *cmd_info;
+		char cache_name[OCF_CACHE_NAME_SIZE];
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		cache_name_from_id(cache_name, cmd_info->cache_id);
+
+		retval = cache_mngt_purge_device(cache_name, OCF_CACHE_NAME_SIZE);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+
 	case KCAS_IOCTL_FLUSH_CACHE: {
 		struct kcas_flush_cache *cmd_info;
 		char cache_name[OCF_CACHE_NAME_SIZE];
@@ -177,6 +190,23 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		retval = cache_mngt_interrupt_flushing(cache_name,
 						OCF_CACHE_NAME_SIZE);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+
+	case KCAS_IOCTL_PURGE_CORE: {
+		struct kcas_flush_core *cmd_info;
+		char cache_name[OCF_CACHE_NAME_SIZE];
+		char core_name[OCF_CORE_NAME_SIZE];
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		cache_name_from_id(cache_name, cmd_info->cache_id);
+
+		core_name_from_id(core_name, cmd_info->core_id);
+
+		retval = cache_mngt_purge_object(cache_name, OCF_CACHE_NAME_SIZE,
+						core_name, OCF_CORE_NAME_SIZE);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}

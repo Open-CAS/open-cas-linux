@@ -1419,6 +1419,8 @@ enum {
 
 	script_cmd_add_core,
 	script_cmd_remove_core,
+	script_cmd_purge_cache,
+	script_cmd_purge_core,
 
 	script_cmd_max_id,
 
@@ -1477,6 +1479,23 @@ static cli_option script_params_options[] = {
 			| (1 << script_opt_core_id),
 		.flags = CLI_COMMAND_HIDDEN,
 	},
+	[script_cmd_purge_cache] = {
+		.short_name = 0,
+		.long_name = "purge-cache",
+		.args_count = 0,
+		.arg = NULL,
+		.priv = (1 << script_opt_cache_id),
+		.flags = CLI_COMMAND_HIDDEN,
+	},
+	[script_cmd_purge_core] = {
+		.short_name = 0,
+		.long_name = "purge-core",
+		.args_count = 0,
+		.arg = NULL,
+		.priv = (1 << script_opt_cache_id)
+			| (1 << script_opt_core_id),
+		.flags = CLI_COMMAND_HIDDEN,
+	},
 	[script_opt_cache_device] = {
 		.short_name = 0,
 		.long_name = "cache-device",
@@ -1491,7 +1510,9 @@ static cli_option script_params_options[] = {
 		.args_count = 1,
 		.arg = "ID",
 		.priv = (1 << script_cmd_remove_core)
-			| (1 << script_cmd_add_core),
+			| (1 << script_cmd_add_core)
+			| (1 << script_cmd_purge_cache)
+			| (1 << script_cmd_purge_core),
 		.flags = (CLI_OPTION_RANGE_INT | CLI_OPTION_HIDDEN),
 		.min_value = OCF_CACHE_ID_MIN,
 		.max_value = OCF_CACHE_ID_MAX,
@@ -1502,7 +1523,8 @@ static cli_option script_params_options[] = {
 		.args_count = 1,
 		.arg = "ID",
 		.priv = (1 << script_cmd_remove_core)
-			| (1 << script_cmd_add_core),
+			| (1 << script_cmd_add_core)
+			| (1 << script_cmd_purge_core),
 		.flags = (CLI_OPTION_RANGE_INT | CLI_OPTION_HIDDEN),
 		.min_value = OCF_CORE_ID_MIN,
 		.max_value = OCF_CORE_ID_MAX,
@@ -1658,6 +1680,13 @@ int script_handle() {
 			command_args_values.detach,
 			command_args_values.no_flush
 			);
+	case script_cmd_purge_cache:
+		return purge_cache(command_args_values.cache_id);
+	case script_cmd_purge_core:
+		return purge_core(
+				command_args_values.cache_id,
+				command_args_values.core_id
+				);
 	}
 
 	return FAILURE;

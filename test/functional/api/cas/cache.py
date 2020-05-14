@@ -117,6 +117,10 @@ class Cache:
         sync()
         assert self.get_dirty_blocks().get_value(Unit.Blocks4096) == 0
 
+    def purge_cache(self):
+        casadm.purge_cache(cache_id=self.cache_id)
+        sync()
+
     def stop(self, no_data_flush: bool = False):
         return casadm.stop_cache(self.cache_id, no_data_flush)
 

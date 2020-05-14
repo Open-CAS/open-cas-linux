@@ -230,6 +230,106 @@ static int _cache_mngt_cache_flush_uninterruptible(ocf_cache_t cache)
 	return result;
 }
 
+static void _cache_mngt_cache_purge_complete(ocf_cache_t cache, void *priv,
+		int error)
+{
+	struct _cache_mngt_async_context *context = priv;
+	int result;
+
+	if (context->compl_func)
+		context->compl_func(cache);
+
+	result = _cache_mngt_async_callee_set_result(context, error);
+
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
+}
+
+/*
+ * Possible return values:
+ * 0 - completion was called and operation succeded
+ * -KCAS_ERR_WAITING_INTERRUPTED - operation was canceled, caller must
+ *		propagate error
+ * other values - completion was called and operation failed
+ */
+static int _cache_mngt_cache_purge_sync(ocf_cache_t cache,
+		void (*compl)(ocf_cache_t cache))
+{
+	int result;
+	struct _cache_mngt_async_context *context;
+
+	context = kmalloc(sizeof(*context), GFP_KERNEL);
+	if (!context) {
+		if (compl)
+			compl(cache);
+		return -ENOMEM;
+	}
+
+	_cache_mngt_async_context_init(context);
+	context->compl_func = compl;
+
+	ocf_mngt_cache_purge(cache, _cache_mngt_cache_purge_complete, context);
+	result = wait_for_completion_interruptible(&context->cmpl);
+
+	result = _cache_mngt_async_caller_set_result(context, result);
+
+	if (result != -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
+
+	return result;
+}
+
+static void _cache_mngt_core_purge_complete(ocf_core_t core, void *priv,
+		int error)
+{
+	struct _cache_mngt_async_context *context = priv;
+	int result;
+	ocf_cache_t cache = ocf_core_get_cache(core);
+
+	if (context->compl_func)
+		context->compl_func(cache);
+
+	result = _cache_mngt_async_callee_set_result(context, error);
+
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
+}
+
+/*
+ * Possible return values:
+ * 0 - completion was called and operation succeded
+ * -KCAS_ERR_WAITING_INTERRUPTED - operation was canceled, caller must
+ *		propagate error
+ * other values - completion was called and operation failed
+ */
+static int _cache_mngt_core_purge_sync(ocf_core_t core, bool interruption,
+		void (*compl)(ocf_cache_t cache))
+{
+	int result;
+	struct _cache_mngt_async_context *context;
+	ocf_cache_t cache = ocf_core_get_cache(core);
+
+	context = kmalloc(sizeof(*context), GFP_KERNEL);
+	if (!context) {
+		if (compl)
+			compl(cache);
+		return -ENOMEM;
+	}
+
+	_cache_mngt_async_context_init(context);
+	context->compl_func = compl;
+
+	ocf_mngt_core_purge(core, _cache_mngt_core_purge_complete, context);
+	result = wait_for_completion_interruptible(&context->cmpl);
+
+	result = _cache_mngt_async_caller_set_result(context, result);
+
+	if (result != -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
+
+	return result;
+}
+
 static void _cache_mngt_cache_flush_complete(ocf_cache_t cache, void *priv,
 		int error)
 {
@@ -609,6 +709,37 @@ static void _cache_read_unlock_put_cmpl(ocf_cache_t cache)
 	ocf_mngt_cache_put(cache);
 }
 
+int cache_mngt_purge_object(const char *cache_name, size_t cache_name_len,
+			const char *core_name, size_t core_name_len)
+{
+	ocf_cache_t cache;
+	ocf_core_t core;
+	int result;
+
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+					cache_name_len, &cache);
+	if (result)
+		return result;
+
+	result = _cache_mngt_read_lock_sync(cache);
+	if (result) {
+		ocf_mngt_cache_put(cache);
+		return result;
+	}
+
+	result = ocf_core_get_by_name(cache, core_name, core_name_len, &core);
+	if (result) {
+		ocf_mngt_cache_read_unlock(cache);
+		ocf_mngt_cache_put(cache);
+		return result;
+	}
+
+	result = _cache_mngt_core_purge_sync(core, true,
+			_cache_read_unlock_put_cmpl);
+
+	return result;
+}
+
 int cache_mngt_flush_object(const char *cache_name, size_t cache_name_len,
 			const char *core_name, size_t core_name_len)
 {
@@ -636,6 +767,27 @@ int cache_mngt_flush_object(const char *cache_name, size_t cache_name_len,
 
 	result = _cache_mngt_core_flush_sync(core, true,
 			_cache_read_unlock_put_cmpl);
+
+	return result;
+}
+
+int cache_mngt_purge_device(const char *cache_name, size_t name_len)
+{
+	int result;
+	ocf_cache_t cache;
+
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+					name_len, &cache);
+	if (result)
+		return result;
+
+	result = _cache_mngt_read_lock_sync(cache);
+	if (result) {
+		ocf_mngt_cache_put(cache);
+		return result;
+	}
+
+	result = _cache_mngt_cache_purge_sync(cache, _cache_read_unlock_put_cmpl);
 
 	return result;
 }

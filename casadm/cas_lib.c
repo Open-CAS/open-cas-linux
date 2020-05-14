@@ -1915,6 +1915,29 @@ int core_pool_remove(const char *core_device)
 	return SUCCESS;
 }
 
+int purge_cache(unsigned int cache_id)
+{
+	int fd = 0;
+	struct kcas_flush_cache cmd;
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.cache_id = cache_id;
+	/* synchronous flag */
+	if (run_ioctl_interruptible(fd, KCAS_IOCTL_PURGE_CACHE, &cmd, "Purging cache",
+			cache_id, OCF_CORE_ID_INVALID) < 0) {
+		close(fd);
+		print_err(cmd.ext_err_code);
+		return FAILURE;
+	}
+
+	close(fd);
+	return SUCCESS;
+}
+
 #define DIRTY_FLUSHING_WARNING "You have interrupted flushing of cache dirty data. CAS continues to operate\nnormally and dirty data that remains on cache device will be flushed by cleaning thread.\n"
 int flush_cache(unsigned int cache_id)
 {
@@ -1940,6 +1963,29 @@ int flush_cache(unsigned int cache_id)
 		}
 	}
 
+	close(fd);
+	return SUCCESS;
+}
+
+int purge_core(unsigned int cache_id, unsigned int core_id)
+{
+	int fd = 0;
+	struct kcas_flush_core cmd;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.cache_id = cache_id;
+	cmd.core_id = core_id;
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	/* synchronous flag */
+	if (run_ioctl_interruptible(fd, KCAS_IOCTL_PURGE_CORE, &cmd, "Purging core", cache_id, core_id) < 0) {
+		close(fd);
+		print_err(cmd.ext_err_code);
+		return FAILURE;
+	}
 	close(fd);
 	return SUCCESS;
 }
