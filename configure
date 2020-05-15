@@ -56,6 +56,23 @@ then
 	MISSING_TOOLS=1
 fi
 
+if [ ! -f /usr/include/libelf.h ]; then
+	KERNEL_CONFIG=$(find /usr/src/ -type d -name "*$(uname -r)")/.config
+	if [ -f "$KERNEL_CONFIG" ]; then
+		if grep ^CONFIG_UNWINDER_ORC=[Yy] "$KERNEL_CONFIG" &>/dev/null; then
+			echo "Error: CONFIG_UNWINDER_ORC=y option is set in your kernel,"\
+			"please install libelf-dev, libelf-devel or elfutils-libelf-devel" >&2
+			MISSING_TOOLS=1
+		fi
+	elif [ "$MISSING_TOOLS" -eq 0 ]; then
+		# Print this warning only if there is no missing tools, to not confuse the user
+		# that installing libelf-dev might help with the lack of needed utilities.
+		echo "Warning: unable to find kernel config" >&2
+		echo -e "If configure ends with an error, you may need to install"\
+		"libelf-dev, libelf-devel or elfutils-libelf-devel\n" >&2
+	fi
+fi
+
 if [ "$MISSING_TOOLS" -ne "0" ]
 then
 	exit 1
