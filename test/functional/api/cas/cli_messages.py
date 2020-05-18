@@ -33,6 +33,14 @@ stop_cache_incomplete = [
     r"Cache is in incomplete state - at least one core is inactive"
 ]
 
+get_stats_ioclass_id_not_configured = [
+    r"IO class \d+ is not configured\."
+]
+
+get_stats_ioclass_id_out_of_range = [
+    r"Invalid IO class id, must be in the range 0-32\."
+]
+
 remove_multilevel_core = [
     r"Error while removing core device \d+ from cache instance \d+",
     r"Device opens or mount are pending to this cache"
@@ -52,9 +60,19 @@ stop_cache_mounted_core = [
 ]
 
 
-def check_msg(output: Output, expected_messages):
-    result = '\n'.join([output.stdout, output.stderr])
+def check_stderr_msg(output: Output, expected_messages):
+    return __check_string_msg(output.stderr, expected_messages)
+
+
+def check_stdout_msg(output: Output, expected_messages):
+    return __check_string_msg(output.stdout, expected_messages)
+
+
+def __check_string_msg(text: str, expected_messages):
+    msg_ok = True
     for msg in expected_messages:
-        matches = re.search(msg, result)
+        matches = re.search(msg, text)
         if not matches:
-            TestRun.LOGGER.error(f"Message is incorrect, expected: {msg}\n actual: {result}.")
+            TestRun.LOGGER.error(f"Message is incorrect, expected: {msg}\n actual: {text}.")
+            msg_ok = False
+    return msg_ok

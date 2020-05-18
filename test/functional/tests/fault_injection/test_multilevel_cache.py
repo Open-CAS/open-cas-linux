@@ -6,8 +6,8 @@
 import pytest
 
 from api.cas import casadm, cli, cli_messages
-from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.size import Size, Unit
 
 
@@ -49,7 +49,7 @@ def test_remove_multilevel_core():
         output = TestRun.executor.run_expect_fail(cli.remove_core_cmd(cache_id=str(cache1.cache_id),
                                                                       core_id=str(core1.core_id),
                                                                       force=True))
-        cli_messages.check_msg(output, cli_messages.remove_multilevel_core)
+        cli_messages.check_stderr_msg(output, cli_messages.remove_multilevel_core)
 
     with TestRun.step("Stop cache."):
         casadm.stop_all_caches()

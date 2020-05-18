@@ -1,16 +1,18 @@
 #
-# Copyright(c) 2019 Intel Corporation
+# Copyright(c) 2019-2020 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
+import time
 from datetime import timedelta
 from random import shuffle
 
 import pytest
-import time
-from api.cas import casadm, init_config, cli, cli_messages
+
+from api.cas import casadm, cli, cli_messages
 from api.cas.cache_config import CacheStatus, SeqCutOffPolicy
 from api.cas.core import CoreStatus, CacheMode, CleaningPolicy, FlushParametersAlru, File
+from api.cas.init_config import InitConfig
 from api.cas.statistics import CacheStats
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
@@ -47,7 +49,7 @@ def test_attach_core_to_incomplete_cache_volume():
         cache = casadm.start_cache(cache_dev, force=True)
         core = cache.add_core(core_dev)
     with TestRun.step("Create init config file using current CAS configuration."):
-        init_config.create_init_config_from_running_configuration()
+        InitConfig.create_init_config_from_running_configuration()
     with TestRun.step("Stop cache."):
         cache.stop()
     with TestRun.step("Load cache."):
@@ -106,7 +108,7 @@ def test_flush_inactive_devices():
         first_core = cache.add_core(first_core_dev)
         second_core = cache.add_core(second_core_dev)
     with TestRun.step("Create init config file using running CAS configuration."):
-        init_config.create_init_config_from_running_configuration()
+        InitConfig.create_init_config_from_running_configuration()
     with TestRun.step("Run random writes to CAS device."):
         run_fio([first_core.system_path, second_core.system_path])
     with TestRun.step("Stop cache without flushing dirty data."):
@@ -180,7 +182,7 @@ def test_list_cache_and_cache_volumes():
         if cache_status != CacheStatus.running:
             TestRun.fail(f"Cache should be in running state. Actual state: {cache_status}")
     with TestRun.step("Create init config file using current CAS configuration."):
-        init_config.create_init_config_from_running_configuration()
+        InitConfig.create_init_config_from_running_configuration()
     with TestRun.step("Stop cache."):
         cache.stop()
     with TestRun.step("Unplug core device."):
@@ -226,14 +228,14 @@ def test_load_cache_with_inactive_core():
         cache = casadm.start_cache(cache_dev, force=True)
         core = cache.add_core(core_dev)
     with TestRun.step("Create init config file using current CAS configuration."):
-        init_config.create_init_config_from_running_configuration()
+        InitConfig.create_init_config_from_running_configuration()
     with TestRun.step("Stop cache."):
         cache.stop()
     with TestRun.step("Unplug core device."):
         plug_device.unplug()
     with TestRun.step("Load cache."):
         output = TestRun.executor.run(cli.load_cmd(cache_dev.system_path))
-        cli_messages.check_msg(output, cli_messages.load_inactive_core_missing)
+        cli_messages.check_stderr_msg(output, cli_messages.load_inactive_core_missing)
     with TestRun.step("Plug missing device and stop cache."):
         plug_device.plug()
         core.wait_for_status_change(CoreStatus.active)
@@ -267,7 +269,7 @@ def test_preserve_data_for_inactive_device():
         cache.set_cleaning_policy(CleaningPolicy.nop)
         core = cache.add_core(core_dev)
     with TestRun.step("Create init config file using current CAS configuration."):
-        init_config.create_init_config_from_running_configuration()
+        InitConfig.create_init_config_from_running_configuration()
     with TestRun.step("Create filesystem on CAS device and mount it."):
         core.create_filesystem(Filesystem.ext3)
         core.mount(mount_dir)
@@ -361,7 +363,7 @@ def test_print_statistics_inactive(cache_mode):
         first_core = cache.add_core(first_core_dev)
         second_core = cache.add_core(second_core_dev)
     with TestRun.step("Create init config file using current CAS configuration."):
-        init_config.create_init_config_from_running_configuration()
+        InitConfig.create_init_config_from_running_configuration()
     with TestRun.step("Run IO."):
         run_fio([first_core.system_path, second_core.system_path])
     with TestRun.step("Print statistics and check if there is no inactive usage section."):
@@ -448,7 +450,7 @@ def test_remove_detached_cores():
         for d in core_devs:
             cores.append(cache.add_core(d))
     with TestRun.step("Create init config file using current CAS configuration."):
-        init_config.create_init_config_from_running_configuration()
+        InitConfig.create_init_config_from_running_configuration()
     with TestRun.step("Run random writes to all CAS devices."):
         run_fio([c.system_path for c in cores])
     with TestRun.step("Flush dirty data from two CAS devices and verify than other two contain "
@@ -507,7 +509,7 @@ def test_remove_inactive_devices():
         for d in core_devs:
             cores.append(cache.add_core(d))
     with TestRun.step("Create init config file using current CAS configuration."):
-        init_config.create_init_config_from_running_configuration()
+        InitConfig.create_init_config_from_running_configuration()
     with TestRun.step("Run random writes to all CAS devices."):
         run_fio([c.system_path for c in cores])
     with TestRun.step("Flush dirty data from two CAS devices and verify than other two "
@@ -549,7 +551,7 @@ def test_remove_inactive_devices():
                                  "command returned an error.")
                 TestRun.LOGGER.info("Remove operation without force option is blocked for "
                                     "dirty CAS device as expected.")
-                cli_messages.check_msg(e.output, cli_messages.remove_inactive_core)
+                cli_messages.check_stderr_msg(e.output, cli_messages.remove_inactive_core)
                 output = casadm.list_caches().stdout
                 if core.system_path not in output:
                     TestRun.fail(f"CAS device is not listed in casadm list output but it should be."
@@ -582,7 +584,7 @@ def test_stop_cache_with_inactive_devices():
         cache = casadm.start_cache(cache_dev, cache_mode=CacheMode.WB, force=True)
         core = cache.add_core(core_dev)
     with TestRun.step("Create init config file using current CAS configuration."):
-        init_config.create_init_config_from_running_configuration()
+        InitConfig.create_init_config_from_running_configuration()
     with TestRun.step("Run random writes and verify that CAS device contains dirty data."):
         run_fio([core.system_path])
         if core.get_dirty_blocks() == Size.zero():
@@ -629,7 +631,7 @@ def try_stop_incomplete_cache(cache):
         cache.stop()
     except CmdException as e:
         TestRun.LOGGER.info("Stopping cache without 'no data flush' option is blocked as expected.")
-        cli_messages.check_msg(e.output, cli_messages.stop_cache_incomplete)
+        cli_messages.check_stderr_msg(e.output, cli_messages.stop_cache_incomplete)
 
 
 def check_inactive_usage_stats(stats_before, stats_after, stat_name, should_be_zero):
