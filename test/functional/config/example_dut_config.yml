@@ -7,6 +7,7 @@ type: "local"
 # password: "example_password"
 
 # env: "HTTPS_PROXY=myproxy.example:12345"
+# reboot_timeout: 1800  #timeout value in seconds
 
 # By enabling this option framework is allowed to retrieve random non-os disks from DUT.
 # It can lead to data loss!!!
