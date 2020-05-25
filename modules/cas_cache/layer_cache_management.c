@@ -1552,7 +1552,6 @@ int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 		io_class_cfg->config[class_id].class_id = class_id;
 
 		if (!cfg->info[class_id].name[0]) {
-			io_class_cfg->config[class_id].class_id = class_id;
 			continue;
 		}
 

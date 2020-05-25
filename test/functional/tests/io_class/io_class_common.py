@@ -19,20 +19,21 @@ def prepare():
     cache_device = TestRun.disks['cache']
     core_device = TestRun.disks['core']
 
-    cache_device.create_partitions([Size(500, Unit.MebiByte)])
-    core_device.create_partitions([Size(1, Unit.GibiByte)])
+    cache_device.create_partitions([Size(50, Unit.MebiByte)])
+    core_device.create_partitions([Size(200, Unit.MebiByte)])
 
     cache_device = cache_device.partitions[0]
     core_device = core_device.partitions[0]
 
     TestRun.LOGGER.info(f"Starting cache")
-    cache = casadm.start_cache(cache_device, cache_mode=CacheMode.WB, force=True)
+    cache = casadm.start_cache(cache_device, cache_mode=CacheMode.WT, force=True)
 
     Udev.disable()
     TestRun.LOGGER.info(f"Setting cleaning policy to NOP")
     casadm.set_param_cleaning(cache_id=cache.cache_id, policy=CleaningPolicy.nop)
     TestRun.LOGGER.info(f"Adding core device")
     core = casadm.add_core(cache, core_dev=core_device)
+    TestRun.LOGGER.info(f"Setting seq cutoff policy to never")
     core.set_seq_cutoff_policy(SeqCutOffPolicy.never)
     ioclass_config.create_ioclass_config(
         add_default_rule=False, ioclass_config_path=ioclass_config_path
@@ -42,7 +43,7 @@ def prepare():
     ioclass_config.add_ioclass(
         ioclass_id=0,
         eviction_priority=22,
-        allocation=False,
+        occupancy=False,
         rule="unclassified",
         ioclass_config_path=ioclass_config_path,
     )

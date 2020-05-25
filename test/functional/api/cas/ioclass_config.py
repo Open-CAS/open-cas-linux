@@ -22,29 +22,29 @@ default_config_file_path = "/tmp/opencas_ioclass.conf"
 MAX_IO_CLASS_ID = 32
 MAX_IO_CLASS_PRIORITY = 255
 MAX_CLASSIFICATION_DELAY = timedelta(seconds=6)
-IO_CLASS_CONFIG_HEADER = "IO class id,IO class name,Eviction priority,Allocation"
+IO_CLASS_CONFIG_HEADER = "IO class id,IO class name,Eviction priority,Occupancy"
 
 
 @functools.total_ordering
 class IoClass:
     def __init__(self, class_id: int, rule: str = '', priority: int = None,
-                 allocation: bool = True):
+                 occupancy: str = '1'):
         self.id = class_id
         self.rule = rule
         self.priority = priority
-        self.allocation = allocation
+        self.occupancy = occupancy
 
     def __str__(self):
         return (f'{self.id},{self.rule},{"" if self.priority is None else self.priority}'
-                f',{int(self.allocation)}')
+                f',{int(self.occupancy)}')
 
     def __eq__(self, other):
-        return ((self.id, self.rule, self.priority, self.allocation)
-                == (other.id, other.rule, other.priority, other.allocation))
+        return ((self.id, self.rule, self.priority, self.occupancy)
+                == (other.id, other.rule, other.priority, other.occupancy))
 
     def __lt__(self, other):
-        return ((self.id, self.rule, self.priority, self.allocation)
-                < (other.id, other.rule, other.priority, other.allocation))
+        return ((self.id, self.rule, self.priority, self.occupancy)
+                < (other.id, other.rule, other.priority, other.occupancy))
 
     @staticmethod
     def from_string(ioclass_str: str):
@@ -53,7 +53,7 @@ class IoClass:
             class_id=int(parts[0]),
             rule=parts[1],
             priority=int(parts[2]),
-            allocation=parts[3] in ['1', 'YES'])
+            occupancy=parts[3])
 
     @staticmethod
     def list_to_csv(ioclass_list: [], add_default_rule: bool = True):
@@ -81,8 +81,8 @@ class IoClass:
                             IoClass.list_to_csv(ioclass_list, add_default_rule))
 
     @staticmethod
-    def default(priority: int = 255, allocation: bool = True):
-        return IoClass(0, 'unclassified', priority, allocation)
+    def default(priority: int = 255):
+        return IoClass(0, 'unclassified', priority, occupancy)
 
     @staticmethod
     def compare_ioclass_lists(list1: [], list2: []):
@@ -171,10 +171,10 @@ def add_ioclass(
         ioclass_id: int,
         rule: str,
         eviction_priority: int,
-        allocation: bool,
+        occupancy,
         ioclass_config_path: str = default_config_file_path,
 ):
-    new_ioclass = f"{ioclass_id},{rule},{eviction_priority},{int(allocation)}"
+    new_ioclass = f"{ioclass_id},{rule},{eviction_priority},{occupancy}"
     TestRun.LOGGER.info(
         f"Adding rule {new_ioclass} " + f"to config file {ioclass_config_path}"
     )
@@ -191,7 +191,7 @@ def add_ioclass(
 
 def get_ioclass(ioclass_id: int, ioclass_config_path: str = default_config_file_path):
     TestRun.LOGGER.info(
-        f"Retrieving rule no.{ioclass_id} " + f"from config file {ioclass_config_path}"
+        f"Retrieving rule no. {ioclass_id} " + f"from config file {ioclass_config_path}"
     )
     output = TestRun.executor.run(f"cat {ioclass_config_path}")
     if output.exit_code != 0:

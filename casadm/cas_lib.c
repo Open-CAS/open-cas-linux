@@ -2027,7 +2027,7 @@ static struct partition_config_col partition_config_columns[] = {
 	{ .name = "IO class id", .pos = -1 },
 	{ .name = "IO class name", .pos = -1 },
 	{ .name = "Eviction priority", .pos = -1 },
-	{ .name = "Allocation", .pos = -1 },
+	{ .name = "Occupancy", .pos = -1 },
 	{ .name = NULL }
 };
 
@@ -2035,11 +2035,9 @@ void partition_list_line(FILE *out, struct kcas_io_class *cls, bool csv)
 {
 	char buffer[128];
 	const char *prio;
-	const char *allocation;
-	if (cls->info.cache_mode != ocf_cache_mode_pt)
-		allocation = csv ? "1" : "YES";
-	else
-		allocation = csv ? "0" : "NO";
+	// Need space for max uint32 value...
+	char allocation[11];
+	snprintf(allocation, sizeof(allocation), "%u", cls->info.max_size);
 
 	if (OCF_IO_CLASS_PRIO_PINNED == cls->info.priority) {
 		prio = csv ? "" : "Pinned";
@@ -2122,8 +2120,11 @@ int partition_list(unsigned int cache_id, unsigned int output_format)
 }
 
 enum {
-	part_csv_coll_id = 0, part_csv_coll_name, part_csv_coll_prio,
-	part_csv_coll_alloc, part_csv_coll_max
+	part_csv_coll_id = 0,
+	part_csv_coll_name,
+	part_csv_coll_prio,
+	part_csv_coll_occ,
+	part_csv_coll_max
 };
 
 int partition_is_name_valid(const char *name)
@@ -2167,7 +2168,7 @@ static inline int partition_get_line(CSVFILE *csv,
 {
 	uint32_t part_id;
 	uint32_t value;
-	const char *id, *name, *prio, *alloc;
+	const char *id, *name, *prio, *occ_float, *occupancy;
 
 	id = partition_get_csv_col(csv, part_csv_coll_id, error_col);
 	if (!id) {
@@ -2181,8 +2182,8 @@ static inline int partition_get_line(CSVFILE *csv,
 	if (!prio) {
 		return FAILURE;
 	}
-	alloc = partition_get_csv_col(csv, part_csv_coll_alloc, error_col);
-	if (!alloc) {
+	occ_float = partition_get_csv_col(csv, part_csv_coll_occ, error_col);
+	if (!occ_float) {
 		return FAILURE;
 	}
 
@@ -2226,25 +2227,61 @@ static inline int partition_get_line(CSVFILE *csv,
 	}
 	cnfg->info[part_id].priority = value;
 
-	/* Validate Allocation */
-	*error_col = part_csv_coll_alloc;
-	if (strempty(alloc)) {
-		return FAILURE;
-	}
-	if (validate_str_num(alloc, "alloc", 0, 1)) {
-		return FAILURE;
-	}
-	value = strtoul(alloc, NULL, 10);
-	if (0 == value) {
-		cnfg->info[part_id].cache_mode = ocf_cache_mode_pt;
-	} else if (1 == value) {
-		cnfg->info[part_id].cache_mode = ocf_cache_mode_max;
-	} else {
+	/* Validate Occupancy */
+	*error_col = part_csv_coll_occ;
+	if (strempty(occ_float)) {
 		return FAILURE;
 	}
 
+	occupancy = strchr(occ_float, '.');
+	if(!occupancy)
+		return FAILURE;
+	else
+		occupancy--;
+
+	value = strtoul(occupancy, NULL, 10);
+	if (value > 1) {
+		return FAILURE;
+	} else {
+		/* Get cache size for max cachelines calculation */
+		int fd;
+		struct kcas_cache_info cmd_info;
+		uint32_t cache_size;
+		memset(&cmd_info, 0, sizeof(cmd_info));
+		cmd_info.cache_id = cnfg->cache_id;
+
+		fd = open_ctrl_device();
+		if (fd == -1)
+			return FAILURE;
+
+		if (ioctl(fd, KCAS_IOCTL_CACHE_INFO, &cmd_info) < 0)
+			return FAILURE;
+
+		cache_size = cmd_info.info.size;
+
+		if (value == 0) {
+			/* Max occupancy is expressed as a 0.x value, we need to
+			 * skip the dot sign from string */
+			occupancy+=2;
+			if (validate_str_num(occupancy, "allocancy", 0, 99))
+				return FAILURE;
+
+			value = strtoul(occupancy, NULL, 10);
+			if (value)
+				cnfg->info[part_id].cache_mode = ocf_cache_mode_max;
+			else
+				cnfg->info[part_id].cache_mode = ocf_cache_mode_pt;
+
+			/* Set max occupancy as a max number of 4k blocks */
+			value = value * cache_size / 100;
+		} else {
+			value = cache_size;
+		}
+
+		cnfg->info[part_id].max_size = value;
+	}
+
 	cnfg->info[part_id].min_size = 0;
-	cnfg->info[part_id].max_size = UINT32_MAX;
 
 	return 0;
 }
