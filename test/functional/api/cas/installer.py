@@ -21,6 +21,18 @@ def install_opencas():
         exclude_list=["test/functional/results/"],
         delete=True)
 
+
+def _clean_opencas_repo():
+    TestRun.LOGGER.info("Cleaning Open CAS repo")
+    output = TestRun.executor.run(
+        f"cd {TestRun.usr.working_dir} && "
+        "make distclean")
+    if output.exit_code != 0:
+        raise CmdException("make distclean command executed with nonzero status", output)
+
+
+def install_opencas():
+    _clean_opencas_repo()
     TestRun.LOGGER.info("Building Open CAS")
     output = TestRun.executor.run(
         f"cd {TestRun.usr.working_dir} && "
