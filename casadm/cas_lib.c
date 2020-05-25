@@ -2926,3 +2926,47 @@ int check_cache_device(const char *device_path)
 
 	return SUCCESS;
 }
+
+int zero_md(const char *cache_device){
+	struct kcas_cache_check_device cmd_info;
+	char zero_page[4096] = {0};
+	int fd = 0;
+
+	/* check if given cache device exists */
+	fd = open(cache_device, O_RDONLY);
+	if (fd < 0) {
+		cas_printf(LOG_ERR, "Device '%s' not found.\n", cache_device);
+		return FAILURE;
+	}
+	close(fd);
+
+	/* don't delete metadata if cache is in use */
+	if (check_cache_already_added(cache_device) == FAILURE) {
+		cas_printf(LOG_ERR, "Cache device '%s' is already used as cache. "
+				"Please stop cache to clear metadata.\n", cache_device);
+		return FAILURE;
+	}
+
+	/* don't delete metadata if device hasn't got CAS's metadata */
+	_check_cache_device(cache_device, &cmd_info);
+	if (!cmd_info.is_cache_device) {
+		cas_printf(LOG_ERR, "Device '%s' does not contain OpenCAS's metadata.\n", cache_device);
+		return FAILURE;
+	}
+
+	fd = open(cache_device, O_WRONLY | O_SYNC);
+	if (fd < 0) {
+		cas_printf(LOG_ERR, "Error while opening '%s' to purge metadata.\n", cache_device);
+		return FAILURE;
+	}
+
+	if(write(fd, zero_page, 4096) != 4096) {
+		close(fd);
+		cas_printf(LOG_ERR, "Error while wiping out metadata from device '%s'.\n", cache_device);
+		return FAILURE;
+	}
+
+	close(fd);
+	cas_printf(LOG_INFO, "OpenCAS's metadata wiped succesfully from device '%s'.\n", cache_device);
+	return SUCCESS;
+}

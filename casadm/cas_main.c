@@ -1945,6 +1945,51 @@ void io_class_help(app *app_values, cli_command *cmd)
 
 static int handle_help();
 
+struct {
+	const char *device;
+} static zero_params = {
+	.device = ""
+};
+
+static cli_option zero_options[] = {
+	{'d', "device", "Path to device on which metadata would be cleared", 1, "DEVICE", CLI_OPTION_REQUIRED},
+	{0}
+};
+
+/* Parser of option for zeroing metadata command */
+int zero_handle_option(char *opt, const char **arg)
+{
+	if (!strcmp(opt, "device")) {
+		if(validate_device_name(arg[0]) == FAILURE)
+			return FAILURE;
+		zero_params.device = arg[0];
+
+	} else {
+		return FAILURE;
+	}
+
+	return 0;
+}
+
+int handle_zero()
+{
+	int cache_device = 0;
+
+	cache_device = open(zero_params.device, O_RDONLY);
+
+	if (cache_device < 0) {
+		cas_printf(LOG_ERR, "Couldn't open cache device %s.\n", zero_params.device);
+		return FAILURE;
+	}
+
+	if (close(cache_device) < 0) {
+		cas_printf(LOG_ERR, "Couldn't close the cache device.\n");
+		return FAILURE;
+	}
+
+	return zero_md(zero_params.device);
+}
+
 static cli_command cas_commands[] = {
 		{
 			.name = "start-cache",
@@ -2130,6 +2175,16 @@ static cli_command cas_commands[] = {
 			.command_handle_opts = NULL,
 			.flags = 0,
 			.handle = handle_help,
+			.help = NULL
+		},
+		{
+			.name = "zero-metadata",
+			.desc = "Clear metadata from caching device",
+			.long_desc = NULL,
+			.options = zero_options,
+			.command_handle_opts = zero_handle_option,
+			.handle = handle_zero,
+			.flags = CLI_SU_REQUIRED,
 			.help = NULL
 		},
 		{
