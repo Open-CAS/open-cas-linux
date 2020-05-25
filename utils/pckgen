@@ -19,7 +19,7 @@ ARCH="$(uname -i)"
 SCRIPT_BASE_DIR="$(dirname $(realpath $0))"
 BASE_SPEC="$SCRIPT_BASE_DIR/$NAME.spec.base"
 TEMP_TEMPLATE="opencas-${THIS}"
-DEPENDENCIES=(sed git)
+DEPENDENCIES=(sed git mktemp rsync)
 # Dependencies for particular packages creation:
 DEPENDENCIES_TAR=(tar)
 DEPENDENCIES_ZIP=(zip)
