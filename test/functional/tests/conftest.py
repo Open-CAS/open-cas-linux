@@ -174,7 +174,7 @@ def base_prepare(item):
         if get_force_param(item) and not TestRun.usr.already_updated:
             installer.reinstall_opencas()
         elif not installer.check_if_installed():
-            installer.install_opencas()
+            installer.set_up_opencas()
         TestRun.usr.already_updated = True
         TestRun.LOGGER.add_build_info(f'Commit hash:')
         TestRun.LOGGER.add_build_info(f"{git.get_current_commit_hash()}")
