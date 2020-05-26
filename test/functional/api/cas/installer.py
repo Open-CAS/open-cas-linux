@@ -58,13 +58,13 @@ def install_opencas():
         TestRun.LOGGER.info(output.stdout)
 
 
-def set_up_opencas():
+def set_up_opencas(version=None):
     rsync_opencas_sources()
 
     _clean_opencas_repo()
 
     if version:
-        git.checkout_cas_version()
+        git.checkout_cas_version(version)
 
     build_opencas()
 
@@ -84,10 +84,10 @@ def uninstall_opencas():
             raise CmdException("There was an error during uninstall process", output)
 
 
-def reinstall_opencas():
+def reinstall_opencas(version=None):
     if check_if_installed():
         uninstall_opencas()
-    set_up_opencas()
+    set_up_opencas(version)
 
 
 def check_if_installed():
