@@ -31,3 +31,32 @@ def get_release_tags():
     tags = [v for v in output.splitlines() if "-" not in v and "_" not in v]
 
     return tags
+
+
+def checkout_cas_version(cas_version):
+    from api.cas.version import CasVersion
+    if isinstance(cas_version, CasVersion):
+        output = TestRun.executor.run(
+            f"cd {TestRun.usr.working_dir} && "
+            f"git rev-parse {cas_version}")
+        if output.exit_code != 0:
+            raise CmdException(f"Failed to resolve {cas_version} tag to commit hash", output)
+        TestRun.LOGGER.info(f"Resolved {cas_version} as commit {output.stdout}")
+        cas_version = output.stdout
+
+    _checkout_cas_commit(cas_version)
+
+
+def _checkout_cas_commit(commit_hash):
+    TestRun.LOGGER.info(f"Checkout CAS to {commit_hash}")
+    output = TestRun.executor.run(
+        f"cd {TestRun.usr.working_dir} && "
+        f"git checkout --force {commit_hash}")
+    if output.exit_code != 0:
+        raise CmdException(f"Failed to checkout to CAS {commit_hash}", output)
+
+    output = TestRun.executor.run(
+        f"cd {TestRun.usr.working_dir} && "
+        f"git submodule update")
+    if output.exit_code != 0:
+        raise CmdException(f"Failed to update submodules", output)
