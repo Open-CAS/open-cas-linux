@@ -8,12 +8,13 @@ import logging
 
 from tests import conftest
 from core.test_run import TestRun
+from api.cas import git
 from api.cas import cas_module
 from test_utils import os_utils
 from test_utils.output import CmdException
 
 
-def install_opencas():
+def rsync_opencas_sources():
     TestRun.LOGGER.info("Copying Open CAS repository to DUT")
     TestRun.executor.rsync_to(
         f"{TestRun.usr.repo_dir}/",
@@ -21,6 +22,17 @@ def install_opencas():
         exclude_list=["test/functional/results/"],
         delete=True)
 
+
+def _clean_opencas_repo():
+    TestRun.LOGGER.info("Cleaning Open CAS repo")
+    output = TestRun.executor.run(
+        f"cd {TestRun.usr.working_dir} && "
+        "make distclean")
+    if output.exit_code != 0:
+        raise CmdException("make distclean command executed with nonzero status", output)
+
+
+def build_opencas():
     TestRun.LOGGER.info("Building Open CAS")
     output = TestRun.executor.run(
         f"cd {TestRun.usr.working_dir} && "
@@ -29,6 +41,8 @@ def install_opencas():
     if output.exit_code != 0:
         raise CmdException("Make command executed with nonzero status", output)
 
+
+def install_opencas():
     TestRun.LOGGER.info("Installing Open CAS")
     output = TestRun.executor.run(
         f"cd {TestRun.usr.working_dir} && "
@@ -44,6 +58,17 @@ def install_opencas():
         TestRun.LOGGER.info(output.stdout)
 
 
+def set_up_opencas(version=None):
+    _clean_opencas_repo()
+
+    if version:
+        git.checkout_cas_version(version)
+
+    build_opencas()
+
+    install_opencas()
+
+
 def uninstall_opencas():
     TestRun.LOGGER.info("Uninstalling Open CAS")
     output = TestRun.executor.run("casadm -V")
@@ -57,10 +82,10 @@ def uninstall_opencas():
             raise CmdException("There was an error during uninstall process", output)
 
 
-def reinstall_opencas():
+def reinstall_opencas(version=None):
     if check_if_installed():
         uninstall_opencas()
-    install_opencas()
+    set_up_opencas(version)
 
 
 def check_if_installed():
