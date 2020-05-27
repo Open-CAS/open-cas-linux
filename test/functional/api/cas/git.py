@@ -9,10 +9,12 @@ from core.test_run import TestRun
 from connection.local_executor import LocalExecutor
 
 
-def get_current_commit_hash():
-    local_executor = LocalExecutor()
-    return local_executor.run(
-        f"cd {TestRun.usr.repo_dir} &&"
+def get_current_commit_hash(from_dut: bool = False):
+    executor = TestRun.executor if from_dut else LocalExecutor()
+    repo_path = TestRun.usr.working_dir if from_dut else TestRun.usr.repo_dir
+
+    return executor.run(
+        f"cd {repo_path} &&"
         f'git show HEAD -s --pretty=format:"%H"').stdout
 
 
