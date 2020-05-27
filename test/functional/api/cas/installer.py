@@ -59,8 +59,6 @@ def install_opencas():
 
 
 def set_up_opencas(version=None):
-    rsync_opencas_sources()
-
     _clean_opencas_repo()
 
     if version:

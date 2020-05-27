@@ -172,8 +172,10 @@ def base_prepare(item):
                 raise Exception(f"Failed to remove partitions from {disk}")
 
         if get_force_param(item) and not TestRun.usr.already_updated:
+            installer.rsync_opencas_sources()
             installer.reinstall_opencas()
         elif not installer.check_if_installed():
+            installer.rsync_opencas_sources()
             installer.set_up_opencas()
         TestRun.usr.already_updated = True
         TestRun.LOGGER.add_build_info(f'Commit hash:')
