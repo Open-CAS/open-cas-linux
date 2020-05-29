@@ -448,6 +448,64 @@ static void _cas_cls_directory_dtr(struct cas_classifier *cls,
 	kfree(ctx);
 }
 
+/* Core id test function */
+static cas_cls_eval_t _cas_cls_core_id_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	char *core_id_str;
+	uint64_t core_id;
+	struct bio *bio = io->bio;
+
+	core_id_str = strrchr(CAS_BIO_GET_DEV(bio)->disk_name, '-');
+	if (!core_id_str)
+		return cas_cls_eval_no;
+
+	/* First character of @core_id_str is '-', which we don't want to compare */
+	core_id_str += 1;
+
+	if (kstrtou64(core_id_str, 10, &core_id))
+		return cas_cls_eval_no;
+
+	return _cas_cls_numeric_test_u(c, core_id);
+}
+
+/* Core id condition constructor */
+static int _cas_cls_core_id_ctr(struct cas_classifier *cls,
+		struct cas_cls_condition *c, char *data)
+{
+	struct cas_cls_numeric *ctx;
+	int result;
+
+	result = _cas_cls_numeric_ctr(cls, c, data);
+	if (result)
+		return result;
+
+	ctx = c->context;
+
+	if (ctx->v_u64 < OCF_CORE_ID_MIN || ctx->v_u64 > OCF_CORE_ID_MAX) {
+		CAS_CLS_MSG(KERN_ERR, "Core id have to be within <%u-%u> range\n",
+				OCF_CORE_ID_MIN, OCF_CORE_ID_MAX);
+		result = -EINVAL;
+		goto error;
+	}
+
+	return 0;
+
+error:
+	kfree(c->context);
+	return result;
+}
+
+/* Core id condition destructor */
+static void _cas_cls_core_id_dtr(struct cas_classifier *cls,
+		struct cas_cls_condition *c)
+{
+	if (c->context)
+		kfree(c->context);
+	c->context = NULL;
+}
+
 /* File extension test function */
 static cas_cls_eval_t _cas_cls_extension_test(
 		struct cas_classifier *cls, struct cas_cls_condition *c,
@@ -608,6 +666,8 @@ static struct cas_cls_condition_handler _handlers[] = {
 			_cas_cls_generic_dtr },
 	{ "directory", _cas_cls_directory_test, _cas_cls_directory_ctr,
 			_cas_cls_directory_dtr },
+	{ "core_id", _cas_cls_core_id_test, _cas_cls_core_id_ctr,
+			_cas_cls_core_id_dtr },
 	{ "extension", _cas_cls_extension_test, _cas_cls_string_ctr,
 			_cas_cls_generic_dtr },
 	{ "file_name_prefix", _cas_cls_file_name_prefix_test, _cas_cls_string_ctr,
