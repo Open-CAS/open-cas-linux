@@ -152,6 +152,91 @@ def test_clean_stop_cache(cache_mode):
         test_file_3.remove(True)
 
 
+@pytest.mark.parametrize("fs", Filesystem)
+@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_clean_remove_core_with_fs(cache_mode, fs):
+    """
+        title: Test of the ability to remove core from cache in lazy-write modes with filesystem.
+        description: |
+          Test if OpenCAS removes core from cache in modes with lazy writes and with different
+          filesystems without data loss.
+        pass_criteria:
+          - Core removing works properly.
+          - Data on core device is correct after core is removed.
+    """
+    with TestRun.step("Prepare devices for cache and core."):
+        cache_dev = TestRun.disks['cache']
+        cache_dev.create_partitions([Size(256, Unit.MebiByte)])
+        cache_part = cache_dev.partitions[0]
+        core_dev = TestRun.disks['core']
+        core_dev.create_partitions([Size(512, Unit.MebiByte)])
+        core_part = core_dev.partitions[0]
+        Udev.disable()
+
+    with TestRun.step(f"Start cache in {cache_mode} mode."):
+        cache = casadm.start_cache(cache_part, cache_mode)
+
+    with TestRun.step(f"Add core with {fs.name} filesystem to cache and mount it."):
+        core_part.create_filesystem(fs)
+        core = cache.add_core(core_part)
+        core.mount(mnt_point)
+
+    with TestRun.step("Disable cleaning and sequential cutoff."):
+        cache.set_cleaning_policy(CleaningPolicy.nop)
+        cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+
+    with TestRun.step("Create test file and read its md5 sum."):
+        test_file_main = create_random_test_file("/tmp/test_file_main", Size(64, Unit.MebiByte))
+        test_file_md5sum_main = test_file_main.md5sum()
+
+    with TestRun.step("Copy test file to the exported object."):
+        test_file_1 = File.create_file(mnt_point + "test_file_1")
+        dd = Dd().output(test_file_1.full_path) \
+            .input(test_file_main.full_path) \
+            .block_size(bs) \
+            .count(int(test_file_main.size / bs)) \
+            .oflag("direct")
+        dd.run()
+        test_file_1.refresh_item()
+        sync()
+
+    with TestRun.step("Compare md5 sum of test files."):
+        if test_file_md5sum_main != test_file_1.md5sum():
+            TestRun.LOGGER.error("Md5 sums should be equal.")
+
+    with TestRun.step("Unmount and remove core."):
+        core.unmount()
+        core.remove_core()
+
+    with TestRun.step("Mount core device."):
+        core_part.mount(mnt_point)
+
+    with TestRun.step("Read data from the core device."):
+        test_file_2 = File.create_file("/tmp/test_file_2")
+        dd = Dd().output(test_file_2.full_path) \
+            .input(test_file_1.full_path) \
+            .block_size(bs) \
+            .count(int(test_file_1.size / bs)) \
+            .oflag("direct")
+        dd.run()
+        test_file_2.refresh_item()
+        sync()
+
+    with TestRun.step("Compare md5 sum of test files."):
+        if test_file_md5sum_main != test_file_2.md5sum():
+            TestRun.LOGGER.error("Md5 sums should be equal.")
+
+    with TestRun.step("Delete test files."):
+        test_file_main.remove(True)
+        test_file_1.remove(True)
+        test_file_2.remove(True)
+
+    with TestRun.step("Unmount core device."):
+        core_part.unmount()
+        remove(mnt_point, True, True, True)
+
 
 
 def check_device_write_stats(device: Device):
