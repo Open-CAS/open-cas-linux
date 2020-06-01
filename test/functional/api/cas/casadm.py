@@ -46,7 +46,7 @@ def stop_cache(cache_id: int, no_data_flush: bool = False, shortcut: bool = Fals
 
 
 def add_core(cache: Cache, core_dev: Device, core_id: int = None, shortcut: bool = False):
-    _core_id = None if core_id is None else str(id)
+    _core_id = None if core_id is None else str(core_id)
     output = TestRun.executor.run(
         add_core_cmd(cache_id=str(cache.cache_id), core_dev=core_dev.system_path,
                      core_id=_core_id, shortcut=shortcut))
