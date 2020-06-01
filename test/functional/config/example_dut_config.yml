@@ -22,3 +22,10 @@ disks:
     serial: "DEF"
     type: "hdd"
     blocksize: 512
+
+plugins:
+  example_plugin:
+    provided_by: "internal_plugins.example_plugin"
+    config:
+      property1: "value1"
+      property2: "value2"
