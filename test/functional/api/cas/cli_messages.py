@@ -59,6 +59,10 @@ stop_cache_mounted_core = [
     r"Can\'t stop cache instance \d+\. Device /dev/cas\d+-\d+ is mounted\!"
 ]
 
+load_and_force = [
+    r"Use of \'load\' and \'force\' simultaneously is forbidden\."
+]
+
 
 def check_stderr_msg(output: Output, expected_messages):
     return __check_string_msg(output.stderr, expected_messages)

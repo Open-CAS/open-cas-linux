@@ -294,6 +294,11 @@ int handle_start()
 	int status;
 	struct stat device_info;
 
+	if (command_args_values.state == CACHE_INIT_LOAD && command_args_values.force) {
+		cas_printf(LOG_ERR, "Use of 'load' and 'force' simultaneously is forbidden.\n");
+		return FAILURE;
+	}
+
 	cache_device = open(command_args_values.cache_device, O_RDONLY);
 
 	if (cache_device < 0) {
