@@ -7,6 +7,7 @@ import os
 
 from core.test_run import TestRun
 from connection.local_executor import LocalExecutor
+from test_utils.output import CmdException
 
 
 def get_current_commit_hash(from_dut: bool = False):
@@ -56,6 +57,12 @@ def _checkout_cas_commit(commit_hash):
         f"git checkout --force {commit_hash}")
     if output.exit_code != 0:
         raise CmdException(f"Failed to checkout to CAS {commit_hash}", output)
+
+    output = TestRun.executor.run(
+        f"cd {TestRun.usr.working_dir} && "
+        f"git clean -dxf")
+    if output.exit_code != 0:
+        raise CmdException(f"Failed cleanup CAS repository", output)
 
     output = TestRun.executor.run(
         f"cd {TestRun.usr.working_dir} && "
