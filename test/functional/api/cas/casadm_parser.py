@@ -274,5 +274,17 @@ def get_seq_cut_off_parameters(cache_id: int, core_id: int):
 
 def get_casadm_version():
     casadm_output = casadm.print_version(OutputFormat.csv).stdout.split('\n')
+    version_str = casadm_output[3].split(',')[-1]
+    return version.parse(version_str)
+
+
+def get_cas_disk_version():
+    casadm_output = casadm.print_version(OutputFormat.csv).stdout.split('\n')
+    version_str = casadm_output[2].split(',')[-1]
+    return version.parse(version_str)
+
+
+def get_cas_cache_version():
+    casadm_output = casadm.print_version(OutputFormat.csv).stdout.split('\n')
     version_str = casadm_output[1].split(',')[-1]
     return version.parse(version_str)
