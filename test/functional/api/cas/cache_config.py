@@ -5,8 +5,35 @@
 
 from aenum import Enum, IntFlag
 from attotime import attotimedelta
+from random import sample, choice
 
 from test_utils.size import Size, Unit
+
+
+class CacheIds:
+    min_cache_id = 1
+    max_cache_id = 16384
+    valid_cache_ids = tuple(range(min_cache_id, max_cache_id + 1))
+
+    @classmethod
+    def get_random_id(cls, ids_number=1):
+        if ids_number > 1:
+            return sample(cls.valid_cache_ids, ids_number)
+
+        return choice(cls.valid_cache_ids)
+
+
+class CoreIds:
+    min_core_id = 0
+    max_core_id = 4095
+    valid_core_ids = tuple(range(min_core_id, max_core_id + 1))
+
+    @classmethod
+    def get_random_id(cls, ids_number=1):
+        if ids_number > 1:
+            return sample(cls.valid_core_ids, ids_number)
+
+        return choice(cls.valid_core_ids)
 
 
 class CacheLineSize(Enum):
