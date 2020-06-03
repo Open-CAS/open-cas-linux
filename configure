@@ -29,7 +29,6 @@ SCRIPTPATH=`dirname $0`
 SCRIPTPATH=`realpath $SCRIPTPATH`
 SUBMODULES=(
 	"ocf"
-	"test/functional/test-framework"
 )
 
 for SUBMOD in ${SUBMODULES[@]}; do
