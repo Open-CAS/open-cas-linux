@@ -4,28 +4,83 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
-VER_FILE=CAS_VERSION
+SOURCES_DIR="$(realpath ../)"
+VERSION_FILE="$SOURCES_DIR/.metadata/cas_version"
+SUBMODULES=(
+    "ocf"
+    "test/functional/test-framework"
+)
 
-if [ -f ${VER_FILE} ]; then
-    echo -e "Using existing ${VER_FILE} version file.\n"
-    exit 0
+. "$SOURCES_DIR/version"
+
+# Check if we're inside a git repository
+if [[ -d "$SOURCES_DIR/.git" ]] && which git &>/dev/null &&\
+        (cd "$SOURCES_DIR" && git rev-parse --is-inside-work-tree &>/dev/null); then
+    echo "Git tree available - creating version file."
+
+    CAS_VERSION_BUILD=$(cd "$SOURCES_DIR" && git log --merges --oneline | wc -l)
+    LAST_COMMIT_HASH=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%H)
+    LAST_COMMIT_HASH_ABBR=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%h)
+    LAST_COMMIT_DATE=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%ci |\
+                       sed "s/ /T/" | sed "s/ //" | sed "s/00$/:00/")
+    LAST_COMMIT_TIMESTAMP=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%ct)
+    for SUBMOD in ${SUBMODULES[@]}; do
+        LAST_SUB_COMMIT_HASHES+=($(cd "$SOURCES_DIR/$SUBMOD" && git log -1 --pretty=format:%H))
+        LAST_SUB_COMMIT_HASHES_ABBR+=($(cd "$SOURCES_DIR/$SUBMOD" && git log -1 --pretty=format:%h))
+    done
+
+    if [[ $(cd "$SOURCES_DIR" && git tag --points-at HEAD) ]]; then
+        CAS_RELEASE="release"
+    elif [[ $(cd "$SOURCES_DIR" && git log -1 --pretty=format:%H)\
+            == $(cd "$SOURCES_DIR" && git log -1 --merges --pretty=format:%H) ]]; then
+        CAS_RELEASE="master"
+    else
+        CAS_RELEASE="devel.${LAST_COMMIT_TIMESTAMP}"
+    fi
+
+    CAS_VERSION=$(printf "%02d.%02d.%01d.%04d-%s" $CAS_VERSION_MAIN $CAS_VERSION_MAJOR\
+                $CAS_VERSION_MINOR $CAS_VERSION_BUILD $CAS_RELEASE)
+
+    mkdir -p $(dirname "$VERSION_FILE")
+    if ! touch "$VERSION_FILE"; then
+        echo "Couldn't create version file" >&2
+        exit 1
+    fi
+    echo "CAS_VERSION_MAIN=$CAS_VERSION_MAIN" > "$VERSION_FILE"
+    echo "CAS_VERSION_MAJOR=$CAS_VERSION_MAJOR" >> "$VERSION_FILE"
+    echo "CAS_VERSION_MINOR=$CAS_VERSION_MINOR" >> "$VERSION_FILE"
+    echo "CAS_VERSION_BUILD=$CAS_VERSION_BUILD" >> "$VERSION_FILE"
+    echo "CAS_RELEASE=$CAS_RELEASE" >> "$VERSION_FILE"
+    echo "CAS_VERSION=$CAS_VERSION" >> "$VERSION_FILE"
+    echo "LAST_COMMIT_HASH=$LAST_COMMIT_HASH" >> "$VERSION_FILE"
+    echo "LAST_COMMIT_HASH_ABBR=$LAST_COMMIT_HASH_ABBR" >> "$VERSION_FILE"
+    echo "LAST_COMMIT_DATE=$LAST_COMMIT_DATE" >> "$VERSION_FILE"
+    echo "LAST_COMMIT_TIMESTAMP=$LAST_COMMIT_TIMESTAMP" >> "$VERSION_FILE"
+    echo "LAST_SUB_COMMIT_HASHES=(${LAST_SUB_COMMIT_HASHES[@]})" >> "$VERSION_FILE"
+    echo "LAST_SUB_COMMIT_HASHES_ABBR=(${LAST_SUB_COMMIT_HASHES_ABBR[@]})" >> "$VERSION_FILE"
+    FILE_CREATION_DATE=$(date --iso-8601=seconds)
+    FILE_CREATION_TIMESTAMP=$(date +%s)
+    echo "FILE_CREATION_DATE=$FILE_CREATION_DATE" >> "$VERSION_FILE"
+    echo "FILE_CREATION_TIMESTAMP=$FILE_CREATION_TIMESTAMP" >> "$VERSION_FILE"
+elif [[ -f "$VERSION_FILE" ]]; then
+    echo "Git tree not available - using existing version file."
+
+    . "$VERSION_FILE" &>/dev/null
+else
+    echo "Couldn't obtain CAS version - no git tree nor version file found" >&2
+    exit 1
 fi
 
-echo -e "No ${VER_FILE} found. Preparing default version file.\n"
-
-CAS_VERSION_MAIN=20
-CAS_VERSION_MAJOR=6
-CAS_VERSION_MINOR=0
-CAS_BUILD_NO=0000`date +%m%d`
-
-touch ${VER_FILE}
-
-CAS_VERSION=$(printf "%02d.%02d.%02d.%s" $CAS_VERSION_MAIN $CAS_VERSION_MAJOR \
-        $CAS_VERSION_MINOR $CAS_BUILD_NO)
-
-echo "CAS_VERSION_MAIN=${CAS_VERSION_MAIN}" >> ${VER_FILE}
-echo "CAS_VERSION_MAJOR=${CAS_VERSION_MAJOR}" >> ${VER_FILE}
-echo "CAS_VERSION_MINOR=${CAS_VERSION_MINOR}" >> ${VER_FILE}
-echo "CAS_VERSION=${CAS_VERSION}" >> ${VER_FILE}
-
-cat ${VER_FILE}
+if ! touch "$VERSION_FILE"; then
+    echo "Couldn't edit version file" >&2
+    exit 1
+fi
+CAS_BUILD_DATE=$(date --iso-8601=seconds)
+CAS_BUILD_TIMESTAMP=$(date +%s)
+if grep CAS_BUILD_DATE "$VERSION_FILE"; then
+    sed -i "s/CAS_BUILD_DATE=.*/CAS_BUILD_DATE=$CAS_BUILD_DATE/" "$VERSION_FILE"
+    sed -i "s/CAS_BUILD_TIMESTAMP=.*/CAS_BUILD_TIMESTAMP=$CAS_BUILD_TIMESTAMP/" "$VERSION_FILE"
+else
+    echo "CAS_BUILD_DATE=$CAS_BUILD_DATE" >> "$VERSION_FILE"
+    echo "CAS_BUILD_TIMESTAMP=$CAS_BUILD_TIMESTAMP" >> "$VERSION_FILE"
+fi
