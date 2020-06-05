@@ -6,9 +6,10 @@
 PWD:=$(shell pwd)
 MODULESDIR:=$(PWD)/../modules
 UTILS_DIR:=$(PWD)/../utils
+METADATA_DIR:=$(PWD)/../.metadata
 BINARY_PATH = /sbin
 
-VERSION_FILE := $(MODULESDIR)/CAS_VERSION
+VERSION_FILE := $(METADATA_DIR)/cas_version
 
 #
 # Section below enables creating build with experimental features
@@ -121,7 +122,7 @@ endif
 
 $(VERSION_FILE):
 	@echo "  VERSION " $@
-	@cd $(MODULESDIR) && ./CAS_VERSION_GEN
+	@cd $(UTILS_DIR) && ./cas_version_gen
 
 clean:
 	@echo "  CLEAN "
@@ -158,4 +159,4 @@ uninstall:
 
 	@rm $(DESTDIR)/usr/share/man/man5/opencas.conf.5
 
-.PHONY: clean distclean all sync build install uninstall
+.PHONY: clean distclean all sync build install uninstall $(VERSION_FILE)

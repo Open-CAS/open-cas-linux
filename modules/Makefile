@@ -15,12 +15,13 @@ obj-y += cas_disk/
 # line; invoke the kernel build system.
 else
 
-VERSION_FILE=$(PWD)/CAS_VERSION
-
+PWD=$(shell pwd)
 OCFDIR=$(PWD)/../ocf
 KERNEL_DIR ?= "/lib/modules/$(shell uname -r)/build"
-PWD=$(shell pwd)
 MODULES_DIR=/lib/modules/$(shell uname -r)/extra
+METADATA_DIR:=$(PWD)/../.metadata
+UTILS_DIR:=$(PWD)/../utils
+VERSION_FILE:=$(METADATA_DIR)/cas_version
 
 DISK_MODULE = cas_disk
 CACHE_MODULE = cas_cache
@@ -32,7 +33,7 @@ MODPROBE:=$(shell which modprobe)
 all: default
 
 $(VERSION_FILE):
-	./CAS_VERSION_GEN
+	@cd $(UTILS_DIR) && ./cas_version_gen
 
 # Extra targets and file configuration
 ifneq ($(wildcard $(PWD)/extra.mk),)
@@ -71,6 +72,6 @@ uninstall:
 
 reinstall: uninstall install
 
-.PHONY: all default clean distclean sync distsync install uninstall
+.PHONY: all default clean distclean sync distsync install uninstall $(VERSION_FILE)
 
 endif

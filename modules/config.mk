@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
-VERSION_FILE := $(M)/CAS_VERSION
+VERSION_FILE := $(M)/../.metadata/cas_version
 
 $(VERSION_FILE):
-	./CAS_VERSION_GEN
+	@cd $(M)/../utils && ./cas_version_gen
 
 check_cflag=$(shell echo "" | \
 	gcc -c -xc ${1} -o /dev/null - 2>/dev/null; \
