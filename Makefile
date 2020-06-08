@@ -26,7 +26,7 @@ archives:
 	@utils/pckgen $(PWD) tar zip
 
 rpm:
-	@utils/pckgen $(PWD) rpm
+	@utils/pckgen $(PWD) rpm --debug
 
 srpm:
-	@utils/pckgen $(PWD) srpm
+	@utils/pckgen $(PWD) srpm --debug
