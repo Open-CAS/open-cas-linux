@@ -10,6 +10,7 @@ import argparse
 import subprocess
 import os
 from pathlib import Path
+from shutil import copy
 
 import opencas
 from upgrade_utils import (
@@ -30,6 +31,7 @@ from upgrade_utils import (
 
 LOG_FILE = "/var/log/opencas-upgrade/upgrade.log"
 COMPILATION_LOG = "/var/log/opencas-upgrade/build.log"
+INIT_CONFIG_FILE_TMP_PATH = "/tmp/opencas_upgrade_backup.conf"
 
 CAS_CACHE_KEY = "CAS Cache Kernel Module"
 CAS_DISK_KEY = "CAS Disk Kernel Module"
@@ -76,6 +78,14 @@ class InitUpgrade(UpgradeState):
         if len(active_devices["core_pool"]) != 0:
             return Failure("Incomplete configuration. Run casadm -L to review CAS state!")
 
+        if os.path.isfile(opencas.cas_config.default_location):
+            try:
+                copy(opencas.cas_config.default_location, INIT_CONFIG_FILE_TMP_PATH)
+            except IOError:
+                return Failure("Could not save init config file backup")
+        else:
+            logging.info("Init config file not found")
+
         return Success()
 
 
@@ -98,6 +108,25 @@ class BuildCas(UpgradeState):
             if p.returncode:
                 return Failure(f"Compilation of Open CAS failed. Build log: {COMPILATION_LOG}")
 
+        return Success()
+
+
+class RestoreInitConfig(UpgradeState):
+    log = "Restore original init config file"
+
+    def do_work(self):
+        if not os.path.isfile(INIT_CONFIG_FILE_TMP_PATH):
+            logging.warning("Init config backup file not found")
+            return Success()
+
+        try:
+            copy(INIT_CONFIG_FILE_TMP_PATH, opencas.cas_config.default_location)
+        except IOError:
+            logging.error(f"Failed to restore original init config file from "
+                    f"{INIT_CONFIG_FILE_TMP_PATH}. Configuration has to be restored manually.")
+            return Failure()
+
+        os.remove(INIT_CONFIG_FILE_TMP_PATH)
         return Success()
 
 
@@ -310,14 +339,20 @@ class UpgradeStateMachine(StateMachine):
     |InsertNew    +--------+          |   |
     +------+------+        |          |   |
            |               |          |   |
-           v               v          |   |
-    +------+------+ +------+--------+ |   |
-    |InstallCas   | |InsertInstalled| |   |
-    +------+------+ +------+--------+ |   |
-           |               |          |   |
            v               |          |   |
+    +------+------+ fail   |          |   |
+    |InstallCas   +--------+          |   |
+    +------+------+        v          |   |
+           |        +------+--------+ |   |
+           |        |InsertInstalled| |   |
+           v        +------+--------+ |   |
     +------+------+        |          |   |
-    |RestoreSched +<-------+----------+   |
+    |RestoreConfig+<-------+          |   |
+    +------+------+                   |   |
+           |                          |   |
+           v                          |   |
+    +------+------+                   |   |
+    |RestoreSched +<------------------+   |
     +------+------+                       v
            |                       +------+---+
            +---------------------->+   END    |
@@ -335,8 +370,9 @@ class UpgradeStateMachine(StateMachine):
         DropCaches: {Success: DryRun, Failure: RestoreCoreSchedulers},
         DryRun: {Success: InsertNewModule, Failure: InsertInstalledModule},
         InsertNewModule: {Success: InstallCas, Failure: InsertInstalledModule},
-        InstallCas: {Success: RestoreCoreSchedulers, Failure: InsertInstalledModule},
-        InsertInstalledModule: {"default": RestoreCoreSchedulers},
+        InstallCas: {Success: RestoreInitConfig, Failure: InsertInstalledModule},
+        InsertInstalledModule: {"default": RestoreInitConfig},
+        RestoreInitConfig: {"default": RestoreCoreSchedulers},
         RestoreCoreSchedulers: {"default": None},
         "default": None,
     }
