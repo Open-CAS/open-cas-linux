@@ -60,6 +60,14 @@ then
 	exit 1
 fi
 
+# Run version generator with 'build' flag to
+# indicate that we are in the build process
+(cd utils && ./cas_version_gen build)
+if [ $? -ne 0 ]; then
+	echo "Error: failed to obtain CAS version" >&2
+	exit 1
+fi
+
 CONFIG_FILES=`ls $SCRIPTPATH/configure.d/*.conf | sort`
 FILES_COUNT=`echo $CONFIG_FILES | wc -w`
 

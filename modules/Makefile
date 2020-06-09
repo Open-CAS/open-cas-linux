@@ -15,8 +15,6 @@ obj-y += cas_disk/
 # line; invoke the kernel build system.
 else
 
-VERSION_FILE=$(PWD)/CAS_VERSION
-
 OCFDIR=$(PWD)/../ocf
 KERNEL_DIR ?= "/lib/modules/$(shell uname -r)/build"
 PWD=$(shell pwd)
@@ -31,9 +29,6 @@ MODPROBE:=$(shell which modprobe)
 
 all: default
 
-$(VERSION_FILE):
-	./CAS_VERSION_GEN
-
 # Extra targets and file configuration
 ifneq ($(wildcard $(PWD)/extra.mk),)
 include $(PWD)/extra.mk
@@ -41,7 +36,7 @@ else
 sync distsync:
 endif
 
-default: $(VERSION_FILE) sync
+default: sync
 	cd $(KERNEL_DIR) && $(MAKE) M=$(PWD) modules
 
 clean:
