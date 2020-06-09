@@ -6,9 +6,10 @@
 PWD:=$(shell pwd)
 MODULESDIR:=$(PWD)/../modules
 UTILS_DIR:=$(PWD)/../utils
+METADATA_DIR:=$(PWD)/../.metadata
 BINARY_PATH = /sbin
 
-VERSION_FILE := $(MODULESDIR)/CAS_VERSION
+VERSION_FILE := $(METADATA_DIR)/cas_version
 
 #
 # Section below enables creating build with experimental features
@@ -89,7 +90,7 @@ LDFLAGS    = -z noexecstack -z relro -z now -pie -pthread
 all: sync
 	$(MAKE) build
 
-build: $(VERSION_FILE) $(TARGETS)
+build: $(TARGETS)
 
 sync:
 	@cd $(MODULESDIR) && $(MAKE) sync
@@ -119,17 +120,12 @@ ifeq ($(strip $(CAS_VERSION_MAIN)),)
 endif
 	@$(CC) -c $(CFLAGS) -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 
-$(VERSION_FILE):
-	@echo "  VERSION " $@
-	@cd $(MODULESDIR) && ./CAS_VERSION_GEN
-
 clean:
 	@echo "  CLEAN "
 	@rm -f *.a $(TARGETS)
 	@rm -f $(shell find -name \*.d) $(shell find -name \*.o)
 
 distclean: clean
-	@rm -f $(VERSION_FILE)
 
 install: install_files
 
