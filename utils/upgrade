@@ -349,10 +349,14 @@ def start(args):
 
     if not isinstance(result, Success):
         print(f"Upgrade failed. Reason: {result}")
+        exit_code = 1
     else:
         print("Upgrade completed successfully!")
+        exit_code = 0
 
     print(f"Full upgrade log: {LOG_FILE}")
+
+    return exit_code
 
 
 def main():
@@ -376,10 +380,11 @@ def main():
 
     if len(sys.argv[1:]) == 0:
         parser.print_help()
+        return 1
     else:
         args = parser.parse_args(sys.argv[1:])
-        args.func(args)
+        return args.func(args)
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
