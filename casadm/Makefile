@@ -139,6 +139,8 @@ install_files:
 	@install -m 755 -d $(DESTDIR)/etc/opencas
 	@install -m 644 $(UTILS_DIR)/opencas.conf $(DESTDIR)/etc/opencas/opencas.conf
 	@install -m 444 $(UTILS_DIR)/ioclass-config.csv $(DESTDIR)/etc/opencas/ioclass-config.csv
+	@install -m 755 -d $(DESTDIR)/var/lib/opencas
+	@install -m 644 $(METADATA_DIR)/cas_version $(DESTDIR)/var/lib/opencas/cas_version
 
 	@mkdir -p $(DESTDIR)/usr/share/man/man5
 	@install -m 644 $(UTILS_DIR)/opencas.conf.5 $(DESTDIR)/usr/share/man/man5/opencas.conf.5
@@ -151,6 +153,8 @@ uninstall:
 	@rm $(DESTDIR)/etc/opencas/opencas.conf
 	@rm $(DESTDIR)/etc/opencas/ioclass-config.csv
 	@rm -rf $(DESTDIR)/etc/opencas
+	@rm $(DESTDIR)/var/lib/opencas/cas_version
+	@rm -rf $(DESTDIR)/var/lib/opencas
 
 	@rm $(DESTDIR)/usr/share/man/man5/opencas.conf.5
 
