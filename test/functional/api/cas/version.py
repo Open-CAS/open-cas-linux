@@ -9,6 +9,9 @@ from git import Repo, Commit
 from packaging import version
 import os
 
+from api.cas.cas_module import CasModule
+from test_utils.os_utils import get_module_path, get_executable_path, get_udev_service_path
+
 
 class CasVersion(version.Version):
     def __str__(self):
@@ -64,3 +67,46 @@ def cas_can_be_upgraded(from_: CasVersion, to: Commit):
         return True
 
     return False
+
+
+def get_installed_files_list(v: CasVersion):
+    if v >= CasVersion("v20.1"):
+        return __20_1_installed_files_list()
+
+    if v >= CasVersion("v19.9"):
+        return __19_9_installed_files_list()
+
+    raise ValueError(f"List of installed files for CAS {v} is not specified")
+
+
+def __20_1_installed_files_list():
+    paths = __19_9_installed_files_list()
+
+    paths.append(get_udev_service_path("open-cas"))
+
+    return paths
+
+
+def __19_9_installed_files_list():
+    casctl_dir = "/lib/opencas"
+    udevrules_dir = "/lib/udev/rules.d"
+    man_dir = "/usr/share/man"
+
+    casctl_files = ["casctl", "open-cas-loader", "opencas.py"]
+    udevrules_files = [
+        "60-persistent-storage-cas-load.rules",
+        "60-persistent-storage-cas.rules",
+    ]
+    man_files = ["man5/opencas.conf.5", "man8/casadm.8", "man8/casctl.8"]
+
+    paths = [get_module_path(CasModule.cache.value)]
+    paths.append(get_module_path(CasModule.disk.value))
+    paths.append(get_executable_path("casctl"))
+    paths.append(get_executable_path("casadm"))
+    paths.append(get_udev_service_path("open-cas-shutdown"))
+    paths.append(get_executable_path("casadm"))
+    paths += [os.path.join(casctl_dir, f) for f in casctl_files]
+    paths += [os.path.join(udevrules_dir, f) for f in udevrules_files]
+    paths += [os.path.join(man_dir, f) for f in man_files]
+
+    return paths
