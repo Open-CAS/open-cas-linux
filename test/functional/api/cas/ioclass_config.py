@@ -89,21 +89,25 @@ class IoClass:
         return sorted(list1) == sorted(list2)
 
     @staticmethod
-    def generate_random_ioclass_list(count: int, max_priority: int = MAX_IO_CLASS_PRIORITY):
+    def generate_random_ioclass_list(
+        count: int, max_priority: int = MAX_IO_CLASS_PRIORITY, blacklist=[]
+    ):
         random_list = [IoClass.default(priority=random.randint(0, max_priority),
                                        allocation=bool(random.randint(0, 1)))]
         for i in range(1, count):
             random_list.append(IoClass(i, priority=random.randint(0, max_priority),
                                        allocation=bool(random.randint(0, 1)))
-                               .set_random_rule())
+                               .set_random_rule(blacklist))
         return random_list
 
-    def set_random_rule(self):
+    def set_random_rule(self, blacklist):
         rules = ["metadata", "direct", "file_size", "directory", "io_class",
                  "extension", "file_name_prefix", "lba", "pid", "process_name",
                  "file_offset", "request_size"]
         if os_utils.get_kernel_version() >= version.Version("4.13"):
             rules.append("wlth")
+
+        rules = [r for r in rules if r not in blacklist]
 
         rule = random.choice(rules)
         self.rule = IoClass.add_random_params(rule)
