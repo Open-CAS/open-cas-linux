@@ -1848,6 +1848,7 @@ static void cache_start_finalize(struct work_struct *work)
 {
 	struct cache_priv *cache_priv =
 		container_of(work, struct cache_priv, start_worker);
+	struct task_struct *rollback_thread;
 	struct _cache_mngt_attach_context *ctx = cache_priv->attach_context;
 	int result;
 	ocf_cache_t cache = ctx->cache;
@@ -1870,6 +1871,8 @@ static void cache_start_finalize(struct work_struct *work)
 
 	init_instance_complete(ctx, cache);
 
+	rollback_thread = ctx->rollback_thread;
+
 	if (_cache_mngt_async_callee_set_result(&ctx->async, 0)) {
 		/* caller interrupted */
 		ctx->ocf_start_error = 0;
@@ -1878,7 +1881,7 @@ static void cache_start_finalize(struct work_struct *work)
 		return;
 	}
 
-	kthread_stop(ctx->rollback_thread);
+	kthread_stop(rollback_thread);
 
 	ocf_mngt_cache_unlock(cache);
 }
