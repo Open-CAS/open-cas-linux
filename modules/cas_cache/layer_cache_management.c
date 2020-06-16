@@ -1836,7 +1836,7 @@ static void init_instance_complete(struct _cache_mngt_attach_context *ctx,
 	/* Set other back information */
 	name = block_dev_get_elevator_name(
 			casdsk_disk_get_queue(bd_cache_obj->dsk));
-	if (name)
+	if (name && ctx->cmd)
 		strlcpy(ctx->cmd->cache_elevator,
 				name, MAX_ELEVATOR_NAME);
 }
@@ -1893,7 +1893,7 @@ static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv, int error)
 	int caller_status = _cache_mngt_async_callee_peek_result(&ctx->async);
 
 	if (caller_status || error) {
-		if (error == -OCF_ERR_NO_FREE_RAM) {
+		if (error == -OCF_ERR_NO_FREE_RAM && ctx->cmd) {
 			ocf_mngt_get_ram_needed(cache, ctx->device_cfg,
 					&ctx->cmd->min_free_ram);
 		} else if (caller_status == -KCAS_ERR_WAITING_INTERRUPTED) {
