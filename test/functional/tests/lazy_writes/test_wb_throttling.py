@@ -14,7 +14,7 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from test_tools.iostat import IOstat
+from test_tools.iostat import IOstatExtended
 from test_utils.os_utils import (
     kill_all_io,
     set_wbt_lat,
@@ -100,10 +100,10 @@ def test_wb_throttling():
         eta = runtime
         while eta.total_seconds() > 0:
             # Instead of explicit sleeping with `time.sleep()` iostat is used for waiting
-            iostat = IOstat.get_iostat_list(
+            iostat = IOstatExtended.get_iostat_list(
                 [core, cache_device, core_device],
                 since_boot=False,
-                interval=sleep_interval.total_seconds(),
+                interval=int(sleep_interval.total_seconds()),
             )
             TestRun.LOGGER.debug(f"{iostat}")
             eta -= sleep_interval
