@@ -152,6 +152,7 @@ def get_force_param(item):
 
 def base_prepare(item):
     with TestRun.LOGGER.step("Cleanup before test"):
+        TestRun.executor.run("pkill --signal=SIGKILL fsck")
         Udev.enable()
         kill_all_io()
         DeviceMapper.remove_all()
