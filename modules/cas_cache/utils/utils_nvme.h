@@ -18,21 +18,11 @@
 #include <uapi/linux/nvme_ioctl.h>
 #endif
 
-#if defined(CAS_NVME_PARTIAL)
-
 #include <linux/nvme.h>
 
 int cas_nvme_get_nsid(struct block_device *bdev, unsigned int *nsid);
 int cas_nvme_identify_ns(struct block_device *bdev, unsigned int nsid,
 		struct nvme_id_ns *ns);
 
-#if defined(CAS_NVME_FULL)
-
-int cas_nvme_format_optimal(const char *device_path, int metadata_mode,
-		int force);
-
-#endif /* CAS_NVME_FULL */
-
-#endif /* CAS_NVME_PARTIAL */
 
 #endif /* UTILS_NVME_H_ */

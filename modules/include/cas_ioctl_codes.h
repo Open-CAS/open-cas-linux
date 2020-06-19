@@ -170,6 +170,10 @@ struct kcas_get_stats {
 	int ext_err_code;
 };
 
+#define CAS_METADATA_MODE_NORMAL	0
+#define CAS_METADATA_MODE_ATOMIC	1
+#define CAS_METADATA_MODE_INVALID	255
+
 struct kcas_cache_info {
 	/** id of a cache */
 	uint16_t cache_id;
@@ -276,32 +280,7 @@ struct kcas_cache_list {
 	int ext_err_code;
 };
 
-/**
- * CAS capabilities.
- */
-struct kcas_capabilites {
-	uint8_t nvme_format : 1;
-		/**< NVMe format support */
-
-	int ext_err_code;
-};
-
 struct kcas_upgrade {
-	int ext_err_code;
-};
-
-/**
- * Format NVMe namespace.
- */
-#define CAS_METADATA_MODE_NORMAL	0
-#define CAS_METADATA_MODE_ATOMIC	1
-#define CAS_METADATA_MODE_INVALID	255
-
-struct kcas_nvme_format {
-	char device_path_name[MAX_STR_LEN]; /**< path to NVMe device*/
-	int metadata_mode; /**< selected metadata mode */
-	int force;
-
 	int ext_err_code;
 };
 
@@ -393,25 +372,23 @@ struct kcas_get_cache_param {
  *    15    *    KCAS_IOCTL_PARTITION_SET                   *    OK            *
  *    16    *    KCAS_IOCTL_GET_CACHE_COUNT                 *    OK            *
  *    17    *    KCAS_IOCTL_LIST_CACHE                      *    OK            *
- *    18    *    KCAS_IOCTL_GET_CAPABILITIES                *    OK            *
- *    19    *    KCAS_IOCTL_UPGRADE                         *    OK            *
- *    20    *    KCAS_IOCTL_NVME_FORMAT                     *    OK            *
- *    21    *    KCAS_IOCTL_START_CACHE                     *    OK            *
- *    22    *    KCAS_IOCTL_INSERT_CORE                     *    OK            *
- *    23    *    KCAS_IOCTL_REMOVE_CORE                     *    OK            *
- *    24    *    KCAS_IOCTL_CACHE_INFO                      *    OK            *
- *    25    *    KCAS_IOCTL_CORE_INFO                       *    OK            *
- *    26    *    KCAS_IOCTL_GET_CORE_POOL_COUNT             *    OK            *
- *    27    *    KCAS_IOCTL_GET_CORE_POOL_PATHS             *    OK            *
- *    28    *    KCAS_IOCTL_CORE_POOL_REMOVE                *    OK            *
- *    29    *    KCAS_IOCTL_CACHE_CHECK_DEVICE              *    OK            *
- *    30    *    KCAS_IOCTL_SET_CORE_PARAM                  *    OK            *
- *    31    *    KCAS_IOCTL_GET_CORE_PARAM                  *    OK            *
- *    32    *    KCAS_IOCTL_SET_CACHE_PARAM                 *    OK            *
- *    33    *    KCAS_IOCTL_GET_CACHE_PARAM                 *    OK            *
- *    34    *    KCAS_IOCTL_GET_STATS                       *    OK            *
- *    35    *    KCAS_IOCTL_PURGE_CACHE                     *    OK            *
- *    36    *    KCAS_IOCTL_PURGE_CORE                      *    OK            *
+ *    18    *    KCAS_IOCTL_UPGRADE                         *    OK            *
+ *    19    *    KCAS_IOCTL_START_CACHE                     *    OK            *
+ *    20    *    KCAS_IOCTL_INSERT_CORE                     *    OK            *
+ *    21    *    KCAS_IOCTL_REMOVE_CORE                     *    OK            *
+ *    22    *    KCAS_IOCTL_CACHE_INFO                      *    OK            *
+ *    23    *    KCAS_IOCTL_CORE_INFO                       *    OK            *
+ *    24    *    KCAS_IOCTL_GET_CORE_POOL_COUNT             *    OK            *
+ *    25    *    KCAS_IOCTL_GET_CORE_POOL_PATHS             *    OK            *
+ *    26    *    KCAS_IOCTL_CORE_POOL_REMOVE                *    OK            *
+ *    27    *    KCAS_IOCTL_CACHE_CHECK_DEVICE              *    OK            *
+ *    28    *    KCAS_IOCTL_SET_CORE_PARAM                  *    OK            *
+ *    29    *    KCAS_IOCTL_GET_CORE_PARAM                  *    OK            *
+ *    30    *    KCAS_IOCTL_SET_CACHE_PARAM                 *    OK            *
+ *    31    *    KCAS_IOCTL_GET_CACHE_PARAM                 *    OK            *
+ *    32    *    KCAS_IOCTL_GET_STATS                       *    OK            *
+ *    33    *    KCAS_IOCTL_PURGE_CACHE                     *    OK            *
+ *    34    *    KCAS_IOCTL_PURGE_CORE                      *    OK            *
  *******************************************************************************
  */
 
@@ -451,64 +428,58 @@ struct kcas_get_cache_param {
 /** List valid cache ids within Open CAS module */
 #define KCAS_IOCTL_LIST_CACHE _IOWR(KCAS_IOCTL_MAGIC, 17, struct kcas_cache_list)
 
-/** Provides capabilites of installed open cas module */
-#define KCAS_IOCTL_GET_CAPABILITIES _IOWR(KCAS_IOCTL_MAGIC, 18, struct kcas_capabilites)
-
 /** Start upgrade in flight procedure */
-#define KCAS_IOCTL_UPGRADE _IOR(KCAS_IOCTL_MAGIC, 19, struct kcas_upgrade)
-
-/** Format NVMe namespace to support selected metadata mode */
-#define KCAS_IOCTL_NVME_FORMAT _IOWR(KCAS_IOCTL_MAGIC, 20, struct kcas_nvme_format)
+#define KCAS_IOCTL_UPGRADE _IOR(KCAS_IOCTL_MAGIC, 18, struct kcas_upgrade)
 
 /** Start new cache instance, load cache or recover cache */
-#define KCAS_IOCTL_START_CACHE _IOWR(KCAS_IOCTL_MAGIC, 21, struct kcas_start_cache)
+#define KCAS_IOCTL_START_CACHE _IOWR(KCAS_IOCTL_MAGIC, 19, struct kcas_start_cache)
 
 /** Add core object to an running cache instance */
-#define KCAS_IOCTL_INSERT_CORE _IOWR(KCAS_IOCTL_MAGIC, 22, struct kcas_insert_core)
+#define KCAS_IOCTL_INSERT_CORE _IOWR(KCAS_IOCTL_MAGIC, 20, struct kcas_insert_core)
 
 /** Remove core object from an running cache instance */
-#define KCAS_IOCTL_REMOVE_CORE _IOR(KCAS_IOCTL_MAGIC, 23, struct kcas_remove_core)
+#define KCAS_IOCTL_REMOVE_CORE _IOR(KCAS_IOCTL_MAGIC, 21, struct kcas_remove_core)
 
 /** Retrieve properties of a running cache instance (incl. mode etc.) */
-#define KCAS_IOCTL_CACHE_INFO _IOWR(KCAS_IOCTL_MAGIC, 24, struct kcas_cache_info)
+#define KCAS_IOCTL_CACHE_INFO _IOWR(KCAS_IOCTL_MAGIC, 22, struct kcas_cache_info)
 
 /** Rretrieve statisting of a given core object */
-#define KCAS_IOCTL_CORE_INFO _IOWR(KCAS_IOCTL_MAGIC, 25, struct kcas_core_info)
+#define KCAS_IOCTL_CORE_INFO _IOWR(KCAS_IOCTL_MAGIC, 23, struct kcas_core_info)
 
 /** Get core pool count */
-#define KCAS_IOCTL_GET_CORE_POOL_COUNT _IOR(KCAS_IOCTL_MAGIC, 26, struct kcas_core_pool_count)
+#define KCAS_IOCTL_GET_CORE_POOL_COUNT _IOR(KCAS_IOCTL_MAGIC, 24, struct kcas_core_pool_count)
 
 /** Ret paths from devices which are in core pool */
-#define KCAS_IOCTL_GET_CORE_POOL_PATHS _IOWR(KCAS_IOCTL_MAGIC, 27, struct kcas_core_pool_path)
+#define KCAS_IOCTL_GET_CORE_POOL_PATHS _IOWR(KCAS_IOCTL_MAGIC, 25, struct kcas_core_pool_path)
 
 /** Remove device from core pool */
-#define KCAS_IOCTL_CORE_POOL_REMOVE _IOWR(KCAS_IOCTL_MAGIC, 28, struct kcas_core_pool_remove)
+#define KCAS_IOCTL_CORE_POOL_REMOVE _IOWR(KCAS_IOCTL_MAGIC, 26, struct kcas_core_pool_remove)
 
 /** Check if given device is initialized cache device */
-#define KCAS_IOCTL_CACHE_CHECK_DEVICE _IOWR(KCAS_IOCTL_MAGIC, 29, struct kcas_cache_check_device)
+#define KCAS_IOCTL_CACHE_CHECK_DEVICE _IOWR(KCAS_IOCTL_MAGIC, 27, struct kcas_cache_check_device)
 
 /** Set various core runtime parameters */
-#define KCAS_IOCTL_SET_CORE_PARAM _IOW(KCAS_IOCTL_MAGIC, 30, struct kcas_set_core_param)
+#define KCAS_IOCTL_SET_CORE_PARAM _IOW(KCAS_IOCTL_MAGIC, 28, struct kcas_set_core_param)
 
 /** Get various core runtime parameters */
-#define KCAS_IOCTL_GET_CORE_PARAM _IOW(KCAS_IOCTL_MAGIC, 31, struct kcas_get_core_param)
+#define KCAS_IOCTL_GET_CORE_PARAM _IOW(KCAS_IOCTL_MAGIC, 29, struct kcas_get_core_param)
 
 /** Set various cache runtime parameters */
-#define KCAS_IOCTL_SET_CACHE_PARAM _IOW(KCAS_IOCTL_MAGIC, 32, struct kcas_set_cache_param)
+#define KCAS_IOCTL_SET_CACHE_PARAM _IOW(KCAS_IOCTL_MAGIC, 30, struct kcas_set_cache_param)
 
 /** Get various cache runtime parameters */
-#define KCAS_IOCTL_GET_CACHE_PARAM _IOW(KCAS_IOCTL_MAGIC, 33, struct kcas_get_cache_param)
+#define KCAS_IOCTL_GET_CACHE_PARAM _IOW(KCAS_IOCTL_MAGIC, 31, struct kcas_get_cache_param)
 
 /** Get stats of particular OCF object */
-#define KCAS_IOCTL_GET_STATS _IOR(KCAS_IOCTL_MAGIC, 34, struct kcas_get_stats)
+#define KCAS_IOCTL_GET_STATS _IOR(KCAS_IOCTL_MAGIC, 32, struct kcas_get_stats)
 
 /* Flush dirty data from running cache
  * and invalidate all valid cache lines */
-#define KCAS_IOCTL_PURGE_CACHE _IOWR(KCAS_IOCTL_MAGIC, 35, struct kcas_flush_cache)
+#define KCAS_IOCTL_PURGE_CACHE _IOWR(KCAS_IOCTL_MAGIC, 33, struct kcas_flush_cache)
 
 /* Flush dirty data from running core object
  * and invalidate all valid cache lines associated with given core. */
-#define KCAS_IOCTL_PURGE_CORE _IOWR(KCAS_IOCTL_MAGIC, 36, struct kcas_flush_core)
+#define KCAS_IOCTL_PURGE_CORE _IOWR(KCAS_IOCTL_MAGIC, 34, struct kcas_flush_core)
 
 /**
  * Extended kernel CAS error codes
@@ -532,9 +503,6 @@ enum kcas_error {
 	/** Device opens or mount are pending to this cache */
 	KCAS_ERR_DEV_PENDING,
 
-	/** NVMe Cache device contains dirty data. */
-	KCAS_ERR_DIRTY_EXISTS_NVME,
-
 	/** Could not create exported object because file in /dev directory
 	 * exists
 	 */
@@ -553,17 +521,8 @@ enum kcas_error {
 	/** Cannot roll-back previous configuration */
 	KCAS_ERR_ROLLBACK,
 
-	/** Device is not NVMe */
-	KCAS_ERR_NOT_NVME,
-
-	/** Failed to format NVMe device */
-	KCAS_ERR_FORMAT_FAILED,
-
 	/** NVMe is formatted to unsupported format */
 	KCAS_ERR_NVME_BAD_FORMAT,
-
-	/** Specified LBA format is not supported by the NVMe device */
-	KCAS_ERR_UNSUPPORTED_LBA_FORMAT,
 
 	/** Device contains partitions */
 	KCAS_ERR_CONTAINS_PART,

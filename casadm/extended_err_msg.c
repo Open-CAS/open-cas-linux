@@ -185,11 +185,6 @@ struct {
 		"Device opens or mount are pending to this cache"
 	},
 	{
-		KCAS_ERR_DIRTY_EXISTS_NVME,
-		"Cache device contains dirty data.\nIf you want to format it, "
-		"please use --force option.\nWarning: all data will be lost!"
-	},
-	{
 		KCAS_ERR_FILE_EXISTS,
 		"Could not create exported object because file in /dev "
 		"directory exists"
@@ -213,20 +208,8 @@ struct {
 		"Cannot restore previous configuration"
 	},
 	{
-		KCAS_ERR_NOT_NVME,
-		"Given block device is not NVMe"
-	},
-	{
-		KCAS_ERR_FORMAT_FAILED,
-		"Failed to format NVMe device"
-	},
-	{
 		KCAS_ERR_NVME_BAD_FORMAT,
 		"NVMe is formatted to unsupported format"
-	},
-	{
-		KCAS_ERR_UNSUPPORTED_LBA_FORMAT,
-		"Specified LBA format is not supported by the NVMe device"
 	},
 	{
 		KCAS_ERR_CONTAINS_PART,
