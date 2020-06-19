@@ -51,8 +51,7 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		cmd != KCAS_IOCTL_LIST_CACHE &&
 		cmd != KCAS_IOCTL_GET_CACHE_COUNT &&
 		cmd != KCAS_IOCTL_CORE_INFO &&
-		cmd != KCAS_IOCTL_PARTITION_INFO &&
-		cmd != KCAS_IOCTL_GET_CAPABILITIES) {
+		cmd != KCAS_IOCTL_PARTITION_INFO) {
 		return -EFAULT;
 	}
 
@@ -306,18 +305,6 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		RETURN_CMD_RESULT(cmd_info, arg, retval > 0 ? 0 : retval);
 	}
 
-	case KCAS_IOCTL_GET_CAPABILITIES: {
-		struct kcas_capabilites *cmd_info;
-
-		GET_CMD_INFO(cmd_info, arg);
-
-		memset(cmd_info, 0, sizeof(*cmd_info));
-#ifdef CAS_NVME_FULL
-		cmd_info->nvme_format = 1;
-#endif
-		RETURN_CMD_RESULT(cmd_info, arg, 0);
-	}
-
 	case KCAS_IOCTL_UPGRADE: {
 		struct kcas_upgrade *cmd_info;
 
@@ -327,21 +314,6 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
-
-#if defined(CAS_NVME_FULL)
-	case KCAS_IOCTL_NVME_FORMAT: {
-		struct kcas_nvme_format *cmd_info;
-
-		GET_CMD_INFO(cmd_info, arg);
-
-		retval = cas_nvme_format_optimal(
-				cmd_info->device_path_name,
-				cmd_info->metadata_mode,
-				cmd_info->force);
-
-		RETURN_CMD_RESULT(cmd_info, arg, retval);
-	}
-#endif
 
 	case KCAS_IOCTL_GET_CORE_POOL_COUNT: {
 		struct kcas_core_pool_count *cmd_info;

@@ -393,9 +393,9 @@ struct kcas_get_cache_param {
  *    15    *    KCAS_IOCTL_PARTITION_SET                   *    OK            *
  *    16    *    KCAS_IOCTL_GET_CACHE_COUNT                 *    OK            *
  *    17    *    KCAS_IOCTL_LIST_CACHE                      *    OK            *
- *    18    *    KCAS_IOCTL_GET_CAPABILITIES                *    OK            *
+ *    18    *    KCAS_IOCTL_GET_CAPABILITIES                *    DEPRECATED    *
  *    19    *    KCAS_IOCTL_UPGRADE                         *    OK            *
- *    20    *    KCAS_IOCTL_NVME_FORMAT                     *    OK            *
+ *    20    *    KCAS_IOCTL_NVME_FORMAT                     *    DEPRECATED    *
  *    21    *    KCAS_IOCTL_START_CACHE                     *    OK            *
  *    22    *    KCAS_IOCTL_INSERT_CORE                     *    OK            *
  *    23    *    KCAS_IOCTL_REMOVE_CORE                     *    OK            *
@@ -532,9 +532,6 @@ enum kcas_error {
 	/** Device opens or mount are pending to this cache */
 	KCAS_ERR_DEV_PENDING,
 
-	/** NVMe Cache device contains dirty data. */
-	KCAS_ERR_DIRTY_EXISTS_NVME,
-
 	/** Could not create exported object because file in /dev directory
 	 * exists
 	 */
@@ -553,17 +550,8 @@ enum kcas_error {
 	/** Cannot roll-back previous configuration */
 	KCAS_ERR_ROLLBACK,
 
-	/** Device is not NVMe */
-	KCAS_ERR_NOT_NVME,
-
-	/** Failed to format NVMe device */
-	KCAS_ERR_FORMAT_FAILED,
-
 	/** NVMe is formatted to unsupported format */
 	KCAS_ERR_NVME_BAD_FORMAT,
-
-	/** Specified LBA format is not supported by the NVMe device */
-	KCAS_ERR_UNSUPPORTED_LBA_FORMAT,
 
 	/** Device contains partitions */
 	KCAS_ERR_CONTAINS_PART,
