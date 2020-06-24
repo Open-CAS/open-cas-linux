@@ -169,8 +169,7 @@ def base_prepare(item):
 
         for disk in TestRun.dut.disks:
             disk.umount_all_partitions()
-            if not create_partition_table(disk, PartitionTable.gpt):
-                raise Exception(f"Failed to remove partitions from {disk}")
+            create_partition_table(disk, PartitionTable.gpt)
 
         if get_force_param(item) and not TestRun.usr.already_updated:
             installer.rsync_opencas_sources()
