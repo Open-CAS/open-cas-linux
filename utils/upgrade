@@ -11,6 +11,7 @@ import subprocess
 import os
 from pathlib import Path
 from shutil import copy
+from packaging.version import parse as parse_version
 
 import opencas
 from upgrade_utils import (
@@ -107,6 +108,20 @@ class BuildCas(UpgradeState):
             )
             if p.returncode:
                 return Failure(f"Compilation of Open CAS failed. Build log: {COMPILATION_LOG}")
+
+            new_casadm_version = subprocess.run(
+                ["./casadm/casadm", "--version", '--output-format', 'csv'], cwd=OCL_BUILD_ROOT,
+                stdout=subprocess.PIPE
+            )
+            new_casadm_version = parse_version(new_casadm_version.stdout.decode().splitlines()[3].split(',')[1])
+
+            current_casadm_version = parse_version(opencas.get_cas_version()[CAS_CLI_KEY])
+
+            if new_casadm_version == current_casadm_version:
+                return Failure(f"Target CAS version {current_casadm_version} already installed!")
+            elif new_casadm_version < current_casadm_version:
+                return Failure(f"Can't downgrade CAS from {current_casadm_version} "
+                    f"to {new_casadm_version}!")
 
         return Success()
 
