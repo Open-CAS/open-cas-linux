@@ -26,16 +26,6 @@ def get_current_commit_message():
         f'git show HEAD -s --pretty=format:"%B"').stdout
 
 
-def get_release_tags():
-    repo_path = os.path.join(TestRun.usr.working_dir, ".git")
-    output = TestRun.executor.run_expect_success(f"git --git-dir={repo_path} tag").stdout
-
-    # Tags containing '-' or '_' are not CAS release versions
-    tags = [v for v in output.splitlines() if "-" not in v and "_" not in v]
-
-    return tags
-
-
 def checkout_cas_version(cas_version):
     from api.cas.version import CasVersion
     if isinstance(cas_version, CasVersion):
