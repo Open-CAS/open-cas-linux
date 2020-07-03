@@ -211,10 +211,16 @@ int cas_create_queue_thread(ocf_queue_t q, int cpu)
 {
 	struct cas_thread_info *info;
 	ocf_cache_t cache = ocf_queue_get_cache(q);
+	const char *cache_num = ocf_cache_get_name(cache) + 5;
 	int result;
 
-	result = _cas_create_thread(&info, _cas_io_queue_thread, q, cpu,
-			"cas_io_%s_%d", ocf_cache_get_name(cache), cpu);
+	if (cpu == -1) {
+		result = _cas_create_thread(&info, _cas_io_queue_thread,
+				q, cpu, "cas_mngt_%s", cache_num);
+	} else {
+		result = _cas_create_thread(&info, _cas_io_queue_thread,
+				q, cpu, "cas_io_%s_%d", cache_num, cpu);
+	}
 	if (!result) {
 		ocf_queue_set_priv(q, info);
 		_cas_start_thread(info);
