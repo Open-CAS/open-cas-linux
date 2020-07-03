@@ -120,8 +120,7 @@ def pytest_addoption(parser):
     parser.addoption("--dut-config", action="store", default="None")
     parser.addoption("--log-path", action="store",
                      default=f"{os.path.join(os.path.dirname(__file__), '../results')}")
-    parser.addoption("--force-reinstall", action="store", default="False")
-    # TODO: investigate whether it is possible to pass the last param as bool
+    parser.addoption("--force-reinstall", action="store_true", default=False)
 
 
 def unmount_cas_devices():
@@ -147,7 +146,7 @@ def unmount_cas_devices():
 
 
 def get_force_param(item):
-    return item.config.getoption("--force-reinstall") is not "False"
+    return item.config.getoption("--force-reinstall")
 
 
 def base_prepare(item):
