@@ -1606,15 +1606,10 @@ out_get:
 static int _cache_mngt_create_exported_object(ocf_core_t core, void *cntx)
 {
 	int result;
-	ocf_cache_t cache = ocf_core_get_cache(core);
 
 	result = block_dev_create_exported_object(core);
-	if (result) {
-		printk(KERN_ERR "Cannot to create exported object, %s.%s\n",
-				ocf_cache_get_name(cache),
-				ocf_core_get_name(core));
+	if (result)
 		return result;
-	}
 
 	result = block_dev_activate_exported_object(core);
 

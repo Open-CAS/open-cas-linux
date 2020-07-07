@@ -879,8 +879,10 @@ int block_dev_create_exported_object(ocf_core_t core)
 			get_core_id_string(core));
 
 	dsk = casdisk_functions.casdsk_disk_claim(uuid->data, core);
-	if (dsk != bvol->dsk)
-		return -KCAS_ERR_SYSTEM;
+	if (dsk != bvol->dsk) {
+		result = -KCAS_ERR_SYSTEM;
+		goto end;
+	}
 
 	if (cas_upgrade_is_in_upgrade()) {
 		bvol->expobj_valid = true;
@@ -892,6 +894,11 @@ int block_dev_create_exported_object(ocf_core_t core)
 	if (!result)
 		bvol->expobj_valid = true;
 
+end:
+	if (result) {
+		printk(KERN_ERR "Cannot create exported object %s. Error code %d\n",
+				dev_name, result);
+	}
 	return result;
 }
 
