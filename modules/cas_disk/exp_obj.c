@@ -557,8 +557,8 @@ int casdsk_exp_obj_create(struct casdsk_disk *dsk, const char *dev_name,
 	}
 
 	queue = blk_mq_init_queue(&dsk->tag_set);
-	if (!queue) {
-		result = -ENOMEM;
+	if (IS_ERR_OR_NULL(queue)) {
+		result = queue ? PTR_ERR(queue) : -ENOMEM;
 		goto error_init_queue;
 	}
 
