@@ -1617,11 +1617,6 @@ static int _cache_mngt_create_exported_object(ocf_core_t core, void *cntx)
 	}
 
 	result = block_dev_activate_exported_object(core);
-	if (result) {
-		printk(KERN_ERR "Cannot to activate exported object, %s.%s\n",
-				ocf_cache_get_name(cache),
-				ocf_core_get_name(core));
-	}
 
 	return result;
 }
