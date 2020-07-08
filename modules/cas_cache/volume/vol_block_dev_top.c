@@ -822,16 +822,24 @@ int block_dev_activate_exported_object(ocf_core_t core)
 {
 	int ret;
 	ocf_volume_t obj = ocf_core_get_volume(core);
+	ocf_cache_t cache = ocf_core_get_cache(core);
 	struct bd_object *bvol = bd_object(obj);
 
 	if (!cas_upgrade_is_in_upgrade()) {
 		ret = casdisk_functions.casdsk_exp_obj_activate(bvol->dsk);
 		if (-EEXIST == ret)
-			return KCAS_ERR_FILE_EXISTS;
+			ret = KCAS_ERR_FILE_EXISTS;
 	} else {
 		ret = casdisk_functions.casdsk_disk_attach(bvol->dsk, THIS_MODULE,
 				&_blockdev_exp_obj_ops);
 	}
+
+	if (ret) {
+		printk(KERN_ERR "Cannot activate exported object, %s.%s. "
+				"Error code %d\n", ocf_cache_get_name(cache),
+				ocf_core_get_name(core), ret);
+	}
+
 	return ret;
 }
 
@@ -871,8 +879,10 @@ int block_dev_create_exported_object(ocf_core_t core)
 			get_core_id_string(core));
 
 	dsk = casdisk_functions.casdsk_disk_claim(uuid->data, core);
-	if (dsk != bvol->dsk)
-		return -KCAS_ERR_SYSTEM;
+	if (dsk != bvol->dsk) {
+		result = -KCAS_ERR_SYSTEM;
+		goto end;
+	}
 
 	if (cas_upgrade_is_in_upgrade()) {
 		bvol->expobj_valid = true;
@@ -884,6 +894,11 @@ int block_dev_create_exported_object(ocf_core_t core)
 	if (!result)
 		bvol->expobj_valid = true;
 
+end:
+	if (result) {
+		printk(KERN_ERR "Cannot create exported object %s. Error code %d\n",
+				dev_name, result);
+	}
 	return result;
 }
 
