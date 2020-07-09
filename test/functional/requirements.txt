@@ -1,1 +1,2 @@
 attotime>=0.2.0
+schema==0.7.2
