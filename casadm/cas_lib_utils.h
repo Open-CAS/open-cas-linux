@@ -28,7 +28,10 @@ struct progress_status {
 void init_progress_bar(struct progress_status *ps);
 void print_progress_bar_or_indicator(float prog, struct progress_status *ps);
 int run_ioctl(int fd, int command, void *cmd);
+int run_ioctl_retry(int fd, int command, void *cmd);
 int run_ioctl_interruptible(int fd, int command, void *cmd,
+		char *friendly_name, int cache_id, int core_id);
+int run_ioctl_interruptible_retry(int fd, int command, void *cmd,
 		char *friendly_name, int cache_id, int core_id);
 int open_ctrl_device();
 int was_ioctl_interrupted();

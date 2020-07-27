@@ -433,9 +433,10 @@ void *print_command_progress(void *th_arg)
  * Catch SIGINT signal.
  * @param friendly_name name of management operation that shall
  * be displayed in command prompt
+ * @param retry decide if ioctl attepmts should retry
  */
-int run_ioctl_interruptible(int fd, int command, void *cmd,
-		char *friendly_name, int cache_id, int core_id)
+static int run_ioctl_interruptible_retry_option(int fd, int command, void *cmd,
+		char *friendly_name, int cache_id, int core_id, bool retry)
 {
 	pthread_t thread;
 	int ioctl_res;
@@ -457,7 +458,13 @@ int run_ioctl_interruptible(int fd, int command, void *cmd,
 	pthread_sigmask(SIG_BLOCK, &sigset, NULL);
 
 	pthread_create(&thread, 0, print_command_progress, &ps);
-	ioctl_res = run_ioctl(fd, command, cmd);
+
+	if (retry) {
+		ioctl_res = run_ioctl_retry(fd, command, cmd);
+	} else {
+		ioctl_res = run_ioctl(fd, command, cmd);
+	}
+	
 	if (!interrupted) {
 		close(fdspipe[1]);
 	}
@@ -469,12 +476,50 @@ int run_ioctl_interruptible(int fd, int command, void *cmd,
 }
 
 /*
- * @brief ioctl wrapper that retries ioctl attempts within one second timeouts
+ * Run ioctl in a way that displays progressbar (if flushing operation takes longer)
+ * Catch SIGINT signal.
+ * @param friendly_name name of management operation that shall
+ * be displayed in command prompt
+ */
+int run_ioctl_interruptible(int fd, int command, void *cmd,
+		char *friendly_name, int cache_id, int core_id)
+{
+	return run_ioctl_interruptible_retry_option(fd, command, cmd, friendly_name, 
+				cache_id, core_id, false);
+}
+
+/*
+ * Run ioctl in a way that displays progressbar (if flushing operation 
+ * takes longer) with retries.
+ * Catch SIGINT signal.
+ * @param friendly_name name of management operation that shall
+ * be displayed in command prompt
+ */
+int run_ioctl_interruptible_retry(int fd, int command, void *cmd,
+		char *friendly_name, int cache_id, int core_id)
+{
+	return run_ioctl_interruptible_retry_option(fd, command, cmd, friendly_name, 
+				cache_id, core_id, true);
+}
+
+/*
+ * @brief ioctl wrapper
  * @param[in] fd as for IOCTL(2)
  * @param[in] command as for IOCTL(2)
  * @param[inout] cmd_info as for IOCTL(2)
  */
 int run_ioctl(int fd, int command, void *cmd)
+{
+	return ioctl(fd, command, cmd);
+}
+
+/*
+ * @brief ioctl wrapper that retries ioctl attempts within one second timeouts
+ * @param[in] fd as for IOCTL(2)
+ * @param[in] command as for IOCTL(2)
+ * @param[inout] cmd_info as for IOCTL(2)
+ */
+int run_ioctl_retry(int fd, int command, void *cmd)
 {
 	int i, ret;
 	struct timespec timeout = {
