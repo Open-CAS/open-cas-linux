@@ -287,7 +287,7 @@ def test_load_x_to_one_with_params(cache_mode, cleaning_policy, cache_line_size,
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_load_x_to_one_diff_params(cache_mode, cleaning_policy, cache_line_size, cores_amount):
-    f"""
+    """
         title: Test for loading CAS with 1 cache and 1 or 4 cores with different params.
         description: |
           Verify that loading cache configurations works properly in every mode
