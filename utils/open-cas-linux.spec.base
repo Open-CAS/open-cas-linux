@@ -17,12 +17,12 @@
 
 Name:		open-cas-linux
 Version:	<CAS_VERSION>
-Release:	<RPM_RELEASE>
+Release:	1%{?dist}
 Summary:	Open Cache Acceleration Software
 Group:		System
 License:	BSD-3-Clause
 URL:		https://open-cas.github.io/
-Source0:	https://github.com/Open-CAS/open-cas-linux/releases/download/v%{version}/%{name}-v%{version}.tar.gz
+Source0:	https://github.com/Open-CAS/open-cas-linux/releases/download/v%{version}/%{name}-%{version}.tar.gz
 BuildRequires:	gcc
 BuildRequires:	kernel-devel
 BuildRequires:	kernel-headers
@@ -56,7 +56,7 @@ This package contains CAS kernel modules.
 
 
 %prep
-%setup -q -n %{name}-v%{version}
+%setup -q
 
 
 %build
@@ -111,8 +111,10 @@ fi
 %doc README.md
 %dir /etc/opencas/
 %dir /lib/opencas/
+%dir /var/lib/opencas
 %config /etc/opencas/opencas.conf
 /etc/opencas/ioclass-config.csv
+/var/lib/opencas/cas_version
 /lib/opencas/casctl
 /lib/opencas/open-cas-loader
 /lib/opencas/opencas.py
@@ -137,6 +139,10 @@ fi
 
 
 %changelog
+* Wed Jun 10 2020 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.06-1
+- Add cas_version file
+- Join Release into Version
+- Simplify prep setup
 * Tue Feb 25 2020 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.3-1
 - Minor improvements in SPEC file
 - Update files list for releases > 20.1

@@ -6,9 +6,10 @@
 PWD:=$(shell pwd)
 MODULESDIR:=$(PWD)/../modules
 UTILS_DIR:=$(PWD)/../utils
+METADATA_DIR:=$(PWD)/../.metadata
 BINARY_PATH = /sbin
 
-VERSION_FILE := $(MODULESDIR)/CAS_VERSION
+VERSION_FILE := $(METADATA_DIR)/cas_version
 
 #
 # Section below enables creating build with experimental features
@@ -89,7 +90,7 @@ LDFLAGS    = -z noexecstack -z relro -z now -pie -pthread
 all: sync
 	$(MAKE) build
 
-build: $(VERSION_FILE) $(TARGETS)
+build: $(TARGETS)
 
 sync:
 	@cd $(MODULESDIR) && $(MAKE) sync
@@ -119,17 +120,12 @@ ifeq ($(strip $(CAS_VERSION_MAIN)),)
 endif
 	@$(CC) -c $(CFLAGS) -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 
-$(VERSION_FILE):
-	@echo "  VERSION " $@
-	@cd $(MODULESDIR) && ./CAS_VERSION_GEN
-
 clean:
 	@echo "  CLEAN "
 	@rm -f *.a $(TARGETS)
 	@rm -f $(shell find -name \*.d) $(shell find -name \*.o)
 
 distclean: clean
-	@rm -f $(VERSION_FILE)
 
 install: install_files
 
@@ -143,6 +139,8 @@ install_files:
 	@install -m 755 -d $(DESTDIR)/etc/opencas
 	@install -m 644 $(UTILS_DIR)/opencas.conf $(DESTDIR)/etc/opencas/opencas.conf
 	@install -m 444 $(UTILS_DIR)/ioclass-config.csv $(DESTDIR)/etc/opencas/ioclass-config.csv
+	@install -m 755 -d $(DESTDIR)/var/lib/opencas
+	@install -m 644 $(METADATA_DIR)/cas_version $(DESTDIR)/var/lib/opencas/cas_version
 
 	@mkdir -p $(DESTDIR)/usr/share/man/man5
 	@install -m 644 $(UTILS_DIR)/opencas.conf.5 $(DESTDIR)/usr/share/man/man5/opencas.conf.5
@@ -155,6 +153,8 @@ uninstall:
 	@rm $(DESTDIR)/etc/opencas/opencas.conf
 	@rm $(DESTDIR)/etc/opencas/ioclass-config.csv
 	@rm -rf $(DESTDIR)/etc/opencas
+	@rm $(DESTDIR)/var/lib/opencas/cas_version
+	@rm -rf $(DESTDIR)/var/lib/opencas
 
 	@rm $(DESTDIR)/usr/share/man/man5/opencas.conf.5
 

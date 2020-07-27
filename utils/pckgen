@@ -33,7 +33,7 @@ SUBMODULES=(
 
 # Unset all variables that may be checked for existence:
 unset ${!GENERATE_*} ARCHIVE_PREPARED DEBUG FAILED_DEPS OUTPUT_DIR RPM_BUILT\
-      SOURCES_DIR SUBMODULES_MISSING TAR_CREATED VERSION_ONLY
+      SOURCES_DIR SUBMODULES_MISSING TAR_CREATED
 
 
 usage() {
@@ -47,8 +47,8 @@ print_help() {
     echo "Generate OpenCAS packages."
     echo "$(usage)"
     echo
-    echo "This script generates various OpenCAS packages like release archives (tar, zip),"
-    echo "RPMs (source and binary) as well as creates version file with metadata."
+    echo "This script generates various OpenCAS packages like"
+    echo "release archives (tar, zip) and RPMs (source and binary)."
     echo
     echo "Mandatory arguments to long options are mandatory for short options too."
     echo
@@ -57,12 +57,10 @@ print_help() {
     echo "  zip                             generate zip archive"
     echo "  rpm                             generate RPM packages"
     echo "  srpm                            generate SRPM package"
-    echo "  version-only                    create only version file and exit;"
     echo
     echo "Options:"
     echo "  -o, --output-dir <DIR>          put all created files in the given directory;"
-    echo "                                  by default all files (except version file)"
-    echo "                                  will be put in 'SOURCES_PATH/packages/'"
+    echo "                                  default: 'SOURCES_PATH/packages/'"
     echo "  -d, --debug                     create all debug files and packages as well"
     echo "  -c, --clean                     clean all temporary files and folders that"
     echo "                                  may have been left around if $THIS ended"
@@ -78,10 +76,6 @@ invalid_usage() {
 
 info() {
     echo -e "\e[33m$*\e[0m"
-}
-
-success() {
-    echo -e "\n\e[32m=== ALL DONE ===\e[0m\n\nYou can find your fresh packages in '$OUTPUT_DIR'\n"
 }
 
 error() {
@@ -105,34 +99,27 @@ clean_all() {
     if ls "/tmp/${TEMP_TEMPLATE}."* &>/dev/null; then
         # This function on the other hand is called only by a '-c' option
         # so we may throw an error here and exit.
-        error "Cleanup failed"
+        error "cleanup failed"
     fi
 }
 
 check_options() {
     if [ ! "$SOURCES_DIR" ]; then
-        invalid_usage "No mandatory SOURCES_PATH provided"
+        invalid_usage "no mandatory SOURCES_PATH provided"
     elif [[ $(head -n 1 "$SOURCES_DIR/README.md" 2>/dev/null) != *Open*CAS*Linux* ]]; then
         invalid_usage "'$SOURCES_DIR' does not point to the root directory of CAS sources"
-    elif [ ! "${!GENERATE_*}" ] && [ ! "$VERSION_ONLY" ]; then
-        invalid_usage "Nothing to do - no command provided"
+    elif [ ! "${!GENERATE_*}" ]; then
+        invalid_usage "nothing to do - no command provided"
     fi
 }
 
 check_version() {
-    (cd "$TEMP_DIR" && sh "$CAS_VERSION_GEN" >/dev/null)
-    if [ ! -f "$TEMP_DIR/$CAS_VERSION_GEN_FILE" ]; then
-        error "Couldn't create CAS_VERSION file"
+    if ! (cd $(dirname "$CAS_VERSION_GEN") && ./$(basename "$CAS_VERSION_GEN")); then
+        error "failed to obtain CAS version"
     fi
-    while IFS= read -r line; do
-        case "$line" in
-            CAS_VERSION_MAIN*) CAS_VERSION_MAIN="${line##*=}";;
-            CAS_VERSION_MAJOR*) CAS_VERSION_MAJOR="$(printf %02d ${line##*=})";;
-            CAS_VERSION_MINOR*) CAS_VERSION_MINOR="${line##*=}";;
-        esac
-    done < "$TEMP_DIR/$CAS_VERSION_GEN_FILE"
+    . "$VERSION_FILE"
 
-    VERSION_SHORT="${CAS_VERSION_MAIN}.${CAS_VERSION_MAJOR}"
+    VERSION_SHORT="${CAS_VERSION_MAIN}.$(printf %02d ${CAS_VERSION_MAJOR})"
     if [ $CAS_VERSION_MINOR -ne 0 ]; then
         VERSION_SHORT+=".${CAS_VERSION_MINOR}"
     fi
@@ -150,34 +137,6 @@ check_version() {
     if [ "$SUBMODULES_MISSING" ]; then
         error "There are missing submodules:\n${SUBMODULES_MISSING}\nUpdate submodules and try again!"
     fi
-
-    if [ -d "$SOURCES_DIR/.git" ]; then
-        CAS_VERSION_BUILD=$(printf %04d $(cd "$SOURCES_DIR" && git log --merges --oneline | wc -l))
-        LAST_COMMIT_HASH=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%H)
-        LAST_COMMIT_HASH_ABBR=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%h)
-        LAST_COMMIT_DATE=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%ci |\
-                           sed "s/ /T/" | sed "s/ //" | sed "s/00$/:00/")
-        LAST_COMMIT_TIMESTAMP=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%ct)
-        for SUBMOD in ${SUBMODULES[@]}; do
-            LAST_SUB_COMMIT_HASHES+=($(cd "$SOURCES_DIR/$SUBMOD" && git log -1 --pretty=format:%H))
-            LAST_SUB_COMMIT_HASHES_ABBR+=($(cd "$SOURCES_DIR/$SUBMOD" && git log -1 --pretty=format:%h))
-        done
-
-        if [ $(cd "$SOURCES_DIR" && git tag --points-at HEAD) ]; then
-            CAS_RELEASE="release"
-        elif [ $(cd "$SOURCES_DIR" && git log -1 --pretty=format:%H)\
-               == $(cd "$SOURCES_DIR" && git log -1 --merges --pretty=format:%H) ]; then
-            CAS_RELEASE="master"
-        else
-            CAS_RELEASE="devel.${LAST_COMMIT_TIMESTAMP}"
-        fi
-    elif [ -f "$VERSION_FILE" ]; then
-        source "$VERSION_FILE" &>/dev/null
-    else
-        error "Couldn't obtain CAS version - no git tree nor version file within given sources"
-    fi
-
-    VERSION="${CAS_VERSION_MAIN}.${CAS_VERSION_MAJOR}.${CAS_VERSION_MINOR}.${CAS_VERSION_BUILD}"
 }
 
 check_dependencies() {
@@ -200,39 +159,15 @@ check_dependencies() {
 create_dir() {
     mkdir -p "$*"
     if [ ! -d "$*" ] || [ ! -w "$*" ]; then
-        error "No access to '$*'"
+        error "no access to '$*'"
     fi
 }
 
 create_temp() {
     TEMP_DIR=$(mktemp -d -t ${TEMP_TEMPLATE}.XXXXXXXXXX)
     if [ $? -ne 0 ]; then
-        error "Couldn't create temporary directory"
+        error "couldn't create temporary directory"
     fi
-}
-
-create_version_file() {
-    echo "--- Creating version file"
-    mkdir -p $(dirname "$VERSION_FILE")
-    if ! touch "$VERSION_FILE"; then
-        error "Couldn't create version file"
-    fi
-
-    CREATION_DATE=$(date --iso-8601=seconds)
-    CREATION_TIMESTAMP=$(date +%s)
-    echo "CREATION_DATE=$CREATION_DATE" > "$VERSION_FILE"
-    echo "CREATION_TIMESTAMP=$CREATION_TIMESTAMP" >> "$VERSION_FILE"
-    echo "CAS_VERSION_MAIN=$CAS_VERSION_MAIN" >> "$VERSION_FILE"
-    echo "CAS_VERSION_MAJOR=$CAS_VERSION_MAJOR" >> "$VERSION_FILE"
-    echo "CAS_VERSION_MINOR=$CAS_VERSION_MINOR" >> "$VERSION_FILE"
-    echo "CAS_VERSION_BUILD=$CAS_VERSION_BUILD" >> "$VERSION_FILE"
-    echo "CAS_RELEASE=$CAS_RELEASE" >> "$VERSION_FILE"
-    echo "LAST_COMMIT_HASH=$LAST_COMMIT_HASH" >> "$VERSION_FILE"
-    echo "LAST_COMMIT_HASH_ABBR=$LAST_COMMIT_HASH_ABBR" >> "$VERSION_FILE"
-    echo "LAST_COMMIT_DATE=$LAST_COMMIT_DATE" >> "$VERSION_FILE"
-    echo "LAST_COMMIT_TIMESTAMP=$LAST_COMMIT_TIMESTAMP" >> "$VERSION_FILE"
-    echo "LAST_SUB_COMMIT_HASHES=(${LAST_SUB_COMMIT_HASHES[@]})" >> "$VERSION_FILE"
-    echo "LAST_SUB_COMMIT_HASHES_ABBR=(${LAST_SUB_COMMIT_HASHES_ABBR[@]})" >> "$VERSION_FILE"
 }
 
 archive_prepare() {
@@ -256,7 +191,7 @@ generate_tar() {
         tar -C "$TEMP_DIR" -zcf "$TEMP_DIR/$SOURCES_TAR_NAME" "$CAS_FILENAME"
         if [ $? -ne 0 ] || [ ! -f "$TEMP_DIR/$SOURCES_TAR_NAME" ]; then
             rm -rf "$TEMP_DIR/$SOURCES_TAR_NAME"
-            error "Couldn't create tar archive"
+            error "couldn't create tar archive"
         fi
 
         TAR_CREATED="tar_created"
@@ -273,7 +208,7 @@ generate_zip() {
     (cd "$TEMP_DIR" && zip -qr - "$CAS_FILENAME") > "$OUTPUT_DIR/$SOURCES_ZIP_NAME"
     if [ $? -ne 0 ] || [ ! -f "$OUTPUT_DIR/$SOURCES_ZIP_NAME" ]; then
         rm -rf "$OUTPUT_DIR/$SOURCES_ZIP_NAME"
-        error "Couldn't create zip archive"
+        error "couldn't create zip archive"
     fi
 }
 
@@ -281,7 +216,7 @@ rpm_create_tree() {
     echo "--- Creating directory tree for building RPMs"
     mkdir -p "$RPM_BUILD_DIR/"{BUILD,RPMS,SOURCES,SPECS,SRPMS}
     if [ $? -ne 0 ] || [ ! -w "$RPM_BUILD_DIR" ]; then
-        error "Couldn't create directory tree for building RPMs"
+        error "couldn't create directory tree for building RPMs"
     fi
 }
 
@@ -291,7 +226,7 @@ rpm_obtain_sources() {
     cp -v "$TEMP_DIR/$SOURCES_TAR_NAME" "$RPM_SOURCES_DIR"
 
     if [ ! -f "$RPM_SOURCES_DIR/$SOURCES_TAR_NAME" ]; then
-        error "Couldn't obtain $SOURCES_TAR_NAME sources tarball!"
+        error "couldn't obtain $SOURCES_TAR_NAME sources tarball!"
     fi
 }
 
@@ -302,15 +237,14 @@ rpm_spec_prepare() {
     fi
 
     cp -v "$BASE_SPEC" "$RPM_SPECS_DIR/$NAME.spec"
-    sed -i "s/<CAS_VERSION>/$VERSION/g" "$RPM_SPECS_DIR/$NAME.spec"
-    sed -i "s/<RPM_RELEASE>/$CAS_RELEASE/g" "$RPM_SPECS_DIR/$NAME.spec"
+    sed -i "s/<CAS_VERSION>/$CAS_VERSION/g" "$RPM_SPECS_DIR/$NAME.spec"
     if [ "$DEBUG" ]; then
         echo "---   Debug RPMs will be built as well"
         sed -i "s/%define debug_package %{nil}//g" "$RPM_SPECS_DIR/$NAME.spec"
     fi
 
     if [ ! -f "$RPM_SPECS_DIR/$NAME.spec" ]; then
-        error "Couldn't create a SPEC file"
+        error "couldn't create a SPEC file"
     fi
 }
 
@@ -327,7 +261,7 @@ generate_rpm() {
         echo "--- Building binary RPM packages"
         (HOME="$TEMP_DIR"; rpmbuild -bb "$RPM_SPECS_DIR/$NAME.spec")
         if [ $? -ne 0 ]; then
-            error "Couldn't create RPM packages"
+            error "couldn't create RPM packages"
         fi
         mv -t "$OUTPUT_DIR" "$RPM_RPMS_DIR/$ARCH"/*
     fi
@@ -335,7 +269,7 @@ generate_rpm() {
         echo "--- Building source SRPM package"
         (HOME="$TEMP_DIR"; rpmbuild -bs "$RPM_SPECS_DIR/$NAME.spec")
         if [ $? -ne 0 ]; then
-            error "Couldn't create SRPM package"
+            error "couldn't create SRPM package"
         fi
         mv -t "$OUTPUT_DIR" "$RPM_SRPMS_DIR"/*
     fi
@@ -343,7 +277,7 @@ generate_rpm() {
         echo "--- Building source and binary RPM packages"
         (HOME="$TEMP_DIR"; rpmbuild -ba "$RPM_SPECS_DIR/$NAME.spec")
         if [ $? -ne 0 ]; then
-            error "Couldn't create RPM packages"
+            error "couldn't create RPM packages"
         fi
         mv -t "$OUTPUT_DIR" "$RPM_SRPMS_DIR"/*
         mv -t "$OUTPUT_DIR" "$RPM_RPMS_DIR/$ARCH"/*
@@ -374,9 +308,6 @@ while (( $# )); do
             ;;
         srpm)
             GENERATE_SRPM="generate_srpm"
-            ;;
-        version-only)
-            VERSION_ONLY="version_only"
             ;;
         --output-dir|-o)
             OUTPUT_DIR="$2"
@@ -417,22 +348,21 @@ create_temp
 
 # By default all created packages will be put in:
 : ${OUTPUT_DIR:="$SOURCES_DIR/packages"}
-# Version file location:
-VERSION_FILE="$SOURCES_DIR/.metadata/cas_version"
 # RPM building directories:
 RPM_BUILD_DIR="$TEMP_DIR/rpmbuild"
 RPM_SOURCES_DIR="$RPM_BUILD_DIR/SOURCES"
 RPM_SPECS_DIR="$RPM_BUILD_DIR/SPECS"
 RPM_RPMS_DIR="$RPM_BUILD_DIR/RPMS"
 RPM_SRPMS_DIR="$RPM_BUILD_DIR/SRPMS"
-# CAS version generator location and output file name:
-CAS_VERSION_GEN="$SOURCES_DIR/modules/CAS_VERSION_GEN"
-CAS_VERSION_GEN_FILE="CAS_VERSION"
+# Version file location:
+VERSION_FILE="$SOURCES_DIR/.metadata/cas_version"
+# CAS version generator location:
+CAS_VERSION_GEN="$SOURCES_DIR/utils/cas_version_gen"
 
 check_version
 
 # CAS naming convention:
-CAS_FILENAME="$NAME-v$VERSION"
+CAS_FILENAME="$NAME-$CAS_VERSION"
 # CAS sources archives filenames:
 SOURCES_TAR_NAME="$CAS_FILENAME.tar.gz"
 SOURCES_ZIP_NAME="$CAS_FILENAME.zip"
@@ -443,12 +373,7 @@ SOURCES_ZIP_NAME="$CAS_FILENAME.zip"
 # Run the package generator script
 #
 
-info "\n=== Running OpenCAS '$VERSION-$CAS_RELEASE' package generator ===\n"
-
-if [ "$VERSION_ONLY" ]; then
-    create_version_file
-    exit 0
-fi
+info "\n=== Running OpenCAS '$CAS_VERSION' package generator ===\n"
 
 echo -n "Packages that will be built: "
 for package in ${!GENERATE_*}; do
@@ -457,9 +382,9 @@ done
 echo -e "\n"
 
 check_dependencies
-create_version_file
 create_dir "$OUTPUT_DIR"
 for package in ${!GENERATE_*}; do
     ${package,,}
 done
-success
+
+echo -e "\n\e[32m=== ALL DONE ===\e[0m\n\nYou can find your fresh packages in '$OUTPUT_DIR'\n"
