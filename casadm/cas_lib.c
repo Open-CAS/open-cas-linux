@@ -1811,7 +1811,7 @@ int check_if_mounted(int cache_id, int core_id)
 	FILE *mtab;
 	struct mntent *mstruct;
 	char dev_buf[80];
-	int dev_buf_len;
+	int dev_buf_len, mnt_fsname_len;
 	if (0 <= core_id) {
 		/* verify if specific core is mounted */
 		snprintf(dev_buf, sizeof(dev_buf), "/dev/cas%d-%d", cache_id, core_id);
@@ -1829,9 +1829,11 @@ int check_if_mounted(int cache_id, int core_id)
 	}
 
 	while ((mstruct = getmntent(mtab)) != NULL) {
+		mnt_fsname_len = strnlen(mstruct->mnt_fsname,
+				(sizeof("/dev/") + sizeof(mstruct->mnt_fsname)));
 		/* mstruct->mnt_fsname is /dev/... block device path, not a mountpoint */
 		if ((NULL != mstruct->mnt_fsname)
-		    && (strncmp(mstruct->mnt_fsname, dev_buf, dev_buf_len) == 0)) {
+		    && (strncmp(mstruct->mnt_fsname, dev_buf, max(dev_buf_len, mnt_fsname_len)) == 0)) {
 			if (core_id<0) {
 				cas_printf(LOG_ERR,
 					   "Can't stop cache instance %d. Device %s is mounted!\n",

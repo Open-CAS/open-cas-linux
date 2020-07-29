@@ -11,6 +11,7 @@
 #include "safeclib/safe_lib.h"
 
 #define min(x, y)  ({ x < y ? x : y; })
+#define max(x, y)  ({ x > y ? x : y; })
 
 #define ENV_BUG_ON(cond) ({ if (cond) exit(1); })
 
