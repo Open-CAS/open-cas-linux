@@ -5,7 +5,7 @@
 
 import pytest
 
-from api.cas import casadm
+from api.cas import casadm, casctl, casadm_parser
 from api.cas.casadm_parser import get_caches, get_cores
 from api.cas.cache_config import CacheMode
 from api.cas.init_config import InitConfig
@@ -102,3 +102,71 @@ def test_cas_startup(cache_mode, filesystem):
         core.unmount()
         InitConfig.create_default_init_config()
         casadm.stop_all_caches()
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.parametrizex("cache_mode_pair", [(CacheMode.WT, CacheMode.WB),
+                                              (CacheMode.WB, CacheMode.WA),
+                                              (CacheMode.WA, CacheMode.PT),
+                                              (CacheMode.PT, CacheMode.WO),
+                                              (CacheMode.WO, CacheMode.WT)])
+def test_cas_init_with_changed_mode(cache_mode_pair):
+    """
+    title: Check starting cache in other cache mode by initializing OpenCAS service from config.
+    description: |
+      Start cache, create config based on running configuration but with another cache mode,
+      reinitialize OpenCAS service with '--force' option and check if cache defined
+      in config file starts properly.
+      Check all cache modes.
+    pass_criteria:
+      - Cache starts with attached core
+      - Cache starts in mode saved in configuration file.
+    """
+    with TestRun.step("Prepare partitions for cache and core."):
+        cache_dev = TestRun.disks['cache']
+        cache_dev.create_partitions([Size(200, Unit.MebiByte)])
+        cache_part = cache_dev.partitions[0]
+        core_dev = TestRun.disks['core']
+        core_dev.create_partitions([Size(400, Unit.MebiByte)])
+        core_part = core_dev.partitions[0]
+
+    with TestRun.step(f"Start cache in the {cache_mode_pair[0]} mode and add core."):
+        cache = casadm.start_cache(cache_part, cache_mode_pair[0], force=True)
+        core = cache.add_core(core_part)
+
+    with TestRun.step(
+            f"Create the configuration file with a different cache mode ({cache_mode_pair[1]})"
+    ):
+        init_conf = InitConfig()
+        init_conf.add_cache(cache.cache_id, cache.cache_device, cache_mode_pair[1])
+        init_conf.add_core(cache.cache_id, core.core_id, core.core_device)
+        init_conf.save_config_file()
+
+    with TestRun.step("Reinitialize OpenCAS service with '--force' option."):
+        casadm.stop_all_caches()
+        casctl.init(True)
+
+    with TestRun.step("Check if cache started in correct mode with core attached."):
+        validate_cache(cache_mode_pair[1])
+
+
+def validate_cache(cache_mode):
+    caches = casadm_parser.get_caches()
+    caches_count = len(caches)
+    if caches_count != 1:
+        TestRun.LOGGER.error(
+            f"Cache did not start successfully - wrong number of caches: {caches_count}."
+        )
+
+    cores = casadm_parser.get_cores(caches[0].cache_id)
+    cores_count = len(cores)
+    if cores_count != 1:
+        TestRun.LOGGER.error(f"Cache started with wrong number of cores: {cores_count}.")
+
+    current_mode = caches[0].get_cache_mode()
+    if current_mode != cache_mode:
+        TestRun.LOGGER.error(
+            f"Cache started in wrong mode!\n"
+            f"Should start in {cache_mode}, but started in {current_mode} mode."
+        )
