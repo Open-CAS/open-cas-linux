@@ -29,11 +29,13 @@ error() {
 if [[ -d "$SOURCES_DIR/.git" ]] && which git &>/dev/null &&\
         (cd "$SOURCES_DIR" && git rev-parse --is-inside-work-tree &>/dev/null); then
     if [[ ! -r "$MANUAL_VERSION_INPUT" ]]; then
-        error "can't read version input file"
+        error "can't read version input file '$MANUAL_VERSION_INPUT'"
     fi
     . "$MANUAL_VERSION_INPUT"
     if [[ ! "$CAS_VERSION_MAIN" || ! "$CAS_VERSION_MAJOR" || ! "$CAS_VERSION_MINOR" ]]; then
-        error "wrong version input file format"
+        error "'$MANUAL_VERSION_INPUT' - wrong version input file format;"\
+            "file should contain CAS_VERSION_MAIN, CAS_VERSION_MAJOR and CAS_VERSION_MINOR"\
+            "variables along with their respective values"
     fi
 
     CAS_VERSION_BUILD=$(cd "$SOURCES_DIR" && git log --merges --oneline | wc -l)
@@ -60,7 +62,7 @@ if [[ -d "$SOURCES_DIR/.git" ]] && which git &>/dev/null &&\
 
     mkdir -p $(dirname "$VERSION_FILE")
     if ! touch "$VERSION_FILE"; then
-        error "couldn't create version file"
+        error "couldn't create version file '$VERSION_FILE'"
     fi
     echo "CAS_VERSION_MAIN=$CAS_VERSION_MAIN" > "$VERSION_FILE"
     echo "CAS_VERSION_MAJOR=$CAS_VERSION_MAJOR" >> "$VERSION_FILE"
@@ -81,7 +83,7 @@ if [[ -d "$SOURCES_DIR/.git" ]] && which git &>/dev/null &&\
 elif [[ -r "$VERSION_FILE" ]]; then
     . "$VERSION_FILE" >/dev/null
     if [[ ! "$CAS_VERSION" ]]; then
-        error "wrong version file format"
+        error "'$VERSION_FILE' - wrong version file format; file does not contain CAS_VERSION"
     fi
 else
     error "couldn't obtain CAS version - no git tree nor readable version file found"
@@ -90,7 +92,7 @@ fi
 # Check if this script was called during building of OpenCAS...
 if [[ "$1" == "build" ]]; then
     if ! touch "$VERSION_FILE"; then
-        warning "couldn't edit version file"
+        warning "couldn't edit version file '$VERSION_FILE'"
     fi
     # ...and if so, add (or substitute if exist) a build time to version file
     CAS_BUILD_DATE=$(date --iso-8601=seconds)
