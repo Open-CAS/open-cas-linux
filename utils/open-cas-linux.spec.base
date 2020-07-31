@@ -87,20 +87,14 @@ fi
 
 
 %post modules_%{kver_filename}
-ls /lib/modules/%{kver}/extra/cas_disk.ko | weak-modules --no-initramfs --add-modules
-ls /lib/modules/%{kver}/extra/cas_cache.ko | weak-modules --no-initramfs --add-modules
 depmod
-
-%preun modules_%{kver_filename}
-if [ $1 -eq 0 ]; then
-    rmmod cas_cache
-    rmmod cas_disk
-    ls /lib/modules/%{kver}/extra/cas_disk.ko | weak-modules --no-initramfs --remove-modules
-    ls /lib/modules/%{kver}/extra/cas_cache.ko | weak-modules --no-initramfs --remove-modules
-fi
+modules=( $(realpath $(modinfo -F filename cas_cache cas_disk)) )
+printf "%s\n" "${modules[@]}" | weak-modules --no-initramfs --add-modules
 
 %postun modules_%{kver_filename}
 if [ $1 -eq 0 ]; then
+    modules=( $(realpath $(modinfo -F filename cas_cache cas_disk 2>/dev/null)) )
+    printf "%s\n" "${modules[@]}" | weak-modules --no-initramfs --remove-modules
     depmod
 fi
 
@@ -139,6 +133,8 @@ fi
 
 
 %changelog
+* Thu Jul 30 2020 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.09-1
+- Improve adding and removing modules with weak-modules
 * Wed Jun 10 2020 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.06-1
 - Add cas_version file
 - Join Release into Version
