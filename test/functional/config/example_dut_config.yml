@@ -14,6 +14,10 @@ type: "local"
 allow_disk_autoselect: False
 working_dir: "/tmp/open-cas-linux/"
 
+# Optional paths required by tests which use vdbench
+# vdbench_source_dir: "/path/to/vdbench/source/dir"
+# vdbench_working_dir: "/tmp/vdbench"
+
 disks:
   - path: "/dev/device_name1" # disk device path
     serial: "ABC"             # disk serial number
