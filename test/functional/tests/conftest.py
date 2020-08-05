@@ -168,6 +168,7 @@ def base_prepare(item):
 
         for disk in TestRun.dut.disks:
             disk.umount_all_partitions()
+            disk.remove_partitions()
             create_partition_table(disk, PartitionTable.gpt)
 
         if get_force_param(item) and not TestRun.usr.already_updated:
