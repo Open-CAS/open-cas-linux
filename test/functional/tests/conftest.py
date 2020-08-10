@@ -116,7 +116,12 @@ def pytest_configure(config):
     TestRun.configure(config)
 
 
+def pytest_generate_tests(metafunc):
+    TestRun.generate_tests(metafunc)
+
+
 def pytest_addoption(parser):
+    TestRun.addoption(parser)
     parser.addoption("--dut-config", action="store", default="None")
     parser.addoption("--log-path", action="store",
                      default=f"{os.path.join(os.path.dirname(__file__), '../results')}")
