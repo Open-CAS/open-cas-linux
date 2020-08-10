@@ -140,11 +140,11 @@ def print_version(output_format: OutputFormat = None, shortcut: bool = False):
     return output
 
 
-def format_nvme(cache_dev: Device, force: bool = False, shortcut: bool = False):
+def zero_metadata(cache_dev: Device, shortcut: bool = False):
     output = TestRun.executor.run(
-        format_cmd(cache_dev=cache_dev.system_path, force=force, shortcut=shortcut))
+        zero_metadata_cmd(cache_dev=cache_dev.system_path, shortcut=shortcut))
     if output.exit_code != 0:
-        raise CmdException("Format command failed.", output)
+        raise CmdException("Failed to wipe metadata.", output)
     return output
 
 
