@@ -387,6 +387,9 @@ class UsageStats:
             f"Dirty: {self.dirty}\n"
         )
 
+    def __repr__(self):
+        return str(self)
+
     def __eq__(self, other):
         if not other:
             return False
@@ -396,6 +399,24 @@ class UsageStats:
             and self.clean == other.clean
             and self.dirty == other.dirty
         )
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __add__(self, other):
+        return UsageStats(
+            self.occupancy + other.occupancy,
+            self.free + other.free,
+            self.clean + other.clean,
+            self.dirty + other.dirty
+        )
+
+    def __iadd__(self, other):
+        self.occupancy += other.occupancy
+        self.free += other.free
+        self.clean += other.clean
+        self.dirty += other.dirty
+        return self
 
 
 class InactiveUsageStats:
