@@ -24,7 +24,7 @@ test_file_size = Size(1.5, Unit.GibiByte)
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_plugin("power_control")
 def test_recovery_flush_reset_raw(cache_mode):
     """
@@ -103,8 +103,8 @@ def test_recovery_flush_reset_raw(cache_mode):
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
-@pytest.mark.parametrize("fs", [Filesystem.xfs, Filesystem.ext4])
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("fs", [Filesystem.xfs, Filesystem.ext4])
 @pytest.mark.require_plugin("power_control")
 def test_recovery_flush_reset_fs(cache_mode, fs):
     """

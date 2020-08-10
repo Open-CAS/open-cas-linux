@@ -27,7 +27,7 @@ stress_time = timedelta(minutes=30)
                                           (CacheMode.WO, CleaningPolicy.acp),
                                           (CacheMode.WO, CleaningPolicy.alru),
                                           (CacheMode.WO, CleaningPolicy.nop)])
-@pytest.mark.parametrize("cache_line_size", CacheLineSize)
+@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_stress_small_cas_device(cache_line_size, cores_number, cache_config):

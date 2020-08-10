@@ -22,7 +22,7 @@ bs = Size(512, Unit.KibiByte)
 mnt_point = "/mnt/cas/"
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_clean_stop_cache(cache_mode):
@@ -152,8 +152,8 @@ def test_clean_stop_cache(cache_mode):
         test_file_3.remove(True)
 
 
-@pytest.mark.parametrize("fs", Filesystem)
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("fs", Filesystem)
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_clean_remove_core_with_fs(cache_mode, fs):
@@ -238,7 +238,7 @@ def test_clean_remove_core_with_fs(cache_mode, fs):
         remove(mnt_point, True, True, True)
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_clean_remove_core_without_fs(cache_mode):

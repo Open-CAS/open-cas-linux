@@ -19,8 +19,8 @@ mount_point = "/mnt/cas"
 test_file_path = f"{mount_point}/test_file"
 
 
-@pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_stop_no_flush_load_cache(cache_mode, filesystem):

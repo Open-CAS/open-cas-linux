@@ -17,9 +17,9 @@ from test_utils.size import Size, Unit
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("cache_mode", [mode for mode in CacheMode if
+@pytest.mark.parametrizex("cache_mode", [mode for mode in CacheMode if
                                         CacheModeTrait.InsertWrite & mode.get_traits(mode)])
-@pytest.mark.parametrize("cache_line_size", CacheLineSize)
+@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 def test_write_fetch_full_misses(cache_mode, cache_line_size):
     """
         title: No caching of full write miss operations with block size smaller than cache line size
@@ -61,9 +61,9 @@ def test_write_fetch_full_misses(cache_mode, cache_line_size):
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("cache_mode", [mode for mode in CacheMode if
+@pytest.mark.parametrizex("cache_mode", [mode for mode in CacheMode if
                                         CacheModeTrait.InsertWrite & CacheMode.get_traits(mode)])
-@pytest.mark.parametrize("cache_line_size", CacheLineSize)
+@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 def test_write_fetch_partial_misses(cache_mode, cache_line_size):
     """
         title: No caching of partial write miss operations

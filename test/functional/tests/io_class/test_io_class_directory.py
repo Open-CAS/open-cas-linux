@@ -20,7 +20,7 @@ from .io_class_common import *
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem)
 def test_ioclass_directory_depth(filesystem):
     """
     Test if directory classification works properly for deeply nested directories for read and
@@ -111,7 +111,7 @@ def test_ioclass_directory_depth(filesystem):
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem)
 def test_ioclass_directory_dir_operations(filesystem):
     """
     Test if directory classification works properly after directory operations like move or rename.
@@ -283,7 +283,7 @@ def test_ioclass_directory_dir_operations(filesystem):
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem)
 def test_ioclass_directory_file_operations(filesystem):
     """
     Test if directory classification works properly after file operations like move or rename.

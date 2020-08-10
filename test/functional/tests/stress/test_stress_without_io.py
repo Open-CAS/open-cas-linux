@@ -21,7 +21,7 @@ mount_point = "/mnt/cas"
 test_file_path = f"{mount_point}/test_file"
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_stress_load(cache_mode):
@@ -60,7 +60,7 @@ def test_stress_load(cache_mode):
         casadm.stop_all_caches()
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_stress_service(cache_mode):
@@ -108,7 +108,7 @@ def test_stress_service(cache_mode):
         InitConfig.create_default_init_config()
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_stress_start(cache_mode):
@@ -144,7 +144,7 @@ def test_stress_start(cache_mode):
         casadm.stop_all_caches()
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_stress_reload_cache(cache_mode):
@@ -188,7 +188,7 @@ def test_stress_reload_cache(cache_mode):
         casadm.stop_all_caches()
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_stress_add_remove_core(cache_mode):
@@ -233,7 +233,7 @@ def test_stress_add_remove_core(cache_mode):
         casadm.stop_all_caches()
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_stress_reload_module(cache_mode):

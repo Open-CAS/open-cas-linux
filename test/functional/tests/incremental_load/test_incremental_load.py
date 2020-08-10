@@ -336,7 +336,7 @@ def test_preserve_data_for_inactive_device():
         cache.stop()
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core1", DiskTypeSet([DiskType.sata, DiskType.hdd, DiskType.hdd4k]))
 @pytest.mark.require_disk("core2", DiskTypeSet([DiskType.sata, DiskType.hdd, DiskType.hdd4k]))

@@ -18,7 +18,7 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, ErrorFilter
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_soft_hot_plug_cache(cache_mode):
@@ -94,7 +94,7 @@ def test_soft_hot_plug_cache(cache_mode):
         cache_dev.plug()
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core1", DiskTypeLowerThan("cache"))
 @pytest.mark.require_disk("core2", DiskTypeLowerThan("cache"))

@@ -24,8 +24,8 @@ mount_point = "/mnt/test"
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("runlevel", [Runlevel.runlevel5, Runlevel.runlevel3])
-@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.parametrizex("runlevel", [Runlevel.runlevel5, Runlevel.runlevel3])
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 def test_init_reboot_runlevels(runlevel, cache_mode):
     """
         title: Initialize CAS devices after reboot
