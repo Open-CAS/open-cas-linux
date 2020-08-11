@@ -155,12 +155,9 @@ def test_seq_cutoff_policy_load():
                          f"should be {SeqCutOffPolicy.DEFAULT}")
 
 
-@pytest.mark.parametrize("threshold", random.sample(
-    range((int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte)) + 1),
-          c_uint32(-1).value), 3))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_seq_cutoff_set_invalid_threshold(threshold):
+def test_seq_cutoff_set_invalid_threshold():
     """
     title: Invalid sequential cut-off threshold test
     description: Test if CAS is allowing setting invalid sequential cut-off threshold
@@ -169,34 +166,41 @@ def test_seq_cutoff_set_invalid_threshold(threshold):
     """
     with TestRun.step("Test prepare (start cache and add core)"):
         cache, cores = prepare()
-        _threshold = Size(threshold, Unit.KibiByte)
+        thresholds = [
+            Size(
+                random.randrange(
+                    int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KiB)) + 1,
+                    c_uint32(-1).value
+                ),
+                Unit.KiB)
+            for _ in range(3)
+        ]
 
-    with TestRun.step(f"Setting cache sequential cut off threshold to out of range value: "
-                      f"{_threshold}"):
-        command = set_param_cutoff_cmd(
-            cache_id=str(cache.cache_id), core_id=str(cores[0].core_id),
-            threshold=str(int(_threshold.get_value())))
-        output = TestRun.executor.run_expect_fail(command)
-        if "Invalid sequential cutoff threshold, must be in the range 1-4194181"\
-                not in output.stderr:
-            TestRun.fail("Command succeeded (should fail)!")
+    for threshold in thresholds:
+        with TestRun.step(f"Setting cache sequential cut off threshold to out of range value: "
+                          f"{threshold}"):
+            command = set_param_cutoff_cmd(
+                cache_id=str(cache.cache_id), core_id=str(cores[0].core_id),
+                threshold=str(int(threshold.get_value())))
+            output = TestRun.executor.run_expect_fail(command)
+            if "Invalid sequential cutoff threshold, must be in the range 1-4194181"\
+                    not in output.stderr:
+                TestRun.fail("Command succeeded (should fail)!")
 
-    with TestRun.step(f"Setting cache sequential cut off threshold "
-                      f"to value passed as a float"):
-        command = set_param_cutoff_cmd(
-            cache_id=str(cache.cache_id), core_id=str(cores[0].core_id),
-            threshold=str(_threshold.get_value()))
-        output = TestRun.executor.run_expect_fail(command)
-        if "Invalid sequential cutoff threshold, must be a correct unsigned decimal integer"\
-                not in output.stderr:
-            TestRun.fail("Command succeeded (should fail)!")
+        with TestRun.step(f"Setting cache sequential cut off threshold "
+                          f"to value passed as a float"):
+            command = set_param_cutoff_cmd(
+                cache_id=str(cache.cache_id), core_id=str(cores[0].core_id),
+                threshold=str(threshold.get_value()))
+            output = TestRun.executor.run_expect_fail(command)
+            if "Invalid sequential cutoff threshold, must be a correct unsigned decimal integer"\
+                    not in output.stderr:
+                TestRun.fail("Command succeeded (should fail)!")
 
 
-@pytest.mark.parametrize("threshold", random.sample(
-    range(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))), 3))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_seq_cutoff_set_get_threshold(threshold):
+def test_seq_cutoff_set_get_threshold():
     """
     title: Sequential cut-off threshold set/get test
     description: |
@@ -208,24 +212,31 @@ def test_seq_cutoff_set_get_threshold(threshold):
     """
     with TestRun.step("Test prepare (start cache and add core)"):
         cache, cores = prepare()
-        _threshold = Size(threshold, Unit.KibiByte)
+        thresholds = [
+            Size(
+                random.randrange(
+                    1,
+                    int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KiB))
+                ),
+                Unit.KiB)
+            for _ in range(3)
+        ]
 
-    with TestRun.step(f"Setting cache sequential cut off threshold to "
-                      f"{_threshold}"):
-        cores[0].set_seq_cutoff_threshold(_threshold)
+    for threshold in thresholds:
+        with TestRun.step(f"Setting cache sequential cut off threshold to "
+                          f"{threshold}"):
+            cores[0].set_seq_cutoff_threshold(threshold)
 
-    with TestRun.step("Check if proper sequential cut off threshold was set"):
-        if cores[0].get_seq_cut_off_threshold() != _threshold:
-            TestRun.fail(f"Wrong sequential cut off threshold set: "
-                         f"{cores[0].get_seq_cut_off_threshold()} "
-                         f"should be {_threshold}")
+        with TestRun.step("Check if proper sequential cut off threshold was set"):
+            if cores[0].get_seq_cut_off_threshold() != threshold:
+                TestRun.fail(f"Wrong sequential cut off threshold set: "
+                             f"{cores[0].get_seq_cut_off_threshold()} "
+                             f"should be {threshold}")
 
 
-@pytest.mark.parametrize("threshold", random.sample(
-    range(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))), 3))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_seq_cutoff_threshold_load(threshold):
+def test_seq_cutoff_threshold_load():
     """
     title: Sequential cut-off threshold set/get test with cache load between
     description: |
@@ -238,11 +249,14 @@ def test_seq_cutoff_threshold_load(threshold):
     """
     with TestRun.step("Test prepare (start cache and add core)"):
         cache, cores = prepare()
-        _threshold = Size(threshold, Unit.KibiByte)
+        threshold = Size(
+            random.randrange(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KiB))),
+            Unit.KiB
+        )
 
     with TestRun.step(f"Setting cache sequential cut off threshold to "
-                      f"{_threshold}"):
-        cores[0].set_seq_cutoff_threshold(_threshold)
+                      f"{threshold}"):
+        cores[0].set_seq_cutoff_threshold(threshold)
 
     with TestRun.step("Stopping cache"):
         cache.stop()
@@ -254,10 +268,10 @@ def test_seq_cutoff_threshold_load(threshold):
         cores_load = loaded_cache.get_core_devices()
 
     with TestRun.step("Check if proper sequential cut off policy was loaded"):
-        if cores_load[0].get_seq_cut_off_threshold() != _threshold:
+        if cores_load[0].get_seq_cut_off_threshold() != threshold:
             TestRun.fail(f"Wrong sequential cut off threshold set: "
                          f"{cores_load[0].get_seq_cut_off_threshold()} "
-                         f"should be {_threshold}")
+                         f"should be {threshold}")
 
 
 def prepare(cores_count=1):

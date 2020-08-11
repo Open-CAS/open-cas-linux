@@ -34,8 +34,7 @@ cache_id = 1
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("random_cls", [random.choice(list(CacheLineSize))])
-def test_ioclass_stats_basic(random_cls):
+def test_ioclass_stats_basic():
     """
         title: Basic test for retrieving IO class statistics.
         description: |
@@ -50,6 +49,7 @@ def test_ioclass_stats_basic(random_cls):
     max_ioclass_id = 21
 
     with TestRun.step("Test prepare"):
+        random_cls = random.choice(list(CacheLineSize))
         prepare(random_cls)
 
     with TestRun.step("Prepare IO class config file"):
@@ -93,8 +93,7 @@ def test_ioclass_stats_basic(random_cls):
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("random_cls", [random.choice(list(CacheLineSize))])
-def test_ioclass_stats_sum(random_cls):
+def test_ioclass_stats_sum():
     """
         title: Test for sum of IO class statistics.
         description: |
@@ -109,6 +108,7 @@ def test_ioclass_stats_sum(random_cls):
     file_size_base = Unit.Blocks4096.value
 
     with TestRun.step("Test prepare"):
+        random_cls = random.choice(list(CacheLineSize))
         caches, cores = prepare(random_cls)
         cache, core = caches[0], cores[0]
 
@@ -211,8 +211,7 @@ def test_ioclass_stats_sum(random_cls):
 @pytest.mark.parametrize("stat_filter", [StatsFilter.req, StatsFilter.usage, StatsFilter.conf,
                                          StatsFilter.blk])
 @pytest.mark.parametrize("per_core", [True, False])
-@pytest.mark.parametrize("random_cls", [random.choice(list(CacheLineSize))])
-def test_ioclass_stats_sections(stat_filter, per_core, random_cls):
+def test_ioclass_stats_sections(stat_filter, per_core):
     """
         title: Test for cache/core IO class statistics sections.
         description: |
@@ -223,6 +222,7 @@ def test_ioclass_stats_sections(stat_filter, per_core, random_cls):
           - Section statistics do not contain any additional entries.
     """
     with TestRun.step("Test prepare"):
+        random_cls = random.choice(list(CacheLineSize))
         caches, cores = prepare(random_cls, cache_count=4, cores_per_cache=3)
 
     with TestRun.step(f"Validate displayed {stat_filter.name} statistics for default IO class for "

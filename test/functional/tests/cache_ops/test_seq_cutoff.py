@@ -26,12 +26,6 @@ class VerifyType(Enum):
     EQUAL = auto()
 
 
-@pytest.mark.parametrize("thresholds_list", [[
-    random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))),
-    random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))),
-    random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))),
-    random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))),
-]])
 @pytest.mark.parametrize("cache_mode, io_type, io_type_last", [
     (CacheMode.WB, ReadWrite.write, ReadWrite.randwrite),
     (CacheMode.WT, ReadWrite.write, ReadWrite.randwrite),
@@ -40,7 +34,7 @@ class VerifyType(Enum):
 @pytest.mark.parametrizex("cls", CacheLineSize)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_seq_cutoff_multi_core(thresholds_list, cache_mode, io_type, io_type_last, cls):
+def test_seq_cutoff_multi_core(cache_mode, io_type, io_type_last, cls):
     """
     title: Sequential cut-off tests during sequential and random IO 'always' policy with 4 cores
     description: |
@@ -52,6 +46,12 @@ def test_seq_cutoff_multi_core(thresholds_list, cache_mode, io_type, io_type_las
           with sequential cut-off threshold for three first cores.
         - Amount of written blocks to cache is equal to io size run against last core.
     """
+    thresholds_list = [
+        random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))),
+        random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))),
+        random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))),
+        random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))),
+    ]
     with TestRun.step(f"Test prepare (start cache (cache line size: {cls}) and add cores)"):
         cache, cores = prepare(cores_count=len(thresholds_list), cache_line_size=cls)
         writes_before = []
@@ -106,9 +106,6 @@ def test_seq_cutoff_multi_core(thresholds_list, cache_mode, io_type, io_type_las
                             VerifyType.EQUAL)
 
 
-@pytest.mark.parametrize("threshold_param", [
-    random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte)))
-])
 @pytest.mark.parametrize("policy, verify_type", [(SeqCutOffPolicy.never, VerifyType.NEGATIVE),
                                                  (SeqCutOffPolicy.always, VerifyType.POSITIVE),
                                                  (SeqCutOffPolicy.full, VerifyType.NEGATIVE)])
@@ -116,7 +113,7 @@ def test_seq_cutoff_multi_core(thresholds_list, cache_mode, io_type, io_type_las
 @pytest.mark.parametrizex("io_dir", [ReadWrite.write, ReadWrite.read])
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_seq_cutoff_thresh(threshold_param, cls, io_dir, policy, verify_type):
+def test_seq_cutoff_thresh(cls, io_dir, policy, verify_type):
     """
     title: Sequential cut-off tests for writes and reads for 'never', 'always' and 'full' policies
     description: |
@@ -133,7 +130,10 @@ def test_seq_cutoff_thresh(threshold_param, cls, io_dir, policy, verify_type):
     with TestRun.step(f"Test prepare (start cache (cache line size: {cls}) and add cores)"):
         cache, cores = prepare(cores_count=1, cache_line_size=cls)
         fio_additional_size = Size(10, Unit.Blocks4096)
-        threshold = Size(threshold_param, Unit.KibiByte)
+        threshold = Size(
+            random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))),
+            Unit.KibiByte
+        )
         io_size = (threshold + fio_additional_size).align_down(0x1000)
 
     with TestRun.step(f"Setting cache sequential cut off policy mode to {policy}"):
@@ -158,14 +158,11 @@ def test_seq_cutoff_thresh(threshold_param, cls, io_dir, policy, verify_type):
         verify_writes_count(cores[0], writes_before, threshold, io_size, verify_type)
 
 
-@pytest.mark.parametrize("threshold_param", [
-    random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte)))
-])
 @pytest.mark.parametrizex("cls", CacheLineSize)
 @pytest.mark.parametrizex("io_dir", [ReadWrite.write, ReadWrite.read])
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_seq_cutoff_thresh_fill(threshold_param, cls, io_dir):
+def test_seq_cutoff_thresh_fill(cls, io_dir):
     """
     title: Sequential cut-off tests during writes and reads on full cache for 'full' policy
     description: |
@@ -181,7 +178,10 @@ def test_seq_cutoff_thresh_fill(threshold_param, cls, io_dir):
     with TestRun.step(f"Test prepare (start cache (cache line size: {cls}) and add cores)"):
         cache, cores = prepare(cores_count=1, cache_line_size=cls)
         fio_additional_size = Size(10, Unit.Blocks4096)
-        threshold = Size(threshold_param, Unit.KibiByte)
+        threshold = Size(
+            random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))),
+            Unit.KibiByte
+        )
         io_size = (threshold + fio_additional_size).align_down(0x1000)
 
     with TestRun.step(f"Setting cache sequential cut off policy mode to "
