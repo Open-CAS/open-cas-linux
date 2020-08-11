@@ -19,10 +19,10 @@ from test_tools.fio.fio_param import *
 from test_utils.size import Size, Unit
 
 
-@pytest.mark.parametrize("cores_amount", [1, 4])
-@pytest.mark.parametrize("cleaning_policy", CleaningPolicy)
-@pytest.mark.parametrize("cache_mode", CacheMode)
-@pytest.mark.parametrize("cache_line_size", CacheLineSize)
+@pytest.mark.parametrizex("cores_amount", [1, 4])
+@pytest.mark.parametrizex("cleaning_policy", CleaningPolicy)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_load_x_to_one_without_params(cache_mode, cleaning_policy, cache_line_size, cores_amount):
@@ -145,10 +145,10 @@ def test_load_x_to_one_without_params(cache_mode, cleaning_policy, cache_line_si
         casadm.stop_all_caches()
 
 
-@pytest.mark.parametrize("cores_amount", [1, 4])
-@pytest.mark.parametrize("cleaning_policy", CleaningPolicy)
-@pytest.mark.parametrize("cache_mode", CacheMode)
-@pytest.mark.parametrize("cache_line_size", CacheLineSize)
+@pytest.mark.parametrizex("cores_amount", [1, 4])
+@pytest.mark.parametrizex("cleaning_policy", CleaningPolicy)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_load_x_to_one_with_params(cache_mode, cleaning_policy, cache_line_size, cores_amount):
@@ -272,13 +272,13 @@ def test_load_x_to_one_with_params(cache_mode, cleaning_policy, cache_line_size,
         casadm.stop_all_caches()
 
 
-@pytest.mark.parametrize("cores_amount", [1, 4])
-@pytest.mark.parametrize("cleaning_policy", CleaningPolicy)
 @pytest.mark.parametrize("cache_mode", [[CacheMode.WT, CacheMode.WB],
                                         [CacheMode.WB, CacheMode.WA],
                                         [CacheMode.WA, CacheMode.PT],
                                         [CacheMode.PT, CacheMode.WO],
                                         [CacheMode.WO, CacheMode.WT]])
+@pytest.mark.parametrizex("cores_amount", [1, 4])
+@pytest.mark.parametrizex("cleaning_policy", CleaningPolicy)
 @pytest.mark.parametrize("cache_line_size", [[CacheLineSize.LINE_4KiB, CacheLineSize.LINE_8KiB],
                                              [CacheLineSize.LINE_8KiB, CacheLineSize.LINE_16KiB],
                                              [CacheLineSize.LINE_16KiB, CacheLineSize.LINE_32KiB],

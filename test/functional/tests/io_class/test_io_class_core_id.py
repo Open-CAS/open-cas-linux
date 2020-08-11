@@ -25,7 +25,7 @@ not_cached_mountpoint = "/tmp/ioclass_core_id_test/not_cached"
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("filesystem", [fs for fs in Filesystem] + [None])
+@pytest.mark.parametrizex("filesystem", [fs for fs in Filesystem] + [None])
 def test_ioclass_core_id(filesystem):
     """
     title: Test for `core_id` classification rule

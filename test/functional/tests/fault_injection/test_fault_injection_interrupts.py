@@ -21,8 +21,8 @@ iterations_per_config = 10
 cache_size = Size(16, Unit.GibiByte)
 
 
-@pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_interrupt_core_flush(cache_mode, filesystem):
@@ -100,8 +100,8 @@ def test_interrupt_core_flush(cache_mode, filesystem):
             core_part.unmount()
 
 
-@pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_interrupt_cache_flush(cache_mode, filesystem):
@@ -179,8 +179,8 @@ def test_interrupt_cache_flush(cache_mode, filesystem):
             core_part.unmount()
 
 
-@pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_interrupt_core_remove(cache_mode, filesystem):
@@ -271,8 +271,8 @@ def test_interrupt_core_remove(cache_mode, filesystem):
             core_part.unmount()
 
 
-@pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_interrupt_cache_mode_switch_immediately(cache_mode, filesystem):
@@ -352,8 +352,8 @@ def test_interrupt_cache_mode_switch_immediately(cache_mode, filesystem):
             core_part.unmount()
 
 
-@pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_interrupt_cache_mode_switch_delayed(cache_mode, filesystem):
@@ -428,8 +428,8 @@ def test_interrupt_cache_mode_switch_delayed(cache_mode, filesystem):
             core_part.unmount()
 
 
-@pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_interrupt_cache_stop(cache_mode, filesystem):

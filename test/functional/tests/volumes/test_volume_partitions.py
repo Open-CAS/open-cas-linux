@@ -18,9 +18,9 @@ mount_point = "/mnt/cas"
 cores_number = 16
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode)
-@pytest.mark.parametrize("partition_table", PartitionTable)
-@pytest.mark.parametrize("filesystem", Filesystem)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
+@pytest.mark.parametrizex("partition_table", PartitionTable)
+@pytest.mark.parametrizex("filesystem", Filesystem)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_cas_preserves_partitions(partition_table, filesystem, cache_mode):
@@ -92,9 +92,9 @@ def test_cas_preserves_partitions(partition_table, filesystem, cache_mode):
             TestRun.fail("Md5 sums are different.")
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode)
-@pytest.mark.parametrize("partition_table", PartitionTable)
-@pytest.mark.parametrize("filesystem", Filesystem)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
+@pytest.mark.parametrizex("partition_table", PartitionTable)
+@pytest.mark.parametrizex("filesystem", Filesystem)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_partition_create_cas(partition_table, filesystem, cache_mode):

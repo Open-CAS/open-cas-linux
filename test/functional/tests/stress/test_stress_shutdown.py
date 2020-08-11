@@ -19,9 +19,9 @@ cores_number = 2
 iterations_per_config = 5
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
-@pytest.mark.parametrize("cleaning_policy", CleaningPolicy)
-@pytest.mark.parametrize("cache_line_size", CacheLineSize)
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("cleaning_policy", CleaningPolicy)
+@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.require_plugin("power_control")

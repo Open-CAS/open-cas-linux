@@ -29,10 +29,10 @@ other_pattern = "0x0000"
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
-@pytest.mark.parametrize("cleaning_policy", CleaningPolicy)
-@pytest.mark.parametrize("cache_line_size", CacheLineSize)
-@pytest.mark.parametrize("filesystem", Filesystem)
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("cleaning_policy", CleaningPolicy)
+@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
+@pytest.mark.parametrizex("filesystem", Filesystem)
 @pytest.mark.require_plugin("power_control")
 def test_recovery_all_options(cache_mode, cache_line_size, cleaning_policy, filesystem):
     """

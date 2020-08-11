@@ -27,11 +27,11 @@ from api.cas.cache_config import (
 from test_tools.blktrace import BlkTrace, BlkTraceMask, ActionKind, RwbsKind
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrizex(
     "cache_line_size",
     [CacheLineSize.LINE_4KiB, CacheLineSize.LINE_16KiB, CacheLineSize.LINE_64KiB],
 )
-@pytest.mark.parametrize(
+@pytest.mark.parametrizex(
     "cache_mode", CacheMode.with_any_trait(CacheModeTrait.LazyWrites)
 )
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -125,11 +125,11 @@ def test_acp_param_flush_max_buffers(cache_line_size, cache_mode):
         casadm.stop_all_caches()
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrizex(
     "cache_line_size",
     [CacheLineSize.LINE_4KiB, CacheLineSize.LINE_16KiB, CacheLineSize.LINE_64KiB],
 )
-@pytest.mark.parametrize(
+@pytest.mark.parametrizex(
     "cache_mode", CacheMode.with_any_trait(CacheModeTrait.LazyWrites)
 )
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

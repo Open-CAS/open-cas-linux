@@ -93,7 +93,7 @@ def test_stat_max_cache():
             stats_compare(cache_stats, cores_stats, cores_per_cache, fail_message)
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_stat_max_core(cache_mode):

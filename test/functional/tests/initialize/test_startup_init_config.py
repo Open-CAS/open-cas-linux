@@ -25,8 +25,8 @@ filepath = f"{mountpoint}/file"
 @pytest.mark.remote_only
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("cache_mode", CacheMode)
-@pytest.mark.parametrize("filesystem", Filesystem)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
+@pytest.mark.parametrizex("filesystem", Filesystem)
 def test_cas_startup(cache_mode, filesystem):
     """
     title: Test for starting CAS on system startup.

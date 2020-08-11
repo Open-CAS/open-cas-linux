@@ -24,8 +24,8 @@ from storage_devices.device import Device
 from test_utils.os_utils import Udev
 
 
-@pytest.mark.parametrize("cache_line_size", CacheLineSize)
-@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_cache_insert_error(cache_mode, cache_line_size):
@@ -83,8 +83,8 @@ def test_cache_insert_error(cache_mode, cache_line_size):
             fio_cmd.target(core_device).verify_only().run()
 
 
-@pytest.mark.parametrize("cache_line_size", CacheLineSize)
-@pytest.mark.parametrize("cache_mode", [CacheMode.WB, CacheMode.WO])
+@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
+@pytest.mark.parametrizex("cache_mode", [CacheMode.WB, CacheMode.WO])
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_cache_write_lazy_insert_error(cache_mode, cache_line_size):

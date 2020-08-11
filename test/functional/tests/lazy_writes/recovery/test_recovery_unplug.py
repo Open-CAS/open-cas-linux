@@ -22,10 +22,10 @@ test_file_path = os.path.join(mount_point, "test_file")
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
-@pytest.mark.parametrize("cls", [CacheLineSize.LINE_4KiB, CacheLineSize.LINE_64KiB])
-@pytest.mark.parametrize("filesystem", Filesystem)
-@pytest.mark.parametrize("direct", [True, False])
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("cls", [CacheLineSize.LINE_4KiB, CacheLineSize.LINE_64KiB])
+@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("direct", [True, False])
 @pytest.mark.require_plugin("power_control")
 def test_recovery_unplug_cache_fs(cache_mode, cls, filesystem, direct):
     """
@@ -102,8 +102,8 @@ def test_recovery_unplug_cache_fs(cache_mode, cls, filesystem, direct):
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
-@pytest.mark.parametrize("cls", [CacheLineSize.LINE_4KiB, CacheLineSize.LINE_64KiB])
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("cls", [CacheLineSize.LINE_4KiB, CacheLineSize.LINE_64KiB])
 @pytest.mark.require_plugin("power_control")
 def test_recovery_unplug_cache_raw(cache_mode, cls):
     """

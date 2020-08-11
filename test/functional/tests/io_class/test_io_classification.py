@@ -161,7 +161,7 @@ def test_ioclass_request_size():
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("filesystem", list(Filesystem) + [False])
+@pytest.mark.parametrizex("filesystem", list(Filesystem) + [False])
 def test_ioclass_direct(filesystem):
     """
     Perform buffered/direct IO to/from files or raw block device.
@@ -246,7 +246,7 @@ def test_ioclass_direct(filesystem):
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem)
 def test_ioclass_metadata(filesystem):
     """
     Perform operations on files that cause metadata update.
@@ -336,7 +336,7 @@ def test_ioclass_metadata(filesystem):
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem)
 def test_ioclass_id_as_condition(filesystem):
     """
     Load config in which IO class ids are used as conditions in other IO class definitions.
@@ -475,7 +475,7 @@ def test_ioclass_id_as_condition(filesystem):
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem)
 def test_ioclass_conditions_or(filesystem):
     """
     Load config with IO class combining 5 contradicting conditions connected by OR operator.
@@ -523,7 +523,7 @@ def test_ioclass_conditions_or(filesystem):
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem)
 def test_ioclass_conditions_and(filesystem):
     """
     Load config with IO class combining 5 conditions contradicting at least one other condition
@@ -572,7 +572,7 @@ def test_ioclass_conditions_and(filesystem):
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem)
 def test_ioclass_effective_ioclass(filesystem):
     """
     title: Effective IO class with multiple non-exclusive conditions

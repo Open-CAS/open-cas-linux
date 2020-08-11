@@ -32,7 +32,7 @@ cores_per_cache = 2
 number_of_checks = 10
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_set_get_seqcutoff_params(cache_mode):
@@ -112,8 +112,8 @@ def test_set_get_seqcutoff_params(cache_mode):
                     )
 
 
-@pytest.mark.parametrize("cache_mode", CacheMode)
-@pytest.mark.parametrize("cleaning_policy", [CleaningPolicy.alru, CleaningPolicy.acp])
+@pytest.mark.parametrizex("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cleaning_policy", [CleaningPolicy.alru, CleaningPolicy.acp])
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_set_get_cleaning_params(cache_mode, cleaning_policy):

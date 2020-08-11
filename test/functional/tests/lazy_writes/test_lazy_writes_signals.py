@@ -25,7 +25,7 @@ syslog_path = "/var/log/messages"
 
 
 @pytest.mark.require_plugin("scsi_debug_fua_signals", dev_size_mb="4096", opts="1")
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 def test_flush_signal_core(cache_mode):
     """
@@ -122,7 +122,7 @@ def test_flush_signal_core(cache_mode):
 
 
 @pytest.mark.require_plugin("scsi_debug_fua_signals", dev_size_mb="2048", opts="1")
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd, DiskType.hdd4k, DiskType.sata]))
 def test_flush_signal_cache(cache_mode):
     """
@@ -219,7 +219,7 @@ def test_flush_signal_cache(cache_mode):
 
 
 @pytest.mark.require_plugin("scsi_debug_fua_signals", dev_size_mb="2048", opts="1")
-@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 def test_flush_signal_multilevel_cache(cache_mode):
     """

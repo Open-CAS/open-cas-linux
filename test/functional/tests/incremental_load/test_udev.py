@@ -98,7 +98,7 @@ def test_udev_core():
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-@pytest.mark.parametrize("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 def test_udev_cache_load(cache_mode):
     """
         title: CAS udev rule execution after unplugging and plugging cache device.

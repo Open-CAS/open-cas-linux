@@ -37,7 +37,7 @@ class VerifyType(Enum):
     (CacheMode.WT, ReadWrite.write, ReadWrite.randwrite),
     (CacheMode.WA, ReadWrite.read, ReadWrite.randread),
     (CacheMode.WO, ReadWrite.write, ReadWrite.randwrite)])
-@pytest.mark.parametrize("cls", CacheLineSize)
+@pytest.mark.parametrizex("cls", CacheLineSize)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_seq_cutoff_multi_core(thresholds_list, cache_mode, io_type, io_type_last, cls):
@@ -109,11 +109,11 @@ def test_seq_cutoff_multi_core(thresholds_list, cache_mode, io_type, io_type_las
 @pytest.mark.parametrize("threshold_param", [
     random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte)))
 ])
-@pytest.mark.parametrize("cls", CacheLineSize)
-@pytest.mark.parametrize("io_dir", [ReadWrite.write, ReadWrite.read])
 @pytest.mark.parametrize("policy, verify_type", [(SeqCutOffPolicy.never, VerifyType.NEGATIVE),
                                                  (SeqCutOffPolicy.always, VerifyType.POSITIVE),
                                                  (SeqCutOffPolicy.full, VerifyType.NEGATIVE)])
+@pytest.mark.parametrizex("cls", CacheLineSize)
+@pytest.mark.parametrizex("io_dir", [ReadWrite.write, ReadWrite.read])
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_seq_cutoff_thresh(threshold_param, cls, io_dir, policy, verify_type):
@@ -161,8 +161,8 @@ def test_seq_cutoff_thresh(threshold_param, cls, io_dir, policy, verify_type):
 @pytest.mark.parametrize("threshold_param", [
     random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte)))
 ])
-@pytest.mark.parametrize("cls", CacheLineSize)
-@pytest.mark.parametrize("io_dir", [ReadWrite.write, ReadWrite.read])
+@pytest.mark.parametrizex("cls", CacheLineSize)
+@pytest.mark.parametrizex("io_dir", [ReadWrite.write, ReadWrite.read])
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_seq_cutoff_thresh_fill(threshold_param, cls, io_dir):
