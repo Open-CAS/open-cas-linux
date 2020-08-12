@@ -16,6 +16,7 @@ from test_tools.fio.fio_param import ReadWrite, IoEngine
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 def test_trim_start_discard():
     """

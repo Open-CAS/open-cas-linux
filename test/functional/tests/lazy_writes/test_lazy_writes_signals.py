@@ -24,6 +24,7 @@ mount_point = "/mnt/cas"
 syslog_path = "/var/log/messages"
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_plugin("scsi_debug_fua_signals", dev_size_mb="4096", opts="1")
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -121,6 +122,7 @@ def test_flush_signal_core(cache_mode):
         cache.stop()
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_plugin("scsi_debug_fua_signals", dev_size_mb="2048", opts="1")
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd, DiskType.hdd4k, DiskType.sata]))
@@ -218,6 +220,7 @@ def test_flush_signal_cache(cache_mode):
         cache.stop()
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_plugin("scsi_debug_fua_signals", dev_size_mb="2048", opts="1")
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

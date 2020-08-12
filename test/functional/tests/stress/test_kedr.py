@@ -149,6 +149,7 @@ def test_kedr_start_cache(module, unload_modules, install_kedr):
         Kedr.stop()
 
 
+@pytest.mark.os_dependent
 @pytest.mark.parametrize("module", cas_module.CasModule)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
@@ -213,6 +214,7 @@ def test_kedr_basic_io_raw(module, unload_modules, install_kedr):
         Kedr.stop()
 
 
+@pytest.mark.os_dependent
 @pytest.mark.parametrize("module", cas_module.CasModule)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))

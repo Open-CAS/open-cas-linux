@@ -19,6 +19,7 @@ cores_number = 2
 iterations_per_config = 5
 
 
+@pytest.mark.os_dependent
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.parametrizex("cleaning_policy", CleaningPolicy)
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)

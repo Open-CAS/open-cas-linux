@@ -303,6 +303,7 @@ def test_ioclass_file_offset():
             TestRun.LOGGER.error(f"Inappropriately cached offset: {file_offset}")
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("filesystem", Filesystem)
