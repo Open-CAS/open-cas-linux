@@ -120,6 +120,7 @@ def pytest_runtest_teardown():
 
 
 def pytest_configure(config):
+    add_marks(config)
     TestRun.configure(config)
 
 
@@ -194,3 +195,10 @@ def base_prepare(item):
         TestRun.LOGGER.add_build_info(f"{git.get_current_commit_hash()}")
         TestRun.LOGGER.add_build_info(f'Commit message:')
         TestRun.LOGGER.add_build_info(f'{git.get_current_commit_message()}')
+
+
+def add_marks(config):
+    config.addinivalue_line(
+        "markers",
+        "uninstall_cas: don't install OpenCAS and if already installed, uninstall it"
+    )
