@@ -14,6 +14,12 @@ type: "local"
 allow_disk_autoselect: False
 working_dir: "/tmp/open-cas-linux/"
 
+# Option below is used only, when CLI flag '--rpm_install' is on. When the flag is on
+# and a path is not given, framework would create RPM packages from sources
+# in default place (working_dir/packages/)
+
+# rpm_dir: "path_to_RPM_packages"
+
 disks:
   - path: "/dev/device_name1" # disk device path
     serial: "ABC"             # disk serial number
