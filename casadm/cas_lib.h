@@ -226,11 +226,6 @@ int purge_core(unsigned int cache_id, unsigned int core_id);
 int flush_cache(unsigned int cache_id);
 int flush_core(unsigned int cache_id, unsigned int core_id);
 
-int get_cas_capabilites_quiet(struct kcas_capabilites *caps);
-int get_cas_capabilites(struct kcas_capabilites *caps);
-
-int nvme_format(const char *device_path, int metadata_mode, int force);
-
 int check_cache_device(const char *device_path);
 
 int partition_list(unsigned int cache_id, unsigned int output_format);

@@ -1697,128 +1697,6 @@ int script_handle() {
 	return FAILURE;
 }
 
-/*******************************************************************************
- * NVMe Commands
- ******************************************************************************/
-
-enum {
-	nvme_opt_subcmd_format = 0,
-
-	nvme_opt_device,
-	nvme_opt_force,
-
-	nvme_opt_flag_required,
-	nvme_opt_flag_set,
-
-	nvme_opt_subcmd_unknown,
-};
-
-/* NVMe command options */
-static cli_option nvme_options[] = {
-	[nvme_opt_subcmd_format] = {
-		.short_name = 'F',
-		.long_name = "format",
-		.desc = "Change NVMe metadata mode {normal|atomic} WARNING: Reboot required!",
-		.args_count = 1,
-		.arg = "MODE",
-		.flags = CLI_OPTION_REQUIRED,
-	},
-	[nvme_opt_device] = {
-		.short_name = 'd',
-		.long_name = "device",
-		.desc = "NVMe device to be formatted",
-		.args_count = 1,
-		.arg = "DEVICE",
-		.flags = CLI_OPTION_REQUIRED,
-	},
-	[nvme_opt_force] = {
-		.short_name = 'f',
-		.long_name = "force",
-		.desc = "Force NVMe format",
-		.args_count = 0,
-		.arg = NULL,
-		.flags = CLI_OPTION_OPTIONAL_ARG,
-	},
-	{0}
-};
-
-
-struct {
-	const char *device;
-	int metadata_mode;
-	int force;
-} static nvme_params = {
-	.device = "",
-	.metadata_mode = 0,
-	.force = 0,
-};
-
-
-/* Parser of option for IO class command */
-int nvme_handle_option(char *opt, const char **arg)
-{
-	if (!strcmp(opt, "device")) {
-		nvme_params.device = arg[0];
-	} else if (!strcmp(opt, "format")) {
-		nvme_params.metadata_mode = validate_str_metadata_mode(arg[0]);
-
-		if (METADATA_MODE_INVALID == nvme_params.metadata_mode)
-			return FAILURE;
-	} else if (!strcmp(opt, "force")) {
-		nvme_params.force = 1;
-	} else {
-		return FAILURE;
-	}
-
-	return 0;
-}
-
-static int handle_nvme_format()
-{
-	struct kcas_capabilites cas_capabilites;
-	static const char fsck_cmd[] = "/sbin/fsck -n %s > /dev/null 2>&1";
-	static const uint32_t size = MAX_STR_LEN + sizeof(fsck_cmd) + 1;
-	char nvme_dev_path[MAX_STR_LEN];
-	char buff[size];
-
-	if (get_cas_capabilites(&cas_capabilites)) {
-		cas_printf(LOG_ERR, "Can't obtain CAS capabilities\n");
-		return FAILURE;
-	}
-
-	if (!cas_capabilites.nvme_format) {
-		cas_printf(LOG_ERR, "Command is not supported by current kernel\n");
-		return FAILURE;
-	}
-
-	if (get_dev_path(nvme_params.device, nvme_dev_path,
-			sizeof(nvme_dev_path))) {
-		cas_printf(LOG_ERR, "Device does not exist\n");
-		return FAILURE;
-	}
-
-	snprintf(buff, sizeof(buff), fsck_cmd, nvme_dev_path);
-
-	if (!system(buff)) {
-		if (nvme_params.force) {
-			cas_printf(LOG_INFO, "A filesystem existed on %s. "
-				"Data may have been lost\n",
-				nvme_params.device);
-		} else {
-			/* file system on cache device */
-			cas_printf(LOG_ERR, "A filesystem exists on %s. "
-				"Specify the --force option if you "
-				"wish to format the device anyway.\n"
-				"Note: this may result in loss of data\n",
-				nvme_params.device);
-			return FAILURE;
-		}
-	}
-
-	return nvme_format(nvme_dev_path, nvme_params.metadata_mode,
-			nvme_params.force);
-}
-
 static cli_option version_options[] = {
 	{
 		.short_name = 'o',
@@ -1890,12 +1768,6 @@ void io_class_help(app *app_values, cli_command *cmd)
 	int i, flag = 0, all_ops, printed_ops;
 	char option_name[MAX_STR_LEN];
 	cli_option* iter = &(cmd->options[0]);
-
-	struct kcas_capabilites caps;
-	if (get_cas_capabilites(&caps)) {
-		memset(&caps, 0, sizeof(caps));
-	}
-
 
 	/* Print usage */
 	cas_printf(LOG_INFO, "Usage: %s --%s {", app_values->name, cmd->name);
@@ -2148,17 +2020,6 @@ static cli_command cas_commands[] = {
 			.handle = io_class_handle,
 			.flags = CLI_SU_REQUIRED,
 			.help = io_class_help,
-		},
-		{
-			.name = "nvme",
-			.short_name = 'N',
-			.desc = "Manage NVMe namespace",
-			.long_desc = NULL,
-			.options = nvme_options,
-			.command_handle_opts = nvme_handle_option,
-			.handle = handle_nvme_format,
-			.flags = CLI_SU_REQUIRED,
-			.help = NULL,
 		},
 		{
 			.name = "version",
