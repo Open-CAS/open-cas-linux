@@ -7,6 +7,7 @@ import os
 
 from core.test_run import TestRun
 from connection.local_executor import LocalExecutor
+from test_utils.output import CmdException
 
 
 def get_current_commit_hash(from_dut: bool = False):
