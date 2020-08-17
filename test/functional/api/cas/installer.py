@@ -5,8 +5,10 @@
 
 from datetime import timedelta
 
+from api.cas.cas_module import CasModule
 from core.test_run import TestRun
 from api.cas import cas_module, git
+from test_tools.rpm import Rpm
 from test_utils import os_utils
 from test_utils.output import CmdException
 
@@ -102,3 +104,45 @@ class Installer:
             TestRun.LOGGER.info(output.stdout)
             return True
 
+
+class RpmInstaller(Installer):
+    @staticmethod
+    def rsync_opencas():
+        if TestRun.usr.rpm_dir is not None:
+            TestRun.LOGGER.info("Copying OpenCAS RPM package to DUT")
+            Installer._rsync_opencas(TestRun.usr.rpm_dir)
+        else:
+            Installer.rsync_opencas()
+
+    @staticmethod
+    def set_up_opencas(version=None):
+        if not TestRun.usr.rpm_dir:
+            Installer._clean_opencas_repo()
+
+            if version:
+                git.checkout_cas_version(version)
+
+        rpm = Rpm("open-cas-linux")
+
+        if TestRun.usr.rpm_dir is not None:
+            rpm.packages_dir = TestRun.usr.rpm_dir
+        else:
+            rpm.make_rpm(TestRun.usr.working_dir)
+
+        rpm.update_packages_to_install()
+        rpm.install_packages()
+        os_utils.load_kernel_module(CasModule.cache.value)
+
+    @staticmethod
+    def uninstall_opencas():
+        TestRun.LOGGER.info("Uninstalling OpenCAS")
+        if Rpm.is_package_installed("open-cas-linux"):
+            Rpm("open-cas-linux").uninstall_packages()
+        else:
+            Installer.uninstall_opencas()
+
+    @staticmethod
+    def reinstall_opencas(version=None):
+        if Installer.check_if_installed():
+            RpmInstaller.uninstall_opencas()
+        RpmInstaller.set_up_opencas(version)
