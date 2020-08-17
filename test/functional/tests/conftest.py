@@ -14,9 +14,8 @@ import traceback
 sys.path.append(os.path.join(os.path.dirname(__file__), "../test-framework"))
 
 from core.test_run_utils import TestRun
-from api.cas import installer
-from api.cas import casadm
-from api.cas import git
+from api.cas import casadm, git
+from api.cas.installer import Installer, RpmInstaller
 from test_utils.os_utils import Udev, kill_all_io
 from test_tools.disk_utils import PartitionTable, create_partition_table
 from test_tools.device_mapper import DeviceMapper
@@ -25,9 +24,10 @@ from test_utils.singleton import Singleton
 
 
 class Opencas(metaclass=Singleton):
-    def __init__(self, repo_dir, working_dir):
+    def __init__(self, repo_dir, working_dir, rpm_dir):
         self.repo_dir = repo_dir
         self.working_dir = working_dir
+        self.rpm_dir = rpm_dir
         self.already_updated = False
 
 
@@ -72,7 +72,9 @@ def pytest_runtest_setup(item):
 
     TestRun.usr = Opencas(
         repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
-        working_dir=dut_config['working_dir'])
+        working_dir=dut_config['working_dir'],
+        rpm_dir=dut_config.get('rpm_dir')
+    )
 
     TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
 
@@ -102,7 +104,7 @@ def pytest_runtest_teardown():
                 Udev.enable()
                 kill_all_io()
                 unmount_cas_devices()
-                if installer.check_if_installed():
+                if Installer.check_if_installed():
                     casadm.remove_all_detached_cores()
                     casadm.stop_all_caches()
                     from api.cas.init_config import InitConfig
@@ -134,6 +136,7 @@ def pytest_addoption(parser):
     parser.addoption("--log-path", action="store",
                      default=f"{os.path.join(os.path.dirname(__file__), '../results')}")
     parser.addoption("--force-reinstall", action="store_true", default=False)
+    parser.addoption("--rpm-install", action="store_true", default=False)
 
 
 def unmount_cas_devices():
@@ -162,6 +165,10 @@ def get_force_param(item):
     return item.config.getoption("--force-reinstall")
 
 
+def get_rpm_param(item):
+    return item.config.getoption("--rpm-install")
+
+
 def base_prepare(item):
     with TestRun.LOGGER.step("Cleanup before test"):
         TestRun.executor.run("pkill --signal=SIGKILL fsck")
@@ -169,7 +176,11 @@ def base_prepare(item):
         kill_all_io()
         DeviceMapper.remove_all()
 
-        if installer.check_if_installed():
+        uninstall_cas = list(TestRun.item.iter_markers(name="uninstall_cas"))
+        installer = RpmInstaller if get_rpm_param(item) else Installer
+        opencas_installed = installer.check_if_installed()
+
+        if opencas_installed:
             try:
                 from api.cas.init_config import InitConfig
                 InitConfig.create_default_init_config()
@@ -177,19 +188,25 @@ def base_prepare(item):
                 casadm.stop_all_caches()
                 casadm.remove_all_detached_cores()
             except Exception:
-                pass  # TODO: Reboot DUT if test is executed remotely
+                if TestRun.executor.is_remote():
+                    TestRun.executor.reboot()
 
         for disk in TestRun.dut.disks:
             disk.umount_all_partitions()
             disk.remove_partitions()
             create_partition_table(disk, PartitionTable.gpt)
 
-        if get_force_param(item) and not TestRun.usr.already_updated:
-            installer.rsync_opencas_sources()
+        # sources should be up-to-date on DUT even if installation is skipped
+        installer.rsync_opencas()
+
+        if uninstall_cas:
+            if opencas_installed:
+                RpmInstaller.uninstall_opencas()
+        elif get_force_param(item) and not TestRun.usr.already_updated:
             installer.reinstall_opencas()
-        elif not installer.check_if_installed():
-            installer.rsync_opencas_sources()
+        elif not opencas_installed and not uninstall_cas:
             installer.set_up_opencas()
+
         TestRun.usr.already_updated = True
         TestRun.LOGGER.add_build_info(f'Commit hash:')
         TestRun.LOGGER.add_build_info(f"{git.get_current_commit_hash()}")
