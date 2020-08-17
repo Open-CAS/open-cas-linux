@@ -104,10 +104,9 @@ def print_statistics_cmd(cache_id: str, core_id: str = None, per_io_class: bool 
     return casadm_bin + command
 
 
-def format_cmd(cache_dev: str, force: bool = False, shortcut: bool = False):
-    command = (" -N -F -d " if shortcut else " --nvme --format --device ") + cache_dev
-    if force:
-        command += " -f" if shortcut else " --force"
+def zero_metadata_cmd(cache_dev: str, shortcut: bool):
+    command = " --zero-metadata"
+    command += (" -d " if shortcut else " --device ") + cache_dev
     return casadm_bin + command
 
 
