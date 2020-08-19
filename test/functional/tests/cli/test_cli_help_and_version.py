@@ -122,5 +122,5 @@ def names_in_output(output):
 
 
 def versions_in_output(output):
-    version_pattern = re.compile(r"(\d){2}\.(\d){2}\.(\d){2}\.(\d){8}")
+    version_pattern = re.compile(r"(\d){2}\.(\d){2}\.(\d)\.(\d){4}.(\S)")
     return len(version_pattern.findall(output)) == 3
