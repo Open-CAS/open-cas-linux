@@ -82,9 +82,6 @@ def pytest_runtest_teardown():
     This method is executed always in the end of each test, even if it fails or raises exception in
     prepare stage.
     """
-    if TestRun.outcome == "skipped":
-        return
-
     TestRun.LOGGER.end_all_groups()
 
     with TestRun.LOGGER.step("Cleanup after test"):
