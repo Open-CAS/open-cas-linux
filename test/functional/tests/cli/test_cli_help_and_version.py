@@ -81,10 +81,6 @@ def test_cli_help(shortcut):
                                   + (" -H" if shortcut else " --help"))
     check_stdout_msg(output, ioclass_help)
 
-    output = TestRun.executor.run("casadm" + (" -N" if shortcut else " --nvme")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, nvme_help)
-
     output = TestRun.executor.run("casadm" + (" -V" if shortcut else " --version")
                                   + (" -H" if shortcut else " --help"))
     check_stdout_msg(output, version_help)
