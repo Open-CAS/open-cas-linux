@@ -1408,7 +1408,7 @@ int check_core_already_cached(const char *core_device) {
 		curr_cache = caches[i];
 		for (j = 0; j < curr_cache->core_count; ++j) {
 			curr_core = &curr_cache->cores[j];
-			if (0 ==
+			if (curr_core->info.state == ocf_core_state_active && 0 ==
 			strncmp(core_device_path, curr_core->path, MAX_STR_LEN)) {
 				free_cache_devices_list(caches, caches_count);
 				return FAILURE;
