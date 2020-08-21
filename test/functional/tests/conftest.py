@@ -5,6 +5,7 @@
 
 import os
 import sys
+from datetime import timedelta
 
 import pytest
 import yaml
@@ -47,7 +48,7 @@ def pytest_runtest_setup(item):
         raise Exception("You need to specify DUT config. See the example_dut_config.py file.")
 
     dut_config['plugins_dir'] = os.path.join(os.path.dirname(__file__), "../lib")
-    dut_config['opt_plugins'] = {"test_wrapper": {}, "serial_log": {}}
+    dut_config['opt_plugins'] = {"test_wrapper": {}, "serial_log": {}, "power_control": {}}
 
     try:
         TestRun.prepare(item, dut_config)
@@ -55,6 +56,15 @@ def pytest_runtest_setup(item):
         test_name = item.name.split('[')[0]
         TestRun.LOGGER = create_log(item.config.getoption('--log-path'), test_name)
 
+        TestRun.presetup()
+        try:
+            TestRun.executor.wait_for_connection(timedelta(seconds=20))
+        except Exception:
+            try:
+                TestRun.plugin_manager.get_plugin('power_control').power_cycle()
+                TestRun.executor.wait_for_connection()
+            except Exception:
+                raise Exception("Failed to connect to DUT.")
         TestRun.setup()
     except Exception as ex:
         raise Exception(f"Exception occurred during test setup:\n"
