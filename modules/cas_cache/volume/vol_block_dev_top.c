@@ -22,10 +22,8 @@ static inline bool _blockdev_can_handle_rq(struct request *rq)
 	if (unlikely(!cas_is_rq_type_fs(rq)))
 		error = __LINE__;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 1, 0)
-	if (unlikely(blk_bidi_rq(rq)))
+	if (unlikely(CAS_BLK_BIDI_RQ(rq)))
 		error = __LINE__;
-#endif
 
 	if (error != 0) {
 		CAS_PRINT_RL(KERN_ERR "%s cannot handle request (ERROR %d)\n",
