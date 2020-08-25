@@ -97,7 +97,7 @@ def pytest_runtest_teardown():
     with TestRun.LOGGER.step("Cleanup after test"):
         try:
             if TestRun.executor:
-                if TestRun.executor.is_active():
+                if not TestRun.executor.is_active():
                     TestRun.executor.wait_for_connection()
                 Udev.enable()
                 kill_all_io()
