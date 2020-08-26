@@ -81,10 +81,6 @@ def test_cli_help(shortcut):
                                   + (" -H" if shortcut else " --help"))
     check_stdout_msg(output, ioclass_help)
 
-    output = TestRun.executor.run("casadm" + (" -N" if shortcut else " --nvme")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, nvme_help)
-
     output = TestRun.executor.run("casadm" + (" -V" if shortcut else " --version")
                                   + (" -H" if shortcut else " --help"))
     check_stdout_msg(output, version_help)
@@ -126,5 +122,5 @@ def names_in_output(output):
 
 
 def versions_in_output(output):
-    version_pattern = re.compile(r"(\d){2}\.(\d){2}\.(\d){2}\.(\d){8}")
+    version_pattern = re.compile(r"(\d){2}\.(\d){2}\.(\d)\.(\d){4}.(\S)")
     return len(version_pattern.findall(output)) == 3

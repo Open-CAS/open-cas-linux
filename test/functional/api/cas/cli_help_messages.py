@@ -22,7 +22,6 @@ casadm_help = [
     r"-E  --flush-core               Flush dirty data of a given core from the caching device "
     r"to this core device",
     r"-C  --io-class                 Manage IO classes",
-    r"-N  --nvme                     Manage NVMe namespace",
     r"-V  --version                  Print CAS version",
     r"-H  --help                     Print help",
     r"--zero-metadata            Clear metadata from caching device",
@@ -43,16 +42,6 @@ version_help = [
     r"Print CAS version",
     r"Options that are valid with --version \(-V\) are:"
     r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}"
-]
-
-nvme_help = [
-    r"Usage: casadm --nvme --format \<MODE\> --device \<DEVICE\> \[option\.\.\.\]",
-    r"Manage NVMe namespace",
-    r"Options that are valid with --nvme \(-N\) are:",
-    r"-F  --format \<MODE\>                 Change NVMe metadata mode \{normal|atomic\} "
-    r"WARNING: Reboot required\!",
-    r"-d  --device \<DEVICE\>               NVMe device to be formatted",
-    r"-f  --force                         Force NVMe format"
 ]
 
 ioclass_help = [
