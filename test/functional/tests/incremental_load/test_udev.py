@@ -14,6 +14,7 @@ from storage_devices.disk import DiskTypeSet, DiskTypeLowerThan, DiskType
 from test_utils.size import Size, Unit
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_udev_core_partition():
@@ -54,6 +55,7 @@ def test_udev_core_partition():
             check_if_dev_in_core_pool(dev)
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd, DiskType.hdd4k, DiskType.sata]))
 def test_udev_core():
@@ -97,6 +99,7 @@ def test_udev_core():
             TestRun.fail(f"Core status is {core.get_status()} instead of active.")
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.parametrizex("cache_mode", CacheMode)
 def test_udev_cache_load(cache_mode):
@@ -140,6 +143,7 @@ def test_udev_cache_load(cache_mode):
         TestRun.LOGGER.info("Cache is correctly loaded.")
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.sata, DiskType.hdd]))
 def test_neg_udev_cache_load():

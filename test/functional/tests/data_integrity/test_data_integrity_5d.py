@@ -33,6 +33,7 @@ def shuffled_fs_list(n):
     return random.sample(list(itertools.islice(itertools.cycle(Filesystem), n)), n)
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core1", DiskTypeLowerThan("cache"))
 @pytest.mark.require_disk("core2", DiskTypeLowerThan("cache"))
@@ -121,6 +122,7 @@ def test_data_integrity_5d_dss(filesystems):
                              f"Cache mode: {mode} Filesystem: {fs}")
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core1", DiskTypeLowerThan("cache"))
 @pytest.mark.require_disk("core2", DiskTypeLowerThan("cache"))

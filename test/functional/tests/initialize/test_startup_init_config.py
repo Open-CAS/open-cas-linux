@@ -22,6 +22,7 @@ mountpoint = "/mnt"
 filepath = f"{mountpoint}/file"
 
 
+@pytest.mark.os_dependent
 @pytest.mark.remote_only
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))

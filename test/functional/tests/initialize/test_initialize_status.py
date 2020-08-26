@@ -3,12 +3,15 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
+import pytest
+
 from api.cas import cas_module, casctl
 from api.cas.cas_module import CasModule
 from core.test_run import TestRun
 from test_utils import os_utils
 
 
+@pytest.mark.os_dependent
 def test_init_status():
     """
         title: CAS management device status

@@ -159,6 +159,7 @@ def test_ioclass_request_size():
             TestRun.fail("Dirty data present!")
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("filesystem", list(Filesystem) + [False])
@@ -244,6 +245,7 @@ def test_ioclass_direct(filesystem):
                      f"Expected: {base_occupancy + io_size}, actual: {new_occupancy}")
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("filesystem", Filesystem)
@@ -334,6 +336,7 @@ def test_ioclass_metadata(filesystem):
         TestRun.fail("No requests to metadata while deleting directory with files!")
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("filesystem", Filesystem)
@@ -473,6 +476,7 @@ def test_ioclass_id_as_condition(filesystem):
                      f"Expected: {base_occupancy + ioclass_file_size}, actual: {new_occupancy}")
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("filesystem", Filesystem)
@@ -521,6 +525,7 @@ def test_ioclass_conditions_or(filesystem):
                          f"Expected: {base_occupancy + file_size}, actual: {new_occupancy}")
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("filesystem", Filesystem)
@@ -570,6 +575,7 @@ def test_ioclass_conditions_and(filesystem):
                          f"Expected: {base_occupancy}, actual: {new_occupancy}")
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("filesystem", Filesystem)

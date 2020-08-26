@@ -22,6 +22,7 @@ from test_utils.size import Size, Unit
 mount_point = "/mnt/test"
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("runlevel", [Runlevel.runlevel5, Runlevel.runlevel3])

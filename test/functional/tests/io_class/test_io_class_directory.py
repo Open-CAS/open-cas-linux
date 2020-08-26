@@ -18,6 +18,7 @@ from test_utils.os_utils import drop_caches, DropCachesMode, sync, Udev
 from .io_class_common import *
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("filesystem", Filesystem)
@@ -109,6 +110,7 @@ def test_ioclass_directory_depth(filesystem):
         f"Expected: {base_occupancy + test_file_2.size}, actual: {new_occupancy}"
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("filesystem", Filesystem)
@@ -281,6 +283,7 @@ def test_ioclass_directory_dir_operations(filesystem):
         directory=dir_1, with_delay=True)
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("filesystem", Filesystem)
