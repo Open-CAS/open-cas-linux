@@ -19,9 +19,12 @@ def add_core_cmd(cache_id: str, core_dev: str, core_id: str = None, shortcut: bo
     return casadm_bin + command
 
 
-def script_try_add_cmd(cache_id: str, core_dev: str):
-    return f"{casadm_bin} --script --add-core --try-add --cache-id {cache_id} " \
-           f"--core-device {core_dev}"
+def script_try_add_cmd(cache_id: str, core_dev: str, core_id: str = None):
+    command = f"{casadm_bin} --script --add-core --try-add --cache-id {cache_id} " \
+              f"--core-device {core_dev}"
+    if core_id:
+        command += f" --core-id {core_id}"
+    return command
 
 
 def script_purge_cache_cmd(cache_id: str):
@@ -30,6 +33,11 @@ def script_purge_cache_cmd(cache_id: str):
 
 def script_purge_core_cmd(cache_id: str, core_id: str):
     return f"{casadm_bin} --script --purge-core --cache-id {cache_id} --core-id {core_id}"
+
+
+def script_detach_core_cmd(cache_id: str, core_id: str):
+    return f"{casadm_bin} --script --remove-core --detach --cache-id {cache_id} " \
+           f"--core-id {core_id}"
 
 
 def remove_core_cmd(cache_id: str, core_id: str, force: bool = False, shortcut: bool = False):

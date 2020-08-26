@@ -72,8 +72,9 @@ def remove_detached(core_device: Device, shortcut: bool = False):
     return output
 
 
-def try_add(core_device: Device, cache_id: int):
-    output = TestRun.executor.run(script_try_add_cmd(str(cache_id), core_device.system_path))
+def try_add(core_device: Device, cache_id: int, core_id: int = None):
+    output = TestRun.executor.run(script_try_add_cmd(str(cache_id), core_device.system_path,
+                                                     str(core_id) if core_id is not None else None))
     if output.exit_code != 0:
         raise CmdException("Failed to execute try add script command.", output)
     return Core(core_device.system_path, cache_id)
@@ -90,6 +91,13 @@ def purge_core(cache_id: int, core_id: int):
     output = TestRun.executor.run(script_purge_core_cmd(str(cache_id), str(core_id)))
     if output.exit_code != 0:
         raise CmdException("Purge core failed.", output)
+    return output
+
+
+def detach_core(cache_id: int, core_id: int):
+    output = TestRun.executor.run(script_detach_core_cmd(str(cache_id), str(core_id)))
+    if output.exit_code != 0:
+        raise CmdException("Failed to execute detach core script command.", output)
     return output
 
 
