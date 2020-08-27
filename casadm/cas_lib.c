@@ -972,7 +972,7 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	if (!cmd.metadata_mode_optimal)
 		cas_printf(LOG_NOTICE, "Selected metadata mode is not optimal for device %s.\n"
 			"You can improve cache performance by formatting your device\n",
-			cache_device, cache_device);
+			cache_device);
 
 	check_cache_scheduler(cache_device,
 			      cmd.cache_elevator);
