@@ -4,9 +4,7 @@
 #
 
 import time
-from datetime import timedelta
 from random import shuffle
-
 import pytest
 
 from api.cas import casadm, cli, cli_messages
@@ -23,6 +21,7 @@ from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_utils import os_utils
 from test_utils.output import CmdException
 from test_utils.size import Size, Unit
+from test_utils.time import Time
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -101,9 +100,10 @@ def test_flush_inactive_devices():
         cache = casadm.start_cache(cache_dev, cache_mode=CacheMode.WB, force=True)
         cache.set_cleaning_policy(CleaningPolicy.alru)
         cache.set_params_alru(FlushParametersAlru(
-            staleness_time=timedelta(seconds=10),
-            wake_up_time=timedelta(seconds=1),
-            activity_threshold=timedelta(milliseconds=500)))
+            staleness_time=Time(seconds=10),
+            wake_up_time=Time(seconds=1),
+            activity_threshold=Time(milliseconds=500)))
+
     with TestRun.step("Add two cores."):
         first_core = cache.add_core(first_core_dev)
         second_core = cache.add_core(second_core_dev)
