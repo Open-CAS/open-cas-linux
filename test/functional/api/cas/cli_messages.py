@@ -12,7 +12,6 @@ load_inactive_core_missing = [
     r"WARNING: Can not resolve path to core \d+ from cache \d+\. By-id path will be shown for that "
     r"core\.",
     r"WARNING: Cache is in incomplete state - at least one core is inactive",
-    r"Successfully added cache instance \d+"
 ]
 
 start_cache_with_existing_metadata = [
