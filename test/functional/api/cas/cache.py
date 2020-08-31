@@ -176,7 +176,7 @@ class Cache:
             if alru_params.staleness_time is not None else None,
             alru_params.flush_max_buffers
             if alru_params.flush_max_buffers is not None else None,
-            alru_params.activity_threshold.total_milliseconds()
+            int(alru_params.activity_threshold.total_milliseconds())
             if alru_params.activity_threshold is not None else None)
 
     def get_cache_config(self):
