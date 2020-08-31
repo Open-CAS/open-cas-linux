@@ -4,10 +4,10 @@
 #
 
 from aenum import Enum, IntFlag
-from attotime import attotimedelta
 
 from test_utils.os_utils import get_kernel_module_parameter
 from test_utils.size import Size, Unit
+from test_utils.time import Time
 
 
 class CacheLineSize(Enum):
@@ -128,11 +128,6 @@ class CacheStatus(Enum):
 
     def __str__(self):
         return self.value
-
-
-class Time(attotimedelta):
-    def total_milliseconds(self):
-        return int(self.total_seconds() * 1000)
 
 
 class FlushParametersAlru:
