@@ -49,6 +49,7 @@ def test_udev_core_partition():
         core_disk.unplug()
     with TestRun.step("Plug missing core disk."):
         core_disk.plug()
+        time.sleep(1)
     with TestRun.step("List cache devices and check that created partitions are present "
                       "in core pool."):
         for dev in core_devices:
@@ -87,6 +88,7 @@ def test_udev_core():
         core_disk.unplug()
     with TestRun.step("Plug core disk."):
         core_disk.plug()
+        time.sleep(1)
     with TestRun.step("Check if core device is listed in core pool."):
         check_if_dev_in_core_pool(core_dev)
     with TestRun.step("Unplug cache disk."):
@@ -126,6 +128,7 @@ def test_udev_cache_load(cache_mode):
         cache_disk.unplug()
     with TestRun.step("Plug cache disk."):
         cache_disk.plug()
+        time.sleep(1)
     with TestRun.step("List caches and check if cache is loaded."):
         caches = casadm_parser.get_caches()
         if len(caches) < 1:
@@ -184,6 +187,7 @@ def test_neg_udev_cache_load():
     with TestRun.step("Unplug and plug cache disk."):
         cache_disk.unplug()
         cache_disk.plug()
+        time.sleep(1)
     with TestRun.step("Check if CAS is loaded correctly."):
         cas_devices = casadm_parser.get_cas_devices_dict()
         if len(cas_devices["core_pool"]) != 0:
@@ -209,6 +213,7 @@ def test_neg_udev_cache_load():
     with TestRun.step("Unplug and plug core disk."):
         core_disk.unplug()
         core_disk.plug()
+        time.sleep(1)
     with TestRun.step("Check if two cores assigned to not loaded cache are inserted to core pool."):
         cas_devices = casadm_parser.get_cas_devices_dict()
         if len(cas_devices["core_pool"]) != 2:
