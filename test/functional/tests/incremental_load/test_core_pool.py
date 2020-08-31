@@ -2,6 +2,7 @@
 # Copyright(c) 2019-2020 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
+
 import pytest
 
 from api.cas import casadm
@@ -36,24 +37,32 @@ def test_attach_core_pool():
         core_disk.create_partitions([Size(2, Unit.GibiByte), Size(2, Unit.GibiByte)])
         core_dev = core_disk.partitions[0]
         second_core_dev = core_disk.partitions[1]
+
     with TestRun.step("Start cache."):
         cache = casadm.start_cache(cache_dev, force=True)
+
     with TestRun.step("Add core device."):
         cache.add_core(core_dev)
+
     with TestRun.step("Stop cache."):
         cache.stop()
+
     with TestRun.step("Add previously used core device to core pool using --try-add flag."):
         first_core = casadm.try_add(core_dev, cache.cache_id)
+
     with TestRun.step("Add different core device to core pool using --try-add flag."):
         second_core = casadm.try_add(second_core_dev, cache.cache_id)
+
     with TestRun.step("Load cache."):
         cache = casadm.load_cache(cache_dev)
+
     with TestRun.step("Check each core status."):
         if first_core.get_status() is not CoreStatus.active:
             TestRun.fail(f"First core status should be active but is {first_core.get_status()}.")
         if second_core.get_status() is not CoreStatus.detached:
             TestRun.fail(
                 f"Second core status should be detached but is {second_core.get_status()}.")
+
     with TestRun.step("Stop cache and remove core from core pool."):
         casadm.remove_all_detached_cores()
         cache.stop()
@@ -77,12 +86,15 @@ def test_core_pool_exclusive_open():
         core_disk.create_partitions([Size(1, Unit.GibiByte)])
         core_dev = core_disk.partitions[0]
         core_dev.create_filesystem(Filesystem.ext4)
+
     with TestRun.step("Add core device to core device pool using --try-add flag."):
         core = casadm.try_add(core_dev, 1)
+
     with TestRun.step("Check if core status of added core in core pool is detached."):
         status = core.get_status()
         if status is not CoreStatus.detached:
             TestRun.fail(f"Core status should be detached but is {status}.")
+
     with TestRun.step("Check if it is impossible to add core device from core pool to "
                       "running cache."):
         TestRun.disks["cache"].create_partitions([Size(2, Unit.GibiByte)])
@@ -94,6 +106,7 @@ def test_core_pool_exclusive_open():
         except CmdException:
             TestRun.LOGGER.info("Adding core from core pool to cache is blocked as expected.")
         cache.stop()
+
     with TestRun.step("Check if it is impossible to start cache with casadm start command on the "
                       "core device from core pool."):
         try:
@@ -103,6 +116,7 @@ def test_core_pool_exclusive_open():
                          "this is unexpected behaviour.")
         except CmdException:
             TestRun.LOGGER.info("Using core device from core pool as cache is blocked as expected.")
+
     with TestRun.step("Check if it is impossible to make filesystem on the core device "
                       "from core pool."):
         try:
@@ -112,11 +126,13 @@ def test_core_pool_exclusive_open():
         except Exception:
             TestRun.LOGGER.info("Creating filesystem on core device from core pool is "
                                 "blocked as expected.")
+
     with TestRun.step("Check if it is impossible to mount the core device from core pool."):
         try:
             core_dev.mount("/mnt")
             TestRun.fail("Successfully mounted core pool device, this is unexpected behaviour.")
         except Exception:
             TestRun.LOGGER.info("Mounting core device form core pool is blocked as expected.")
+
     with TestRun.step("Remove core from core pool."):
         casadm.remove_all_detached_cores()

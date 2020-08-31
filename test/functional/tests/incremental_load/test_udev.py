@@ -2,8 +2,8 @@
 # Copyright(c) 2020 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
-import random
 
+import random
 import pytest
 
 from api.cas import casadm, casadm_parser
@@ -30,6 +30,7 @@ def test_udev_core_partition():
           - Created partitions are added to core pool after attaching core drive.
     """
     cores_count = 4
+
     with TestRun.step("Create four partitions on core device and one on cache device."):
         cache_disk = TestRun.disks["cache"]
         cache_disk.create_partitions([Size(1, Unit.GibiByte)])
@@ -37,19 +38,25 @@ def test_udev_core_partition():
         core_disk = TestRun.disks["core"]
         core_disk.create_partitions([Size(2, Unit.GibiByte)] * cores_count)
         core_devices = core_disk.partitions
+
     with TestRun.step("Start cache and add created partitions as cores."):
         cache = casadm.start_cache(cache_dev, force=True)
         for dev in core_devices:
             cache.add_core(dev)
+
     with TestRun.step("Create init config from running CAS configuration."):
         InitConfig.create_init_config_from_running_configuration()
+
     with TestRun.step("Stop cache."):
         cache.stop()
+
     with TestRun.step("Detach core disk."):
         core_disk.unplug()
+
     with TestRun.step("Plug missing core disk."):
         core_disk.plug()
         time.sleep(1)
+
     with TestRun.step("List cache devices and check that created partitions are present "
                       "in core pool."):
         for dev in core_devices:
@@ -80,21 +87,29 @@ def test_udev_core():
         core_dev = core_disk.partitions[0]
         cache = casadm.start_cache(cache_dev, force=True)
         core = cache.add_core(core_dev)
+
     with TestRun.step("Create init config from running CAS configuration."):
         InitConfig.create_init_config_from_running_configuration()
+
     with TestRun.step("Stop cache."):
         cache.stop()
+
     with TestRun.step("Unplug core disk."):
         core_disk.unplug()
+
     with TestRun.step("Plug core disk."):
         core_disk.plug()
         time.sleep(1)
+
     with TestRun.step("Check if core device is listed in core pool."):
         check_if_dev_in_core_pool(core_dev)
+
     with TestRun.step("Unplug cache disk."):
         cache_disk.unplug()
+
     with TestRun.step("Plug cache disk."):
         cache_disk.plug()
+
     with TestRun.step("Check if core device is active and not in the core pool."):
         check_if_dev_in_core_pool(core_dev, False)
         if core.get_status() != CoreStatus.active:
@@ -120,15 +135,20 @@ def test_udev_cache_load(cache_mode):
         cache_disk.create_partitions([Size(1, Unit.GibiByte)])
         cache_dev = cache_disk.partitions[0]
         cache = casadm.start_cache(cache_dev, cache_mode=cache_mode)
+
     with TestRun.step("Create init config from running configuration"):
         InitConfig.create_init_config_from_running_configuration()
+
     with TestRun.step("Stop cache."):
         cache.stop()
+
     with TestRun.step("Unplug cache disk."):
         cache_disk.unplug()
+
     with TestRun.step("Plug cache disk."):
         cache_disk.plug()
         time.sleep(1)
+
     with TestRun.step("List caches and check if cache is loaded."):
         caches = casadm_parser.get_caches()
         if len(caches) < 1:
@@ -165,6 +185,7 @@ def test_neg_udev_cache_load():
     """
     caches_count = 2
     cores_count = 4
+
     with TestRun.step("Create init config file with two caches and two cores per each cache."):
         cache_disk = TestRun.disks["cache"]
         cache_disk.create_partitions([Size(1, Unit.GibiByte)] * caches_count)
@@ -178,16 +199,20 @@ def test_neg_udev_cache_load():
             init_conf.add_core(1 if j in first_cache_core_numbers else 2,
                                j + 1, core_disk.partitions[j])
         init_conf.save_config_file()
+
     with TestRun.step("Start one cache and add two cores as defined in init config."):
         cache = casadm.start_cache(cache_disk.partitions[0])
         for i in first_cache_core_numbers:
             cache.add_core(core_disk.partitions[i])
+
     with TestRun.step("Stop cache."):
         cache.stop()
+
     with TestRun.step("Unplug and plug cache disk."):
         cache_disk.unplug()
         cache_disk.plug()
         time.sleep(1)
+
     with TestRun.step("Check if CAS is loaded correctly."):
         cas_devices = casadm_parser.get_cas_devices_dict()
         if len(cas_devices["core_pool"]) != 0:
@@ -202,6 +227,7 @@ def test_neg_udev_cache_load():
         if len(cas_devices["cores"]) != 2:
             TestRun.LOGGER.error(f"There is wrong number of cores. Expected: 2, actual: "
                                  f"{len(cas_devices['caches'])}")
+
         correct_core_devices = []
         for i in first_cache_core_numbers:
             correct_core_devices.append(core_disk.partitions[i].system_path)
@@ -210,10 +236,12 @@ def test_neg_udev_cache_load():
                     CoreStatus[core["status"].lower()] != CoreStatus.active or \
                     core["cache_id"] != 1:
                 TestRun.LOGGER.error(f"Core did not load correctly: {core}.")
+
     with TestRun.step("Unplug and plug core disk."):
         core_disk.unplug()
         core_disk.plug()
         time.sleep(1)
+
     with TestRun.step("Check if two cores assigned to not loaded cache are inserted to core pool."):
         cas_devices = casadm_parser.get_cas_devices_dict()
         if len(cas_devices["core_pool"]) != 2:
