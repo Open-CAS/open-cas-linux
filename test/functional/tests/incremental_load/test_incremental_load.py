@@ -8,7 +8,7 @@ from random import shuffle
 import pytest
 
 from api.cas import casadm, cli, cli_messages
-from api.cas.cache_config import CacheStatus, SeqCutOffPolicy
+from api.cas.cache_config import CacheStatus, SeqCutOffPolicy, CacheModeTrait
 from api.cas.core import CoreStatus, CacheMode, CleaningPolicy, FlushParametersAlru, File
 from api.cas.init_config import InitConfig
 from api.cas.statistics import CacheStats
@@ -19,6 +19,7 @@ from test_tools.disk_utils import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_utils import os_utils
+from test_utils.os_utils import Udev
 from test_utils.output import CmdException
 from test_utils.size import Size, Unit
 from test_utils.time import Time
@@ -412,11 +413,17 @@ def test_print_statistics_inactive(cache_mode):
         second_core_dev = devices["core2"].partitions[0]
         first_plug_device = devices["core1"]
         second_plug_device = devices["core2"]
+        Udev.disable()  # disabling udev for a while prevents creating clean data on cores
 
     with TestRun.step("Start cache and add cores."):
         cache = casadm.start_cache(cache_dev, cache_mode=cache_mode, force=True)
         first_core = cache.add_core(first_core_dev)
         second_core = cache.add_core(second_core_dev)
+        cache_mode_traits = CacheMode.get_traits(cache.get_cache_mode())
+
+    with TestRun.step("Disable cleaning and sequential cutoff policies."):
+        cache.set_cleaning_policy(CleaningPolicy.nop)
+        cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
 
     with TestRun.step("Create init config file using current CAS configuration."):
         InitConfig.create_init_config_from_running_configuration()
@@ -429,8 +436,13 @@ def test_print_statistics_inactive(cache_mode):
         check_if_inactive_section_exists(active_stats, False)
 
     with TestRun.step("Stop cache."):
-        cache.stop()
+        if CacheModeTrait.LazyWrites in cache_mode_traits:
+            cache.stop(no_data_flush=True)
+        else:
+            cache.stop()
+
     with TestRun.step("Remove both core devices from OS."):
+        Udev.enable()  # enable udev back because it's necessary now
         first_plug_device.unplug()
         second_plug_device.unplug()
 
@@ -455,17 +467,24 @@ def test_print_statistics_inactive(cache_mode):
         inactive_stats_after = cache.get_statistics()
         check_if_inactive_section_exists(inactive_stats_after)
         check_number_of_inactive_devices(inactive_stats_after, 1)
+        # criteria for checks below
+        insert_write_traits = CacheModeTrait.InsertWrite in cache_mode_traits
+        lazy_write_traits = CacheModeTrait.LazyWrites in cache_mode_traits
+        lazy_writes_or_no_insert_write_traits = (not insert_write_traits
+                                                 or lazy_write_traits)
+
         check_inactive_usage_stats(inactive_stats_before.inactive_usage_stats.inactive_occupancy,
                                    inactive_stats_after.inactive_usage_stats.inactive_occupancy,
-                                   "inactive occupancy", cache.get_cache_mode() == CacheMode.PT)
+                                   "inactive occupancy",
+                                   not insert_write_traits)
         check_inactive_usage_stats(inactive_stats_before.inactive_usage_stats.inactive_clean,
                                    inactive_stats_after.inactive_usage_stats.inactive_clean,
                                    "inactive clean",
-                                   cache.get_cache_mode() in [CacheMode.PT, CacheMode.WB])
+                                   lazy_writes_or_no_insert_write_traits)
         check_inactive_usage_stats(inactive_stats_before.inactive_usage_stats.inactive_dirty,
                                    inactive_stats_after.inactive_usage_stats.inactive_dirty,
                                    "inactive dirty",
-                                   cache.get_cache_mode() != CacheMode.WB)
+                                   not lazy_write_traits)
 
     with TestRun.step("Check statistics per inactive core."):
         inactive_core_stats = second_core.get_statistics()
@@ -634,9 +653,6 @@ def test_remove_inactive_devices():
                                  "command executed without any error.")
                 TestRun.LOGGER.info("Removing core with force option skipped for clean CAS device.")
             except CmdException as e:
-                if dirty_blocks == Size.zero():
-                    TestRun.fail("Removing clean CAS device should be possible but remove "
-                                 "command returned an error.")
                 TestRun.LOGGER.info("Remove operation without force option is blocked for "
                                     "dirty CAS device as expected.")
                 cli_messages.check_stderr_msg(e.output, cli_messages.remove_inactive_core)
@@ -747,8 +763,8 @@ def check_inactive_usage_stats(stats_before, stats_after, stat_name, should_be_z
     elif not should_be_zero and stats_after < stats_before:
         TestRun.LOGGER.info(f"{stat_name} is lower than before as expected.")
     else:
-        TestRun.fail(f"{stat_name} ({stats_after}) is not lower than before "
-                     f"({stats_before}).")
+        TestRun.LOGGER.error(f"{stat_name} ({stats_after}) is not lower than before "
+                             f"({stats_before}).")
 
 
 def check_number_of_inactive_devices(stats: CacheStats, expected_num):
