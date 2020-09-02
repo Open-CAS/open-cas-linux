@@ -4,13 +4,15 @@
 #
 
 import pytest
-from test_tools.disk_utils import Filesystem
-from test_utils.size import Size, Unit
+
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet
-from test_utils.filesystem.file import File
-from test_utils.filesystem.directory import Directory
+from storage_devices.raid import Raid, RaidConfiguration, MetadataVariant, Level
 from test_tools import fs_utils
+from test_tools.disk_utils import Filesystem
+from test_utils.filesystem.directory import Directory
+from test_utils.filesystem.file import File
+from test_utils.size import Size, Unit
 
 
 def setup_module():
@@ -30,7 +32,7 @@ def test_create_example_partitions():
         test_disk = TestRun.disks['cache']
 
     with TestRun.group("Repartition disk"):
-        with TestRun.step("Genetare partitions table"):
+        with TestRun.step("Generate partitions table"):
             part_sizes = []
             for i in range(1, 6):
                 part_sizes.append(Size(10 * i + 100, Unit.MebiByte))
@@ -41,11 +43,41 @@ def test_create_example_partitions():
                 test_disk.partitions[i].create_filesystem(Filesystem.ext3)
 
 
+@pytest.mark.require_disk("cache1", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("cache2", DiskTypeSet([DiskType.optane, DiskType.nand]))
+def test_raid_example():
+    """
+        title: Example test using RAID API.
+        description: Create and discover RAID volumes.
+        pass_criteria:
+          - RAID created.
+          - RAID discovered.
+    """
+    with TestRun.step("Prepare"):
+        test_disk_1 = TestRun.disks['cache1']
+        test_disk_2 = TestRun.disks['cache2']
+
+    with TestRun.step("Create RAID"):
+        config = RaidConfiguration(
+            level=Level.Raid1,
+            metadata=MetadataVariant.Imsm,
+            number_of_devices=2,
+            size=Size(20, Unit.GiB)
+        )
+        raid = Raid.create(config, [test_disk_1, test_disk_2])
+
+    with TestRun.group("Discover RAIDs"):
+        raids = Raid.discover()
+
+    with TestRun.group("Check if created RAID was discovered"):
+        if raid not in raids:
+            TestRun.LOGGER.error("Created RAID not discovered in system!")
+
 
 def test_create_example_files():
     """
         title: Example test manipulating on filesystem.
-        description: Perform various operaations on filesystem.
+        description: Perform various operations on filesystem.
         pass_criteria:
           - System does not crash.
           - All operations complete successfully.
@@ -84,4 +116,3 @@ def test_create_example_files():
             TestRun.LOGGER.info(f"Item {str(item)} - {type(item).__name__}")
     with TestRun.step("Remove file"):
         fs_utils.remove(file1.full_path, True)
-
