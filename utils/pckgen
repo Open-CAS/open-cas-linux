@@ -12,12 +12,13 @@
 # - update help!
 
 
-NAME="open-cas-linux"
+CAS_NAME="open-cas-linux"
 SUPPORTED_FROM_VERSION="20.03"
-THIS="$(basename $0)"
+THIS=$(basename "$0")
 ARCH="$(uname -i)"
-SCRIPT_BASE_DIR="$(dirname $(realpath $0))"
-BASE_SPEC="$SCRIPT_BASE_DIR/$NAME.spec.base"
+SYS_INFO="/etc/os-release"
+SCRIPT_BASE_DIR=$(dirname $(realpath "$0"))
+BASE_SPEC="$SCRIPT_BASE_DIR/$CAS_NAME.spec.base"
 TEMP_TEMPLATE="opencas-${THIS}"
 DEPENDENCIES=(sed git mktemp rsync)
 # Dependencies for particular packages creation:
@@ -124,8 +125,8 @@ check_version() {
         VERSION_SHORT+=".${CAS_VERSION_MINOR}"
     fi
     if [[ "$VERSION_SHORT" < "$SUPPORTED_FROM_VERSION" ]]; then
-        echo "Sorry... this version of $NAME ($VERSION_SHORT) is not supported"\
-             "by $THIS. Use $NAME >= $SUPPORTED_FROM_VERSION"
+        echo "Sorry... this version of $CAS_NAME ($VERSION_SHORT) is not supported"\
+             "by $THIS. Use $CAS_NAME >= $SUPPORTED_FROM_VERSION"
         exit 1
     fi
 
@@ -236,14 +237,14 @@ rpm_spec_prepare() {
         error "SPEC file '$BASE_SPEC' not found"
     fi
 
-    cp -v "$BASE_SPEC" "$RPM_SPECS_DIR/$NAME.spec"
-    sed -i "s/<CAS_VERSION>/$CAS_VERSION/g" "$RPM_SPECS_DIR/$NAME.spec"
+    cp -v "$BASE_SPEC" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+    sed -i "s/<CAS_VERSION>/$CAS_VERSION/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     if [ "$DEBUG" ]; then
         echo "---   Debug RPMs will be built as well"
-        sed -i "s/%define debug_package %{nil}//g" "$RPM_SPECS_DIR/$NAME.spec"
+        sed -i "s/%define debug_package %{nil}//g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     fi
 
-    if [ ! -f "$RPM_SPECS_DIR/$NAME.spec" ]; then
+    if [ ! -f "$RPM_SPECS_DIR/$CAS_NAME.spec" ]; then
         error "couldn't create a SPEC file"
     fi
 }
@@ -257,9 +258,18 @@ generate_rpm() {
     rpm_obtain_sources
     rpm_spec_prepare
 
+    . $SYS_INFO
+    if [[ "$ID_LIKE" =~ suse|sles ]] && [ -d /usr/src/packages ]; then
+        info "INFO: It appears that you are using SUSE Linux."\
+             "In case of encountering error during building of RPM package,"\
+             "about missing files or directories in /usr/src/packages/,"\
+             "remove or rename '/usr/src/packages' folder to prevent"\
+             "rpmbuild to look for stuff in that location."
+    fi
+
     if [ ! "$GENERATE_SRPM" ] && [ "$GENERATE_RPM" ]; then
         echo "--- Building binary RPM packages"
-        (HOME="$TEMP_DIR"; rpmbuild -bb "$RPM_SPECS_DIR/$NAME.spec")
+        (HOME="$TEMP_DIR"; rpmbuild -bb "$RPM_SPECS_DIR/$CAS_NAME.spec")
         if [ $? -ne 0 ]; then
             error "couldn't create RPM packages"
         fi
@@ -267,7 +277,7 @@ generate_rpm() {
     fi
     if [ "$GENERATE_SRPM" ] && [ ! "$GENERATE_RPM" ]; then
         echo "--- Building source SRPM package"
-        (HOME="$TEMP_DIR"; rpmbuild -bs "$RPM_SPECS_DIR/$NAME.spec")
+        (HOME="$TEMP_DIR"; rpmbuild -bs "$RPM_SPECS_DIR/$CAS_NAME.spec")
         if [ $? -ne 0 ]; then
             error "couldn't create SRPM package"
         fi
@@ -275,7 +285,7 @@ generate_rpm() {
     fi
     if [ "$GENERATE_SRPM" ] && [ "$GENERATE_RPM" ]; then
         echo "--- Building source and binary RPM packages"
-        (HOME="$TEMP_DIR"; rpmbuild -ba "$RPM_SPECS_DIR/$NAME.spec")
+        (HOME="$TEMP_DIR"; rpmbuild -ba "$RPM_SPECS_DIR/$CAS_NAME.spec")
         if [ $? -ne 0 ]; then
             error "couldn't create RPM packages"
         fi
@@ -362,7 +372,7 @@ CAS_VERSION_GEN="$SOURCES_DIR/utils/cas_version_gen"
 check_version
 
 # CAS naming convention:
-CAS_FILENAME="$NAME-$CAS_VERSION"
+CAS_FILENAME="$CAS_NAME-$CAS_VERSION"
 # CAS sources archives filenames:
 SOURCES_TAR_NAME="$CAS_FILENAME.tar.gz"
 SOURCES_ZIP_NAME="$CAS_FILENAME.zip"
