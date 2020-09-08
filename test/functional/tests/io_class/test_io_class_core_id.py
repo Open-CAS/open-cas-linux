@@ -3,8 +3,6 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
-import time
-
 import pytest
 
 from test_tools.disk_utils import Filesystem
@@ -12,7 +10,7 @@ from api.cas import ioclass_config, casadm
 from api.cas.cache_config import CacheMode, CleaningPolicy, SeqCutOffPolicy
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
-from test_utils.os_utils import sync, Udev, drop_caches, DropCachesMode
+from test_utils.os_utils import sync, Udev, drop_caches
 from test_utils.size import Unit, Size
 from core.test_run import TestRun
 
@@ -29,7 +27,7 @@ not_cached_mountpoint = "/tmp/ioclass_core_id_test/not_cached"
 def test_ioclass_core_id(filesystem):
     """
     title: Test for `core_id` classification rule
-    dsecription: |
+    description: |
         Test if IO to core with selective allocation enabled is cached and IO to core with
         selective allocation disabled is redirected to pass-through mode
     pass_criteria:
