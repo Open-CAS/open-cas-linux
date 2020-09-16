@@ -92,5 +92,6 @@ def run_workload(target):
         fio_job = fio_run.add_job()
         fio_job.stonewall()
         fio_job.block_size(block_size)
+        fio_run.verify_backlog(block_size)
 
     fio_run.run()
