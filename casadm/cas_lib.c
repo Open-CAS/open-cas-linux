@@ -111,8 +111,6 @@ int vcaslog(int log_level, const char *template, va_list args)
 		goto out;
 	}
 
-	timestamp[strnlen(timestamp, SIZE_MAX)-1] = 0;
-
 	fseek(log, 0, SEEK_END);
 	fprintf(log, "%s casadm: ", timestamp);
 	vfprintf(log, template, args);
