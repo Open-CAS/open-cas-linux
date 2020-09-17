@@ -1,0 +1,11 @@
+<CAS_NAME> (<CAS_VERSION>-1) trusty; urgency=medium
+
+  * pckgen: automated package generation
+
+ -- <PACKAGE_MAINTAINER>  <PACKAGE_DATE>
+
+open-cas-linux (20.03.2.0295-1) trusty; urgency=medium
+
+  * Initial OpenCAS DEB package release
+
+ -- Rafal Stefanowski <rafal.stefanowski@intel.com>  Mon, 07 Sep 2020 14:17:04 +0200

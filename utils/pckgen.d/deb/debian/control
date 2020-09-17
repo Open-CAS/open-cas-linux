@@ -1,0 +1,30 @@
+Source: <CAS_NAME>
+Section: utils
+Priority: optional
+Maintainer: <PACKAGE_MAINTAINER>
+Build-Depends: debhelper (>= 11), gawk, libelf-dev, linux-headers-generic
+Standards-Version: 4.1.2
+Homepage: <CAS_HOMEPAGE>
+Vcs-Git: <CAS_GIT>
+
+Package: <CAS_NAME>
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, python3,
+ <CAS_NAME>-modules (= <CAS_VERSION>-1)
+Description: Open Cache Acceleration Software
+ Open Cache Acceleration Software (Open CAS) is an open source project
+ encompassing block caching software libraries, adapters, tools and more.
+ The main goal of this cache acceleration software is to accelerate a
+ backend block device(s) by utilizing a higher performance device(s).
+ This package contains tools and utilities for managing CAS and monitor
+ running cache instances (no kernel modules).
+
+Package: <CAS_NAME>-modules
+Architecture: amd64
+Depends: ${misc:Depends}
+Description: Open Cache Acceleration Software kernel modules (${kver})
+ Open Cache Acceleration Software (Open CAS) is an open source project
+ encompassing block caching software libraries, adapters, tools and more.
+ The main goal of this cache acceleration software is to accelerate a
+ backend block device(s) by utilizing a higher performance device(s).
+ This package contains only CAS kernel modules.

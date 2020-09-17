@@ -17,7 +17,11 @@ $(DIRS):
 ifneq ($(MAKECMDGOALS),archives)
 ifneq ($(MAKECMDGOALS),rpm)
 ifneq ($(MAKECMDGOALS),srpm)
+ifneq ($(MAKECMDGOALS),deb)
+ifneq ($(MAKECMDGOALS),dsc)
 	cd $@ && $(MAKE) $(MAKECMDGOALS)
+endif
+endif
 endif
 endif
 endif
@@ -30,3 +34,9 @@ rpm:
 
 srpm:
 	@utils/pckgen $(PWD) srpm --debug
+
+deb:
+	@utils/pckgen $(PWD) deb
+
+dsc:
+	@utils/pckgen $(PWD) dsc
