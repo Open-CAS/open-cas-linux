@@ -13,19 +13,27 @@
 
 
 CAS_NAME="open-cas-linux"
+CAS_HOMEPAGE="https://open-cas.github.io"
+CAS_GIT="https://github.com/Open-CAS/open-cas-linux.git"
+CAS_LICENSE_NAME="BSD-3-Clause-Clear"
 SUPPORTED_FROM_VERSION="20.03"
 THIS=$(basename "$0")
 ARCH="$(uname -i)"
 SYS_INFO="/etc/os-release"
 SCRIPT_BASE_DIR=$(dirname $(realpath "$0"))
-BASE_SPEC="$SCRIPT_BASE_DIR/$CAS_NAME.spec.base"
+RPM_SPEC_FILE="$SCRIPT_BASE_DIR/$THIS.d/rpm/CAS_NAME.spec"
+DEB_CONTROL_FILES_DIR="$SCRIPT_BASE_DIR/$THIS.d/deb/debian"
+PACKAGE_MAINTAINER="Rafal Stefanowski <rafal.stefanowski@intel.com>"
+PACKAGE_DATE="$(date -R)"
 TEMP_TEMPLATE="opencas-${THIS}"
-DEPENDENCIES=(sed git mktemp rsync)
+DEPENDENCIES=(git mktemp rsync sed)
 # Dependencies for particular packages creation:
 DEPENDENCIES_TAR=(tar)
 DEPENDENCIES_ZIP=(zip)
-DEPENDENCIES_RPM=(tar rpmbuild)
+DEPENDENCIES_RPM=(rpmbuild tar)
 DEPENDENCIES_SRPM=("${DEPENDENCIES_RPM[@]}")
+DEPENDENCIES_DEB=(debuild dh fakeroot tar)
+DEPENDENCIES_DSC=("${DEPENDENCIES_DEB[@]}")
 # List of relative submodule directories:
 SUBMODULES=(
     "ocf"
@@ -57,7 +65,9 @@ print_help() {
     echo "  tar                             generate tar archive"
     echo "  zip                             generate zip archive"
     echo "  rpm                             generate RPM packages"
-    echo "  srpm                            generate SRPM package"
+    echo "  srpm                            generate SRPM (source RPM) package"
+    echo "  deb                             generate DEB packages"
+    echo "  dsc                             generate DSC (source DEB) package"
     echo
     echo "Options:"
     echo "  -o, --output-dir <DIR>          put all created files in the given directory;"
@@ -171,16 +181,34 @@ create_temp() {
     fi
 }
 
+rename_templates() {
+    # Due to inconsistent ordering in 'find' output, it is necessary to
+    # rerun files renaming in order to include files and subdirectories
+    # when both need to be renamed. To prevent infinite loops, rerun is not
+    # based on 'mv' command exit status, but on specified subdirectory depth.
+    # This mechanism seems to be much simpler then piping the output through
+    # various external utilities.
+    SUBDIR_DEPTH=3
+    while [ $((SUBDIR_DEPTH--)) -gt 0 ]; do
+        for filename in $(find "$@"); do
+            if [[ "$filename" =~ CAS_NAME ]]; then
+                mv "$filename" "${filename//CAS_NAME/${CAS_NAME}}" 2>/dev/null
+            fi
+        done
+    done
+}
+
 archive_prepare() {
     if [ "$ARCHIVE_PREPARED" ]; then
         return 0
     fi
 
-    echo "--- Copying sources to the working directory"
+    echo "--- Copying sources to the working directory and cleaning"
     local TEMP_SOURCES_DIR="$TEMP_DIR/$CAS_FILENAME"
     rm -rf "$TEMP_SOURCES_DIR"
     mkdir -p "$TEMP_SOURCES_DIR"
     rsync -a --exclude={/packages,.git*,.pep8speaks.yml} "$SOURCES_DIR/" "$TEMP_SOURCES_DIR"
+    make -C "$TEMP_SOURCES_DIR" clean distclean >/dev/null
 
     ARCHIVE_PREPARED="archive_prepared"
 }
@@ -231,14 +259,42 @@ rpm_obtain_sources() {
     fi
 }
 
-rpm_spec_prepare() {
-    echo "--- Preparing SPEC file"
-    if [ ! -f "$BASE_SPEC" ]; then
-        error "SPEC file '$BASE_SPEC' not found"
+deb_obtain_sources() {
+    echo "--- Obtaining CAS sources for DEBs"
+    generate_tar temp
+    mkdir -p "$DEB_BUILD_DIR"
+    cp -v "$TEMP_DIR/$SOURCES_TAR_NAME" "$DEB_BUILD_DIR/$DEB_TAR_NAME"
+
+    if [ ! -f "$DEB_BUILD_DIR/$DEB_TAR_NAME" ]; then
+        error "couldn't obtain $DEB_TAR_NAME sources tarball!"
     fi
 
-    cp -v "$BASE_SPEC" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+    tar -C "$DEB_BUILD_DIR" -zxf "$DEB_BUILD_DIR/$DEB_TAR_NAME"
+    if [ $? -ne 0 ] || [ ! -d "$DEB_SOURCES_DIR" ]; then
+        error "couldn't unpack tar archive '$DEB_BUILD_DIR/$DEB_TAR_NAME'"\
+              "or it contains wrong sources dir name"\
+              "(should be '$(basename $DEB_SOURCES_DIR)')"
+    fi
+}
+
+rpm_spec_prepare() {
+    echo "--- Preparing SPEC file"
+    if [ ! -f "$RPM_SPEC_FILE" ]; then
+        error "SPEC file '$RPM_SPEC_FILE' not found"
+    fi
+
+    cp "$RPM_SPEC_FILE" "$RPM_SPECS_DIR"
+    if ! ls -A "$RPM_SPECS_DIR/"* &>/dev/null; then
+        error "couldn't copy SPEC file to working directory '$RPM_SPECS_DIR'"
+    fi
+
+    rename_templates "$RPM_SPECS_DIR"
+
+    sed -i "s/<CAS_NAME>/$CAS_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     sed -i "s/<CAS_VERSION>/$CAS_VERSION/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+    sed -i "s/<CAS_LICENSE_NAME>/$CAS_LICENSE_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+    sed -i "s/<CAS_HOMEPAGE>/${CAS_HOMEPAGE//\//\\/}/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+    sed -i "s/<PACKAGE_MAINTAINER>/$PACKAGE_MAINTAINER/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     if [ "$DEBUG" ]; then
         echo "---   Debug RPMs will be built as well"
         sed -i "s/%define debug_package %{nil}//g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
@@ -247,6 +303,41 @@ rpm_spec_prepare() {
     if [ ! -f "$RPM_SPECS_DIR/$CAS_NAME.spec" ]; then
         error "couldn't create a SPEC file"
     fi
+}
+
+deb_control_files_prepare() {
+    echo "--- Preparing DEB control files"
+    if ! ls -A "$DEB_CONTROL_FILES_DIR/"* &>/dev/null; then
+        error "DEB control files directory '$DEB_CONTROL_FILES_DIR' not found or empty"
+    fi
+
+    cp -r "$DEB_CONTROL_FILES_DIR" "$DEB_SOURCES_DIR"
+    if ! ls -A "$DEB_SOURCES_DIR/debian/"* &>/dev/null; then
+        error "couldn't copy DEB control files to working directory '$DEB_SOURCES_DIR'"
+    fi
+
+    rename_templates "$DEB_SOURCES_DIR/debian/"
+
+    # Parsing the CAS license file to fit Debian copyright file format
+    sed '${/^$/d}' "$CAS_LICENSE" > "$TEMP_DIR/LICENSE.deb.tmp"
+    sed -i 's/^$/./' "$TEMP_DIR/LICENSE.deb.tmp"
+    rm -f "$TEMP_DIR/LICENSE.deb"
+    while read -r line; do
+        echo " $line" >> "$TEMP_DIR/LICENSE.deb"
+    done < "$TEMP_DIR/LICENSE.deb.tmp"
+    rm -f "$TEMP_DIR/LICENSE.deb.tmp"
+    cat "$TEMP_DIR/LICENSE.deb" >> "$DEB_SOURCES_DIR/debian/copyright"
+
+    # Replacing tags
+    for file in $(find "$DEB_SOURCES_DIR/debian/" -type f); do
+        sed -i "s/<CAS_NAME>/$CAS_NAME/g" "$file"
+        sed -i "s/<CAS_VERSION>/$CAS_VERSION/g" "$file"
+        sed -i "s/<CAS_LICENSE_NAME>/$CAS_LICENSE_NAME/g" "$file"
+        sed -i "s/<CAS_HOMEPAGE>/${CAS_HOMEPAGE//\//\\/}/g" "$file"
+        sed -i "s/<CAS_GIT>/${CAS_GIT//\//\\/}/g" "$file"
+        sed -i "s/<PACKAGE_MAINTAINER>/$PACKAGE_MAINTAINER/g" "$file"
+        sed -i "s/<PACKAGE_DATE>/$PACKAGE_DATE/g" "$file"
+    done
 }
 
 generate_rpm() {
@@ -273,7 +364,7 @@ generate_rpm() {
         if [ $? -ne 0 ]; then
             error "couldn't create RPM packages"
         fi
-        mv -t "$OUTPUT_DIR" "$RPM_RPMS_DIR/$ARCH"/*
+        mv -ft "$OUTPUT_DIR" "$RPM_RPMS_DIR/$ARCH"/*
     fi
     if [ "$GENERATE_SRPM" ] && [ ! "$GENERATE_RPM" ]; then
         echo "--- Building source SRPM package"
@@ -281,7 +372,7 @@ generate_rpm() {
         if [ $? -ne 0 ]; then
             error "couldn't create SRPM package"
         fi
-        mv -t "$OUTPUT_DIR" "$RPM_SRPMS_DIR"/*
+        mv -ft "$OUTPUT_DIR" "$RPM_SRPMS_DIR"/*
     fi
     if [ "$GENERATE_SRPM" ] && [ "$GENERATE_RPM" ]; then
         echo "--- Building source and binary RPM packages"
@@ -289,8 +380,8 @@ generate_rpm() {
         if [ $? -ne 0 ]; then
             error "couldn't create RPM packages"
         fi
-        mv -t "$OUTPUT_DIR" "$RPM_SRPMS_DIR"/*
-        mv -t "$OUTPUT_DIR" "$RPM_RPMS_DIR/$ARCH"/*
+        mv -ft "$OUTPUT_DIR" "$RPM_SRPMS_DIR"/*
+        mv -ft "$OUTPUT_DIR" "$RPM_RPMS_DIR/$ARCH"/*
     fi
 
     RPM_BUILT="rpm_built"
@@ -298,6 +389,51 @@ generate_rpm() {
 
 generate_srpm() {
     generate_rpm
+}
+
+generate_deb() {
+    if [ "$DEB_BUILT" ]; then
+        return 0
+    fi
+
+    deb_obtain_sources
+    deb_control_files_prepare
+
+    if [ ! "$GENERATE_DSC" ] && [ "$GENERATE_DEB" ]; then
+        echo "--- Building binary DEB packages"
+        (cd "$DEB_SOURCES_DIR" && debuild -us -uc -b)
+        if [ $? -ne 0 ]; then
+            error "couldn't create DEB packages"
+        fi
+        mv -ft "$OUTPUT_DIR" "$DEB_BUILD_DIR/$CAS_NAME"*deb
+    fi
+    if [ "$GENERATE_DSC" ] && [ ! "$GENERATE_DEB" ]; then
+        echo "--- Building DSC (source DEB) package"
+        (cd "$DEB_SOURCES_DIR" && debuild -us -uc -S -d)
+        if [ $? -ne 0 ]; then
+            error "couldn't create DSC package"
+        fi
+        mv -ft "$OUTPUT_DIR" "$DEB_BUILD_DIR/$CAS_NAME"*.dsc
+        mv -ft "$OUTPUT_DIR" "$DEB_BUILD_DIR/$CAS_NAME"*.orig.tar.gz
+        mv -ft "$OUTPUT_DIR" "$DEB_BUILD_DIR/$CAS_NAME"*.debian.tar.xz
+    fi
+    if [ "$GENERATE_DSC" ] && [ "$GENERATE_DEB" ]; then
+        echo "--- Building DEB and DSC (source DEB) packages"
+        (cd "$DEB_SOURCES_DIR" && debuild -us -uc -F)
+        if [ $? -ne 0 ]; then
+            error "couldn't create DEB and DSC packages"
+        fi
+        mv -ft "$OUTPUT_DIR" "$DEB_BUILD_DIR/$CAS_NAME"*deb
+        mv -ft "$OUTPUT_DIR" "$DEB_BUILD_DIR/$CAS_NAME"*.dsc
+        mv -ft "$OUTPUT_DIR" "$DEB_BUILD_DIR/$CAS_NAME"*.orig.tar.gz
+        mv -ft "$OUTPUT_DIR" "$DEB_BUILD_DIR/$CAS_NAME"*.debian.tar.xz
+    fi
+
+    DEB_BUILT="deb_built"
+}
+
+generate_dsc() {
+    generate_deb
 }
 
 
@@ -318,6 +454,12 @@ while (( $# )); do
             ;;
         srpm)
             GENERATE_SRPM="generate_srpm"
+            ;;
+        deb)
+            GENERATE_DEB="generate_deb"
+            ;;
+        dsc)
+            GENERATE_DSC="generate_dsc"
             ;;
         --output-dir|-o)
             OUTPUT_DIR="$2"
@@ -350,12 +492,17 @@ done
 
 check_options
 
+# Following line removes all temporary (build process) files and dirs
+# even if this script ends with an error. For debuging purposes, when
+# build-time files are needed for inspection, simply comment it out.
 trap clean EXIT
+
 create_temp
 
 
 ### Variables that relates on arguments passed to this script:
 
+CAS_LICENSE="$SOURCES_DIR/LICENSE"
 # By default all created packages will be put in:
 : ${OUTPUT_DIR:="$SOURCES_DIR/packages"}
 # RPM building directories:
@@ -364,6 +511,7 @@ RPM_SOURCES_DIR="$RPM_BUILD_DIR/SOURCES"
 RPM_SPECS_DIR="$RPM_BUILD_DIR/SPECS"
 RPM_RPMS_DIR="$RPM_BUILD_DIR/RPMS"
 RPM_SRPMS_DIR="$RPM_BUILD_DIR/SRPMS"
+DEB_BUILD_DIR="$TEMP_DIR/debuild"
 # Version file location:
 VERSION_FILE="$SOURCES_DIR/.metadata/cas_version"
 # CAS version generator location:
@@ -376,6 +524,10 @@ CAS_FILENAME="$CAS_NAME-$CAS_VERSION"
 # CAS sources archives filenames:
 SOURCES_TAR_NAME="$CAS_FILENAME.tar.gz"
 SOURCES_ZIP_NAME="$CAS_FILENAME.zip"
+DEB_TAR_NAME="${CAS_NAME}_${CAS_VERSION}.orig.tar.gz"
+# DEB sources dir needs to be obtained after version checking
+# because its name contains version number
+DEB_SOURCES_DIR="$DEB_BUILD_DIR/$CAS_NAME-$CAS_VERSION"
 
 
 
