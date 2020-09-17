@@ -8,7 +8,7 @@
 #include "argp.h"
 #include "cas_lib.h"
 #include "cas_lib_utils.h"
-#include <sys/timeb.h>
+#include <sys/time.h>
 #include <sys/stat.h>
 
 #define PADDING "   "
@@ -472,6 +472,11 @@ void log_command(int argc, const char **argv, int result, long long int timespan
 	free(command);
 }
 
+static inline long long int timeval_to_msec(struct timeval t)
+{
+	return 1000 * t.tv_sec + t.tv_usec / 1000;
+}
+
 /**
  * run command. Additionally log its execution and report any errors if
  * they've happened
@@ -480,15 +485,12 @@ int run_command(cli_command *commands, int cmd, int argc, const char **argv)
 {
 	int result;
 	const char *syslog_path = "/var/log/messages";
-	/* time buffer and stat buffer after running command */
-	struct timeb t0;
+	struct timeval t0, t1;
 	FILE *messages_f;
-	/* time buffer and stat buffer after running command */
-	struct timeb t1;
 	long long int timespan;
 
 	/* collect time */
-	ftime(&t0);
+	gettimeofday(&t0, NULL);
 	/* collect stat buffer for syslog */
 	messages_f = fopen(syslog_path, "r");
 	if (messages_f) {
@@ -507,8 +509,8 @@ int run_command(cli_command *commands, int cmd, int argc, const char **argv)
 
 	/* execute CAS command */
 	result = commands[cmd].handle();
-	ftime(&t1);
-	timespan = (1000 * (t1.time - t0.time) + t1.millitm - t0.millitm);
+	gettimeofday(&t1, NULL);
+	timespan = timeval_to_msec(t1) - timeval_to_msec(t0);
 
 	if (commands[cmd].short_name != 'V') {
 		log_command(argc, argv, result, timespan);
