@@ -70,6 +70,10 @@ try_add_core_sector_size_mismatch = [
     r"or try other device with the same logical sector size as core device\."
 ]
 
+no_caches_running = [
+    r"No caches running"
+]
+
 
 def check_stderr_msg(output: Output, expected_messages):
     return __check_string_msg(output.stderr, expected_messages)
