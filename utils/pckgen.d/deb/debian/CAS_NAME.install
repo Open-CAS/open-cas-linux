@@ -1,0 +1,7 @@
+etc/
+lib/opencas/
+lib/udev/
+sbin/
+utils/open-cas.shutdown lib/systemd/system-shutdown/
+utils/open-cas.service lib/systemd/system/
+utils/open-cas-shutdown.service lib/systemd/system/

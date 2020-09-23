@@ -4,7 +4,7 @@
 #
 
 #
-# This is a base SPEC file for generating OpenCAS RPMs automatically.
+# This is a template SPEC file for generating OpenCAS RPMs automatically.
 # It contains tags in form of <TAG> which are substituted with particular
 # values in the build time.
 #
@@ -15,24 +15,18 @@
 %define kver_filename k%{expand:%(kname="%{kver}"; echo "${kname%.*}" | sed -r "y/-/_/;")}
 
 
-Name:		open-cas-linux
-Version:	<CAS_VERSION>
-Release:	<RPM_RELEASE>
-Summary:	Open Cache Acceleration Software
-Group:		System
-License:	BSD-3-Clause
-URL:		https://open-cas.github.io/
-Source0:	https://github.com/Open-CAS/open-cas-linux/releases/download/v%{version}/%{name}-v%{version}.tar.gz
-BuildRequires:	gcc
-BuildRequires:	kernel-devel
-BuildRequires:	kernel-headers
-BuildRequires:	make
-BuildRequires:	elfutils-libelf-devel
-BuildRequires:	coreutils
-BuildRequires:	gawk
-Requires:	python3
-Requires:	sed
-Requires:   open-cas-linux-modules-%{version}
+Name:       <CAS_NAME>
+Version:    <CAS_VERSION>
+Release:    1%{?dist}
+Summary:    Open Cache Acceleration Software
+Group:      System
+Vendor:     Intel Corporation
+License:    <CAS_LICENSE_NAME>
+URL:        <CAS_HOMEPAGE>
+Source0:    https://github.com/Open-CAS/open-cas-linux/releases/download/v%{version}/%{name}-v%{version}.tar.gz
+Packager:   <PACKAGE_MAINTAINER>
+BuildRequires:  coreutils, gawk, gcc, kernel-devel, kernel-headers, make
+Requires:   <CAS_NAME>-modules-%{version}, python3, sed
 %description
 Open Cache Acceleration Software (Open CAS) is an open source project
 encompassing block caching software libraries, adapters, tools and more.
@@ -43,20 +37,20 @@ running cache instances.
 
 
 %package    modules_%{kver_filename}
-Summary:	Open Cache Acceleration Software kernel modules
-Group:		System
-Requires:	kmod
-Provides:   open-cas-linux-modules-%{version}
+Summary:    Open Cache Acceleration Software kernel modules
+Group:      System
+Requires:   kmod
+Provides:   <CAS_NAME>-modules-%{version}
 %description    modules_%{kver_filename}
 Open Cache Acceleration Software (Open CAS) is an open source project
 encompassing block caching software libraries, adapters, tools and more.
 The main goal of this cache acceleration software is to accelerate a
 backend block device(s) by utilizing a higher performance device(s).
-This package contains CAS kernel modules.
+This package contains only CAS kernel modules.
 
 
 %prep
-%setup -q -n %{name}-v%{version}
+%setup -q
 
 
 %build
@@ -87,20 +81,20 @@ fi
 
 
 %post modules_%{kver_filename}
-ls /lib/modules/%{kver}/extra/cas_disk.ko | weak-modules --no-initramfs --add-modules
-ls /lib/modules/%{kver}/extra/cas_cache.ko | weak-modules --no-initramfs --add-modules
 depmod
-
-%preun modules_%{kver_filename}
-if [ $1 -eq 0 ]; then
-    rmmod cas_cache
-    rmmod cas_disk
-    ls /lib/modules/%{kver}/extra/cas_disk.ko | weak-modules --no-initramfs --remove-modules
-    ls /lib/modules/%{kver}/extra/cas_cache.ko | weak-modules --no-initramfs --remove-modules
+. /etc/os-release
+if [[ ! "$ID_LIKE" =~ suse|sles ]]; then
+    modules=( $(realpath $(modinfo -F filename cas_cache cas_disk)) )
+    printf "%s\n" "${modules[@]}" | weak-modules --no-initramfs --add-modules
 fi
 
 %postun modules_%{kver_filename}
 if [ $1 -eq 0 ]; then
+    . /etc/os-release
+    if [[ ! "$ID_LIKE" =~ suse|sles ]]; then
+        modules=( $(realpath $(modinfo -F filename cas_cache cas_disk 2>/dev/null)) )
+        printf "%s\n" "${modules[@]}" | weak-modules --no-initramfs --remove-modules
+    fi
     depmod
 fi
 
@@ -111,8 +105,10 @@ fi
 %doc README.md
 %dir /etc/opencas/
 %dir /lib/opencas/
+%dir /var/lib/opencas
 %config /etc/opencas/opencas.conf
 /etc/opencas/ioclass-config.csv
+/var/lib/opencas/cas_version
 /lib/opencas/casctl
 /lib/opencas/open-cas-loader
 /lib/opencas/opencas.py
@@ -137,6 +133,15 @@ fi
 
 
 %changelog
+* Fri Sep 11 2020 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.09-1
+- SLES related modifications
+- Add some missing info about a package
+* Thu Jul 30 2020 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.09-1
+- Improve adding and removing modules with weak-modules
+* Wed Jun 10 2020 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.06-1
+- Add cas_version file
+- Join Release into Version
+- Simplify prep setup
 * Tue Feb 25 2020 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.3-1
 - Minor improvements in SPEC file
 - Update files list for releases > 20.1
