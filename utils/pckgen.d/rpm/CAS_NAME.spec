@@ -50,7 +50,7 @@ This package contains only CAS kernel modules.
 
 
 %prep
-%setup -q
+%setup -q -n %{name}-v%{version}
 
 
 %build
@@ -105,10 +105,8 @@ fi
 %doc README.md
 %dir /etc/opencas/
 %dir /lib/opencas/
-%dir /var/lib/opencas
 %config /etc/opencas/opencas.conf
 /etc/opencas/ioclass-config.csv
-/var/lib/opencas/cas_version
 /lib/opencas/casctl
 /lib/opencas/open-cas-loader
 /lib/opencas/opencas.py
