@@ -24,7 +24,6 @@ struct blkio {
 	int error;
 	atomic_t rq_remaning;
 	atomic_t ref_counter;
-	int32_t dirty;
 	int32_t dir;
 
 	struct blk_data *data; /* IO data buffer */

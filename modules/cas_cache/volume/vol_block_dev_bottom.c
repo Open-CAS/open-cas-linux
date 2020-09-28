@@ -218,23 +218,6 @@ CAS_DECLARE_BLOCK_CALLBACK(cas_bd_io_end, struct bio *bio,
 
 	CAS_DEBUG_TRACE();
 
-	if (err)
-		goto out;
-
-	if (bdio->dir == OCF_WRITE) {
-		/* IO was a write */
-
-		if (!cas_blk_is_flush_io(io->flags)) {
-			/* Device cache is dirty, mark it */
-			atomic_inc(&bdobj->potentially_dirty);
-		} else {
-			/* IO flush finished, update potential
-			 * dirty state
-			 */
-			atomic_sub(bdio->dirty, &bdobj->potentially_dirty);
-		}
-	}
-out:
 	if (err == -EOPNOTSUPP && (CAS_BIO_OP_FLAGS(bio) & CAS_BIO_DISCARD))
 		err = 0;
 
@@ -253,20 +236,11 @@ static void block_dev_submit_flush(struct ocf_io *io)
 	struct request_queue *q = bdev_get_queue(bdev);
 	struct bio *bio = NULL;
 
-	blkio->dirty = atomic_read(&bdobj->potentially_dirty);
-
 	/* Prevent races of completing IO */
 	atomic_set(&blkio->rq_remaning, 1);
 
 	/* Increase IO reference counter for FLUSH IO */
 	ocf_io_get(io);
-
-	if (!blkio->dirty) {
-		/* Didn't write anything to underlying disk; no need to
-		 * send req_flush
-		 */
-		goto out;
-	}
 
 	if (q == NULL) {
 		/* No queue, error */
@@ -276,7 +250,6 @@ static void block_dev_submit_flush(struct ocf_io *io)
 
 	if (!CAS_CHECK_QUEUE_FLUSH(q)) {
 		/* This block device does not support flush, call back */
-		atomic_sub(blkio->dirty, &bdobj->potentially_dirty);
 		goto out;
 	}
 
@@ -396,13 +369,9 @@ out:
 static inline bool cas_bd_io_prepare(int *dir, struct ocf_io *io)
 {
 	struct blkio *bdio = cas_io_to_blkio(io);
-	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
 
 	/* Setup DIR */
 	bdio->dir = *dir;
-
-	/* Save dirty counter */
-	bdio->dirty = atomic_read(&bdobj->potentially_dirty);
 
 	/* Convert CAS direction into kernel values */
 	switch (bdio->dir) {
