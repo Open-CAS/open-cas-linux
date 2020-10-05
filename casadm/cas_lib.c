@@ -1625,7 +1625,7 @@ int illegal_recursive_core(unsigned int cache_id, const char *core_device, int c
 */
 static bool dev_link_blacklisted(const char* entry)
 {
-	static const char* const prefix_blacklist[] = {"lvm"};
+	static const char* const prefix_blacklist[] = {"lvm", "md-name"};
 	static const unsigned count = ARRAY_SIZE(prefix_blacklist);
 	const char* curr;
 	unsigned i;
