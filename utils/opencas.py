@@ -26,7 +26,7 @@ class casadm:
 
     class CasadmError(Exception):
         def __init__(self, result):
-            super(casadm.CasadmError, self).__init__('casadm error')
+            super(casadm.CasadmError, self).__init__('casadm error: {}'.format(result.stderr))
             self.result = result
 
     @classmethod
@@ -172,7 +172,12 @@ class cas_config(object):
 
     @staticmethod
     def get_by_id_path(path):
+        blocklist = ["lvm", "md-name"]
+
         for id_path in os.listdir('/dev/disk/by-id'):
+            if any([id_path.startswith(x) for x in blocklist]):
+                continue
+
             full_path = '/dev/disk/by-id/{0}'.format(id_path)
             if os.path.realpath(full_path) == os.path.realpath(path):
                 return full_path
@@ -247,6 +252,8 @@ class cas_config(object):
                 self.check_promotion_policy_valid(param_value)
             elif param_name == 'cache_line_size':
                 self.check_cache_line_size_valid(param_value)
+            elif param_name == "lazy_startup":
+                self.check_lazy_startup(param_value)
             else:
                 raise ValueError('{0} is invalid parameter name'.format(param_name))
 
@@ -277,6 +284,10 @@ class cas_config(object):
             if cleaning_policy.lower() not in ['acp', 'alru', 'nop']:
                 raise ValueError('{0} is invalid cleaning policy name'.format(
                     cleaning_policy))
+
+        def check_lazy_startup_valid(self, lazy_startup):
+            if param_value.lower() not in ["true", "false"]:
+                raise ValueError('{0} is invalid lazy_startup value'.format(lazy_startup))
 
         def check_promotion_policy_valid(self, promotion_policy):
             if promotion_policy.lower() not in ['always', 'nhit']:
@@ -313,6 +324,9 @@ class cas_config(object):
             ret += '\n'
 
             return ret
+
+        def is_lazy(self):
+            return self.params.get("lazy_startup", "false").lower() == "true"
 
     class core_config(object):
         def __init__(self, cache_id, core_id, path, **params):
@@ -394,6 +408,9 @@ class cas_config(object):
             ret += "\n"
 
             return ret
+
+        def is_lazy(self):
+            return self.params.get("lazy_startup", "false").lower() == "true"
 
     def __init__(self, caches=None, cores=None, version_tag=None):
         self.caches = caches if caches else dict()
@@ -533,13 +550,6 @@ class cas_config(object):
 
         except:
             raise Exception('Couldn\'t write config file')
-
-    def get_startup_cores(self):
-        return [
-            core
-            for core in self.cores
-            if core.params.get("lazy_startup", "false") == "false"
-        ]
 
 # Config helper functions
 
@@ -740,7 +750,7 @@ def stop(flush):
 def get_devices_state():
     device_list = get_caches_list()
 
-    devices = {"core_pool": [], "caches": {}, "cores": {}}
+    devices = {"core_pool": {}, "caches": {}, "cores": {}}
 
     core_pool = False
     prev_cache_id = -1
@@ -764,7 +774,12 @@ def get_devices_state():
         elif device["type"] == "core":
             core = {"device": device["disk"], "status": device["status"]}
             if core_pool:
-                devices["core_pool"].append(core)
+                try:
+                    device_path = os.path.realpath(core["device"])
+                except ValueError:
+                    device_path = core["device"]
+
+                devices["core_pool"].update({device_path: core})
             else:
                 core.update({"cache_id": prev_cache_id})
                 devices["cores"].update(
@@ -781,7 +796,42 @@ def wait_for_cas_ctrl():
         time.sleep(1)
 
 
+def _get_uninitialized_devices(target_dev_state):
+    not_initialized = []
+
+    runtime_dev_state = get_devices_state()
+
+    for core in target_dev_state.cores:
+        try:
+            runtime_state = (
+                runtime_dev_state["cores"].get((core.cache_id, core.core_id))
+                or runtime_dev_state["core_pool"].get(os.path.realpath(core.device))
+            )
+        except ValueError:
+            runtime_state = None
+
+        if not runtime_state or runtime_state["status"] == "Inactive":
+            not_initialized.append(core)
+
+    for cache in target_dev_state.caches.values():
+        runtime_state = runtime_dev_state["caches"].get(cache.cache_id)
+
+        if not runtime_state:
+            not_initialized.append(cache)
+
+    return not_initialized
+
+
 def wait_for_startup(timeout=300, interval=5):
+    def start_device(dev):
+        if os.path.exists(dev.device):
+            if type(dev) is cas_config.core_config:
+                add_core(dev, True)
+            elif type(dev) is cas_config.cache_config:
+                start_cache(dev, True)
+
+    stop_time = time.time() + int(timeout)
+
     try:
         config = cas_config.from_file(
             cas_config.default_location, allow_incomplete=True
@@ -789,21 +839,24 @@ def wait_for_startup(timeout=300, interval=5):
     except Exception as e:
         raise Exception("Unable to load opencas config. Reason: {0}".format(str(e)))
 
-    stop_time = time.time() + int(timeout)
+    not_initialized = _get_uninitialized_devices(config)
+    if not not_initialized:
+        return []
 
-    not_initialized = None
-    target_core_state = config.get_startup_cores()
+    result = subprocess.run(["udevadm", "settle"])
+
+    for dev in not_initialized:
+        start_device(dev)
 
     while stop_time > time.time():
-        not_initialized = []
-        runtime_core_state = get_devices_state()["cores"]
+        not_initialized = _get_uninitialized_devices(config)
+        wait = False
 
-        for core in target_core_state:
-            runtime_state = runtime_core_state.get((core.cache_id, core.core_id), None)
-            if not runtime_state or runtime_state["status"] != "Active":
-                not_initialized.append(core)
+        for dev in not_initialized:
+            wait = wait or not dev.is_lazy()
+            start_device(dev)
 
-        if not not_initialized:
+        if not wait:
             break
 
         time.sleep(interval)

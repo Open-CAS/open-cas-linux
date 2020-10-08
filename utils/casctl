@@ -113,17 +113,15 @@ def settle(timeout, interval):
         # Don't fail the boot if we're missing the config
         exit(0)
 
+    fail = False
     if not_initialized:
-        eprint("Open CAS initialization failed. Couldn't set up all required devices")
         for device in not_initialized:
-            eprint(
-                "Couldn't add device {} as core {} in cache {}".format(
-                    device.device, device.core_id, device.cache_id
-                )
-            )
-        exit(1)
+            fail = fail or not device.is_lazy()
+            eprint("Couldn't initialize device {}".format(device.device))
 
-    exit(0)
+        eprint("Open CAS initialization failed. Couldn't set up all required devices")
+
+    exit(1 if fail else 0)
 
 
 # Stop - detach cores and stop caches
