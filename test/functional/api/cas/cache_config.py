@@ -6,6 +6,7 @@
 from aenum import Enum, IntFlag
 from attotime import attotimedelta
 
+from test_utils.os_utils import get_kernel_module_parameter
 from test_utils.size import Size, Unit
 
 
@@ -263,6 +264,114 @@ class PromotionParametersNhit:
         return nhit_params
 
 
+# Specify layout of metadata on SSD
+class MetadataLayout(Enum):
+    striping = 0
+    sequential = 1
+    DEFAULT = striping
+
+
+# Specify how IO requests unaligned to 4KiB should be handled
+class UnalignedIo(Enum):
+    PT = 0      # use PT mode
+    cache = 1   # use current cache mode
+    DEFAULT = cache
+
+
+# Specify if IO scheduler will be used when handling IO requests
+class UseIoScheduler(Enum):
+    off = 0
+    on = 1
+    DEFAULT = on
+
+
+class KernelParameters:
+    seq_cut_off_mb_DEFAULT = 1
+    max_writeback_queue_size_DEFAULT = 65536
+    writeback_queue_unblock_size_DEFAULT = 60000
+
+    def __init__(
+            self,
+            metadata_layout: MetadataLayout = None,
+            unaligned_io: UnalignedIo = None,
+            use_io_scheduler: UseIoScheduler = None,
+            seq_cut_off_mb: int = None,
+            max_writeback_queue_size: int = None,
+            writeback_queue_unblock_size: int = None
+    ):
+        self.metadata_layout = metadata_layout
+        self.unaligned_io = unaligned_io
+        self.use_io_scheduler = use_io_scheduler
+        # Specify default sequential cut off threshold value in MiB
+        # 0 - sequential cut off disabled, 1 or larger = sequential cut off threshold (default is 1)
+        self.seq_cut_off_mb = seq_cut_off_mb
+        # Specify optimal write queue size, default - 65536
+        self.max_writeback_queue_size = max_writeback_queue_size
+        # Specify unblock threshold for write queue, default - 60000
+        self.writeback_queue_unblock_size = writeback_queue_unblock_size
+
+    def __eq__(self, other):
+        return (
+            equal_or_default(self.metadata_layout, other.metadata_layout, MetadataLayout.DEFAULT)
+            and equal_or_default(self.unaligned_io, other.unaligned_io, UnalignedIo.DEFAULT)
+            and equal_or_default(
+                self.use_io_scheduler, other.use_io_scheduler, UseIoScheduler.DEFAULT
+            )
+            and equal_or_default(
+                self.seq_cut_off_mb, other.seq_cut_off_mb,
+                self.seq_cut_off_mb_DEFAULT
+            )
+            and equal_or_default(
+                self.max_writeback_queue_size, other.max_writeback_queue_size,
+                self.max_writeback_queue_size_DEFAULT
+            )
+            and equal_or_default(
+                self.writeback_queue_unblock_size, other.writeback_queue_unblock_size,
+                self.writeback_queue_unblock_size_DEFAULT
+            )
+        )
+
+    @classmethod
+    def DEFAULT(cls):
+        return KernelParameters(
+            MetadataLayout.DEFAULT,
+            UnalignedIo.DEFAULT,
+            UseIoScheduler.DEFAULT,
+            cls.seq_cut_off_mb_DEFAULT,
+            cls.max_writeback_queue_size_DEFAULT,
+            cls.writeback_queue_unblock_size_DEFAULT
+        )
+
+    @staticmethod
+    def read_current_settings():
+        module = "cas_cache"
+        return KernelParameters(
+            MetadataLayout(int(get_kernel_module_parameter(module, "metadata_layout"))),
+            UnalignedIo(int(get_kernel_module_parameter(module, "unaligned_io"))),
+            UseIoScheduler(int(get_kernel_module_parameter(module, "use_io_scheduler"))),
+            int(get_kernel_module_parameter(module, "seq_cut_off_mb")),
+            int(get_kernel_module_parameter(module, "max_writeback_queue_size")),
+            int(get_kernel_module_parameter(module, "writeback_queue_unblock_size"))
+        )
+
+    def get_parameter_dictionary(self):
+        params = {}
+        if self.metadata_layout not in [None, MetadataLayout.DEFAULT]:
+            params["metadata_layout"] = str(self.metadata_layout.value)
+        if self.unaligned_io not in [None, UnalignedIo.DEFAULT]:
+            params["unaligned_io"] = str(self.unaligned_io.value)
+        if self.use_io_scheduler not in [None, UseIoScheduler.DEFAULT]:
+            params["use_io_scheduler"] = str(self.use_io_scheduler.value)
+        if self.seq_cut_off_mb not in [None, self.seq_cut_off_mb_DEFAULT]:
+            params["seq_cut_off_mb"] = str(self.seq_cut_off_mb)
+        if self.max_writeback_queue_size not in [None, self.max_writeback_queue_size_DEFAULT]:
+            params["max_writeback_queue_size"] = str(self.max_writeback_queue_size)
+        if (self.writeback_queue_unblock_size not in
+                [None, self.writeback_queue_unblock_size_DEFAULT]):
+            params["writeback_queue_unblock_size"] = str(self.writeback_queue_unblock_size)
+        return params
+
+
 # TODO: Use case for this will be to iterate over configurations (kernel params such as
 # TODO: io scheduler, metadata layout) and prepare env before starting cache
 class CacheConfig:
@@ -273,12 +382,14 @@ class CacheConfig:
         cleaning_policy=CleaningPolicy.DEFAULT,
         eviction_policy=EvictionPolicy.DEFAULT,
         metadata_mode=MetadataMode.normal,
+        kernel_parameters=None
     ):
         self.cache_line_size = cache_line_size
         self.cache_mode = cache_mode
         self.cleaning_policy = cleaning_policy
         self.eviction_policy = eviction_policy
         self.metadata_mode = metadata_mode
+        self.kernel_parameters = kernel_parameters
 
     def __eq__(self, other):
         return (
@@ -287,4 +398,11 @@ class CacheConfig:
             and self.cleaning_policy == other.cleaning_policy
             and self.eviction_policy == other.eviction_policy
             and self.metadata_mode == other.metadata_mode
+            and equal_or_default(
+                self.kernel_parameters, other.kernel_parameters, KernelParameters.DEFAULT
+            )
         )
+
+
+def equal_or_default(item1, item2, default):
+    return (item1 if item1 is not None else default) == (item2 if item2 is not None else default)
