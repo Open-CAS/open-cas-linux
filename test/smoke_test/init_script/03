@@ -41,6 +41,8 @@ run_cmd "casctl init"
 
 run_cmd "dd if=/dev/urandom of=${DEVICE_NAME}1-2 count=1000 bs=4096 oflag=direct"
 
+run_cmd "udevadm settle"
+
 run_cmd "casctl stop"
 
 # We shouldn't be able to start cache on this device, it contains dirty data
@@ -62,6 +64,8 @@ clear_options
 run_cmd "casctl init --force"
 
 run_cmd "dd if=/dev/urandom of=${DEVICE_NAME}1-2 count=1000 bs=4096 oflag=direct"
+
+run_cmd "udevadm settle"
 
 run_cmd "casctl stop --flush"
 
