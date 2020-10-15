@@ -5,7 +5,12 @@
 
 from api.cas import casadm
 from api.cas import ioclass_config
-from api.cas.cache_config import CacheMode, CleaningPolicy, SeqCutOffPolicy
+from api.cas.cache_config import (
+    CacheMode,
+    CleaningPolicy,
+    SeqCutOffPolicy,
+    CacheLineSize,
+)
 from core.test_run import TestRun
 from test_utils.os_utils import Udev
 from test_utils.size import Size, Unit
@@ -14,19 +19,26 @@ ioclass_config_path = "/tmp/opencas_ioclass.conf"
 mountpoint = "/tmp/cas1-1"
 
 
-def prepare():
+def prepare(
+    cache_size=Size(500, Unit.MebiByte),
+    core_size=Size(10, Unit.GibiByte),
+    cache_mode=CacheMode.WB,
+    cache_line_size=CacheLineSize.LINE_4KiB,
+):
     ioclass_config.remove_ioclass_config()
-    cache_device = TestRun.disks['cache']
-    core_device = TestRun.disks['core']
+    cache_device = TestRun.disks["cache"]
+    core_device = TestRun.disks["core"]
 
-    cache_device.create_partitions([Size(500, Unit.MebiByte)])
-    core_device.create_partitions([Size(1, Unit.GibiByte)])
+    cache_device.create_partitions([cache_size])
+    core_device.create_partitions([core_size])
 
     cache_device = cache_device.partitions[0]
     core_device = core_device.partitions[0]
 
     TestRun.LOGGER.info(f"Starting cache")
-    cache = casadm.start_cache(cache_device, cache_mode=CacheMode.WB, force=True)
+    cache = casadm.start_cache(
+        cache_device, cache_mode=cache_mode, cache_line_size=cache_line_size, force=True
+    )
 
     Udev.disable()
     TestRun.LOGGER.info(f"Setting cleaning policy to NOP")
