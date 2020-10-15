@@ -33,6 +33,7 @@ def prepare():
     casadm.set_param_cleaning(cache_id=cache.cache_id, policy=CleaningPolicy.nop)
     TestRun.LOGGER.info(f"Adding core device")
     core = casadm.add_core(cache, core_dev=core_device)
+    TestRun.LOGGER.info(f"Setting seq cutoff policy to never")
     core.set_seq_cutoff_policy(SeqCutOffPolicy.never)
     ioclass_config.create_ioclass_config(
         add_default_rule=False, ioclass_config_path=ioclass_config_path
