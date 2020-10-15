@@ -149,9 +149,11 @@ def create_ioclass_config(
             "Failed to create ioclass config file. "
             + f"stdout: {output.stdout} \n stderr :{output.stderr}"
         )
+
     if add_default_rule:
         output = TestRun.executor.run(
-            f'echo "0,unclassified,22,1" >> {ioclass_config_path}'
+            f'echo "{DEFAULT_IO_CLASS_ID},{DEFAULT_IO_CLASS_RULE},{DEFAULT_IO_CLASS_PRIORITY},"'
+            + f'"1.00" >> {ioclass_config_path}'
         )
         if output.exit_code != 0:
             raise Exception(
