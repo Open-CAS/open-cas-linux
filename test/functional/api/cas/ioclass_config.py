@@ -21,6 +21,9 @@ default_config_file_path = "/tmp/opencas_ioclass.conf"
 
 MAX_IO_CLASS_ID = 32
 MAX_IO_CLASS_PRIORITY = 255
+DEFAULT_IO_CLASS_ID = 0
+DEFAULT_IO_CLASS_PRIORITY = 255
+DEFAULT_IO_CLASS_RULE = "unclassified"
 MAX_CLASSIFICATION_DELAY = timedelta(seconds=6)
 IO_CLASS_CONFIG_HEADER = "IO class id,IO class name,Eviction priority,Allocation"
 
