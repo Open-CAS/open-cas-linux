@@ -6,10 +6,12 @@
 from typing import List
 
 from api.cas.cache import Cache
-from api.cas.cache_config import CacheLineSize, CacheMode, SeqCutOffPolicy, CleaningPolicy
+from api.cas.cache_config import CacheLineSize, CacheMode, SeqCutOffPolicy, CleaningPolicy, \
+    KernelParameters
 from api.cas.core import Core
 from core.test_run import TestRun
 from storage_devices.device import Device
+from test_utils.os_utils import reload_kernel_module
 from test_utils.output import CmdException
 from test_utils.size import Size, Unit
 from .casadm_params import *
@@ -23,7 +25,11 @@ def help(shortcut: bool = False):
 
 def start_cache(cache_dev: Device, cache_mode: CacheMode = None,
                 cache_line_size: CacheLineSize = None, cache_id: int = None,
-                force: bool = False, load: bool = False, shortcut: bool = False):
+                force: bool = False, load: bool = False, shortcut: bool = False,
+                kernel_params: KernelParameters = KernelParameters()):
+    if kernel_params != KernelParameters.read_current_settings():
+        reload_kernel_module("cas_cache", kernel_params.get_parameter_dictionary())
+
     _cache_line_size = None if cache_line_size is None else str(
         int(cache_line_size.value.get_value(Unit.KibiByte)))
     _cache_id = None if cache_id is None else str(cache_id)
@@ -33,7 +39,6 @@ def start_cache(cache_dev: Device, cache_mode: CacheMode = None,
         cache_id=_cache_id, force=force, load=load, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to start cache.", output)
-
     return Cache(cache_dev)
 
 
@@ -126,7 +131,6 @@ def load_cache(device: Device, shortcut: bool = False):
         load_cmd(cache_dev=device.system_path, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to load cache.", output)
-
     return Cache(device)
 
 
