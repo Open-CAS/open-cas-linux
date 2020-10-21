@@ -4,11 +4,11 @@
 #
 
 import pytest
-
 from datetime import timedelta
 
 from test_tools.kedr import Kedr, KedrProfile
-from api.cas import cas_module, installer, casadm
+from api.cas import cas_module, casadm
+from api.cas.installer import Installer
 from core.test_run import TestRun
 from test_utils import os_utils
 from test_utils.size import Size, Unit
@@ -19,6 +19,7 @@ from test_tools.fio.fio_param import ReadWrite, IoEngine
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 
 mountpoint = "/tmp/cas1-1"
+
 
 @pytest.fixture(scope="module")
 def install_kedr():
@@ -31,7 +32,7 @@ def install_kedr():
 @pytest.fixture(scope="function")
 def unload_modules():
     TestRun.LOGGER.info("Check if CAS is installed")
-    if installer.check_if_installed():
+    if Installer.check_if_installed():
         TestRun.LOGGER.info("Unloading modules")
         cas_module.unload_all_cas_modules()
 
