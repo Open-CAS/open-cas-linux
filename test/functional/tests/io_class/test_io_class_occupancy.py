@@ -142,3 +142,110 @@ def test_ioclass_occupancy_directory_write(io_size_multiplication, cache_mode, c
                     f"Occupancy for ioclass id exceeded: {io_class.id}. "
                     f"Limit: {occupancy_limit}, actuall: {actuall_occupancy}"
                 )
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_ioclass_occupancy_sum_cache():
+    """
+        title: Test for ioclasses occupancy sum
+        description: |
+          Create ioclass for 3 different directories, each with different
+          max cache occupancy configured. Trigger IO to each ioclass and check
+          if sum of their Usage stats is equal to cache Usage stats.
+        pass_criteria:
+          - Max occupancy is set correctly for each ioclass
+          - Sum of ioclassess stats is equal to cache stats
+    """
+    with TestRun.step("Prepare CAS device"):
+        cache, core = prepare()
+        cache_size = cache.get_statistics().config_stats.cache_size
+
+    with TestRun.step("Disable udev"):
+        Udev.disable()
+
+    with TestRun.step(f"Prepare filesystem and mount {core.system_path} at {mountpoint}"):
+        filesystem = Filesystem.xfs
+        core.create_filesystem(filesystem)
+        core.mount(mountpoint)
+        sync()
+
+    with TestRun.step("Prepare test dirs"):
+        default_ioclass_id = 0
+        IoclassConfig = namedtuple("IoclassConfig", "id eviction_prio max_occupancy dir_path")
+        io_classes = [
+            IoclassConfig(1, 3, 0.10, f"{mountpoint}/A"),
+            IoclassConfig(2, 4, 0.20, f"{mountpoint}/B"),
+            IoclassConfig(3, 5, 0.30, f"{mountpoint}/C"),
+        ]
+
+        for io_class in io_classes:
+            fs_utils.create_directory(io_class.dir_path, parents=True)
+
+    with TestRun.step("Remove old ioclass config"):
+        ioclass_config.remove_ioclass_config()
+        ioclass_config.create_ioclass_config(False)
+
+    with TestRun.step("Add default ioclasses"):
+        ioclass_config.add_ioclass(*str(IoClass.default(allocation="0.00")).split(","))
+
+    with TestRun.step("Add ioclasses for all dirs"):
+        for io_class in io_classes:
+            ioclass_config.add_ioclass(
+                io_class.id,
+                f"directory:{io_class.dir_path}&done",
+                io_class.eviction_prio,
+                f"{io_class.max_occupancy:0.2f}",
+            )
+
+        casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
+
+    with TestRun.step("Purge cache"):
+        cache.purge_cache()
+
+    with TestRun.step("Verify stats before IO"):
+        usage_stats_sum = UsageStats(Size(0), Size(0), Size(0), Size(0))
+        for i in io_classes:
+            usage_stats_sum += get_io_class_usage(cache, i.id)
+        usage_stats_sum += get_io_class_usage(cache, default_ioclass_id)
+
+        cache_stats = cache.get_statistics().usage_stats
+        cache_stats.free = Size(0)
+
+        if (
+            cache_stats.occupancy != usage_stats_sum.occupancy
+            or cache_stats.clean != usage_stats_sum.clean
+            or cache_stats.dirty != usage_stats_sum.dirty
+        ):
+            TestRun.LOGGER.error(
+                "Initial cache usage stats doesn't match sum of ioclasses stats\n"
+                f"cache stats: {cache_stats}, sumed up stats {usage_stats_sum}\n"
+                f"particular stats {[get_io_class_usage(cache, i.id) for i in io_classes]}"
+            )
+
+    with TestRun.step(f"Trigger IO to each directory"):
+        for io_class in io_classes:
+            run_io_dir(
+                f"{io_class.dir_path}/tmp_file",
+                int((io_class.max_occupancy * cache_size) / Unit.Blocks4096),
+            )
+
+    with TestRun.step("Verify stats after IO"):
+        usage_stats_sum = UsageStats(Size(0), Size(0), Size(0), Size(0))
+        for i in io_classes:
+            usage_stats_sum += get_io_class_usage(cache, i.id)
+        usage_stats_sum += get_io_class_usage(cache, default_ioclass_id)
+
+        cache_stats = cache.get_statistics().usage_stats
+        cache_stats.free = Size(0)
+
+        if (
+            cache_stats.occupancy != usage_stats_sum.occupancy
+            or cache_stats.clean != usage_stats_sum.clean
+            or cache_stats.dirty != usage_stats_sum.dirty
+        ):
+            TestRun.LOGGER.error(
+                "Cache usage stats doesn't match sum of ioclasses stats\n"
+                f"cache stats: {cache_stats}, sumed up stats {usage_stats_sum}\n"
+                f"particular stats {[get_io_class_usage(cache, i.id) for i in io_classes]}"
+            )
