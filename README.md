@@ -51,6 +51,11 @@ The `./configure` performs check for dependencies, so if some of them are missin
 command will print their names in output. After installing missing dependencies
 you need to run `./configure` once again - this time it should succeed.
 
+NOTE: If after installing CAS, your system boots into emergency mode due to the
+**"Failed to start opencas initialization service."** error, you need to force SELinux
+relabelling in permissive mode on your filesystem.\
+Refer to the [Open CAS documentation](https://open-cas.github.io/guide_running.html#rebooting-power-cycling-and-open-cas-linux-autostart) for details.
+
 ## Getting Started
 
 To quickly deploy Open CAS Linux in your system please follow the instructions
