@@ -455,7 +455,7 @@ class cas_config(object):
         except ValueError:
             raise
         except IOError:
-            raise Exception('Couldn\'t open config file')
+            raise FileNotFoundError('Couldn\'t open config file')
         except:
             raise
 
@@ -825,19 +825,19 @@ def _get_uninitialized_devices(target_dev_state):
 def wait_for_startup(timeout=300, interval=5):
     def start_device(dev):
         if os.path.exists(dev.device):
-            if type(dev) is cas_config.core_config:
-                add_core(dev, True)
-            elif type(dev) is cas_config.cache_config:
-                start_cache(dev, True)
+            try:
+                if type(dev) is cas_config.core_config:
+                    add_core(dev, True)
+                elif type(dev) is cas_config.cache_config:
+                    start_cache(dev, True)
+            except casadm.CasadmError:
+                pass
 
     stop_time = time.time() + int(timeout)
 
-    try:
-        config = cas_config.from_file(
-            cas_config.default_location, allow_incomplete=True
-        )
-    except Exception as e:
-        raise Exception("Unable to load opencas config. Reason: {0}".format(str(e)))
+    config = cas_config.from_file(
+        cas_config.default_location, allow_incomplete=True
+    )
 
     not_initialized = _get_uninitialized_devices(config)
     if not not_initialized:

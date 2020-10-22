@@ -108,10 +108,13 @@ def init(force):
 def settle(timeout, interval):
     try:
         not_initialized = opencas.wait_for_startup(timeout, interval)
-    except Exception as e:
+    except FileNotFoundError as e:
         eprint(e)
         # Don't fail the boot if we're missing the config
         exit(0)
+    except Exception as e:
+        eprint(e)
+        exit(1)
 
     fail = False
     if not_initialized:
