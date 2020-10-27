@@ -253,7 +253,7 @@ class cas_config(object):
             elif param_name == 'cache_line_size':
                 self.check_cache_line_size_valid(param_value)
             elif param_name == "lazy_startup":
-                self.check_lazy_startup(param_value)
+                self.check_lazy_startup_valid(param_value)
             else:
                 raise ValueError('{0} is invalid parameter name'.format(param_name))
 
@@ -286,7 +286,7 @@ class cas_config(object):
                     cleaning_policy))
 
         def check_lazy_startup_valid(self, lazy_startup):
-            if param_value.lower() not in ["true", "false"]:
+            if lazy_startup.lower() not in ["true", "false"]:
                 raise ValueError('{0} is invalid lazy_startup value'.format(lazy_startup))
 
         def check_promotion_policy_valid(self, promotion_policy):
