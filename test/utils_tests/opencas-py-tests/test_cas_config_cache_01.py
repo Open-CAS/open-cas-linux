@@ -204,6 +204,8 @@ def test_cache_config_from_line_missing_ioclass_file(
         "promotion_policy=Robert'); DROP TABLE Students;--",
         "promotion_policy=awlays",
         "promotion_policy=nnhit",
+        "lazy_startup=yes",
+        "lazy_startup=absolutely",
     ],
 )
 @mock.patch("os.path.exists")
@@ -240,7 +242,10 @@ def test_cache_config_from_line_parameter_validation_01(
         "ioclass_file=ioclass.csv,cache_line_size=4,cleaning_policy=nop",
         "promotion_policy=nhit",
         "promotion_policy=always",
-        "ioclass_file=ioclass.csv,cache_line_size=4,cleaning_policy=nop,promotion_policy=always",
+        "lazy_startup=true",
+        "lazy_startup=false",
+        ("ioclass_file=ioclass.csv,cache_line_size=4,cleaning_policy=nop,promotion_policy=always,"
+            "lazy_startup=true"),
     ],
 )
 @mock.patch("os.path.exists")
