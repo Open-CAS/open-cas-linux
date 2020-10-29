@@ -9,6 +9,7 @@
 
 #include <linux/ioctl.h>
 #include <linux/file.h>
+#include <linux/nvme_ioctl.h>
 
 
 int cas_nvme_get_nsid(struct block_device *bdev, unsigned int *nsid)
