@@ -2,9 +2,9 @@
 # Copyright(c) 2012-2020 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
-# If KERNELRELEASE is defined, we've been invoked from the
+# If $(M) is defined, we've been invoked from the
 # kernel build system and can use its language.
-ifneq ($(KERNELRELEASE),)
+ifneq ($(M),)
 
 include $(M)/config.mk
 
@@ -16,8 +16,9 @@ obj-y += cas_disk/
 else
 
 OCFDIR=$(PWD)/../ocf
-KERNEL_DIR ?= "/lib/modules/$(shell uname -r)/build"
 PWD=$(shell pwd)
+KERNEL_VERSION ?= "$(shell uname -r)"
+KERNEL_DIR ?= "/lib/modules/$(KERNEL_VERSION)/build"
 MODULES_DIR=/lib/modules/$(shell uname -r)/extra
 
 DISK_MODULE = cas_disk
