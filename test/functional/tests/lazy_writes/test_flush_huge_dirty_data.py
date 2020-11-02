@@ -111,6 +111,62 @@ def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
         remove(mnt_point, True, True, True)
 
 
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_flush_over_640_gibibytes_raw_device(cache_mode):
+    """
+        title: Test of the ability to flush huge amount of dirty data on raw device.
+        description: |
+          Flush cache when amount of dirty data in cache exceeds 640 GiB.
+        pass_criteria:
+          - Flushing completes successfully without any errors.
+    """
+    with TestRun.step("Prepare devices for cache and core."):
+        cache_dev = TestRun.disks['cache']
+        check_disk_size(cache_dev)
+        cache_dev.create_partitions([required_disk_size])
+        cache_part = cache_dev.partitions[0]
+        core_dev = TestRun.disks['core']
+        check_disk_size(core_dev)
+        Udev.disable()
+
+    with TestRun.step(f"Start cache in {cache_mode} mode."):
+        cache = casadm.start_cache(cache_part, cache_mode)
+
+    with TestRun.step(f"Add core to cache."):
+        core = cache.add_core(core_dev)
+
+    with TestRun.step("Disable cleaning and sequential cutoff."):
+        cache.set_cleaning_policy(CleaningPolicy.nop)
+        cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+
+    with TestRun.step("Create test file"):
+        fio = (
+            Fio()
+            .create_command()
+            .io_engine(IoEngine.libaio)
+            .read_write(ReadWrite.write)
+            .block_size(bs)
+            .direct()
+            .io_depth(256)
+            .target(core)
+            .size(file_size)
+        )
+        fio.default_run_time = timedelta(hours=4)  # timeout for non-time-based fio
+        fio.run()
+
+    with TestRun.step(f"Check if dirty data exceeded {file_size * 0.98} GiB."):
+        minimum_4KiB_blocks = int((file_size * 0.98).get_value(Unit.Blocks4096))
+        if int(cache.get_statistics().usage_stats.dirty) < minimum_4KiB_blocks:
+            TestRun.fail("There is not enough dirty data in the cache!")
+
+    with TestRun.step("Stop cache with flush."):
+        # this operation could take few hours, depending on core disk
+        output = TestRun.executor.run(stop_cmd(str(cache.cache_id)), timedelta(hours=12))
+        if output.exit_code != 0:
+            TestRun.fail(f"Stopping cache with flush failed!\n{output.stderr}")
+
 
 def check_disk_size(device: Device):
     if device.size < required_disk_size:
