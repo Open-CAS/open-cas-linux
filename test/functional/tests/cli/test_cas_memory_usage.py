@@ -7,7 +7,7 @@ import pytest
 
 from api.cas.cas_module import CasModule
 from core.test_run import TestRun
-from test_utils.size import Unit
+from test_utils.size import Unit, Size
 from test_utils.os_utils import (allocate_memory,
                                  defaultize_memory_affecting_functions,
                                  disable_memory_affecting_functions,
@@ -16,7 +16,65 @@ from test_utils.os_utils import (allocate_memory,
                                  is_kernel_module_loaded,
                                  load_kernel_module,
                                  unload_kernel_module,
-                                 unmount_ramfs)
+                                 unmount_ramfs,
+                                 get_dut_cpu_number,
+                                 DropCachesMode)
+
+
+@pytest.mark.os_dependent
+def test_cas_module_memory_usage():
+    """
+        title: Validate OpenCAS kernel module memory usage.
+        description: |
+          Check that OpenCAS kernel module memory usage is in acceptable limits.
+        pass_criteria: |
+          - Loaded OpenCAS kernel module should not consume more than 140% of total memory
+          calculated by requirement formula:
+          7.5 MiB * active CPUs number
+    """
+    with TestRun.step("Disable caching and memory over-committing."):
+        disable_memory_affecting_functions()
+        drop_caches(DropCachesMode.ALL)
+
+    with TestRun.step("Measure memory usage without OpenCAS module."):
+        if is_kernel_module_loaded(CasModule.cache.value):
+            unload_kernel_module(CasModule.cache.value)
+            unload_kernel_module(CasModule.disk.value)
+        available_mem_before_cas = get_free_memory()
+
+    with TestRun.step("Load OpenCAS module"):
+        output = load_kernel_module(CasModule.cache.value)
+        if output.exit_code != 0:
+            TestRun.fail("Cannot load OpenCAS module!")
+
+    with TestRun.step("Measure memory usage with OpenCAS module."):
+        available_mem_with_cas = get_free_memory()
+        memory_used_by_cas = available_mem_before_cas - available_mem_with_cas
+        TestRun.LOGGER.info(
+            f"OpenCAS module uses {memory_used_by_cas.get_value(Unit.MiB):.2f} MiB of DRAM."
+        )
+
+    with TestRun.step("Validate amount of memory used by OpenCAS module"):
+        expected_memory_used = Size(7.5 * get_dut_cpu_number(), Unit.MiB)
+        TestRun.LOGGER.info(
+            f"Expected module memory consumption:"
+            f" {expected_memory_used.get_value(Unit.MiB):.2f} MiB of DRAM."
+        )
+        requirement_fulfillment_ratio = (
+            memory_used_by_cas.get_value() / expected_memory_used.get_value()
+        )
+        TestRun.LOGGER.info(f"Actual to expected usage ratio: {requirement_fulfillment_ratio:.2f}")
+        if requirement_fulfillment_ratio > 1.1:
+            if requirement_fulfillment_ratio < 1.4:
+                TestRun.LOGGER.warning("Memory usage corresponds to required limit "
+                                       "(between 110-140% of expected value)")
+            else:
+                TestRun.LOGGER.error("Memory usage exceeded required limit "
+                                     "(over 140% of expected value)")
+        elif requirement_fulfillment_ratio < 0.8:
+            TestRun.LOGGER.warning("Memory usage is strangely small (below 80% of expected value)")
+        else:
+            TestRun.LOGGER.info("Memory usage corresponds to required limit")
 
 
 @pytest.mark.os_dependent
