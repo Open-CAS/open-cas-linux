@@ -1,1 +1,9 @@
-lib/modules/
+./.metadata/* usr/src/<CAS_NAME>-modules-<CAS_VERSION>/.metadata/
+./modules/* usr/src/<CAS_NAME>-modules-<CAS_VERSION>/modules/
+./ocf/* usr/src/<CAS_NAME>-modules-<CAS_VERSION>/ocf/
+./utils/* usr/src/<CAS_NAME>-modules-<CAS_VERSION>/utils/
+./configure.d/* usr/src/<CAS_NAME>-modules-<CAS_VERSION>/configure.d/
+./configure usr/src/<CAS_NAME>-modules-<CAS_VERSION>/
+./Makefile usr/src/<CAS_NAME>-modules-<CAS_VERSION>/
+./LICENSE usr/src/<CAS_NAME>-modules-<CAS_VERSION>/
+./version usr/src/<CAS_NAME>-modules-<CAS_VERSION>/

@@ -2,7 +2,7 @@ Source: <CAS_NAME>
 Section: utils
 Priority: optional
 Maintainer: <PACKAGE_MAINTAINER>
-Build-Depends: debhelper (>= 11), gawk, libelf-dev, linux-headers-generic
+Build-Depends: debhelper (>= 11), gawk, libelf-dev, linux-headers-generic, dkms
 Standards-Version: 4.1.2
 Homepage: <CAS_HOMEPAGE>
 Vcs-Git: <CAS_GIT>
@@ -21,7 +21,7 @@ Description: Open Cache Acceleration Software
 
 Package: <CAS_NAME>-modules
 Architecture: amd64
-Depends: ${misc:Depends}
+Depends: ${misc:Depends}, debhelper (>= 9), dkms
 Description: Open Cache Acceleration Software kernel modules (${kver})
  Open Cache Acceleration Software (Open CAS) is an open source project
  encompassing block caching software libraries, adapters, tools and more.
