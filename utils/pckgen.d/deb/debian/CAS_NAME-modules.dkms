@@ -1,0 +1,11 @@
+PACKAGE_NAME="<CAS_NAME>-modules"
+PACKAGE_VERSION="#MODULE_VERSION#"
+BUILT_MODULE_NAME[0]="cas_disk"
+BUILT_MODULE_NAME[1]="cas_cache"
+BUILT_MODULE_LOCATION[0]="modules/cas_disk/"
+BUILT_MODULE_LOCATION[1]="modules/cas_cache/"
+DEST_MODULE_LOCATION[0]="/extra"
+DEST_MODULE_LOCATION[1]="/extra"
+PRE_BUILD="./configure"
+MAKE[0]="make -j -C modules/ KERNEL_VERSION=$kernelver"
+AUTOINSTALL=yes
