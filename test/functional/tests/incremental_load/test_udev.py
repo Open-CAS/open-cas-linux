@@ -11,6 +11,7 @@ from api.cas.core import CoreStatus, CacheMode, CacheStatus
 from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskTypeLowerThan, DiskType
+from storage_devices.raid import RaidConfiguration, Raid, Level, MetadataVariant
 from test_utils.size import Size, Unit
 
 
@@ -93,6 +94,51 @@ def test_udev_core():
         cache_disk.unplug()
     with TestRun.step("Plug cache disk."):
         cache_disk.plug()
+    with TestRun.step("Check if core device is active and not in the core pool."):
+        check_if_dev_in_core_pool(core_dev, False)
+        if core.get_status() != CoreStatus.active:
+            TestRun.fail(f"Core status is {core.get_status()} instead of active.")
+
+
+@pytest.mark.os_dependent
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd, DiskType.hdd4k, DiskType.sata]))
+@pytest.mark.require_disk("core2", DiskTypeSet([DiskType.hdd, DiskType.hdd4k, DiskType.sata]))
+def test_udev_raid_core():
+    """
+        title: CAS udev rule execution for core after recreating RAID device existing in
+        configuration file as core.
+        description: |
+          Verify if CAS udev rule is executed for RAID volume recreated after soft reboot.
+        pass_criteria:
+          - No kernel error
+          - After reboot, the RAID volume is added to the cache instance and is in 'active' state
+    """
+    with TestRun.step("Test prepare."):
+        cache_disk = TestRun.disks["cache"]
+        cache_disk.create_partitions([Size(1, Unit.GibiByte)])
+        cache_dev = cache_disk.partitions[0]
+        core_disk = TestRun.disks["core"]
+        core_disk2 = TestRun.disks["core2"]
+
+    with TestRun.step("Create RAID0 volume."):
+        config = RaidConfiguration(
+            level=Level.Raid0,
+            metadata=MetadataVariant.Legacy,
+            number_of_devices=2
+        )
+        core_dev = Raid.create(config, [core_disk, core_disk2])
+
+    with TestRun.step("Start cache and add core."):
+        cache = casadm.start_cache(cache_dev, force=True)
+        core = cache.add_core(core_dev)
+
+    with TestRun.step("Create init config from running CAS configuration."):
+        InitConfig.create_init_config_from_running_configuration()
+
+    with TestRun.step("Reboot system."):
+        TestRun.executor.reboot()
+
     with TestRun.step("Check if core device is active and not in the core pool."):
         check_if_dev_in_core_pool(core_dev, False)
         if core.get_status() != CoreStatus.active:

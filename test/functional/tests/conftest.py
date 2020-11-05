@@ -5,11 +5,11 @@
 
 import os
 import sys
+import traceback
 from datetime import timedelta
 
 import pytest
 import yaml
-import traceback
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../test-framework"))
 
@@ -17,9 +17,11 @@ from core.test_run_utils import TestRun
 from api.cas import installer
 from api.cas import casadm
 from api.cas import git
+from storage_devices.raid import Raid
 from test_utils.os_utils import Udev, kill_all_io
 from test_tools.disk_utils import PartitionTable, create_partition_table
 from test_tools.device_mapper import DeviceMapper
+from test_tools.mdadm import Mdadm
 from log.logger import create_log, Log
 from test_utils.singleton import Singleton
 
@@ -178,8 +180,20 @@ def base_prepare(item):
             except Exception:
                 pass  # TODO: Reboot DUT if test is executed remotely
 
+        raids = Raid.discover()
+        for raid in raids:
+            # stop only those RAIDs, which are comprised of test disks
+            if all(map(
+                    lambda d: d.system_path in [bd.system_path for bd in TestRun.dut.disks],
+                    raid.array_devices
+            )):
+                raid.umount_all_partitions()
+                raid.remove_partitions()
+                raid.stop()
+
         for disk in TestRun.dut.disks:
             disk.umount_all_partitions()
+            Mdadm.zero_superblock(disk.system_path)
             disk.remove_partitions()
             create_partition_table(disk, PartitionTable.gpt)
 
