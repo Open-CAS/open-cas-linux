@@ -1696,7 +1696,6 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	device_cfg->uuid.size = strnlen(device_cfg->uuid.data, MAX_STR_LEN) + 1;
 	device_cfg->cache_line_size = cmd->line_size;
 	device_cfg->force = cmd->force;
-	device_cfg->perform_test = true;
 	device_cfg->discard_on_start = true;
 
 	init_cache = cmd->init_cache;
@@ -1730,8 +1729,12 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	if (result)
 		return result;
 
-	if (device_cfg->volume_type == ATOMIC_DEVICE_VOLUME)
+	if (device_cfg->volume_type == ATOMIC_DEVICE_VOLUME) {
 		device_cfg->volume_params = atomic_params;
+		device_cfg->perform_test = true;
+	} else {
+		device_cfg->perform_test = false;
+	}
 
 	cmd->metadata_mode_optimal =
 			block_dev_is_metadata_mode_optimal(atomic_params,
