@@ -625,6 +625,7 @@ static inline uint32_t env_crc32(uint32_t crc, uint8_t const *data, size_t len)
 /* *** LOGGING *** */
 
 #define ENV_PRIu64 "llu"
+#define ENV_PRId64 "lld"
 
 #define ENV_WARN(cond, fmt...)		WARN(cond, fmt)
 #define ENV_WARN_ON(cond)		WARN_ON(cond)
