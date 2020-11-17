@@ -16,6 +16,7 @@
 
 #include "ocf/ocf.h"
 #include <linux/limits.h>
+#include <linux/ioctl.h>
 
 /**
  * Max path, string size
