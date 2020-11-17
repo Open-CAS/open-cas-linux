@@ -403,9 +403,7 @@ static void print_stats_ioclass_conf(const struct kcas_io_class* io_class,
 		print_kv_pair(outfile, "Eviction priority", "%d",
 			      io_class->info.priority);
 	}
-	print_kv_pair(outfile, "Selective allocation", "%s",
-		      io_class->info.cache_mode != ocf_cache_mode_pt ?
-		      "Yes" : "No");
+	print_kv_pair(outfile, "Max size", "%u%%", io_class->info.max_size);
 }
 
 
