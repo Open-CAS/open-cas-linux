@@ -40,6 +40,8 @@ EOM
 
 run_cmd "casctl init"
 
+run_cmd "udevadm settle"
+
 DEVICE_ID_OPTION=${CACHE_DEVICE}1 DEMANDED_STATE_OPTION="Running" check_device_state
 DEVICE_ID_OPTION="${DEVICE_NAME}1-1" DEMANDED_STATE_OPTION="Active" check_device_state
 DEVICE_ID_OPTION="${DEVICE_NAME}1-2" DEMANDED_STATE_OPTION="Active" check_device_state
@@ -50,6 +52,8 @@ run_cmd "casctl stop"
 check_no_cache_running
 
 run_cmd "casctl start"
+
+run_cmd "udevadm settle"
 
 DEVICE_ID_OPTION=${CACHE_DEVICE}1 DEMANDED_STATE_OPTION="Running" check_device_state
 DEVICE_ID_OPTION="${DEVICE_NAME}1-1" DEMANDED_STATE_OPTION="Active" check_device_state
