@@ -53,10 +53,10 @@ def prepare(
     # To make test more precise all workload except of tested ioclass should be
     # put in pass-through mode
     ioclass_config.add_ioclass(
-        ioclass_id=0,
-        eviction_priority=22,
+        ioclass_id=ioclass_config.DEFAULT_IO_CLASS_ID,
+        eviction_priority=ioclass_config.DEFAULT_IO_CLASS_PRIORITY,
         allocation="0.00",
-        rule="unclassified",
+        rule=ioclass_config.DEFAULT_IO_CLASS_RULE,
         ioclass_config_path=ioclass_config_path,
     )
 
