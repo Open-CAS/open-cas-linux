@@ -7,7 +7,6 @@ import re
 from core.test_run import TestRun
 from test_utils.output import Output
 
-
 load_inactive_core_missing = [
     r"WARNING: Can not resolve path to core \d+ from cache \d+\. By-id path will be shown for that "
     r"core\.",
@@ -68,6 +67,14 @@ try_add_core_sector_size_mismatch = [
     r"Cache device logical sector size is greater than core device logical sector size\.",
     r"Consider changing logical sector size on current cache device",
     r"or try other device with the same logical sector size as core device\."
+]
+
+partition_not_suitable_for_array = [
+    r"\S+ is not suitable for this array"
+]
+
+device_or_resource_busy = [
+    r"cannot open \S+: Device or resource busy"
 ]
 
 
