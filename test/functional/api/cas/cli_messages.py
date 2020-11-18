@@ -23,6 +23,16 @@ start_cache_with_existing_metadata = [
     r"Error occurred, please see syslog \(/var/log/messages\) for details\."
 ]
 
+error_inserting_cache = [
+    r"Error inserting cache \d+"
+]
+
+reinitialize_with_force_or_recovery = [
+    r"Old metadata found on device\.",
+    r"Please load cache metadata using --load option or use --force to",
+    r" discard on-disk metadata and start fresh cache instance\."
+]
+
 remove_inactive_core = [
     r"Error while removing core device \d+ from cache instance \d+",
     r"Core device is in inactive state"
