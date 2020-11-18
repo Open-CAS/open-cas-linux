@@ -55,7 +55,7 @@ def prepare(
     ioclass_config.add_ioclass(
         ioclass_id=0,
         eviction_priority=22,
-        allocation=False,
+        allocation="0.00",
         rule="unclassified",
         ioclass_config_path=ioclass_config_path,
     )

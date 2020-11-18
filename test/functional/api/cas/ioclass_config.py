@@ -31,7 +31,7 @@ IO_CLASS_CONFIG_HEADER = "IO class id,IO class name,Eviction priority,Allocation
 @functools.total_ordering
 class IoClass:
     def __init__(self, class_id: int, rule: str = '', priority: int = None,
-                 allocation: str = '1.00'):
+                 allocation: str = "1.00"):
         self.id = class_id
         self.rule = rule
         self.priority = priority
