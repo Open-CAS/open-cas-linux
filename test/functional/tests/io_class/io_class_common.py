@@ -3,17 +3,24 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
+from datetime import timedelta
+
 from api.cas import casadm
 from api.cas import ioclass_config
 from api.cas.cache_config import (
+    CacheLineSize,
     CacheMode,
     CleaningPolicy,
     SeqCutOffPolicy,
-    CacheLineSize,
 )
 from core.test_run import TestRun
-from test_utils.os_utils import Udev
+from test_tools.dd import Dd
+from test_tools.fio.fio import Fio
+from test_tools.fio.fio_param import ReadWrite, IoEngine
+from test_utils.os_utils import Udev, sync
+from test_utils.os_utils import drop_caches, DropCachesMode
 from test_utils.size import Size, Unit
+
 
 ioclass_config_path = "/tmp/opencas_ioclass.conf"
 mountpoint = "/tmp/cas1-1"
@@ -65,3 +72,53 @@ def prepare(
         raise Exception(f"Failed to create mountpoint")
 
     return cache, core
+
+
+def get_io_class_occupancy(cache, io_class_id, percent=False):
+    return get_io_class_usage(cache, io_class_id, percent).occupancy
+
+
+def get_io_class_dirty(cache, io_class_id):
+    return get_io_class_usage(cache, io_class_id).dirty
+
+
+def get_io_class_usage(cache, io_class_id, percent=False):
+    return cache.get_io_class_statistics(
+        io_class_id=io_class_id, percentage_val=percent
+    ).usage_stats
+
+
+def run_io_dir(path, size_4k):
+    dd = (
+        Dd()
+        .input("/dev/zero")
+        .output(f"{path}")
+        .count(size_4k)
+        .block_size(Size(1, Unit.Blocks4096))
+    )
+    TestRun.LOGGER.info(f"{dd}")
+    dd.run()
+    sync()
+    drop_caches(DropCachesMode.ALL)
+
+
+def run_io_dir_read(path):
+    dd = Dd().output("/dev/null").input(f"{path}")
+    dd.run()
+    sync()
+    drop_caches(DropCachesMode.ALL)
+
+
+def run_fio_count(core, blocksize, num_ios):
+    (
+        Fio()
+        .create_command()
+        .target(core)
+        .io_engine(IoEngine.libaio)
+        .read_write(ReadWrite.randread)
+        .block_size(blocksize)
+        .direct()
+        .file_size(Size(10, Unit.GibiByte))
+        .num_ios(num_ios)
+        .run()
+    )
