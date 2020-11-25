@@ -183,13 +183,16 @@ def base_prepare(item):
         raids = Raid.discover()
         for raid in raids:
             # stop only those RAIDs, which are comprised of test disks
-            if all(map(
-                    lambda d: d.system_path in [bd.system_path for bd in TestRun.dut.disks],
-                    raid.array_devices
-            )):
+            if all(map(lambda device:
+                       any(map(lambda disk_path:
+                               disk_path in device.system_path,
+                               [bd.system_path for bd in TestRun.dut.disks])),
+                       raid.array_devices)):
                 raid.umount_all_partitions()
                 raid.remove_partitions()
                 raid.stop()
+                for device in raid.array_devices:
+                    Mdadm.zero_superblock(device.system_path)
 
         for disk in TestRun.dut.disks:
             disk.umount_all_partitions()
