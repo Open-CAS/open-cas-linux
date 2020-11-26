@@ -5,6 +5,7 @@
 
 import os
 import pytest
+
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
 from core.test_run import TestRun
@@ -12,6 +13,7 @@ from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.dd import Dd
 from test_tools.disk_utils import Filesystem
 from test_utils.filesystem.file import File
+from test_utils.os_utils import drop_caches, DropCachesMode, sync
 from test_utils.size import Size, Unit
 
 
@@ -36,8 +38,9 @@ def test_load_after_clean_shutdown(reboot_type, cache_mode, filesystem):
         cache_disk = TestRun.disks['cache']
         cache_disk.create_partitions([Size(1, Unit.GibiByte)])
         cache_dev = cache_disk.partitions[0]
+        cache_dev_link = cache_dev.get_device_link("/dev/disk/by-id")
         core_dev = TestRun.disks['core']
-        cache = casadm.start_cache(cache_dev, cache_mode)
+        cache = casadm.start_cache(cache_dev, cache_mode, force=True)
         core = cache.add_core(core_dev)
         core.create_filesystem(filesystem, blocksize=int(Size(1, Unit.Blocks4096)))
         core.mount(mount_point)
@@ -52,6 +55,8 @@ def test_load_after_clean_shutdown(reboot_type, cache_mode, filesystem):
             .run()
         test_file.refresh_item()
         test_file_md5 = test_file.md5sum()
+        sync()
+        drop_caches(DropCachesMode.ALL)
 
     with TestRun.step("Reset platform."):
         if reboot_type == "soft":
@@ -59,9 +64,10 @@ def test_load_after_clean_shutdown(reboot_type, cache_mode, filesystem):
         else:
             power_control = TestRun.plugin_manager.get_plugin('power_control')
             power_control.power_cycle()
+        cache_dev.system_path = cache_dev_link.get_target()
 
     with TestRun.step("Load cache."):
-        cache = casadm.load_cache(cache_dev)
+        casadm.load_cache(cache_dev)
         core.mount(mount_point)
 
     with TestRun.step("Check file md5sum."):
