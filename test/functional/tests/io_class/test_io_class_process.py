@@ -38,7 +38,7 @@ def test_ioclass_process_name():
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"process_name:dd&done",
             ioclass_config_path=ioclass_config_path,
         )
@@ -113,7 +113,7 @@ def test_ioclass_pid():
             ioclass_config.add_ioclass(
                 ioclass_id=ioclass_id,
                 eviction_priority=1,
-                allocation=True,
+                allocation="1.00",
                 rule=f"pid:eq:{pid}&done",
                 ioclass_config_path=ioclass_config_path,
             )

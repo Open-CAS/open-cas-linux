@@ -47,7 +47,7 @@ def test_ioclass_file_extension():
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"extension:{tested_extension}&done",
             ioclass_config_path=ioclass_config_path,
         )
@@ -114,7 +114,7 @@ def test_ioclass_file_name_prefix():
         ioclass_config.add_ioclass(
             ioclass_id=0,
             eviction_priority=255,
-            allocation=False,
+            allocation="0.00",
             rule=f"unclassified",
             ioclass_config_path=ioclass_config_path,
         )
@@ -122,7 +122,7 @@ def test_ioclass_file_name_prefix():
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"file_name_prefix:test&done",
             ioclass_config_path=ioclass_config_path,
         )
@@ -225,7 +225,7 @@ def test_ioclass_file_extension_preexisting_filesystem():
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"{rule}&done",
             ioclass_config_path=ioclass_config_path,
         )
@@ -279,7 +279,7 @@ def test_ioclass_file_offset():
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"file_offset:gt:{min_cached_offset}&file_offset:lt:{max_cached_offset}&done",
             ioclass_config_path=ioclass_config_path,
         )
@@ -405,7 +405,7 @@ def test_ioclass_file_size(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=0,
             eviction_priority=22,
-            allocation=False,
+            allocation="0.00",
             rule="unclassified",
             ioclass_config_path=ioclass_config_path,
         )
@@ -430,7 +430,7 @@ def test_ioclass_file_size(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=0,
             eviction_priority=22,
-            allocation=False,
+            allocation="0.00",
             rule="unclassified",
             ioclass_config_path=ioclass_config_path,
         )
@@ -464,35 +464,35 @@ def load_file_size_io_classes(cache, base_size):
     ioclass_config.add_ioclass(
         ioclass_id=1,
         eviction_priority=1,
-        allocation=True,
+        allocation="1.00",
         rule=f"file_size:eq:{base_size_bytes}",
         ioclass_config_path=ioclass_config_path,
     )
     ioclass_config.add_ioclass(
         ioclass_id=2,
         eviction_priority=1,
-        allocation=True,
+        allocation="1.00",
         rule=f"file_size:lt:{base_size_bytes}",
         ioclass_config_path=ioclass_config_path,
     )
     ioclass_config.add_ioclass(
         ioclass_id=3,
         eviction_priority=1,
-        allocation=True,
+        allocation="1.00",
         rule=f"file_size:gt:{base_size_bytes}",
         ioclass_config_path=ioclass_config_path,
     )
     ioclass_config.add_ioclass(
         ioclass_id=4,
         eviction_priority=1,
-        allocation=True,
+        allocation="1.00",
         rule=f"file_size:le:{int(base_size_bytes / 2)}",
         ioclass_config_path=ioclass_config_path,
     )
     ioclass_config.add_ioclass(
         ioclass_id=5,
         eviction_priority=1,
-        allocation=True,
+        allocation="1.00",
         rule=f"file_size:ge:{2 * base_size_bytes}",
         ioclass_config_path=ioclass_config_path,
     )

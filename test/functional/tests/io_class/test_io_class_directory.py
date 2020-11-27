@@ -75,7 +75,7 @@ def test_ioclass_directory_depth(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"directory:{base_dir_path}",
             ioclass_config_path=ioclass_config_path,
         )
@@ -94,7 +94,7 @@ def test_ioclass_directory_depth(filesystem):
         new_occupancy = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.occupancy
         if new_occupancy != base_occupancy + test_file_1.size:
             TestRun.LOGGER.error("Wrong occupancy after reading file!\n"
-                                 "Expected: {base_occupancy + test_file_1.size}, "
+                                 f"Expected: {base_occupancy + test_file_1.size}, "
                                  f"actual: {new_occupancy}")
 
     # Test classification in nested dir by creating a file
@@ -104,8 +104,8 @@ def test_ioclass_directory_depth(filesystem):
         dd = (
             Dd().input("/dev/urandom")
                 .output(test_file_2.full_path)
-                .count(random.randint(1, 200))
-                .block_size(Size(1, Unit.MebiByte))
+                .count(random.randint(25600, 51200))  # 100MB to 200MB
+                .block_size(Size(1, Unit.Blocks4096))
         )
         dd.run()
         sync()
@@ -114,9 +114,10 @@ def test_ioclass_directory_depth(filesystem):
 
     with TestRun.step("Check occupancy after creating the second file."):
         new_occupancy = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.occupancy
+        expected_occpuancy = (base_occupancy + test_file_2.size).set_unit(Unit.Blocks4096)
         if new_occupancy != base_occupancy + test_file_2.size:
             TestRun.LOGGER.error("Wrong occupancy after creating file!\n"
-                                 f"Expected: {base_occupancy + test_file_2.size}, "
+                                 f"Expected: {expected_occpuancy}, "
                                  f"actual: {new_occupancy}")
 
 
@@ -149,7 +150,7 @@ def test_ioclass_directory_file_operations(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"directory:{test_dir_path}",
             ioclass_config_path=ioclass_config_path,
         )
@@ -200,7 +201,7 @@ def test_ioclass_directory_file_operations(filesystem):
         classified_before = classified_after
         non_classified_before = non_classified_after
         (Dd().input(test_file.full_path).output("/dev/null")
-         .block_size(Size(1, Unit.MebiByte)).run())
+         .block_size(Size(1, Unit.Blocks4096)).run())
 
     with TestRun.step("Check classified occupancy."):
         classified_after = cache.get_io_class_statistics(
@@ -229,7 +230,7 @@ def test_ioclass_directory_file_operations(filesystem):
         classified_before = classified_after
         non_classified_before = non_classified_after
         (Dd().input(test_file.full_path).output("/dev/null")
-         .block_size(Size(1, Unit.MebiByte)).run())
+         .block_size(Size(1, Unit.Blocks4096)).run())
 
     with TestRun.step("Check classified occupancy."):
         classified_after = cache.get_io_class_statistics(
@@ -275,14 +276,14 @@ def test_ioclass_directory_dir_operations(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id_1,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"directory:{classified_dir_path_1}",
             ioclass_config_path=ioclass_config_path,
         )
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id_2,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"directory:{classified_dir_path_2}",
             ioclass_config_path=ioclass_config_path,
         )
@@ -330,7 +331,7 @@ def test_ioclass_directory_dir_operations(filesystem):
     with TestRun.step("Read files with reclassification check."):
         read_files_with_reclassification_check(cache,
                                                target_ioclass_id=0, source_ioclass_id=ioclass_id_1,
-                                               directory=dir_2, with_delay=False)
+                                               directory=dir_2, with_delay=True)
 
     with TestRun.step(f"Remove {classified_dir_path_2}."):
         fs_utils.remove(path=classified_dir_path_2, force=True, recursive=True)
@@ -377,7 +378,7 @@ def create_files_with_classification_delay_check(cache, directory: Directory, io
             unclassified_files.append(file_path)
 
     if len(unclassified_files) == file_counter:
-        pytest.xfail("No files were properly classified within max delay time!")
+        TestRun.LOGGER.error("No files were properly classified within max delay time!")
 
     if len(unclassified_files):
         TestRun.LOGGER.info("Rewriting unclassified test files...")
@@ -393,42 +394,52 @@ def read_files_with_reclassification_check(cache, target_ioclass_id: int, source
         io_class_id=target_ioclass_id).usage_stats.occupancy
     source_occupancy_after = cache.get_io_class_statistics(
         io_class_id=source_ioclass_id).usage_stats.occupancy
-    unclassified_files = []
+    files_to_reclassify = []
+    target_ioclass_is_enabled = ioclass_is_enabled(cache, target_ioclass_id)
 
     for file in [item for item in directory.ls() if isinstance(item, File)]:
         target_occupancy_before = target_occupancy_after
         source_occupancy_before = source_occupancy_after
         time_from_start = datetime.now() - start_time
-        (Dd().input(file.full_path).output("/dev/null")
-         .block_size(Size(1, Unit.Blocks4096)).run())
+        dd = Dd().input(file.full_path).output("/dev/null").block_size(Size(1, Unit.Blocks4096))
+        dd.run()
         target_occupancy_after = cache.get_io_class_statistics(
             io_class_id=target_ioclass_id).usage_stats.occupancy
         source_occupancy_after = cache.get_io_class_statistics(
             io_class_id=source_ioclass_id).usage_stats.occupancy
-        if target_occupancy_after < target_occupancy_before:
-            pytest.xfail("Target IO class occupancy lowered!")
-        elif target_occupancy_after - target_occupancy_before < file.size:
-            unclassified_files.append(file)
-            if with_delay and time_from_start <= ioclass_config.MAX_CLASSIFICATION_DELAY:
-                continue
-            pytest.xfail("Target IO class occupancy not changed properly!")
-        if source_occupancy_after >= source_occupancy_before:
-            if file not in unclassified_files:
-                unclassified_files.append(file)
-            if with_delay and time_from_start <= ioclass_config.MAX_CLASSIFICATION_DELAY:
-                continue
-            pytest.xfail("Source IO class occupancy not changed properly!")
 
-    if len(unclassified_files):
+        if target_ioclass_is_enabled:
+            if target_occupancy_after < target_occupancy_before:
+                TestRun.LOGGER.error("Target IO class occupancy lowered!")
+            elif target_occupancy_after - target_occupancy_before < file.size:
+                files_to_reclassify.append(file)
+                if with_delay and time_from_start <= ioclass_config.MAX_CLASSIFICATION_DELAY:
+                    continue
+                TestRun.LOGGER.error("Target IO class occupancy not changed properly!")
+        elif target_occupancy_after > target_occupancy_before and with_delay:
+            files_to_reclassify.append(file)
+
+        if source_occupancy_after >= source_occupancy_before:
+            if file not in files_to_reclassify:
+                files_to_reclassify.append(file)
+            if with_delay and time_from_start <= ioclass_config.MAX_CLASSIFICATION_DELAY:
+                continue
+            TestRun.LOGGER.error("Source IO class occupancy not changed properly!")
+
+    if len(files_to_reclassify):
         TestRun.LOGGER.info("Rereading unclassified test files...")
         sync()
         drop_caches(DropCachesMode.ALL)
-        for file in unclassified_files:
+        for file in files_to_reclassify:
             (Dd().input(file.full_path).output("/dev/null")
              .block_size(Size(1, Unit.Blocks4096)).run())
 
 
 def check_occupancy(expected: Size, actual: Size):
     if expected != actual:
-        pytest.xfail("Occupancy check failed!\n"
+        TestRun.LOGGER.error("Occupancy check failed!\n"
                      f"Expected: {expected}, actual: {actual}")
+
+
+def ioclass_is_enabled(cache, ioclass_id: int):
+    return [i["allocation"] for i in cache.list_io_classes() if i["id"] == ioclass_id].pop() > 0.00
