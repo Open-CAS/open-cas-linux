@@ -14,18 +14,8 @@ struct casdsk_disk;
 
 struct bd_object {
 	struct casdsk_disk *dsk;
+
 	struct block_device *btm_bd;
-	/**
-	 * This denotes state of volatile write cache of the device.
-	 * This is set to true when:
-	 *  - opening the device
-	 *  - when writing to a device without FUA/FLUSH flags
-	 * This is set to false when:
-	 *  - FLUSH request is completed on device.
-	 * When it is false
-	 *  - FLUSH requests from upper layer are NOT passed to the device.
-	 */
-	atomic_t potentially_dirty;
 
 	uint32_t expobj_valid : 1;
 		/*!< Bit indicates that exported object was created */

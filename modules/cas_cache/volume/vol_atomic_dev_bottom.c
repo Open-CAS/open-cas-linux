@@ -35,7 +35,6 @@ struct cas_atomic_io {
 
 	struct cas_atomic_io *master;
 	atomic_t req_remaining;
-	atomic_t potential_dirty;
 	uint32_t count;
 
 	uint64_t addr;
@@ -463,23 +462,8 @@ static CAS_DECLARE_BLOCK_CALLBACK(cas_atomic_fire_atom, struct bio *bio,
 		goto out;
 	}
 
-	switch (atom->dir) {
-	case OCF_READ:
-		if (cas_atomic_rd_complete(atom))
-			atom->master->error = -EIO;
-		break;
-	case OCF_WRITE:
-		if (!cas_blk_is_flush_io(atom->flags)) {
-			atomic_inc(&bdobj->potentially_dirty);
-		} else {
-			/* IO flush finished, update potential
-			 * dirty state
-			 */
-			atomic_sub(atomic_read(&atom->potential_dirty),
-				&bdobj->potentially_dirty);
-		}
-		break;
-	}
+	if (atom->dir == OCF_READ && cas_atomic_rd_complete(atom))
+		atom->master->error = -EIO;
 
 out:
 	/* Free BIO, no needed any more */
@@ -858,16 +842,6 @@ void cas_atomic_submit_flush(struct ocf_io *io)
 
 	CAS_DEBUG_TRACE();
 
-	blkio->dirty = atomic_read(&bdobj->potentially_dirty);
-
-	if (!blkio->dirty) {
-		/* Didn't write anything to underlying disk;
-		 * no need to send req_flush
-		 */
-		io->end(io, 0);
-		return;
-	}
-
 	if (!q) {
 		io->end(io, -EINVAL);
 		return;
@@ -875,7 +849,6 @@ void cas_atomic_submit_flush(struct ocf_io *io)
 
 	if (!CAS_CHECK_QUEUE_FLUSH(q)) {
 		/* This block device does not support flush */
-		atomic_sub(blkio->dirty, &bdobj->potentially_dirty);
 		io->end(io, 0);
 		return;
 	}
@@ -900,7 +873,6 @@ void cas_atomic_submit_flush(struct ocf_io *io)
 
 	/* Set up specific field */
 	atom->dir = OCF_WRITE;
-	atomic_set(&atom->potential_dirty, blkio->dirty);
 
 	atom->request = cas_blk_make_request(q, atom->bio, GFP_NOIO);
 	if (IS_ERR(atom->request)) {
