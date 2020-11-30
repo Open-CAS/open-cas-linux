@@ -533,8 +533,10 @@ static cas_cls_eval_t _cas_cls_extension_test(
 		return cas_cls_eval_no;
 
 	/* First character of @extension is '.', which we don't want to compare */
-	len = strnlen(extension + 1, dentry->d_name.len);
-	len = min(ctx->len, len);
+	len = dentry->d_name.len - (extension - (char*)dentry->d_name.name) - 1;
+	if (len != ctx->len)
+		return cas_cls_eval_no;
+
 	if (strncmp(ctx->string, extension + 1, len) == 0)
 		return cas_cls_eval_yes;
 
@@ -615,7 +617,9 @@ static cas_cls_eval_t _cas_cls_process_name_test(
 	get_task_comm(comm, ti);
 
 	len = strnlen(comm, TASK_COMM_LEN);
-	len = min(ctx->len, len);
+	if (len != ctx->len)
+		return cas_cls_eval_no;
+
 	if (strncmp(ctx->string, comm, len) == 0)
 		return cas_cls_eval_yes;
 
