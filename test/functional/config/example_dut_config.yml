@@ -1,10 +1,10 @@
 # DUT type should be either "local" or "ssh"
-# if ssh is selected, then ip, user and password fields are required
+# if ssh is selected, then ip and user fields are required and you have to make sure you have
+# enabled SSH key-based authentication to the machine with given ip address
 type: "local"
 
 # ip: "x.x.x.x"
 # user: "example_user"
-# password: "example_password"
 
 # env: "HTTPS_PROXY=myproxy.example:12345"
 # reboot_timeout: 1800  #timeout value in seconds
