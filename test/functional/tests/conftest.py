@@ -8,6 +8,7 @@ import sys
 import traceback
 from datetime import timedelta
 
+import paramiko
 import pytest
 import yaml
 
@@ -61,6 +62,8 @@ def pytest_runtest_setup(item):
         TestRun.presetup()
         try:
             TestRun.executor.wait_for_connection(timedelta(seconds=20))
+        except paramiko.AuthenticationException:
+            raise
         except Exception:
             try:
                 TestRun.plugin_manager.get_plugin('power_control').power_cycle()
