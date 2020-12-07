@@ -61,7 +61,7 @@ def test_stats_values():
         fio = fio_prepare()
         for i in range(caches_count):
             for j in range(cores_per_cache):
-                fio.add_job().target(cores[i][j].system_path)
+                fio.add_job().target(cores[i][j].path)
         fio.run()
         sleep(3)
 
@@ -156,22 +156,22 @@ def check_stats_initial(caches, cores):
                 if stat_name.lower() == "free":
                     if stat_value != caches[i].size.value:
                         TestRun.LOGGER.error(
-                            f"For core device {cores[i][j].system_path} "
+                            f"For core device {cores[i][j].path} "
                             f"value for '{stat_name}' is {stat_value}, "
                             f"should equal cache size: {caches[i].size.value}\n")
                 elif stat_value != 0:
                     TestRun.LOGGER.error(
-                        f"For core device {cores[i][j].system_path} value for "
+                        f"For core device {cores[i][j].path} value for "
                         f"'{stat_name}' is {stat_value}, should equal 0\n")
             for stat_name, stat_value in cores_stats_perc[j].items():
                 if stat_name.lower() == "free":
                     if stat_value != 100:
                         TestRun.LOGGER.error(
-                            f"For core device {cores[i][j].system_path} percentage value "
+                            f"For core device {cores[i][j].path} percentage value "
                             f"for '{stat_name}' is {stat_value}, should equal 100\n")
                 elif stat_value != 0:
                     TestRun.LOGGER.error(
-                        f"For core device {cores[i][j].system_path} percentage value "
+                        f"For core device {cores[i][j].path} percentage value "
                         f"for '{stat_name}' is {stat_value}, should equal 0\n")
 
 
@@ -191,7 +191,7 @@ def check_stats_after_io(caches, cores, after_reload: bool = False):
         )
         for j in range(cores_per_cache):
             fail_message = (
-                f"For core device {cores[i][j].system_path} in {cache_mode} cache mode ")
+                f"For core device {cores[i][j].path} in {cache_mode} cache mode ")
             if after_reload:
                 validate_usage_stats(
                     cores_stats[j], cores_stats_perc[j], caches[i], cache_mode, fail_message)

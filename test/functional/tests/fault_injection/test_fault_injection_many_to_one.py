@@ -202,7 +202,7 @@ def test_one_core_fail(cache_mode):
 
     with TestRun.step("Check if core device is really out of cache."):
         output = str(casadm.list_caches().stdout.splitlines())
-        if core_part1.system_path in output:
+        if core_part1.path in output:
             TestRun.fail("The first core device should be unplugged!")
 
     with TestRun.step("Check if the remaining core is able to use cache."):
@@ -232,7 +232,7 @@ def dd_builder(cache_mode: CacheMode, dev: Core, size: Size):
           .block_size(block_size)
           .count(blocks))
     if CacheModeTrait.InsertRead in CacheMode.get_traits(cache_mode):
-        dd.input(dev.system_path).output("/dev/null")
+        dd.input(dev.path).output("/dev/null")
     else:
-        dd.input("/dev/urandom").output(dev.system_path)
+        dd.input("/dev/urandom").output(dev.path)
     return dd

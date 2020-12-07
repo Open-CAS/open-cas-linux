@@ -57,13 +57,13 @@ def test_concurrent_cores_flush(cache_mode):
         block_size = Size(4, Unit.MebiByte)
         count = int(cache_size.value / 2 / block_size.value)
 
-        dd_pid = Dd().output(core1.system_path) \
+        dd_pid = Dd().output(core1.path) \
             .input("/dev/urandom") \
             .block_size(block_size) \
             .count(count) \
             .run_in_background()
 
-        Dd().output(core2.system_path) \
+        Dd().output(core2.path) \
             .input("/dev/urandom") \
             .block_size(block_size) \
             .count(count) \
@@ -160,7 +160,7 @@ def test_concurrent_caches_flush(cache_mode):
         count = int(cache_size.value / block_size.value)
         total_saturation = block_size * count
         for core in cores:
-            Dd().output(core.system_path) \
+            Dd().output(core.path) \
                 .input("/dev/urandom") \
                 .block_size(block_size) \
                 .count(count) \

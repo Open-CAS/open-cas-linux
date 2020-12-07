@@ -363,7 +363,7 @@ def fio_prepare(core, io_mode, io_size=io_size):
         .io_engine(IoEngine.libaio)
         .size(io_size)
         .read_write(io_mode)
-        .target(core.system_path)
+        .target(core.path)
         .direct(1)
     )
     return fio

@@ -26,7 +26,7 @@ SEQ_CUT_OFF_THRESHOLD_DEFAULT = Size(1, Unit.MebiByte)
 class Core(Device):
     def __init__(self, core_device: str, cache_id: int):
         self.core_device = Device(core_device)
-        self.system_path = None
+        self.path = None
         core_info = self.__get_core_info()
         if core_info["core_id"] != "-":
             self.core_id = int(core_info["core_id"])
@@ -38,14 +38,14 @@ class Core(Device):
 
     def __get_core_info(self):
         output = TestRun.executor.run(
-            list_cmd(OutputFormat.csv.name))
+            list_cmd(OutputFormat.csv.name, by_id_path=False))
         if output.exit_code != 0:
             raise Exception("Failed to execute list caches command.")
         output_lines = output.stdout.splitlines()
         for line in output_lines:
             split_line = line.split(',')
-            if split_line[0] == "core" and (split_line[2] == self.core_device.system_path
-                                            or split_line[5] == self.system_path):
+            if split_line[0] == "core" and (split_line[2] == self.core_device.short_path
+                                            or split_line[5] == self.path):
                 return {"core_id": split_line[1],
                         "core_device": split_line[2],
                         "status": split_line[3],
@@ -132,7 +132,7 @@ class Core(Device):
     def check_if_is_present_in_os(self, should_be_visible=True):
         device_in_system_message = "CAS device exists in OS."
         device_not_in_system_message = "CAS device does not exist in OS."
-        item = fs_utils.ls_item(f"{self.system_path}")
+        item = fs_utils.ls_item(f"{self.path}")
         if item is not None:
             if should_be_visible:
                 TestRun.LOGGER.info(device_in_system_message)

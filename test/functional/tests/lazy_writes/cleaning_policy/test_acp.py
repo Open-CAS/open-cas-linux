@@ -72,7 +72,7 @@ def test_acp_functional(cache_mode):
                .direct()
                .size(chunk_size)
                .block_size(Size(1, Unit.Blocks4096))
-               .target(f"{core.system_path}"))
+               .target(f"{core.path}"))
         for chunk in chunk_list:
             fio.add_job().offset(chunk.offset).io_size(chunk.writes_size)
         fio.run()

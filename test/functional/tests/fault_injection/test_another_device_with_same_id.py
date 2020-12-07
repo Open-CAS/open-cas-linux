@@ -29,7 +29,7 @@ def test_another_cache_with_same_id():
         cache_dev_1.create_partitions([Size(2, Unit.GibiByte)])
         TestRun.executor.run_expect_success(
             cli.start_cmd(
-                cache_dev_1.partitions[0].system_path, cache_id="1", force=True
+                cache_dev_1.partitions[0].path, cache_id="1", force=True
             )
         )
 
@@ -38,7 +38,7 @@ def test_another_cache_with_same_id():
         cache_dev_2.create_partitions([Size(2, Unit.GibiByte)])
         TestRun.executor.run_expect_fail(
             cli.start_cmd(
-                cache_dev_2.partitions[0].system_path, cache_id="1", force=True
+                cache_dev_2.partitions[0].path, cache_id="1", force=True
             )
         )
 
@@ -69,7 +69,7 @@ def test_another_core_with_same_id():
         TestRun.executor.run_expect_success(
             cli.add_core_cmd(
                 cache_id=f"{cache.cache_id}",
-                core_dev=f"{core_dev_1.partitions[0].system_path}",
+                core_dev=f"{core_dev_1.partitions[0].path}",
                 core_id="1",
             )
         )
@@ -80,7 +80,7 @@ def test_another_core_with_same_id():
         TestRun.executor.run_expect_fail(
             cli.add_core_cmd(
                 cache_id=f"{cache.cache_id}",
-                core_dev=f"{core_dev_2.partitions[0].system_path}",
+                core_dev=f"{core_dev_2.partitions[0].path}",
                 core_id="1",
             )
         )

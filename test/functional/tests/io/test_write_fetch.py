@@ -42,7 +42,7 @@ def test_write_fetch_full_misses(cache_mode, cache_line_size):
         io_stats_before_io = cache_disk.get_io_stats()
         blocksize = cache_line_size.value / 2
         skip_size = cache_line_size.value / 2
-        run_fio(target=core.system_path,
+        run_fio(target=core.path,
                 operation_type=ReadWrite.write,
                 skip=skip_size,
                 blocksize=blocksize,
@@ -87,7 +87,7 @@ def test_write_fetch_partial_misses(cache_mode, cache_line_size):
     with TestRun.step("Fill core partition with pattern."):
         cache_mode_traits = CacheMode.get_traits(cache_mode)
         if CacheModeTrait.InsertRead in cache_mode_traits:
-            run_fio(target=core_part.system_path,
+            run_fio(target=core_part.path,
                     operation_type=ReadWrite.write,
                     blocksize=Size(4, Unit.KibiByte),
                     io_size=io_size,
@@ -103,7 +103,7 @@ def test_write_fetch_partial_misses(cache_mode, cache_line_size):
     with TestRun.step("Cache half of file."):
         operation_type = ReadWrite.read if CacheModeTrait.InsertRead in cache_mode_traits \
             else ReadWrite.write
-        run_fio(target=core.system_path,
+        run_fio(target=core.path,
                 operation_type=operation_type,
                 skip=cache_line_size.value,
                 blocksize=cache_line_size.value,
@@ -117,7 +117,7 @@ def test_write_fetch_partial_misses(cache_mode, cache_line_size):
         io_stats_before_io = cache_disk.get_io_stats()
         blocksize = cache_line_size.value / 2 * 3
         skip_size = cache_line_size.value / 2
-        run_fio(target=core.system_path,
+        run_fio(target=core.path,
                 operation_type=ReadWrite.write,
                 skip=skip_size,
                 blocksize=blocksize,

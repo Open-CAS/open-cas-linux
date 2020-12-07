@@ -47,7 +47,8 @@ class casadm:
     def list_caches(cls):
         cmd = [cls.casadm_path,
                '--list-caches',
-               '--output-format', 'csv']
+               '--output-format', 'csv',
+               '--by-id-path']
         return cls.run_cmd(cmd)
 
     @classmethod

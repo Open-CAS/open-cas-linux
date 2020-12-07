@@ -40,10 +40,10 @@ def test_cli_start_stop_default_id(shortcut):
         if len(caches) != 1:
             TestRun.fail(f"There is a wrong number of caches found in the OS: {len(caches)}. "
                          f"Should be only 1.")
-        if cache.cache_device.system_path != cache_device.system_path:
+        if cache.cache_device.path != cache_device.path:
             TestRun.fail(f"The cache has started using a wrong device:"
-                         f" {cache.cache_device.system_path}."
-                         f"\nShould use {cache_device.system_path}.")
+                         f" {cache.cache_device.path}."
+                         f"\nShould use {cache_device.path}.")
 
     with TestRun.step("Stop the cache."):
         casadm.stop_cache(cache.cache_id, shortcut=shortcut)
@@ -83,10 +83,10 @@ def test_cli_start_stop_custom_id(shortcut):
         if len(caches) != 1:
             TestRun.fail(f"There is a wrong number of caches found in the OS: {len(caches)}. "
                          f"Should be only 1.")
-        if cache.cache_device.system_path != cache_device.system_path:
+        if cache.cache_device.path != cache_device.path:
             TestRun.fail(f"The cache has started using a wrong device:"
-                         f" {cache.cache_device.system_path}."
-                         f"\nShould use {cache_device.system_path}.")
+                         f" {cache.cache_device.path}."
+                         f"\nShould use {cache_device.path}.")
 
     with TestRun.step("Stop the cache."):
         casadm.stop_cache(cache.cache_id, shortcut=shortcut)
@@ -127,7 +127,7 @@ def test_cli_add_remove_default_id(shortcut):
         caches = casadm_parser.get_caches()
         if len(caches[0].get_core_devices()) != 1:
             TestRun.fail("One core should be present in the cache.")
-        if caches[0].get_core_devices()[0].system_path != core.system_path:
+        if caches[0].get_core_devices()[0].path != core.path:
             TestRun.fail("The core path should be equal to the path of the core added.")
 
     with TestRun.step("Remove the core from the cache."):
@@ -180,7 +180,7 @@ def test_cli_add_remove_custom_id(shortcut):
         caches = casadm_parser.get_caches()
         if len(caches[0].get_core_devices()) != 1:
             TestRun.fail("One core should be present in the cache.")
-        if caches[0].get_core_devices()[0].system_path != core.system_path:
+        if caches[0].get_core_devices()[0].path != core.path:
             TestRun.fail("The core path should be equal to the path of the core added.")
 
     with TestRun.step("Remove the core from the cache."):
@@ -227,7 +227,7 @@ def test_cli_load_and_force(shortcut):
 
     with TestRun.step("Try to load cache with 'force'."):
         output = TestRun.executor.run(
-            start_cmd(cache_dev=cache_device.system_path, force=True, load=True, shortcut=shortcut)
+            start_cmd(cache_dev=cache_device.path, force=True, load=True, shortcut=shortcut)
         )
         if output.exit_code == 0:
             TestRun.fail("Loading cache with 'force' option should fail.")

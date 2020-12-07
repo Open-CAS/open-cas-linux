@@ -39,7 +39,7 @@ def test_ioclass_usage_sum():
         Udev.disable()
 
     with TestRun.step(
-        f"Prepare filesystem and mount {core.system_path} at {mountpoint}"
+        f"Prepare filesystem and mount {core.path} at {mountpoint}"
     ):
         filesystem = Filesystem.xfs
         core.create_filesystem(filesystem)

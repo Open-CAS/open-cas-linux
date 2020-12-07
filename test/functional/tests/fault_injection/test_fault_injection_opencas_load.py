@@ -66,7 +66,7 @@ def test_stop_no_flush_load_cache(cache_mode, filesystem):
 
     with TestRun.step("Try to start cache without loading metadata."):
         output = TestRun.executor.run_expect_fail(cli.start_cmd(
-            cache_dev=str(cache_part.system_path), cache_mode=str(cache_mode.name.lower()),
+            cache_dev=str(cache_part.path), cache_mode=str(cache_mode.name.lower()),
             force=False, load=False))
         cli_messages.check_stderr_msg(output, cli_messages.start_cache_with_existing_metadata)
 
@@ -127,7 +127,7 @@ def test_stop_no_flush_load_cache_no_fs(cache_mode):
     with TestRun.step("Fill exported object with data."):
         dd = (Dd()
               .input("/dev/zero")
-              .output(core.system_path)
+              .output(core.path)
               .block_size(Size(1, Unit.Blocks4096))
               .oflag("direct"))
         dd.run()
@@ -143,7 +143,7 @@ def test_stop_no_flush_load_cache_no_fs(cache_mode):
 
     with TestRun.step("Try to start cache without loading metadata."):
         output = TestRun.executor.run_expect_fail(cli.start_cmd(
-            cache_dev=str(cache_part.system_path), cache_mode=str(cache_mode.name.lower()),
+            cache_dev=str(cache_part.path), cache_mode=str(cache_mode.name.lower()),
             force=False, load=False))
         cli_messages.check_stderr_msg(output, cli_messages.start_cache_with_existing_metadata)
 

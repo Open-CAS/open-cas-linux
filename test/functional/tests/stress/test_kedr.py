@@ -194,7 +194,7 @@ def test_kedr_basic_io_raw(module, unload_modules, install_kedr):
               .run_time(timedelta(minutes=4))
               .time_based()
               .read_write(ReadWrite.randrw)
-              .target(f"{core.system_path}")
+              .target(f"{core.path}")
               .direct()
          ).run()
 

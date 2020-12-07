@@ -170,4 +170,4 @@ def test_flush_over_640_gibibytes_raw_device(cache_mode):
 
 def check_disk_size(device: Device):
     if device.size < required_disk_size:
-        pytest.skip(f"Not enough space on device {device.system_path}.")
+        pytest.skip(f"Not enough space on device {device.path}.")

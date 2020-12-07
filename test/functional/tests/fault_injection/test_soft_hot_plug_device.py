@@ -205,7 +205,7 @@ def fio_prepare(core):
         .create_command()
         .io_engine(IoEngine.libaio)
         .read_write(ReadWrite.randrw)
-        .target(core.system_path)
+        .target(core.path)
         .continue_on_error(ErrorFilter.io)
         .direct(1)
         .run_time(timedelta(seconds=30))

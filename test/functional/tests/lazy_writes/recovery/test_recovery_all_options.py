@@ -88,8 +88,8 @@ def test_recovery_all_options(cache_mode, cache_line_size, cleaning_policy, file
         core.unmount()
         TestRun.LOGGER.info(f"Number of dirty blocks in cache: {cache.get_dirty_blocks()}")
         power_cycle_dut()
-        cache_device.system_path = cache_device_link.get_target()
-        core_device.system_path = core_device_link.get_target()
+        cache_device.path = cache_device_link.get_target()
+        core_device.path = core_device_link.get_target()
 
     with TestRun.step("Try to start cache without load and force option."):
         try:

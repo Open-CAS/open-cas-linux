@@ -126,7 +126,7 @@ def test_flush_inactive_devices():
         InitConfig.create_init_config_from_running_configuration()
 
     with TestRun.step("Run random writes to CAS device."):
-        run_fio([first_core.system_path, second_core.system_path])
+        run_fio([first_core.path, second_core.path])
 
     with TestRun.step("Stop cache without flushing dirty data."):
         cache.stop(no_data_flush=True)
@@ -273,7 +273,7 @@ def test_load_cache_with_inactive_core():
         plug_device.unplug()
 
     with TestRun.step("Load cache."):
-        output = TestRun.executor.run(cli.load_cmd(cache_dev.system_path))
+        output = TestRun.executor.run(cli.load_cmd(cache_dev.path))
         cli_messages.check_stderr_msg(output, cli_messages.load_inactive_core_missing)
 
     with TestRun.step("Plug missing device and stop cache."):
@@ -429,7 +429,7 @@ def test_print_statistics_inactive(cache_mode):
         InitConfig.create_init_config_from_running_configuration()
 
     with TestRun.step("Run IO."):
-        run_fio([first_core.system_path, second_core.system_path])
+        run_fio([first_core.path, second_core.path])
 
     with TestRun.step("Print statistics and check if there is no inactive usage section."):
         active_stats = cache.get_statistics()
@@ -460,7 +460,7 @@ def test_print_statistics_inactive(cache_mode):
         time.sleep(1)
         first_core_status = first_core.get_status()
         if first_core_status != CoreStatus.active:
-            TestRun.fail(f"Core {first_core.system_path} should be in active state but it is not. "
+            TestRun.fail(f"Core {first_core.path} should be in active state but it is not. "
                          f"Actual state: {first_core_status}.")
 
     with TestRun.step("Check cache statistics section of inactive devices."):
@@ -543,7 +543,7 @@ def test_remove_detached_cores():
         InitConfig.create_init_config_from_running_configuration()
 
     with TestRun.step("Run random writes to all CAS devices."):
-        run_fio([c.system_path for c in cores])
+        run_fio([c.path for c in cores])
 
     with TestRun.step("Flush dirty data from two CAS devices and verify than other two contain "
                       "dirty data."):
@@ -577,7 +577,7 @@ def test_remove_detached_cores():
     with TestRun.step("Verify that cores are no longer listed."):
         output = casadm.list_caches().stdout
         for dev in core_devs:
-            if dev.system_path in output:
+            if dev.path in output:
                 TestRun.fail(f"CAS device is still listed in casadm list output:\n{output}")
 
 
@@ -612,7 +612,7 @@ def test_remove_inactive_devices():
         InitConfig.create_init_config_from_running_configuration()
 
     with TestRun.step("Run random writes to all CAS devices."):
-        run_fio([c.system_path for c in cores])
+        run_fio([c.path for c in cores])
 
     with TestRun.step("Flush dirty data from two CAS devices and verify than other two "
                       "contain dirty data."):
@@ -657,7 +657,7 @@ def test_remove_inactive_devices():
                                     "dirty CAS device as expected.")
                 cli_messages.check_stderr_msg(e.output, cli_messages.remove_inactive_core)
                 output = casadm.list_caches().stdout
-                if core.system_path not in output:
+                if core.path not in output:
                     TestRun.fail(f"CAS device is not listed in casadm list output but it should be."
                                  f"\n{output}")
                 core.remove_core(force=True)
@@ -695,7 +695,7 @@ def test_stop_cache_with_inactive_devices():
         InitConfig.create_init_config_from_running_configuration()
 
     with TestRun.step("Run random writes and verify that CAS device contains dirty data."):
-        run_fio([core.system_path])
+        run_fio([core.path])
         if core.get_dirty_blocks() == Size.zero():
             TestRun.fail("There is no dirty data on core device.")
 

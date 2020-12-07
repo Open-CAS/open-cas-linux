@@ -70,11 +70,8 @@ class CacheConfigLine:
         self.extra_flags = extra_flags
 
     def __str__(self):
-        cache_symlink = self.cache_device.get_device_link("/dev/disk/by-id")
-        cache_device_path = (
-            cache_symlink.full_path if cache_symlink is not None else self.cache_device.system_path
-        )
-        params = [str(self.cache_id), cache_device_path, self.cache_mode.name, self.extra_flags]
+        params = [str(self.cache_id), self.cache_device.path,
+                  self.cache_mode.name, self.extra_flags]
         return '\t'.join(params)
 
 
@@ -88,9 +85,6 @@ class CoreConfigLine:
         self.extra_flags = extra_flags
 
     def __str__(self):
-        core_symlink = self.core_device.get_device_link("/dev/disk/by-id")
-        core_device_path = (
-            core_symlink.full_path if core_symlink is not None else self.core_device.system_path
-        )
-        params = [str(self.cache_id), str(self.core_id), core_device_path, self.extra_flags]
+        params = [str(self.cache_id), str(self.core_id),
+                  self.core_device.path, self.extra_flags]
         return '\t'.join(params)

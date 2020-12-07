@@ -203,10 +203,10 @@ def test_udev_cache_load(cache_mode):
         elif len(caches) > 1:
             caches_list = '\n'.join(caches)
             TestRun.fail(f"There is more than 1 cache loaded:\n{caches_list}")
-        elif caches[0].cache_device.system_path != cache_dev.system_path:
+        elif caches[0].cache_device.path != cache_dev.path:
             TestRun.fail(f"Cache loaded on wrong device. "
-                         f"Actual: {caches[0].cache_device.system_path}, "
-                         f"expected: {cache_dev.system_path}")
+                         f"Actual: {caches[0].cache_device.path}, "
+                         f"expected: {cache_dev.path}")
         elif caches[0].get_cache_mode() != cache_mode:
             TestRun.fail(f"Cache did load with different cache mode. "
                          f"Actual: {caches[0].get_cache_mode()}, expected: {cache_mode}")
@@ -268,7 +268,7 @@ def test_neg_udev_cache_load():
         if len(cas_devices["caches"]) != 1:
             TestRun.LOGGER.error(f"There is wrong number of caches. Expected: 1, actual: "
                                  f"{len(cas_devices['caches'])}")
-        elif cas_devices["caches"][1]["device"] != cache_disk.partitions[0].system_path or \
+        elif cas_devices["caches"][1]["device"] != cache_disk.partitions[0].path or \
                 CacheStatus[(cas_devices["caches"][1]["status"]).lower()] != CacheStatus.running:
             TestRun.LOGGER.error(f"Cache did not load properly: {cas_devices['caches'][1]}")
         if len(cas_devices["cores"]) != 2:
@@ -277,7 +277,7 @@ def test_neg_udev_cache_load():
 
         correct_core_devices = []
         for i in first_cache_core_numbers:
-            correct_core_devices.append(core_disk.partitions[i].system_path)
+            correct_core_devices.append(core_disk.partitions[i].path)
         for core in cas_devices["cores"].values():
             if core["device"] not in correct_core_devices or \
                     CoreStatus[core["status"].lower()] != CoreStatus.active or \
@@ -297,7 +297,7 @@ def test_neg_udev_cache_load():
         core_pool_expected_devices = []
         for i in range(0, cores_count):
             if i not in first_cache_core_numbers:
-                core_pool_expected_devices.append(core_disk.partitions[i].system_path)
+                core_pool_expected_devices.append(core_disk.partitions[i].path)
         for c in cas_devices["core_pool"]:
             if c["device"] not in core_pool_expected_devices:
                 TestRun.LOGGER.error(f"Wrong core device added to core pool: {c}.")
@@ -305,11 +305,11 @@ def test_neg_udev_cache_load():
 
 def check_if_dev_in_core_pool(dev, should_be_in_core_pool=True):
     cas_devices_dict = casadm_parser.get_cas_devices_dict()
-    is_in_core_pool = any(dev.system_path == d["device"] for d in cas_devices_dict["core_pool"])
+    is_in_core_pool = any(dev.path == d["device"] for d in cas_devices_dict["core_pool"])
     if not (should_be_in_core_pool ^ is_in_core_pool):
-        TestRun.LOGGER.info(f"Core device {dev.system_path} is"
+        TestRun.LOGGER.info(f"Core device {dev.path} is"
                             f"{'' if should_be_in_core_pool else ' not'} listed in core pool "
                             f"as expected.")
     else:
-        TestRun.fail(f"Core device {dev.system_path} is{' not' if should_be_in_core_pool else ''} "
+        TestRun.fail(f"Core device {dev.path} is{' not' if should_be_in_core_pool else ''} "
                      f"listed in core pool.")

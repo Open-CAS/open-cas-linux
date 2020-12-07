@@ -131,7 +131,7 @@ def test_recovery_unplug_cache_raw(cache_mode, cls):
         core = cache.add_core(core_device)
 
     with TestRun.step("Copy file to CAS."):
-        copy_file(source=source_file.full_path, target=core.system_path,
+        copy_file(source=source_file.full_path, target=core.path,
                   size=test_file_size, direct="oflag")
         TestRun.LOGGER.info(str(core.get_statistics()))
 
@@ -156,7 +156,7 @@ def test_recovery_unplug_cache_raw(cache_mode, cls):
         cache.stop()
 
     with TestRun.step("Copy file from core device and check md5sum."):
-        copy_file(source=core_device.system_path, target=target_file.full_path,
+        copy_file(source=core_device.path, target=target_file.full_path,
                   size=test_file_size, direct="iflag")
         compare_files(source_file, target_file)
 

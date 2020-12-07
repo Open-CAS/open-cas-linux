@@ -95,7 +95,8 @@ def start_cmd(cache_dev: str, cache_mode: str = None, cache_line_size: str = Non
 
 def print_statistics_cmd(cache_id: str, core_id: str = None, per_io_class: bool = False,
                          io_class_id: str = None, filter: str = None,
-                         output_format: str = None, shortcut: bool = False):
+                         output_format: str = None, by_id_path: bool = True,
+                         shortcut: bool = False):
     command = (" -P -i " if shortcut else " --stats --cache-id ") + cache_id
     if core_id is not None:
         command += (" -j " if shortcut else " --core-id ") + core_id
@@ -109,6 +110,8 @@ def print_statistics_cmd(cache_id: str, core_id: str = None, per_io_class: bool 
         command += (" -f " if shortcut else " --filter ") + filter
     if output_format is not None:
         command += (" -o " if shortcut else " --output-format ") + output_format
+    if by_id_path:
+        command += (" -b " if shortcut else " --by-id-path ")
     return casadm_bin + command
 
 
@@ -126,10 +129,12 @@ def stop_cmd(cache_id: str, no_data_flush: bool = False, shortcut: bool = False)
     return casadm_bin + command
 
 
-def list_cmd(output_format: str = None, shortcut: bool = False):
+def list_cmd(output_format: str = None, by_id_path: bool = True, shortcut: bool = False):
     command = " -L" if shortcut else " --list-caches"
     if output_format == "table" or output_format == "csv":
         command += (" -o " if shortcut else " --output-format ") + output_format
+    if by_id_path:
+        command += (" -b " if shortcut else " --by-id-path ")
     return casadm_bin + command
 
 

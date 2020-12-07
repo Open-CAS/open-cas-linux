@@ -66,7 +66,7 @@ def test_ioclass_lba():
         for lba in range(min_cached_lba, max_cached_lba, 8):
             dd = (
                 Dd().input("/dev/zero")
-                    .output(f"{core.system_path}")
+                    .output(f"{core.path}")
                     .count(dd_count)
                     .block_size(dd_size)
                     .seek(lba)
@@ -90,7 +90,7 @@ def test_ioclass_lba():
                 continue
             dd = (
                 Dd().input("/dev/zero")
-                    .output(f"{core.system_path}")
+                    .output(f"{core.path}")
                     .count(dd_count)
                     .block_size(dd_size)
                     .seek(rand_lba)
@@ -140,7 +140,7 @@ def test_ioclass_request_size():
             req_size = random.choice(cached_req_sizes)
             dd = (
                 Dd().input("/dev/zero")
-                    .output(core.system_path)
+                    .output(core.path)
                     .count(1)
                     .block_size(req_size)
                     .oflag("direct")
@@ -163,7 +163,7 @@ def test_ioclass_request_size():
             req_size = random.choice(not_cached_req_sizes)
             dd = (
                 Dd().input("/dev/zero")
-                    .output(core.system_path)
+                    .output(core.path)
                     .count(1)
                     .block_size(req_size)
                     .oflag("direct")
@@ -212,12 +212,12 @@ def test_ioclass_direct(filesystem):
             .io_engine(IoEngine.libaio) \
             .size(io_size).offset(io_size) \
             .read_write(ReadWrite.write) \
-            .target(f"{mountpoint}/tmp_file" if filesystem else core.system_path)
+            .target(f"{mountpoint}/tmp_file" if filesystem else core.path)
 
     with TestRun.step("Prepare filesystem."):
         if filesystem:
             TestRun.LOGGER.info(
-                f"Preparing {filesystem.name} filesystem and mounting {core.system_path} at"
+                f"Preparing {filesystem.name} filesystem and mounting {core.path} at"
                 f" {mountpoint}"
             )
             core.create_filesystem(filesystem)
@@ -305,7 +305,7 @@ def test_ioclass_metadata(filesystem):
         )
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
-    with TestRun.step(f"Prepare {filesystem.name} filesystem and mount {core.system_path} "
+    with TestRun.step(f"Prepare {filesystem.name} filesystem and mount {core.path} "
                       f"at {mountpoint}."):
         core.create_filesystem(filesystem)
         core.mount(mountpoint)
@@ -444,7 +444,7 @@ def test_ioclass_id_as_condition(filesystem):
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
     with TestRun.step(f"Prepare {filesystem.name} filesystem "
-                      f"and mount {core.system_path} at {mountpoint}."):
+                      f"and mount {core.path} at {mountpoint}."):
         core.create_filesystem(filesystem)
         core.mount(mountpoint)
         fs_utils.create_directory(base_dir_path)
@@ -553,7 +553,7 @@ def test_ioclass_conditions_or(filesystem):
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
     with TestRun.step(f"Prepare {filesystem.name} filesystem "
-                      f"and mount {core.system_path} at {mountpoint}."):
+                      f"and mount {core.path} at {mountpoint}."):
         core.create_filesystem(filesystem)
         core.mount(mountpoint)
         for i in range(1, 6):
@@ -614,7 +614,7 @@ def test_ioclass_conditions_and(filesystem):
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
     TestRun.LOGGER.info(f"Preparing {filesystem.name} filesystem "
-                        f"and mounting {core.system_path} at {mountpoint}")
+                        f"and mounting {core.path} at {mountpoint}")
     core.create_filesystem(filesystem)
     core.mount(mountpoint)
     sync()
@@ -662,7 +662,7 @@ def test_ioclass_effective_ioclass(filesystem):
                  f"file_size:ge:{file_size_bytes // 2}"]
 
     with TestRun.LOGGER.step(f"Preparing {filesystem.name} filesystem "
-                             f"and mounting {core.system_path} at {mountpoint}"):
+                             f"and mounting {core.path} at {mountpoint}"):
         core.create_filesystem(filesystem)
         core.mount(mountpoint)
         fs_utils.create_directory(test_dir)

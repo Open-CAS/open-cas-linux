@@ -71,12 +71,12 @@ def test_data_integrity_5d_dss(filesystems):
 
     with TestRun.step("Create filesystems and mount cores"):
         for i, core in enumerate(cores):
-            mount_point = core.system_path.replace('/dev/', '/mnt/')
+            mount_point = core.path.replace('/dev/', '/mnt/')
             if not fs_utils.check_if_directory_exists(mount_point):
                 fs_utils.create_directory(mount_point)
-            TestRun.LOGGER.info(f"Create filesystem {filesystems[i].name} on {core.system_path}")
+            TestRun.LOGGER.info(f"Create filesystem {filesystems[i].name} on {core.path}")
             core.create_filesystem(filesystems[i])
-            TestRun.LOGGER.info(f"Mount filesystem {filesystems[i].name} on {core.system_path} to "
+            TestRun.LOGGER.info(f"Mount filesystem {filesystems[i].name} on {core.path} to "
                                 f"{mount_point}")
             core.mount(mount_point)
             sync()

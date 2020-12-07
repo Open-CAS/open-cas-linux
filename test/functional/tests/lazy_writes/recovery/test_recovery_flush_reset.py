@@ -56,12 +56,12 @@ def test_recovery_flush_reset_raw(cache_mode):
         cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
 
     with TestRun.step("Copy file to CAS."):
-        copy_file(source=source_file.full_path, target=core.system_path, size=test_file_size,
+        copy_file(source=source_file.full_path, target=core.path, size=test_file_size,
                   direct="oflag")
 
     with TestRun.step("Sync and flush buffers."):
         os_utils.sync()
-        output = TestRun.executor.run(f"hdparm -f {core.system_path}")
+        output = TestRun.executor.run(f"hdparm -f {core.path}")
         if output.exit_code != 0:
             raise CmdException("Error during hdparm", output)
 
@@ -70,8 +70,8 @@ def test_recovery_flush_reset_raw(cache_mode):
 
     with TestRun.step("Hard reset DUT during data flushing."):
         power_cycle_dut(wait_for_flush_begin=True, core_device=core_device)
-        cache_device.system_path = cache_device_link.get_target()
-        core_device.system_path = core_device_link.get_target()
+        cache_device.path = cache_device_link.get_target()
+        core_device.path = core_device_link.get_target()
 
     with TestRun.step("Copy file from core and check if current md5sum is different than "
                       "before restart."):
@@ -155,8 +155,8 @@ def test_recovery_flush_reset_fs(cache_mode, fs):
 
     with TestRun.step("Hard reset DUT during data flushing."):
         power_cycle_dut(True, core_device)
-        cache_device.system_path = cache_device_link.get_target()
-        core_device.system_path = core_device_link.get_target()
+        cache_device.path = cache_device_link.get_target()
+        core_device.path = core_device_link.get_target()
 
     with TestRun.step("Load cache."):
         cache = casadm.load_cache(cache_device)
