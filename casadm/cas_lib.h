@@ -26,7 +26,7 @@
 
 #define FAILURE 1		/**< default non-zero exit code. */
 #define INTERRUPTED 2		/**< if command is interrupted */
-#define SUCCESS 0		/**< 0 exit code from majority of our functions
+#define SUCCESS 0		/**< 0 exit code from majority of our functions \
 				     stands for success */
 
 struct core_device {
@@ -210,7 +210,7 @@ int set_cache_mode(unsigned int cache_state, unsigned int cache_id, int flush);
  */
 int add_core(unsigned int cache_id, unsigned int core_id, const char *core_device, int try_add, int update_path);
 
-int get_core_info(int fd, int cache_id, int core_id, struct kcas_core_info *info);
+int get_core_info(int fd, int cache_id, int core_id, struct kcas_core_info *info, bool by_id_path);
 
 int remove_core(unsigned int cache_id, unsigned int core_id,
 		bool detach, bool force_no_flush);
@@ -234,16 +234,16 @@ int partition_is_name_valid(const char *name);
 
 int cas_module_version(char *buff, int size);
 int disk_module_version(char *buff, int size);
-int list_caches(unsigned int list_format);
+int list_caches(unsigned int list_format, bool by_id_path);
 int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
-		 unsigned int stats_filters, unsigned int stats_format);
+		 unsigned int stats_filters, unsigned int stats_format, bool by_id_path);
 int get_inactive_core_count(const struct kcas_cache_info *cache_info);
 
 int open_ctrl_device_quiet();
 int open_ctrl_device();
 int *get_cache_ids(int *cache_count);
-struct cache_device *get_cache_device_by_id_fd(int cache_id, int fd);
-struct cache_device **get_cache_devices(int *caches_count);
+struct cache_device *get_cache_device_by_id_fd(int cache_id, int fd, bool by_id_path);
+struct cache_device **get_cache_devices(int *caches_count, bool by_id_path);
 void free_cache_devices_list(struct cache_device **caches, int caches_count);
 
 int validate_dev(const char *dev_path);

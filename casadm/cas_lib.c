@@ -662,6 +662,9 @@ int set_device_path(char *dest_path, size_t dest_len, const char *src_path, size
 	return FAILURE;
 }
 
+int get_core_info(int fd, int cache_id, int core_id,
+		  struct kcas_core_info *info, bool by_id_path)
+{
 	memset(info, 0, sizeof(*info));
 	info->cache_id = cache_id;
 	info->core_id = core_id;
@@ -670,19 +673,20 @@ int set_device_path(char *dest_path, size_t dest_len, const char *src_path, size
 		return FAILURE;
 	}
 
-	/* internally use device special file path to describe core */
-	if (get_dev_path(info->core_path_name,
-			 info->core_path_name,
-			 sizeof(info->core_path_name))) {
-		cas_printf(LOG_WARNING, "WARNING: Can not resolve path to core "
-			"%d from cache %d. By-id path will be shown for that core.\n",
-			core_id, cache_id);
+	if (!by_id_path) {
+		if (get_dev_path(info->core_path_name, info->core_path_name,
+				 sizeof(info->core_path_name))) {
+			cas_printf(LOG_WARNING, "WARNING: Can not resolve path to core %d "
+				   "from cache %d. By-id path will be shown for that core.\n",
+				   core_id, cache_id);
+		}
 	}
 
 	return SUCCESS;
 }
 
-static int get_core_device(int cache_id, int core_id, struct core_device *core)
+static int get_core_device(int cache_id, int core_id,
+			   struct core_device *core, bool by_id_path)
 {
 	int fd;
 	struct kcas_core_info cmd_info;
@@ -694,7 +698,7 @@ static int get_core_device(int cache_id, int core_id, struct core_device *core)
 	if (fd == -1)
 		return FAILURE;
 
-	if (get_core_info(fd, cache_id, core_id, &cmd_info)) {
+	if (get_core_info(fd, cache_id, core_id, &cmd_info, by_id_path)) {
 		cas_printf(LOG_ERR, "Error while retrieving stats\n");
 		print_err(cmd_info.ext_err_code);
 		close(fd);
@@ -788,7 +792,7 @@ error_out:
  *
  * @return valid pointer to a structure or NULL if error happened
  */
-struct cache_device *get_cache_device(const struct kcas_cache_info *info)
+struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool by_id_path)
 {
 	int core_id, cache_id, ret;
 	struct cache_device *cache;
@@ -828,7 +832,7 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info)
 	for (cache->core_count = 0; cache->core_count < info->info.core_count; ++cache->core_count) {
 		core_id = info->core_id[cache->core_count];
 
-		ret = get_core_device(cache_id, core_id, &core);
+		ret = get_core_device(cache_id, core_id, &core, by_id_path);
 		if (0 != ret) {
 			break;
 		} else {
@@ -850,7 +854,7 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info)
  * @param cache_id cache id (1...)
  * @return valid pointer to a structure or NULL if error happened
  */
-struct cache_device *get_cache_device_by_id_fd(int cache_id, int fd)
+struct cache_device *get_cache_device_by_id_fd(int cache_id, int fd, bool by_id_path)
 {
 	struct kcas_cache_info cmd_info;
 
@@ -862,7 +866,7 @@ struct cache_device *get_cache_device_by_id_fd(int cache_id, int fd)
 			return NULL;
 	}
 
-	return get_cache_device(&cmd_info);
+	return get_cache_device(&cmd_info, by_id_path);
 }
 
 void free_cache_devices_list(struct cache_device **caches, int caches_count)
@@ -875,7 +879,7 @@ void free_cache_devices_list(struct cache_device **caches, int caches_count)
 	free(caches);
 }
 
-struct cache_device **get_cache_devices(int *caches_count)
+struct cache_device **get_cache_devices(int *caches_count, bool by_id_path)
 {
 	int i, fd, status, chunk_size, count;
 	struct kcas_cache_list cache_list;
@@ -921,7 +925,8 @@ struct cache_device **get_cache_devices(int *caches_count)
 
 		/* iterate through id table and get status */
 		for (i = 0; i < cache_list.in_out_num; i++) {
-			if ((tmp_cache = get_cache_device_by_id_fd(cache_list.cache_id_tab[i], fd)) == NULL) {
+			if ((tmp_cache = get_cache_device_by_id_fd(cache_list.cache_id_tab[i],
+								   fd, by_id_path)) == NULL) {
 				cas_printf(LOG_ERR, "Failed to retrieve cache information!\n");
 				continue;
 			}
@@ -950,7 +955,7 @@ int check_cache_already_added(const char *cache_device) {
 	struct cache_device **caches, *curr_cache;
 	int caches_count, i;
 
-	caches = get_cache_devices(&caches_count);
+	caches = get_cache_devices(&caches_count, false);
 
 	if (NULL == caches) {
 		return SUCCESS;
@@ -1009,7 +1014,7 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 
 	if (cache_id == 0) {
 		cache_id = 1;
-		caches = get_cache_devices(&caches_count);
+		caches = get_cache_devices(&caches_count, false);
 		if (caches != NULL) {
 			psort(caches, caches_count, sizeof(struct cache_device*), caches_compare);
 			for (i = 0; i < caches_count; ++i) {
@@ -1078,7 +1083,7 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	status = SUCCESS;
 
 	for (i = 0; i < CORE_ADD_MAX_TIMEOUT; ++i) {
-		cache = get_cache_device_by_id_fd(cache_id, fd);
+		cache = get_cache_device_by_id_fd(cache_id, fd, false);
 		status = FAILURE;
 
 		if (cache == NULL) {
@@ -1494,7 +1499,7 @@ int check_core_already_cached(const char *core_device) {
 	if (get_dev_path(core_device, core_device_path, sizeof(core_device_path)))
 		return SUCCESS;
 
-	caches = get_cache_devices(&caches_count);
+	caches = get_cache_devices(&caches_count, false);
 
 	if (NULL == caches) {
 		return SUCCESS;
@@ -1583,7 +1588,7 @@ int get_inactive_core_count(const struct kcas_cache_info *cache_info)
 	int inactive_cores = 0;
 	int i;
 
-	cache = get_cache_device(cache_info);
+	cache = get_cache_device(cache_info, false);
 	if (!cache)
 		return -1;
 
@@ -1686,7 +1691,7 @@ int illegal_recursive_core(unsigned int cache_id, const char *core_device, int c
 		 * iteration of this loop*/
 
 		/* get underlying core device of dev_cache_id-dev_core_id */
-		cache = get_cache_device_by_id_fd(dev_cache_id, fd);
+		cache = get_cache_device_by_id_fd(dev_cache_id, fd, false);
 
 		if (!cache) {
 			cas_printf(LOG_ERR, "Failed to extract statistics for "
@@ -1762,7 +1767,7 @@ int add_core(unsigned int cache_id, unsigned int core_id, const char *core_devic
 	if (fd == -1)
 		return FAILURE;
 
-	/* check for illegal rec ursive caching config. */
+	/* check for illegal recursive caching config. */
 	if (illegal_recursive_core(cache_id, user_core_path,
 		user_core_path_size, fd)) {
 		close(fd);
@@ -2624,7 +2629,7 @@ error_out:
 	return result;
 }
 
-int list_caches(unsigned int list_format)
+int list_caches(unsigned int list_format, bool by_id_path)
 {
 	struct cache_device **caches, *curr_cache;
 	struct kcas_core_pool_path core_pool_path_cmd = {0};
@@ -2636,7 +2641,7 @@ int list_caches(unsigned int list_format)
 	pthread_t thread;
 	struct list_printout_ctx printout_ctx;
 
-	caches = get_cache_devices(&caches_count);
+	caches = get_cache_devices(&caches_count, by_id_path);
 	if (caches_count < 0) {
 		cas_printf(LOG_INFO, "Error getting caches list\n");
 		return FAILURE;
@@ -2691,9 +2696,12 @@ int list_caches(unsigned int list_format)
 			"-" /* device */);
 		for (i = 0; i < core_pool_path_cmd.core_pool_count; i++) {
 			char *core_path = core_pool_path_cmd.core_path_tab + (MAX_STR_LEN * i);
-			if (get_dev_path(core_path, core_path, MAX_STR_LEN)) {
-				cas_printf(LOG_WARNING, "WARNING: Can not resolve path to core. "
-						"By-id path will be shown for that core.\n");
+			if (!by_id_path) {
+				if (get_dev_path(core_path, core_path, MAX_STR_LEN)) {
+					cas_printf(LOG_WARNING, "WARNING: Can not resolve path "
+						   "to core. By-id path will be shown for that "
+						   "core.\n");
+				}
 			}
 			fprintf(intermediate_file[1], TAG(TREE_LEAF)
 			"%s,%s,%s,%s,%s,%s\n",
@@ -2715,7 +2723,10 @@ int list_caches(unsigned int list_format)
 		float cache_flush_prog;
 		float core_flush_prog;
 
-		get_dev_path(curr_cache->device, curr_cache->device, sizeof(curr_cache->device));
+		if (!by_id_path) {
+			get_dev_path(curr_cache->device, curr_cache->device,
+				     sizeof(curr_cache->device));
+		}
 
 		cache_flush_prog = calculate_flush_progress(curr_cache->dirty, curr_cache->flushed);
 		if (cache_flush_prog) {
