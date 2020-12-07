@@ -202,19 +202,6 @@ get_stats_value() {
     clear_options
 }
 
-format_nvme() {
-    check_options ${FUNCNAME[0]}
-
-    local COMMAND="$CAS --nvme --format $NVME_FORMAT_MODE_OPTION --device $DEVICE_OPTION"
-
-    if [ -n "$NVME_FORMAT_FORCE_OPTION" ] ; then
-        COMMAND="$COMMAND --force"
-    fi
-
-    run_cmd $COMMAND
-    clear_options
-}
-
 init() {
     check_options ${FUNCNAME[0]}
 
@@ -717,7 +704,6 @@ export -f try_add_core
 export -f remove_core
 export -f check_device_state
 export -f get_stats_value
-export -f format_nvme
 export -f init
 export -f iteration
 export -f deinit
