@@ -41,7 +41,8 @@ Extra fields (optional) lazy_startup=<true,false>
 .TP
 \fBNOTES\fR
 .RS
-1) It is highly recommended to specify cache/core device using path that is constant across reboots - e.g. disk device links in /dev/disk/by-id/, preferably those using device WWN if available: /dev/disk/by-id/wwn-0x123456789abcdef0. Referencing devices via /dev/sd* may result in cache misconfiguration after system reboot due to change(s) in drive order.
+1) It is required to specify cache/core device using links in /dev/disk/by-id/, preferably those using device WWN if available: /dev/disk/by-id/wwn-0x123456789abcdef0. 
+Referencing devices via /dev/sd* is prohibited because may result in cache misconfiguration after system reboot due to change(s) in drive order. It is allowed to use /dev/cas*-* as a device path.
 .TP
 2) To specify use of the IC Classification file, place ioclass_file=path/to/file.csv in caches configuration section under Extra fields (optional)
 
