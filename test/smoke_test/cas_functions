@@ -30,18 +30,6 @@ restore_config() {
 start_cache() {
     check_options ${FUNCNAME[0]}
 
-    CACHE_DEVICE_NVME_REGEX="(/dev/nvme[0-9]n[0-9])([0-9]*)"
-    if [ ! -b ${CACHE_DEVICE_OPTION} ]
-    then
-        if [[ "${CACHE_DEVICE_OPTION}" =~ ${CACHE_DEVICE_NVME_REGEX} ]]
-        then
-            if [ -b ${BASH_REMATCH[1]}p${BASH_REMATCH[2]} ]
-            then
-                CACHE_DEVICE_OPTION=${BASH_REMATCH[1]}p${BASH_REMATCH[2]}
-            fi
-        fi
-    fi
-
     local COMMAND="$CAS --start-cache --cache-device $CACHE_DEVICE_OPTION --cache-id $CACHE_ID_OPTION"
 
     if [ -n "$CACHE_FORCE_OPTION" ] ; then
@@ -113,7 +101,8 @@ add_core() {
         return 0
     fi
     local i=0
-    local CAS_DEV=` casadm -L | egrep "^.core +[0-9]+ +$CORE_DEVICE_OPTION" | awk '{print $NF}'`
+    local SHORT_LINK=$(realpath $CORE_DEVICE_OPTION)
+    local CAS_DEV=` casadm -L | egrep "^.core +[0-9]+ +$SHORT_LINK" | awk '{print $NF}'`
     clear_options
     while [ ! -e $CAS_DEV ]; do
         sleep 2
@@ -291,10 +280,10 @@ init() {
             CACHE_LINE_SIZE="$L_CACHE_LINE_SIZE"
         fi
 
-        CACHE_ID_OPTION="$i" CACHE_DEVICE_OPTION="${CACHE_DEVICE}$i" start_cache
+        CACHE_ID_OPTION="$i" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part$i" start_cache
 
         for ((j = 1; j <= L_NUMBER_OF_CORE_PARTITIONS && j <= MAX_NUMBER_OF_CORE_PARTITIONS; j++)); do
-            CACHE_ID_OPTION="$i" CORE_DEVICE_OPTION="${CORE_DEVICE}$k" add_core
+            CACHE_ID_OPTION="$i" CORE_DEVICE_OPTION="${CORE_DEVICE}-part$k" add_core
             k=`expr $k \+ 1`
         done
     done
@@ -808,9 +797,9 @@ make_primary_partitions() {
 
     for ID in `seq 1 $PART_NUM`; do
         local i=0
-        local TEST_DEV="${TARGET_DEVICE_OPTION}${ID}"
-        local TEST_DEV_P="${TARGET_DEVICE_OPTION}p${ID}"
-        while ! [[ -b $TEST_DEV  || -b $TEST_DEV_P ]] ; do
+        local TEST_DEV="${DEV_NAME}-part${ID}"
+        local TEST_DEV_P="${DEV_NAME}-part${ID}"
+        while ! [[ -L $TEST_DEV  || -L $TEST_DEV_P ]] ; do
             # make sure that partition is detected if it was created
             partprobe
             sleep 1
@@ -829,7 +818,7 @@ make_primary_partitions() {
         # erase all filesystem/cas cache metadata that may have existed on it
         # before.
 
-        if [ -b $TEST_DEV ]
+        if [ -L $TEST_DEV ]
         then
             run_cmd dd if=/dev/zero of="${TEST_DEV}" bs=1M count=1 oflag=direct
         else
@@ -913,6 +902,7 @@ remove_caches() {
 }
 
 turn_on_device() {
+    # Use realpath resolved before turning off device
     check_options ${FUNCNAME[0]}
     if [[ $CACHE_DEVICE_OPTION == "/dev/nvme"* ]] ; then
         turn_on_nvme_device
@@ -925,17 +915,19 @@ turn_on_device() {
 
 turn_off_device() {
     check_options ${FUNCNAME[0]}
-    if [[ $CACHE_DEVICE_OPTION == "/dev/nvme"* ]] ; then
+    SHORT_LINK=$(realpath $CACHE_DEVICE_OPTION)
+    if [[ $SHORT_LINK == "/dev/nvme"* ]] ; then
         turn_off_nvme_device
     else
-        local COMMAND="echo 'offline' > /sys/block/${CACHE_DEVICE_OPTION:4}/device/state"
+        local COMMAND="echo 'offline' > /sys/block/${SHORT_LINK:4}/device/state"
         run_cmd $COMMAND
     fi
 }
 
 turn_off_nvme_device() {
     check_options ${FUNCNAME[0]}
-    COMMAND="echo '1' > /sys/block/${CACHE_DEVICE_OPTION:4}/device/device/remove"
+    SHORT_LINK=$(realpath $CACHE_DEVICE_OPTION)
+    COMMAND="echo '1' > /sys/block/${SHORT_LINK:4}/device/device/remove"
     run_cmd $COMMAND
     clear_options
 }

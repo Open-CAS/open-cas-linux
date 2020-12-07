@@ -30,6 +30,21 @@ check_if_root_or_exit() {
     fi
 }
 
+resolve_path() {
+    local BY_ID_DIR="/dev/disk/by-id"
+    local BY_ID_LINKS=$(ls $BY_ID_DIR)
+
+    for BY_ID_PATH in $BY_ID_LINKS
+    do
+        FULL_PATH="${BY_ID_DIR}/${BY_ID_PATH}"
+        if [[ "$(realpath $FULL_PATH)" -ef "$(realpath $DEVICE)" ]]
+        then
+            DEVICE=$FULL_PATH
+            break
+        fi
+    done
+}
+
 parse_args() {
     while [ -n "$1" ] ; do
 
@@ -51,10 +66,14 @@ parse_args() {
             -i | --ignore )     export IGNORE_WARNINGS="1"
                                 ;;
             -c | --cache )      shift
-                                CACHE_DEVICE="$1"
+                                DEVICE="$1"
+                                resolve_path
+                                CACHE_DEVICE=$DEVICE
                                 ;;
             -d | --core )       shift
-                                CORE_DEVICE="$1"
+                                DEVICE="$1"
+                                resolve_path
+                                CORE_DEVICE=$DEVICE
                                 ;;
             * )                 echo "Unrecognized option"
                                 usage

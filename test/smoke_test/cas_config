@@ -74,12 +74,12 @@ check_config() {
         fi
 
         # Check if core and cache devices are free for us or not
-        if [ -z $IGNORE_WARNINGS ] && [ -n "$(ls ${CORE_DEVICE}[0-9]* 2> /dev/null)" ] ; then
+        if [ -z $IGNORE_WARNINGS ] && [ -n "$(ls ${CORE_DEVICE}-part[0-9]* 2> /dev/null)" ] ; then
             warning "The core device $CORE_DEVICE is partitioned! Some tests may remove partitions from this device"
             warning "Use --ignore | -i flag to force using this core device"
             exit 1
         fi
-        if [ -z $IGNORE_WARNINGS ] && [ -n "$(ls ${CACHE_DEVICE}[0-9]* 2> /dev/null)" ] ; then
+        if [ -z $IGNORE_WARNINGS ] && [ -n "$(ls ${CACHE_DEVICE}-part[0-9]* 2> /dev/null)" ] ; then
             warning "The cache device $CACHE_DEVICE is partitioned!"
             warning "Use --ignore | -i flag to force using this cache device"
             exit 1
@@ -93,11 +93,15 @@ check_config() {
             umount $DEVICE_TO_UMOUNT
         done
 
-        if [ -n "$(mount | grep $CACHE_DEVICE)" ] ; then
+        SHORT_CACHE_LINK=$(realpath $CACHE_DEVICE)
+        OUTPUT_MOUNT_CACHE=$(mount | grep -E "$CACHE_DEVICE|$SHORT_CACHE_LINK")
+        if [ -n "$OUTPUT_MOUNT_CACHE" ] ; then
             error "The cache device $CACHE_DEVICE or one of its partitions is mounted!"
             exit 1
         fi
-        if [ -n "$(mount | grep $CORE_DEVICE)" ] ; then
+        SHORT_CORE_LINK=$(realpath $CORE_DEVICE)
+        OUTPUT_MOUNT_CORE=$(mount | grep -E $CORE_DEVICE|$SHORT_CORE_LINK)
+        if [ -n "$OUTPUT_MOUNT_CORE" ] ; then
             error "The core device $CORE_DEVICE or one of its partitions is mounted!"
             exit 1
         fi
