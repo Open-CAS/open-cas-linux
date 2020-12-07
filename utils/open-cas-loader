@@ -5,7 +5,6 @@
 #
 
 import subprocess
-import time
 import opencas
 import sys
 import os
@@ -19,10 +18,9 @@ except:
 
 try:
     config = opencas.cas_config.from_file('/etc/opencas/opencas.conf',
-                                       allow_incomplete=True)
+                                          allow_incomplete=True)
 except Exception as e:
-    sl.syslog(sl.LOG_ERR,
-            'Unable to load opencas config. Reason: {0}'.format(str(e)))
+    sl.syslog(sl.LOG_ERR, 'Unable to load opencas config. Reason: {str(e)}')
     exit(1)
 
 for cache in config.caches.values():
@@ -32,8 +30,8 @@ for cache in config.caches.values():
             opencas.start_cache(cache, True)
         except opencas.casadm.CasadmError as e:
             sl.syslog(sl.LOG_WARNING,
-                    'Unable to load cache {0} ({1}). Reason: {2}'
-                    .format(cache.cache_id, cache.device, e.result.stderr))
+                      f'Unable to load cache {cache.cache_id} ({cache.device}). '
+                      f'Reason: {e.result.stderr}')
             exit(e.result.exit_code)
         exit(0)
     for core in cache.cores.values():
@@ -43,7 +41,7 @@ for cache in config.caches.values():
                 opencas.add_core(core, True)
             except opencas.casadm.CasadmError as e:
                 sl.syslog(sl.LOG_WARNING,
-                        'Unable to attach core {0} from cache {1}. Reason: {2}'
-                        .format(core.device, cache.cache_id, e.result.stderr))
+                          f'Unable to attach core {core.device} from cache {cache.cache_id}. '
+                          f'Reason: {e.result.stderr}')
                 exit(e.result.exit_code)
             exit(0)
