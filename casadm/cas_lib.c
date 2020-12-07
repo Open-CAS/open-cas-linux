@@ -36,6 +36,9 @@
 #include "safeclib/safe_lib.h"
 #include <cas_ioctl_codes.h>
 #include "psort.h"
+#include <libgen.h>
+#include <regex.h>
+
 #define PRINT_STAT(x) header->cmd_input.cache_stats.x
 
 #define CORE_ADD_MAX_TIMEOUT 30
@@ -548,6 +551,42 @@ void print_slow_atomic_cache_start_info(const char *device_path)
 }
 
 /**
+  * Save to dest an absolute device file path of src.
+  * Return number of characters copied to dest if succeed, negative value if failed.
+  */
+static int get_abs_path(char* dest, size_t dest_len, const char* src, size_t src_len)
+{
+	int path_len = -FAILURE;
+	char *dir_name, *dev_name;
+	char *dev = strndup(src, src_len);	// strdup creates hidden malloc
+	if (!dev)				// basename/dirname may modify the source and
+		goto dev_err;			// segfault when called with a static string
+
+	char *dir = strndup(src, src_len);
+	if (!dir)
+		goto dir_err;
+
+	dir_name = realpath(dirname(dir), NULL); // realpath creates hidden malloc
+	if (!dir_name)
+		goto dir_name_err;
+
+	dev_name = basename(dev);
+	if (!dev_name)
+		goto dev_name_err;
+
+	path_len = snprintf(dest, dest_len, "%s/%s", dir_name, dev_name);
+
+dev_name_err:
+	free(dir_name);
+dir_name_err:
+	free(dir);
+dir_err:
+	free(dev);
+dev_err:
+	return path_len;
+}
+
+/**
   * @brief get special device file path (/dev/sdX) for disk.
   */
 int get_dev_path(const char* disk, char* buf, size_t num)
@@ -565,8 +604,64 @@ int get_dev_path(const char* disk, char* buf, size_t num)
 	return err;
 }
 
-int get_core_info(int fd, int cache_id, int core_id, struct kcas_core_info *info)
+/* Indicate whether given path should be passed without check */
+static bool is_dev_link_whitelisted(const char* path)
 {
+	regex_t regex;
+	int result;
+	static const char* const whitelist[] = {"/dev/cas[0-9]\\+-[0-9]\\+$"};
+	static const unsigned count = ARRAY_SIZE(whitelist);
+	size_t i;
+
+	for (i = 0; i < count; i++) {
+		result = regcomp(&regex, whitelist[i], REG_NOSUB);
+		if (result)
+			return FAILURE;
+
+		result = regexec(&regex, path, 0, NULL, 0);
+		regfree(&regex);
+		if (!result) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static int _is_by_id_path(const char* dev_path)
+{
+	static const char dev_by_id_dir[] = "/dev/disk/by-id";
+
+	return (!strncmp(dev_path, dev_by_id_dir,
+			 strnlen_s(dev_by_id_dir, sizeof(dev_by_id_dir))));
+}
+
+int set_device_path(char *dest_path, size_t dest_len, const char *src_path, size_t src_len)
+{
+	char abs_dev_path[MAX_STR_LEN];
+	int result;
+
+	/* save given path as absolute path in temporary variable */
+	if (get_abs_path(abs_dev_path, sizeof(abs_dev_path), src_path, src_len) < 0)
+		return FAILURE;
+
+	/* check if given dev_path is whitelisted and then pass it as path or not */
+	if (is_dev_link_whitelisted(abs_dev_path)){
+		result = strncpy_s(dest_path, dest_len, abs_dev_path,
+		    strnlen_s(abs_dev_path, sizeof(abs_dev_path)));
+		return result ?: SUCCESS;
+	}
+
+	if (_is_by_id_path(abs_dev_path)) {
+		result = strncpy_s(dest_path, dest_len, abs_dev_path,
+		    strnlen_s(abs_dev_path, sizeof(abs_dev_path)));
+		if (!result)
+			return SUCCESS;
+	}
+
+	return FAILURE;
+}
+
 	memset(info, 0, sizeof(*info));
 	info->cache_id = cache_id;
 	info->core_id = core_id;
@@ -713,8 +808,11 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info)
 	cache->expected_core_count = info->info.core_count;
 	cache->id = cache_id;
 	cache->state = info->info.state;
-	strncpy_s(cache->device, sizeof(cache->device), info->cache_path_name,
-		  strnlen_s(info->cache_path_name, sizeof(info->cache_path_name)));
+	if (set_device_path(cache->device, sizeof(cache->device), info->cache_path_name,
+			    sizeof(info->cache_path_name)) != SUCCESS) {
+		free(cache);
+		return NULL;
+	}
 	cache->mode = info->info.cache_mode;
 	cache->dirty = info->info.dirty;
 	cache->flushed = info->info.flushed;
@@ -928,11 +1026,13 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 
 	cmd.cache_id = cache_id;
 	cmd.init_cache = cache_init;
-	strncpy_s(cmd.cache_path_name,
-		  sizeof(cmd.cache_path_name),
-		  cache_device,
-		  strnlen_s(cache_device,
-			    sizeof(cmd.cache_path_name)));
+	if (set_device_path(cmd.cache_path_name, sizeof(cmd.cache_path_name),
+			    cache_device, MAX_STR_LEN) != SUCCESS) {
+		cas_printf(LOG_ERR, "Please use correct by-id path to the device "
+			   "%s.\n", cache_device);
+		close(fd);
+		return FAILURE;
+	}
 	cmd.caching_mode = cache_mode;
 	cmd.eviction_policy = eviction_policy_type;
 	cmd.line_size = line_size;
@@ -1619,103 +1719,6 @@ int illegal_recursive_core(unsigned int cache_id, const char *core_device, int c
 	}
 }
 
-/* Indicate whether given entry in /dev/disk/by-id should be ignored -
-   we ignore software created links like 'lvm-' since these can point to
-   both CAS exported object and core device depending on initialization order.
-*/
-static bool dev_link_blacklisted(const char* entry)
-{
-	static const char* const prefix_blacklist[] = {"lvm", "md-name"};
-	static const unsigned count = ARRAY_SIZE(prefix_blacklist);
-	const char* curr;
-	unsigned i;
-
-	for (i = 0; i < count; i++) {
-		curr = prefix_blacklist[i];
-		if (!strncmp(entry, curr, strnlen_s(curr, MAX_STR_LEN)))
-			return true;
-	}
-
-	return false;
-}
-
-/* get device link starting with /dev/disk/by-id */
-static int get_dev_link(const char* disk, char* buf, size_t num)
-{
-	static const char dev_by_id_dir[] = "/dev/disk/by-id";
-	int err;
-	struct dirent *entry;
-	DIR* dir;
-	char disk_dev[MAX_STR_LEN];  /* input disk device file */
-	char dev_by_id[MAX_STR_LEN]; /* current device path by id */
-	char curr_dev[MAX_STR_LEN];  /* current device file - compared against disk_dev[] */
-	int n;
-
-	dir = opendir(dev_by_id_dir);
-	if (!dir) {
-		/* no disk available by id? */
-		cas_printf(LOG_WARNING, "Unable to open disk alias directory.\n");
-		return FAILURE;
-	}
-
-	if (get_dev_path(disk, disk_dev, sizeof(disk_dev))) {
-		err = FAILURE;
-		goto close_dir;
-	}
-
-	err = FAILURE;
-	while (err != SUCCESS && (entry = readdir(dir))) {
-		/* check if link is blacklisted */
-		if (dev_link_blacklisted(entry->d_name))
-			continue;
-
-		/* construct device-by-id path for current device */
-		n = snprintf(dev_by_id, sizeof(dev_by_id), "%s/%s",
-				dev_by_id_dir, entry->d_name);
-		if (n < 0 || n >= sizeof(dev_by_id)) {
-			cas_printf(LOG_WARNING,
-				"Error constructing disk device by-link path.\n");
-			continue;
-		}
-		/* get device path for current device */
-		if (get_dev_path(dev_by_id, curr_dev, sizeof(curr_dev))) {
-			/* it's normal to have stale links in /dev/ - no log */
-			continue;
-		}
-		/* compare current device path against disk device path */
-		if (!strncmp(disk_dev, curr_dev, sizeof(curr_dev))) {
-			if (n >= num) {
-				cas_printf(LOG_WARNING, "Buffer to short to store device link.\n");
-			} else {
-				strncpy_s(buf, num, dev_by_id, sizeof(dev_by_id));
-				err = SUCCESS;
-			}
-		}
-	}
-
-close_dir:
-	closedir(dir);
-
-	return err;
-}
-
-static int set_core_path(char *path, const char *core_device, size_t len)
-{
-	/* attempt to get disk device path by id */
-	if (get_dev_link(core_device, path, len) == SUCCESS)
-		return SUCCESS;
-
-	/* .. if this failed, try to get standard /dev/sd* path */
-	if (get_dev_path(core_device, path, len) == SUCCESS)
-		return SUCCESS;
-
-	/* if everything else failed - fall back to user-provided path */
-	if (!strncpy_s(path, len, core_device, strnlen_s(core_device, MAX_STR_LEN)))
-		return SUCCESS;
-
-	return FAILURE;
-}
-
 int add_core(unsigned int cache_id, unsigned int core_id, const char *core_device,
 		int try_add, int update_path)
 {
@@ -1745,7 +1748,8 @@ int add_core(unsigned int cache_id, unsigned int core_id, const char *core_devic
 	}
 
 	memset(&cmd, 0, sizeof(cmd));
-	if (set_core_path(cmd.core_path_name, core_device, MAX_STR_LEN) != SUCCESS) {
+	if (set_device_path(cmd.core_path_name, sizeof(cmd.core_path_name),
+			    core_device, MAX_STR_LEN) != SUCCESS) {
 		cas_printf(LOG_ERR, "Failed to copy core path\n");
 		return FAILURE;
 	}
@@ -1893,7 +1897,8 @@ int core_pool_remove(const char *core_device)
 	if (fd == -1)
 		return FAILURE;
 
-	if (set_core_path(cmd.core_path_name, core_device, MAX_STR_LEN) != SUCCESS) {
+	if (set_device_path(cmd.core_path_name, sizeof(cmd.core_path_name),
+			    core_device, MAX_STR_LEN) != SUCCESS) {
 		cas_printf(LOG_ERR, "Failed to copy core path\n");
 		close(fd);
 		return FAILURE;
@@ -2786,8 +2791,10 @@ int _check_cache_device(const char *device_path,
 {
 	int result, fd;
 
-	strncpy_s(cmd_info->path_name, sizeof(cmd_info->path_name), device_path,
-		strnlen_s(device_path, sizeof(cmd_info->path_name)));
+	if (set_device_path(cmd_info->path_name, sizeof(cmd_info->path_name),
+			    device_path, MAX_STR_LEN) != SUCCESS) {
+		return FAILURE;
+	}
 
 	fd = open_ctrl_device();
 	if (fd == -1)

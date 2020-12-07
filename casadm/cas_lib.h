@@ -299,6 +299,17 @@ void print_err(int error_code);
 int get_dev_path(const char* disk, char* buf, size_t num);
 
 /**
+ * @brief make sure device link is unique and write sanitized version to \a dest_path
+ * 
+ * @param[in] src_path link to device
+ * @param[in] src_len length of \a src_path
+ * @param[in] dest_len max length of \a dest_path
+ * @param[out] dest_path sanitized absolute path
+ * @return 0 on success, nonzero on failure
+ */
+int set_device_path(char *dest_path, size_t dest_len, const char *src_path, size_t src_len);
+
+/**
  * @brief convert string to int
  */
 bool str_to_int(const char* start, char** end, int *val);
