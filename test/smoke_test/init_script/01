@@ -31,18 +31,18 @@ TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="4000M" PARTITION_IDS_
 cat > $CAS_CONFIG_PATH <<- EOM
 ${CAS_CONFIG_VERSION_TAG}
 [caches]
-1	${CACHE_DEVICE}1	WT
+1	${CACHE_DEVICE}-part1	WT
 [cores]
-1	1	${CORE_DEVICE}1
-1	2	${CORE_DEVICE}2
-1	3	${CORE_DEVICE}3
+1	1	${CORE_DEVICE}-part1
+1	2	${CORE_DEVICE}-part2
+1	3	${CORE_DEVICE}-part3
 EOM
 
 run_cmd "casctl init"
 
 run_cmd "udevadm settle"
 
-DEVICE_ID_OPTION=${CACHE_DEVICE}1 DEMANDED_STATE_OPTION="Running" check_device_state
+DEVICE_ID_OPTION="${CACHE_DEVICE}-part1" DEMANDED_STATE_OPTION="Running" check_device_state
 DEVICE_ID_OPTION="${DEVICE_NAME}1-1" DEMANDED_STATE_OPTION="Active" check_device_state
 DEVICE_ID_OPTION="${DEVICE_NAME}1-2" DEMANDED_STATE_OPTION="Active" check_device_state
 DEVICE_ID_OPTION="${DEVICE_NAME}1-3" DEMANDED_STATE_OPTION="Active" check_device_state
@@ -53,9 +53,7 @@ check_no_cache_running
 
 run_cmd "casctl start"
 
-run_cmd "udevadm settle"
-
-DEVICE_ID_OPTION=${CACHE_DEVICE}1 DEMANDED_STATE_OPTION="Running" check_device_state
+DEVICE_ID_OPTION="${CACHE_DEVICE}-part1" DEMANDED_STATE_OPTION="Running" check_device_state
 DEVICE_ID_OPTION="${DEVICE_NAME}1-1" DEMANDED_STATE_OPTION="Active" check_device_state
 DEVICE_ID_OPTION="${DEVICE_NAME}1-2" DEMANDED_STATE_OPTION="Active" check_device_state
 DEVICE_ID_OPTION="${DEVICE_NAME}1-3" DEMANDED_STATE_OPTION="Active" check_device_state

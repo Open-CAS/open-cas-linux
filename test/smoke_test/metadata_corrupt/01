@@ -24,13 +24,13 @@ test_log_start
 # Corrupts random bit from byte on given by $1 address from ${CACHE_DEVICE}1
 corrupt_byte(){
 	OFFSET=$1
-	READ_VALUE=`od -N 1 -j $OFFSET -A n -t x1 ${CACHE_DEVICE}1`
+	READ_VALUE=`od -N 1 -j $OFFSET -A n -t x1 ${CACHE_DEVICE}-part1`
 	READ_VALUE="0x`echo $READ_VALUE`"
 
 	RANDOM_UINT32=`od -An -tu4 -N4 /dev/urandom`
 	MASK=$(( 1 << $(( $RANDOM_UINT32 % 8 )) ))
 
-	echo -e "\x$(( ${READ_VALUE} ^ ${MASK} ))"| dd bs=1 count=1 seek=$OFFSET conv=notrunc of=${CACHE_DEVICE}1 1>&2 2>/dev/null
+	echo -e "\x$(( ${READ_VALUE} ^ ${MASK} ))"| dd bs=1 count=1 seek=$OFFSET conv=notrunc of=${CACHE_DEVICE}-part1 1>&2 2>/dev/null
 }
 
 # Use CACHE_DEVICE and CORE_DEVICE provided by configuration file and remove partitions from those devices
@@ -52,7 +52,7 @@ do
 	fi
 
 	# Start cache on CACHE_DEVICE to repair it and also to make log.
-	CACHE_ID_OPTION="1" CACHE_FORCE_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+	CACHE_ID_OPTION="1" CACHE_FORCE_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" start_cache
 
 	# Stop cache.
 	CACHE_ID_OPTION="1" stop_cache
@@ -88,7 +88,7 @@ do
 	corrupt_byte ${CORRUPT_ADDRESS}
 
 	# Start again with load option, this should fail, metadata is corrupted.
-	NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="1" CACHE_LOAD_METADATA_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+	NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="1" CACHE_LOAD_METADATA_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" start_cache
 done
 
 

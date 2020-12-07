@@ -23,14 +23,14 @@ TEST_DEVICE=${DEVICE_NAME}1-1
 
 #param device
 get_stat_sectors_read() {
-    L_DEVICE=$(basename $1)
+    L_DEVICE=$(basename $(realpath $1))
     L_STAT=$(cat /proc/diskstats | grep $L_DEVICE | awk '{ print $6 }')
     echo $L_STAT
 }
 
 #param device
 get_stat_sectors_written() {
-    L_DEVICE=$(basename $1)
+    L_DEVICE=$(basename $(realpath $1))
     L_STAT=$(cat /proc/diskstats | grep $L_DEVICE | awk '{ print $10 }')
     echo $L_STAT
 }
@@ -46,13 +46,13 @@ cache_suspend_init() {
     # Create 1 primary partitions on CORE_DEVICE
     TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION=$CORE_DEVICE_SIZE PARTITION_IDS_OPTION="1" make_primary_partitions
 
-    run_cmd dd if=/dev/zero of="${CORE_DEVICE}1" bs=1M count=1 oflag=direct
+    run_cmd dd if=/dev/zero of="${CORE_DEVICE}-part1" bs=1M count=1 oflag=direct
 
     # Start cache on CACHE_DEVICE1
-    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" start_cache
 
     # Add a core device using CORE_DEVICE1
-    CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
+    CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}-part1" add_core
 }
 
 cache_suspend_deinit() {
@@ -80,7 +80,7 @@ cache_suspend_test() {
     CACHE_MODE_FLUSH_OPTION="yes" CACHE_ID_OPTION="1" CACHE_MODE_OPTION="pt" set_cache_mode
 
     # Get read cache statistics before.
-    L_CACHE_READS_BEFORE=$(get_stat_sectors_read ${CACHE_DEVICE}1)
+    L_CACHE_READS_BEFORE=$(get_stat_sectors_read ${CACHE_DEVICE}-part1)
 
     # Read file
     test_log_trace "Read 4k, Read has to be performed from core"
@@ -89,7 +89,7 @@ cache_suspend_test() {
     # Sync
     sync && echo 3 > /proc/sys/vm/drop_caches
 
-    L_CACHE_READS_AFTER=$(get_stat_sectors_read ${CACHE_DEVICE}1)
+    L_CACHE_READS_AFTER=$(get_stat_sectors_read ${CACHE_DEVICE}-part1)
 
     test_log_trace "Cache reads before : $L_CACHE_READS_BEFORE"
     test_log_trace "Cache reads after  : $L_CACHE_READS_AFTER"
@@ -107,9 +107,9 @@ cache_suspend_test() {
     sync && echo 3 > /proc/sys/vm/drop_caches
 
     # Get statistics
-    L_CACHE_WRITES_BEFORE=$(get_stat_sectors_written ${CACHE_DEVICE}1)
-    L_CORE_READS_BEFORE=$(get_stat_sectors_read ${CORE_DEVICE}1)
-    L_CACHE_READS_BEFORE=$(get_stat_sectors_read ${CACHE_DEVICE}1)
+    L_CACHE_WRITES_BEFORE=$(get_stat_sectors_written ${CACHE_DEVICE}-part1)
+    L_CORE_READS_BEFORE=$(get_stat_sectors_read ${CORE_DEVICE}-part1)
+    L_CACHE_READS_BEFORE=$(get_stat_sectors_read ${CACHE_DEVICE}-part1)
 
     # Read file
     test_log_trace "Read 4k, read form core only"
@@ -119,9 +119,9 @@ cache_suspend_test() {
     sync && echo 3 > /proc/sys/vm/drop_caches
 
     # Get statistics
-    L_CACHE_WRITES_AFTER=$(get_stat_sectors_written ${CACHE_DEVICE}1)
-    L_CORE_READS_AFTER=$(get_stat_sectors_read ${CORE_DEVICE}1)
-    L_CACHE_READS_AFTER=$(get_stat_sectors_read ${CACHE_DEVICE}1)
+    L_CACHE_WRITES_AFTER=$(get_stat_sectors_written ${CACHE_DEVICE}-part1)
+    L_CORE_READS_AFTER=$(get_stat_sectors_read ${CORE_DEVICE}-part1)
+    L_CACHE_READS_AFTER=$(get_stat_sectors_read ${CACHE_DEVICE}-part1)
 
     test_log_trace "Core reads before : $L_CORE_READS_BEFORE"
     test_log_trace "Core reads after  : $L_CORE_READS_AFTER"
@@ -146,8 +146,8 @@ cache_suspend_test() {
     # Resume the cache
     CACHE_ID_OPTION="1" CACHE_MODE_OPTION="wt" set_cache_mode
 
-    L_CACHE_WRITES_BEFORE=$(get_stat_sectors_written ${CACHE_DEVICE}1)
-    L_CORE_READS_BEFORE=$(get_stat_sectors_read ${CORE_DEVICE}1)
+    L_CACHE_WRITES_BEFORE=$(get_stat_sectors_written ${CACHE_DEVICE}-part1)
+    L_CORE_READS_BEFORE=$(get_stat_sectors_read ${CORE_DEVICE}-part1)
 
     test_log_trace "Read 4k, read form core, write on cache"
     # Read file
@@ -156,8 +156,8 @@ cache_suspend_test() {
     # Sync
     sync && echo 3 > /proc/sys/vm/drop_caches
 
-    L_CORE_READS_AFTER=$(get_stat_sectors_read ${CORE_DEVICE}1)
-    L_CACHE_WRITES_AFTER=$(get_stat_sectors_written ${CACHE_DEVICE}1)
+    L_CORE_READS_AFTER=$(get_stat_sectors_read ${CORE_DEVICE}-part1)
+    L_CACHE_WRITES_AFTER=$(get_stat_sectors_written ${CACHE_DEVICE}-part1)
 
     test_log_trace "Core reads before : $L_CORE_READS_BEFORE"
     test_log_trace "Core reads after  : $L_CORE_READS_AFTER"

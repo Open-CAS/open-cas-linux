@@ -27,10 +27,10 @@ TEST_COUNT_HALF=16384
 
 #param device
 get_stat_sectors_read() {
-    L_DEVICE=$(basename $1)
+    L_DEVICE=$(basename $(realpath $1))
     if [[  ${L_DEVICE} =~ "nvme" ]]
     then
-        L_DEVICE="${L_DEVICE:0:${#L_DEVICE}-1}p${L_DEVICE: -1}"
+        L_DEVICE="${L_DEVICE:0:${#L_DEVICE}-1}-part${L_DEVICE: -1}"
     fi
     L_STAT=$(cat /proc/diskstats | grep $L_DEVICE | awk '{ print $6 }')
     echo $L_STAT
@@ -38,7 +38,7 @@ get_stat_sectors_read() {
 
 #param device
 get_stat_sectors_written() {
-    L_DEVICE=$(basename $1)
+    L_DEVICE=$(basename $(realpath $1))
     L_STAT=$(cat /proc/diskstats | grep $L_DEVICE | awk '{ print $10 }')
     echo $L_STAT
 }
@@ -54,13 +54,13 @@ cache_suspend_init() {
     # Create 1 primary partitions on CORE_DEVICE
     TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION=$CORE_DEVICE_SIZE PARTITION_IDS_OPTION="1" make_primary_partitions
 
-    run_cmd dd if=/dev/zero of="${CORE_DEVICE}1" bs=1M count=1 oflag=direct
+    run_cmd dd if=/dev/zero of="${CORE_DEVICE}-part1" bs=1M count=1 oflag=direct
 
     # Start cache on CACHE_DEVICE1
-    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" start_cache
 
     # Add a core device using CORE_DEVICE1
-    CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
+    CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}-part1" add_core
 }
 
 cache_suspend_deinit() {
@@ -107,8 +107,8 @@ cache_suspend_test() {
     CACHE_ID_OPTION="1" CACHE_MODE_OPTION="wt" set_cache_mode
 
     # Get statistics before
-    L_CACHE_READS_BEFORE=$(get_stat_sectors_read ${CACHE_DEVICE}1)
-    L_CORE_READS_BEFORE=$(get_stat_sectors_read ${CORE_DEVICE}1)
+    L_CACHE_READS_BEFORE=$(get_stat_sectors_read ${CACHE_DEVICE}-part1)
+    L_CORE_READS_BEFORE=$(get_stat_sectors_read ${CORE_DEVICE}-part1)
 
     # Read from
     test_log_trace "Read from CAS"
@@ -117,8 +117,8 @@ cache_suspend_test() {
     sync && echo 3 > /proc/sys/vm/drop_caches
 
     # Get statistics after
-    L_CACHE_READS_AFTER=$(get_stat_sectors_read ${CACHE_DEVICE}1)
-    L_CORE_READS_AFTER=$(get_stat_sectors_read ${CORE_DEVICE}1)
+    L_CACHE_READS_AFTER=$(get_stat_sectors_read ${CACHE_DEVICE}-part1)
+    L_CORE_READS_AFTER=$(get_stat_sectors_read ${CORE_DEVICE}-part1)
 
     test_log_trace "Cache reads before : $L_CACHE_READS_BEFORE"
     test_log_trace "Cache reads after  : $L_CACHE_READS_AFTER"

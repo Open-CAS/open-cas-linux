@@ -42,14 +42,14 @@ do
     echo "------Start CAS Linux in $mode mode"
 
 # This is where the real test starts
-    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}"1 CACHE_MODE_OPTION="$mode"
+    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}"-part1 CACHE_MODE_OPTION="$mode"
         CACHE_FORCE_OPTION="yes" start_cache
 
-    CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}"1 add_core
+    CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}"-part1 add_core
     sleep 2
 
 # iostat read
-    TMP_CACHE_DEVICE=$(echo "${CACHE_DEVICE}" | cut -c6-)
+    TMP_CACHE_DEVICE=$(echo "$(realpath ${CACHE_DEVICE})" | cut -c6-)
     run_cmd "dd if=/dev/cas1-1 of=$TMP_DIR/file001.bin bs=$BLOCK_SIZE count=$COUNT skip=10000 iflag=direct"
     READ_CACHE_1=$(iostat "${CACHE_DEVICE}" | grep $TMP_CACHE_DEVICE | awk 'NR==1 {print $5}')
     run_cmd "dd if=/dev/cas1-1 of=$TMP_DIR/file001.bin bs=$BLOCK_SIZE count=$COUNT skip=10000 iflag=direct"
@@ -74,14 +74,14 @@ do
     echo "------Start CAS Linux in $mode mode"
 
 # This is where the real test starts
-    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}"1 CACHE_MODE_OPTION="$mode"
+    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}"-part1 CACHE_MODE_OPTION="$mode"
         CACHE_FORCE_OPTION="yes" start_cache
 
-    CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}"1 add_core
+    CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}"-part1 add_core
     sleep 2
 
 # iostat write and write
-    TMP_CORE_DEVICE=$(echo "${CORE_DEVICE}" | cut -c6-)
+    TMP_CORE_DEVICE=$(echo "$(realpath ${CORE_DEVICE})" | cut -c6-)
     WRITE_CORE_0=$(iostat "${CORE_DEVICE}" | grep $TMP_CORE_DEVICE | awk 'NR==1 {print $6}')
     WRITE_CACHE_0=$(iostat "${CACHE_DEVICE}" | grep $TMP_CACHE_DEVICE | awk 'NR==1 {print $6}')
     run_cmd "dd if=$TMP_DIR/file001.bin of=/dev/cas1-1 bs=$BLOCK_SIZE count=$COUNT seek=20000 oflag=direct"

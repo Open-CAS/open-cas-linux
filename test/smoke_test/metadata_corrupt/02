@@ -40,7 +40,7 @@ do
 	fi
 
 	# Start cache on CACHE_DEVICE to repair it and also to make log.
-	CACHE_ID_OPTION="1" CACHE_FORCE_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+	CACHE_ID_OPTION="1" CACHE_FORCE_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" start_cache
 
 	# Stop cache.
 	CACHE_ID_OPTION="1" stop_cache
@@ -59,10 +59,10 @@ do
 	test_log_trace "Corrupting 64K bytes in ${SECTION}"
 
 	# Corrupt cache metadata
-	run_cmd "dd if=/dev/urandom of="${CACHE_DEVICE}1" bs=1 count=64K conv=notrunc seek=${METADATA_SECTION_OFFSET}K "
+	run_cmd "dd if=/dev/urandom of=${CACHE_DEVICE}-part1 bs=1 count=64K conv=notrunc seek=${METADATA_SECTION_OFFSET}K "
 
 	# Start again with load option, this should fail, metadata is corrupted.
-	NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="1" CACHE_LOAD_METADATA_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+	NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="1" CACHE_LOAD_METADATA_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" start_cache
 done
 
 test_log_stop

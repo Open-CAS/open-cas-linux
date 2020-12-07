@@ -30,11 +30,11 @@ TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="4000M" PARTITION_IDS_
 cat > $CAS_CONFIG_PATH <<- EOM
 ${CAS_CONFIG_VERSION_TAG}
 [caches]
-1	${CACHE_DEVICE}1	WB	cleaning_policy=nop
+1	${CACHE_DEVICE}-part1	WB	cleaning_policy=nop
 [cores]
-1	1	${CORE_DEVICE}1
-1	2	${CORE_DEVICE}2
-1	3	${CORE_DEVICE}3
+1	1	${CORE_DEVICE}-part1
+1	2	${CORE_DEVICE}-part2
+1	3	${CORE_DEVICE}-part3
 EOM
 
 run_cmd "casctl init"
@@ -46,7 +46,7 @@ run_cmd "udevadm settle"
 run_cmd "casctl stop"
 
 # We shouldn't be able to start cache on this device, it contains dirty data
-NEGATIVE_TEST_OPTION=1 CACHE_DEVICE_OPTION=${CACHE_DEVICE}1 CACHE_ID_OPTION=1 start_cache
+NEGATIVE_TEST_OPTION=1 CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" CACHE_ID_OPTION=1 start_cache
 
 NEGATIVE_TEST_OPTION=1 run_cmd "casctl init"
 clear_options
@@ -56,7 +56,7 @@ run_cmd "casctl start"
 run_cmd "casctl stop"
 
 # We still shouldn't be able to start
-NEGATIVE_TEST_OPTION=1 CACHE_DEVICE_OPTION=${CACHE_DEVICE}1 CACHE_ID_OPTION=1 start_cache
+NEGATIVE_TEST_OPTION=1 CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" CACHE_ID_OPTION=1 start_cache
 
 NEGATIVE_TEST_OPTION=1 run_cmd "casctl init"
 clear_options
@@ -69,7 +69,7 @@ run_cmd "udevadm settle"
 
 run_cmd "casctl stop --flush"
 
-run_cmd "casadm -S -d ${CACHE_DEVICE}1 --force"
+run_cmd "casadm -S -d ${CACHE_DEVICE}-part1 --force"
 
 run_cmd "casctl stop"
 

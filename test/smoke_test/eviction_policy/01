@@ -48,10 +48,10 @@ eviction_policy_init() {
     fi
 
     # Start cache on CACHE_DEVICE1
-    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" start_cache
 
     # Add a core device using CORE_DEVICE1
-    CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
+    CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}-part1" add_core
 }
 
 eviction_policy_flush() {
