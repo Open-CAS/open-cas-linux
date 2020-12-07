@@ -9,8 +9,8 @@
 # If you want to use this file, rename it to "cas_local_config".
 
 # Default core and cache devices - note that we require whole devices, not partitions
-export CORE_DEVICE="/dev/sdd"
-export CACHE_DEVICE="/dev/sdf"
+export CORE_DEVICE="/dev/disk/by-id/ata-SUPER_SPEED_DISK_SSD"
+export CACHE_DEVICE="/dev/disk/by-id/nvme-BETTER_SSD_KINGOFSSDS"
 
 # Default size of partition for cache/core device. This is used only for
 # the DEFAULT_* API functions
