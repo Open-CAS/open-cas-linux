@@ -163,6 +163,7 @@ class casadm:
 
 class cas_config(object):
     default_location = '/etc/opencas/opencas.conf'
+    _by_id_dir = '/dev/disk/by-id'
 
     class ConflictingConfigException(ValueError):
         pass
@@ -172,17 +173,16 @@ class cas_config(object):
 
     @staticmethod
     def get_by_id_path(path):
-        blocklist = ["lvm", "md-name"]
+        path = os.path.abspath(path)
 
-        for id_path in os.listdir('/dev/disk/by-id'):
-            if any([id_path.startswith(x) for x in blocklist]):
-                continue
+        if os.path.exists(path) or cas_config._is_exp_obj_path(path):
+            return path
+        else:
+            raise ValueError(f"Given path {path} isn't correct by-id path.")
 
-            full_path = '/dev/disk/by-id/{0}'.format(id_path)
-            if os.path.realpath(full_path) == os.path.realpath(path):
-                return full_path
-
-        raise ValueError('By-id device link not found for {0}'.format(path))
+    @staticmethod
+    def _is_exp_obj_path(path):
+        return re.search(r"cas\d+-\d+", path) is not None
 
     @staticmethod
     def check_block_device(path):
