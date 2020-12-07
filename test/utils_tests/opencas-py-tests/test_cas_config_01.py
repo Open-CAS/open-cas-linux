@@ -274,25 +274,6 @@ def test_cas_config_add_same_core_symlinked_02(mock_realpath):
 
 @patch("os.path.realpath")
 @patch("os.listdir")
-def test_cas_config_get_by_id_path(mock_listdir, mock_realpath):
-    mock_listdir.return_value = [
-        "wwn-1337deadbeef-x0x0",
-        "wwn-1337deadbeef-x0x0-part1",
-        "nvme-INTEL_SSDAAAABBBBBCCC_0984547ASDDJHHHFH",
-    ]
-    mock_realpath.side_effect = (
-        lambda x: "/dev/dummy1"
-        if x == "/dev/disk/by-id/wwn-1337deadbeef-x0x0-part1"
-        else x
-    )
-
-    path = opencas.cas_config.get_by_id_path("/dev/dummy1")
-
-    assert path == "/dev/disk/by-id/wwn-1337deadbeef-x0x0-part1"
-
-
-@patch("os.path.realpath")
-@patch("os.listdir")
 def test_cas_config_get_by_id_path_not_found(mock_listdir, mock_realpath):
     mock_listdir.return_value = [
         "wwn-1337deadbeef-x0x0",
