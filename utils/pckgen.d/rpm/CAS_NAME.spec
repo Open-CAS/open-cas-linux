@@ -108,6 +108,7 @@ fi
 %dir /var/lib/opencas
 %config /etc/opencas/opencas.conf
 /etc/opencas/ioclass-config.csv
+/etc/dracut.conf.d/opencas.conf
 /var/lib/opencas/cas_version
 /lib/opencas/casctl
 /lib/opencas/open-cas-loader

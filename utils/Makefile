@@ -35,6 +35,9 @@ install_files:
 	@install -m 755 casctl $(DESTDIR)$(CASCTL_DIR)/casctl
 	@install -m 755 open-cas-loader $(DESTDIR)$(CASCTL_DIR)/open-cas-loader
 
+	@mkdir -p $(DESTDIR)/etc/dracut.conf.d/
+	@install -m 644 etc/dracut.conf.d/opencas.conf $(DESTDIR)/etc/dracut.conf.d/opencas.conf
+
 	@mkdir -p $(DESTDIR)/sbin
 	@ln -fs $(CASCTL_DIR)/casctl $(DESTDIR)/sbin/casctl
 
@@ -59,6 +62,8 @@ uninstall:
 	@rm $(DESTDIR)$(CASCTL_DIR)/casctl
 	@rm $(DESTDIR)$(CASCTL_DIR)/open-cas-loader
 	@rm -rf $(DESTDIR)$(CASCTL_DIR)
+
+	@rm $(DESTDIR)/etc/dracut.conf.d/opencas.conf
 
 	@rm $(DESTDIR)/sbin/casctl
 
