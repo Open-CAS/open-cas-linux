@@ -1,0 +1,86 @@
+{
+  features:
+    {
+      name:
+        {
+          RCRs: [
+              id 1,
+              id 2,
+              id 3
+          ],
+          requirements: [
+              requirement 1,
+              requirement 2,
+              requirement 3
+          ]
+        },
+      another name:
+        {
+          RCRs: [
+              id 1,
+              id 2,
+              id 3
+          ],
+          requirements: [
+              requirement 1,
+              requirement 2,
+              requirement 3
+          ]
+        }
+    }
+}
+
+features:
+  name:
+    RCRs:
+      - id 1
+      - id 2
+      - id 3
+      requirements:
+        - requirement 1
+        - requirement 2
+        - requirement 3
+  another name:
+    RCRs:
+      - id 1
+      - id 2
+      - id 3
+      requirements:
+        - requirement 1
+        - requirement 2
+        - requirement 3
+
+Examples:
+JSON
+{
+  features:
+   {
+     name:
+       {
+         RCRs: [
+             12,
+             123,
+             45
+         ],
+         requirements: [
+             "Open CAS shall allow to use only by-id link as a path of the cache device when
+             starting cache.",
+             "Open CAS shall return error if path to the cache device passed as an argument to
+             the command `casadm --start-cache` is not by-id link."
+         ]
+       },
+   }
+}
+
+YAML
+features:
+  start cache:
+    RCRs:
+      - 12
+      - 123
+      - 45
+    requirements:
+      - "Open CAS shall allow to use only by-id link as a path of the cache device when starting
+      cache."
+      - "Open CAS shall return error if path to the cache device passed as an argument to the
+      command `casadm --start-cache` is not by-id link."
