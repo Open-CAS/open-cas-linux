@@ -267,7 +267,7 @@ static int _casdsk_exp_obj_hide_parts(struct casdsk_disk *dsk)
 				gdsk->disk_name);
 
 			/* Try restore previous partitions by rescaning */
-			ioctl_by_bdev(bd, BLKRRPART, (unsigned long) NULL);
+			cas_reread_partitions(bd);
 			return -EINVAL;
 		}
 	}
@@ -280,7 +280,7 @@ static int _casdsk_exp_obj_hide_parts(struct casdsk_disk *dsk)
 	gdsk->flags &= ~_casdsk_flags;
 	gdsk->minors = 1;
 	/* Rescan partitions */
-	ioctl_by_bdev(bd, BLKRRPART, (unsigned long) NULL);
+	cas_reread_partitions(bd);
 
 	return 0;
 }
@@ -325,7 +325,7 @@ static void _casdsk_exp_obj_clear_dev_t(struct casdsk_disk *dsk)
 		/* Restore previous configuration of bottom disk */
 		gdsk->minors = dsk->gd_minors;
 		gdsk->flags |= dsk->gd_flags;
-		ioctl_by_bdev(bdev, BLKRRPART, (unsigned long) NULL);
+		cas_reread_partitions(bdev);
 	}
 }
 
