@@ -4,6 +4,7 @@
 #
 
 import random
+import time
 import pytest
 
 from api.cas import casadm, casadm_parser
