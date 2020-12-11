@@ -197,6 +197,7 @@ def base_prepare(item):
         for disk in TestRun.dut.disks:
             disk.umount_all_partitions()
             Mdadm.zero_superblock(disk.system_path)
+            TestRun.executor.run_expect_success("udevadm settle")
             disk.remove_partitions()
             create_partition_table(disk, PartitionTable.gpt)
 
