@@ -574,7 +574,7 @@ int casdsk_exp_obj_create(struct casdsk_disk *dsk, const char *dev_name,
 	strlcpy(gd->disk_name, exp_obj->dev_name, sizeof(gd->disk_name));
 
 	dsk->exp_obj->mk_rq_fn = queue->make_request_fn;
-	blk_queue_make_request(queue, _casdsk_exp_obj_make_rq_fn);
+	cas_blk_queue_make_request(queue, _casdsk_exp_obj_make_rq_fn);
 
 	if (exp_obj->ops->set_geometry) {
 		result = exp_obj->ops->set_geometry(dsk, dsk->private);
