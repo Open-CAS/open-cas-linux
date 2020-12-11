@@ -41,7 +41,7 @@ static inline void env_free(const void *ptr)
 
 static inline void *env_vmalloc_flags(size_t size, int flags)
 {
-	return __vmalloc(size, flags | __GFP_HIGHMEM, PAGE_KERNEL);
+	return cas_vmalloc(size, flags | __GFP_HIGHMEM);
 }
 
 static inline void *env_vzalloc_flags(size_t size, int flags)

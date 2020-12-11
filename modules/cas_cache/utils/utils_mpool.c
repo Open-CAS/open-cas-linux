@@ -77,17 +77,18 @@ static env_allocator *cas_mpool_get_allocator(
 
 void *cas_mpool_new_f(struct cas_mpool *mpool, uint32_t count, int flags)
 {
+	unsigned long size;
 	void *items = NULL;
 	env_allocator *allocator;
 
 	allocator = cas_mpool_get_allocator(mpool, count);
 
-	if (allocator)
+	if (allocator) {
 		items = env_allocator_new(allocator);
-	else
-		items = __vmalloc(mpool->hdr_size + (mpool->item_size * count),
-				flags | __GFP_ZERO | __GFP_HIGHMEM,
-				PAGE_KERNEL);
+	} else {
+		size = mpool->hdr_size + (mpool->item_size * count);
+		items = cas_vmalloc(size, flags | __GFP_ZERO | __GFP_HIGHMEM);
+	}
 
 #ifdef ZERO_OR_NULL_PTR
 	if (ZERO_OR_NULL_PTR(items))
