@@ -19,7 +19,7 @@ from test_tools.fio.fio_param import ReadWrite, IoEngine
 from storage_devices.disk import DiskType, DiskTypeSet
 
 
-@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand]))
 def test_trim_start_discard():
     """
     title: Check discarding cache device at cache start
