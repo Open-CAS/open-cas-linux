@@ -1090,11 +1090,7 @@ static struct cas_classifier *_cas_cls_init(void)
 
 	INIT_LIST_HEAD(&cls->rules);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)
 	cls->wq = alloc_workqueue("kcas_clsd", WQ_UNBOUND | WQ_FREEZABLE, 1);
-#else
-	cls->wq = create_singlethread_workqueue("kcas_clsd");
-#endif
 	if (!cls->wq) {
 		kfree(cls);
 		return ERR_PTR(-ENOMEM);
