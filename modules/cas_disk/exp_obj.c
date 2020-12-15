@@ -77,7 +77,7 @@ static inline void _casdsk_exp_obj_handle_bio_att(struct casdsk_disk *dsk,
 				make_request_fn(dsk, q, bio, dsk->private);
 
 	if (status == CASDSK_BIO_NOT_HANDLED)
-		dsk->exp_obj->mk_rq_fn(q, bio);
+		cas_call_default_mk_request_fn(dsk->exp_obj->mk_rq_fn, q, bio);
 }
 
 CAS_DECLARE_BLOCK_CALLBACK(_casdsk_exp_obj_bio_pt_io, struct bio *bio,
@@ -573,7 +573,7 @@ int casdsk_exp_obj_create(struct casdsk_disk *dsk, const char *dev_name,
 	gd->private_data = dsk;
 	strlcpy(gd->disk_name, exp_obj->dev_name, sizeof(gd->disk_name));
 
-	dsk->exp_obj->mk_rq_fn = queue->make_request_fn;
+	dsk->exp_obj->mk_rq_fn = cas_get_default_mk_request_fn(queue);
 	cas_blk_queue_make_request(queue, _casdsk_exp_obj_make_rq_fn);
 
 	if (exp_obj->ops->set_geometry) {
