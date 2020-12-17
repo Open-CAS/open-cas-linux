@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -55,6 +55,23 @@ class Cache:
             .lower()
         )
         return CacheStatus[status]
+
+    @staticmethod
+    def calculate_metadata_max_size(cache_size: Size, cache_line_size: CacheLineSize):
+        """Get memory size according to requirement """
+        max_number_of_cores = 4096
+        # constants here correspond with OCF source code, where the same formula is used;
+        # they are partially empirical data so there are no proper/characteristic names for them
+        constant = Size(100, Unit.MebiByte)
+
+        cache_line_count = cache_size / cache_line_size.value
+        per_cache_line_metadata = Size(68) + 2 * cache_line_size.value / max_number_of_cores
+        amount_of_dram = constant + cache_line_count * per_cache_line_metadata
+
+        # maximum value is 110% of calculated size
+        metadata_max_size = 1.10 * amount_of_dram
+
+        return metadata_max_size
 
     @property
     def size(self):
