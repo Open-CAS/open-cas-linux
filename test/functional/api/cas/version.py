@@ -9,7 +9,7 @@ from api.cas import git
 
 
 class CasVersion:
-    def __init__(self, main, major, minor, pr, release_type):
+    def __init__(self, main, major, minor, pr, release_type=None):
         self.main = main
         self.major = major
         self.minor = minor
@@ -21,7 +21,8 @@ class CasVersion:
         return self.main >= 20
 
     def __str__(self):
-        return f"{self.main}.{self.major}.{self.minor}.{self.pr}.{self.type}"
+        return f"{self.main}.{self.major}.{self.minor}.{self.pr}" \
+               f"{'.' + self.type if self.type is not None else ''}"
 
     def __repr__(self):
         return str(self)
