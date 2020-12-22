@@ -6,6 +6,7 @@
 #include "cas_cache.h"
 #include "utils/utils_blk.h"
 #include "threads.h"
+#include "debugfs.h"
 
 extern u32 max_writeback_queue_size;
 extern u32 writeback_queue_unblock_size;
@@ -512,6 +513,8 @@ static int exit_instance_finish(void *data)
 	if (!ctx->error && flush_status)
 		result = -KCAS_ERR_STOPPED_DIRTY;
 
+	cas_debugfs_remove_cache(ctx->cache);
+
 	cas_cls_deinit(ctx->cache);
 
 	vfree(cache_priv);
@@ -539,6 +542,7 @@ struct _cache_mngt_attach_context {
 	struct {
 		bool priv_inited:1;
 		bool cls_inited:1;
+		bool debugfs_inited:1;
 	};
 };
 
@@ -553,6 +557,9 @@ static int cache_start_rollback(void *data)
 
 	if (kthread_should_stop())
 		return 0;
+
+	if (ctx->debugfs_inited)
+		cas_debugfs_remove_cache(cache);
 
 	if (ctx->cls_inited)
 		cas_cls_deinit(cache);
@@ -1311,6 +1318,11 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 
 	mark_core_id_used(cache, core_id);
 
+	result = cas_debugfs_add_core(core);
+	if (result)
+		goto error_after_create_exported_object;
+
+
 	ocf_mngt_cache_unlock(cache);
 	ocf_mngt_cache_put(cache);
 
@@ -1408,6 +1420,8 @@ static int _cache_mngt_remove_core_prepare(ocf_cache_t cache, ocf_core_t core,
 		result = block_dev_destroy_exported_object(core);
 		if (result)
 			return result;
+
+		cas_debugfs_remove_core(core);
 	}
 
 	if (!cmd->force_no_flush)
@@ -1607,6 +1621,10 @@ static int _cache_mngt_create_exported_object(ocf_core_t core, void *cntx)
 {
 	int result;
 
+	result = cas_debugfs_add_core(core);
+	if (result)
+		return result;
+
 	result = block_dev_create_exported_object(core);
 	if (result)
 		return result;
@@ -1625,6 +1643,8 @@ static int _cache_mngt_destroy_exported_object(ocf_core_t core, void *cntx)
 				ocf_cache_get_name(cache),
 				ocf_core_get_name(core));
 	}
+
+	cas_debugfs_remove_core(core);
 
 	return 0;
 }
@@ -1852,6 +1872,13 @@ static void cache_start_finalize(struct work_struct *work)
 		return _cache_mngt_start_complete(cache, ctx, result);
 	}
 	ctx->cls_inited = true;
+
+	result = cas_debugfs_add_cache(cache);
+	if (result) {
+		ctx->ocf_start_error = result;
+		return _cache_mngt_start_complete(cache, ctx, result);
+	}
+	ctx->debugfs_inited = true;
 
 	result = cache_mngt_initialize_core_objects(cache);
 	if (result) {

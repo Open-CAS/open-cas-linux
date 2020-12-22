@@ -4,6 +4,7 @@
 */
 
 #include "cas_cache.h"
+#include "debugfs.h"
 
 /* Layer information. */
 MODULE_AUTHOR("Intel(R) Corporation");
@@ -196,11 +197,19 @@ static int __init cas_init_module(void)
 		}
 	}
 
+	result = cas_debugfs_init();
+	if (result) {
+		printk(KERN_ERR OCF_PREFIX_SHORT
+				"Cannot initialize debug filesystem\n");
+		goto error_cas_ctx_init;
+	}
+
+
 	result = cas_ctrl_device_init();
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
 				"Cannot initialize control device\n");
-		goto error_cas_ctx_init;
+		goto error_cas_debugfs_init;
 	}
 
 	printk(KERN_INFO "%s Version %s (%s)::Module loaded successfully\n",
@@ -208,6 +217,8 @@ static int __init cas_init_module(void)
 
 	return 0;
 
+error_cas_debugfs_init:
+	cas_debugfs_deinit();
 error_cas_ctx_init:
 	cas_cleanup_context();
 
@@ -219,6 +230,7 @@ module_init(cas_init_module);
 static void __exit cas_exit_module(void)
 {
 	cas_ctrl_device_deinit();
+	cas_debugfs_deinit();
 	cas_cleanup_context();
 }
 
