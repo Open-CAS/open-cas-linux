@@ -51,6 +51,8 @@ bool in_upgrade;
 ocf_ctx_t cas_ctx;
 struct casdsk_functions_mapper casdisk_functions;
 
+#ifdef SYMBOL_LOOKUP_SUPPORTED
+
 struct exported_symbol {
 	char *name;
 	unsigned long addr;
@@ -73,6 +75,16 @@ int static cas_find_symbol(void *data, const char *namebuf,
         if (!casdisk_functions.f)  \
              return -EINVAL; \
 })
+
+#else
+
+#include "../cas_disk/cas_disk.h"
+#include "../cas_disk/exp_obj.h"
+#define cas_lookup_symbol(f) ({ \
+	casdisk_functions.f = (void *)f; \
+})
+
+#endif
 
 int static cas_casdisk_lookup_funtions(void)
 {

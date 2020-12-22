@@ -77,7 +77,7 @@ static inline void _casdsk_exp_obj_handle_bio_att(struct casdsk_disk *dsk,
 				make_request_fn(dsk, q, bio, dsk->private);
 
 	if (status == CASDSK_BIO_NOT_HANDLED)
-		dsk->exp_obj->mk_rq_fn(q, bio);
+		cas_call_default_mk_request_fn(dsk->exp_obj->mk_rq_fn, q, bio);
 }
 
 CAS_DECLARE_BLOCK_CALLBACK(_casdsk_exp_obj_bio_pt_io, struct bio *bio,
@@ -217,22 +217,54 @@ static int _casdsk_get_next_part_no(struct block_device *bd)
 	return part_no;
 }
 
-static int _casdsk_del_partitions(struct block_device *bd)
+static int _casdsk_del_partitions(struct casdsk_disk *dsk)
 {
-	int result = 0;
-	int part_no;
+	struct block_device *bd = casdsk_disk_get_blkdev(dsk);
+	struct file *bd_file;
+	unsigned long __user usr_bpart;
+	unsigned long __user usr_barg;
 	struct blkpg_partition bpart;
 	struct blkpg_ioctl_arg barg;
+	int result = 0;
+	int part_no;
 
-	memset(&bpart, 0, sizeof(struct blkpg_partition));
-	memset(&barg, 0, sizeof(struct blkpg_ioctl_arg));
-	barg.data = (void __force __user *) &bpart;
+	bd_file = filp_open(dsk->path, 0, 0);
+	if (IS_ERR(bd_file))
+		return PTR_ERR(bd_file);
+
+	usr_bpart = cas_vm_mmap(NULL, 0, sizeof(bpart));
+	if (IS_ERR((void *)usr_bpart)) {
+		result = PTR_ERR((void *)usr_bpart);
+		goto out_map_bpart;
+	}
+
+	usr_barg = cas_vm_mmap(NULL, 0, sizeof(barg));
+	if (IS_ERR((void *)usr_barg)) {
+		result = PTR_ERR((void *)usr_barg);
+		goto out_map_barg;
+	}
+
+
+	memset(&bpart, 0, sizeof(bpart));
+	memset(&barg, 0, sizeof(barg));
+	barg.data = (void __user *)usr_bpart;
 	barg.op = BLKPG_DEL_PARTITION;
 
+	result = copy_to_user((void __user *)usr_barg, &barg, sizeof(barg));
+	if (result) {
+		result = -EINVAL;
+		goto out_copy;
+	}
 
 	while ((part_no = _casdsk_get_next_part_no(bd))) {
 		bpart.pno = part_no;
-		result = ioctl_by_bdev(bd, BLKPG, (unsigned long) &barg);
+		result = copy_to_user((void __user *)usr_bpart, &bpart,
+				sizeof(bpart));
+		if (result) {
+			result = -EINVAL;
+			break;
+		}
+		result = cas_vfs_ioctl(bd_file, BLKPG, usr_barg);
 		if (result == 0) {
 			printk(CASDSK_KERN_INFO "Partition %d on %s hidden\n",
 				part_no, bd->bd_disk->disk_name);
@@ -243,6 +275,12 @@ static int _casdsk_del_partitions(struct block_device *bd)
 		}
 	}
 
+out_copy:
+	cas_vm_munmap(usr_barg, sizeof(barg));
+out_map_barg:
+	cas_vm_munmap(usr_bpart, sizeof(bpart));
+out_map_bpart:
+	filp_close(bd_file, NULL);
 	return result;
 }
 
@@ -262,12 +300,12 @@ static int _casdsk_exp_obj_hide_parts(struct casdsk_disk *dsk)
 		return 0;
 
 	if (disk_max_parts(dsk->bd->bd_disk) > 1) {
-		if (_casdsk_del_partitions(bd)) {
+		if (_casdsk_del_partitions(dsk)) {
 			printk(CASDSK_KERN_ERR "Error deleting a partition on thedevice %s\n",
 				gdsk->disk_name);
 
 			/* Try restore previous partitions by rescaning */
-			ioctl_by_bdev(bd, BLKRRPART, (unsigned long) NULL);
+			cas_reread_partitions(bd);
 			return -EINVAL;
 		}
 	}
@@ -280,7 +318,7 @@ static int _casdsk_exp_obj_hide_parts(struct casdsk_disk *dsk)
 	gdsk->flags &= ~_casdsk_flags;
 	gdsk->minors = 1;
 	/* Rescan partitions */
-	ioctl_by_bdev(bd, BLKRRPART, (unsigned long) NULL);
+	cas_reread_partitions(bd);
 
 	return 0;
 }
@@ -325,7 +363,7 @@ static void _casdsk_exp_obj_clear_dev_t(struct casdsk_disk *dsk)
 		/* Restore previous configuration of bottom disk */
 		gdsk->minors = dsk->gd_minors;
 		gdsk->flags |= dsk->gd_flags;
-		ioctl_by_bdev(bdev, BLKRRPART, (unsigned long) NULL);
+		cas_reread_partitions(bdev);
 	}
 }
 
@@ -573,8 +611,8 @@ int casdsk_exp_obj_create(struct casdsk_disk *dsk, const char *dev_name,
 	gd->private_data = dsk;
 	strlcpy(gd->disk_name, exp_obj->dev_name, sizeof(gd->disk_name));
 
-	dsk->exp_obj->mk_rq_fn = queue->make_request_fn;
-	blk_queue_make_request(queue, _casdsk_exp_obj_make_rq_fn);
+	dsk->exp_obj->mk_rq_fn = cas_get_default_mk_request_fn(queue);
+	cas_blk_queue_make_request(queue, _casdsk_exp_obj_make_rq_fn);
 
 	if (exp_obj->ops->set_geometry) {
 		result = exp_obj->ops->set_geometry(dsk, dsk->private);

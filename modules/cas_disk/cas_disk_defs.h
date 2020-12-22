@@ -50,7 +50,6 @@ extern struct casdsk_module *casdsk_module;
 #define CASDSK_KERN_INFO KERN_INFO""CASDSK_PREFIX_SHORT
 #define CASDSK_KERN_DEBUG KERN_DEBUG""CASDSK_PREFIX_SHORT
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 37)
 static inline struct block_device *open_bdev_exclusive(const char *path,
 						       fmode_t mode,
 						       void *holder)
@@ -74,7 +73,6 @@ static inline void bd_release_from_disk(struct block_device *bdev,
 {
 	return bd_unlink_disk_holder(bdev, disk);
 }
-#endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	#define KRETURN(x)	({ return (x); })

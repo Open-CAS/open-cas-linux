@@ -57,12 +57,11 @@ static void _blockdev_set_bio_data(struct blk_data *data, struct bio *bio)
 #endif
 }
 
-static inline void _blockdev_start_io_acct(struct bio *bio)
+static inline unsigned long long _blockdev_start_io_acct(struct bio *bio)
 {
 	struct gendisk *gd = CAS_BIO_GET_DEV(bio);
 
-	cas_generic_start_io_acct(gd->queue, bio_data_dir(bio),
-			bio_sectors(bio), &gd->part0);
+	return cas_generic_start_io_acct(gd->queue, bio, &gd->part0);
 }
 
 static inline void _blockdev_end_io_acct(struct bio *bio,
@@ -70,8 +69,7 @@ static inline void _blockdev_end_io_acct(struct bio *bio,
 {
 	struct gendisk *gd = CAS_BIO_GET_DEV(bio);
 
-	cas_generic_end_io_acct(gd->queue, bio_data_dir(bio),
-			&gd->part0, start_time);
+	cas_generic_end_io_acct(gd->queue, bio, &gd->part0, start_time);
 }
 
 void block_dev_start_bio_fast(struct ocf_io *io)
@@ -79,7 +77,7 @@ void block_dev_start_bio_fast(struct ocf_io *io)
 	struct blk_data *data = ocf_io_get_data(io);
 	struct bio *bio = data->master_io_req;
 
-	_blockdev_start_io_acct(bio);
+	data->start_time = _blockdev_start_io_acct(bio);
 }
 
 void block_dev_complete_bio_fast(struct ocf_io *io, int error)
@@ -761,7 +759,6 @@ static int _blockdev_make_request_fast(struct casdsk_disk *dsk,
 	_blockdev_set_bio_data(data, bio);
 
 	data->master_io_req = bio;
-	data->start_time = jiffies;
 
 	io = ocf_core_new_io(core, cache_priv->io_queues[smp_processor_id()],
 			CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,

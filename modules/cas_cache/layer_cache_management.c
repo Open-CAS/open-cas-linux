@@ -1824,7 +1824,7 @@ static void init_instance_complete(struct _cache_mngt_attach_context *ctx,
 
 	/* If we deal with whole device, reread partitions */
 	if (bdev->bd_contains == bdev)
-		ioctl_by_bdev(bdev, BLKRRPART, (unsigned long)NULL);
+		cas_reread_partitions(bdev);
 
 	/* Set other back information */
 	name = block_dev_get_elevator_name(

@@ -3,6 +3,8 @@
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
+#if defined(CAS_NVME_PARTIAL)
+
 #include "cas_cache.h"
 #include "utils_nvme.h"
 #include "utils_blk.h"
@@ -62,3 +64,5 @@ out:
 	cas_vm_munmap(buffer, sizeof(*ns));
 	return ret;
 }
+
+#endif
