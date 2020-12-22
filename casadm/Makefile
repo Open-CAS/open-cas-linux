@@ -60,6 +60,7 @@ OBJS += safeclib/memmove_s.o
 OBJS += safeclib/memcpy_s.o
 OBJS += safeclib/memset_s.o
 OBJS += safeclib/strncpy_s.o
+OBJS += safeclib/strcmp_s.o
 OBJS += safeclib/strtok_s.o
 OBJS += safeclib/safe_str_constraint.o
 OBJS += safeclib/ignore_handler_s.o

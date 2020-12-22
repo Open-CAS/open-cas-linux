@@ -81,6 +81,10 @@ extern errno_t
 strcmp_s(const char *dest, rsize_t dmax,
          const char *src, int *indicator);
 
+/* string compare */
+extern errno_t
+strncmp_s (const char *dest, rsize_t dmax, 
+           const char *src,  rsize_t slen, int *indicator);
 
 /* fixed field string compare */
 extern errno_t
