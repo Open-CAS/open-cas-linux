@@ -42,7 +42,7 @@ if [ "$SUBMODULES_MISSING" ]; then
 	MISSING_TOOLS=1
 fi
 
-if [ ! -e /lib/modules/$(uname -r)/build/ &> /dev/null ]
+if [ ! -e /lib/modules/$(uname -r)/build/ &> /dev/null ] && [ "$KERNEL_DIR" == "" ]
 then
 	echo >&2 "Error: missing kernel headers and/or kernel devel"
 	MISSING_TOOLS=1
