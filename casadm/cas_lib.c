@@ -2032,11 +2032,10 @@ void partition_list_line(FILE *out, struct kcas_io_class *cls, bool csv)
 {
 	char buffer[128];
 	const char *prio;
-	const char *allocation;
-	if (cls->info.cache_mode != ocf_cache_mode_pt)
-		allocation = csv ? "1" : "YES";
-	else
-		allocation = csv ? "0" : "NO";
+	char allocation_str[MAX_STR_LEN];
+
+	snprintf(allocation_str, sizeof(allocation_str), "%d.%02d",
+					cls->info.max_size/100, cls->info.max_size%100);
 
 	if (OCF_IO_CLASS_PRIO_PINNED == cls->info.priority) {
 		prio = csv ? "" : "Pinned";
@@ -2046,7 +2045,7 @@ void partition_list_line(FILE *out, struct kcas_io_class *cls, bool csv)
 	}
 
 	fprintf(out, TAG(TABLE_ROW)"%u,%s,%s,%s\n",
-		cls->class_id, cls->info.name, prio, allocation);
+		cls->class_id, cls->info.name, prio, allocation_str);
 
 }
 
@@ -2061,6 +2060,7 @@ int partition_list(unsigned int cache_id, unsigned int output_format)
 	fd = open_ctrl_device();
 	if (fd == -1 )
 		return FAILURE;
+
 
 	if (create_pipe_pair(intermediate_file)) {
 		cas_printf(LOG_ERR,"Failed to create unidirectional pipe.\n");
@@ -2119,8 +2119,11 @@ int partition_list(unsigned int cache_id, unsigned int output_format)
 }
 
 enum {
-	part_csv_coll_id = 0, part_csv_coll_name, part_csv_coll_prio,
-	part_csv_coll_alloc, part_csv_coll_max
+	part_csv_coll_id = 0,
+	part_csv_coll_name,
+	part_csv_coll_prio,
+	part_csv_coll_alloc,
+	part_csv_coll_max
 };
 
 int partition_is_name_valid(const char *name)
@@ -2157,6 +2160,28 @@ static inline const char *partition_get_csv_col(CSVFILE *csv, int col,
 	}
 	return val;
 }
+
+static int calculate_max_allocation(uint16_t cache_id, const char *allocation,
+		uint32_t *part_size)
+{
+	float alloc = 0;
+	char *end;
+
+	if (strnlen(allocation, MAX_STR_LEN) > 4)
+			return FAILURE;
+
+	alloc = strtof(allocation, &end);
+	if (alloc > 1 || alloc < 0)
+		return FAILURE;
+
+	if (allocation + strnlen(allocation, MAX_STR_LEN) != end)
+		return FAILURE;
+
+	*part_size = (uint32_t)(alloc * 100);
+
+	return SUCCESS;
+}
+
 
 static inline int partition_get_line(CSVFILE *csv,
 				     struct kcas_io_classes *cnfg,
@@ -2228,20 +2253,13 @@ static inline int partition_get_line(CSVFILE *csv,
 	if (strempty(alloc)) {
 		return FAILURE;
 	}
-	if (validate_str_num(alloc, "alloc", 0, 1)) {
-		return FAILURE;
-	}
-	value = strtoul(alloc, NULL, 10);
-	if (0 == value) {
-		cnfg->info[part_id].cache_mode = ocf_cache_mode_pt;
-	} else if (1 == value) {
-		cnfg->info[part_id].cache_mode = ocf_cache_mode_max;
-	} else {
-		return FAILURE;
-	}
 
+	if (calculate_max_allocation(cnfg->cache_id, alloc, &value) == FAILURE)
+		return FAILURE;
+
+	cnfg->info[part_id].cache_mode = ocf_cache_mode_max;
 	cnfg->info[part_id].min_size = 0;
-	cnfg->info[part_id].max_size = UINT32_MAX;
+	cnfg->info[part_id].max_size = value;
 
 	return 0;
 }

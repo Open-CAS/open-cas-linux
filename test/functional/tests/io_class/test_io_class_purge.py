@@ -134,7 +134,7 @@ def add_io_class(class_id, eviction_prio, rule):
     ioclass_config.add_ioclass(
         ioclass_id=class_id,
         eviction_priority=eviction_prio,
-        allocation=True,
+        allocation="1.00",
         rule=rule,
         ioclass_config_path=ioclass_config_path,
     )

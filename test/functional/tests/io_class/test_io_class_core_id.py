@@ -49,14 +49,14 @@ def test_ioclass_core_id(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=cached_ioclass_id,
             eviction_priority=22,
-            allocation=True,
+            allocation="1.00",
             rule=f"core_id:eq:{core_1.core_id}&done",
             ioclass_config_path=ioclass_config.default_config_file_path,
         )
         ioclass_config.add_ioclass(
             ioclass_id=not_cached_ioclass_id,
             eviction_priority=22,
-            allocation=False,
+            allocation="0.00",
             rule=f"core_id:eq:{core_2.core_id}&done",
             ioclass_config_path=ioclass_config.default_config_file_path,
         )
@@ -169,21 +169,21 @@ def prepare(filesystem, cores_number):
     ioclass_config.add_ioclass(
         ioclass_id=0,
         eviction_priority=22,
-        allocation=True,
+        allocation="1.00",
         rule="unclassified",
         ioclass_config_path=ioclass_config.default_config_file_path,
     )
     ioclass_config.add_ioclass(
         ioclass_id=1,
         eviction_priority=22,
-        allocation=True,
+        allocation="0.00",
         rule="metadata",
         ioclass_config_path=ioclass_config.default_config_file_path,
     )
     ioclass_config.add_ioclass(
         ioclass_id=2,
         eviction_priority=22,
-        allocation=False,
+        allocation="0.00",
         rule="direct",
         ioclass_config_path=ioclass_config.default_config_file_path,
     )

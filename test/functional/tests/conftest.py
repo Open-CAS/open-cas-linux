@@ -47,8 +47,8 @@ def pytest_runtest_setup(item):
     try:
         with open(item.config.getoption('--dut-config')) as cfg:
             dut_config = yaml.safe_load(cfg)
-    except Exception:
-        raise Exception("You need to specify DUT config. See the example_dut_config.py file.")
+    except Exception as ex:
+        raise Exception(f"{ex}\nYou need to specify DUT config. See the example_dut_config.py file")
 
     dut_config['plugins_dir'] = os.path.join(os.path.dirname(__file__), "../lib")
     dut_config['opt_plugins'] = {"test_wrapper": {}, "serial_log": {}, "power_control": {}}

@@ -275,3 +275,19 @@ def get_casadm_version():
     casadm_output = casadm.print_version(OutputFormat.csv).stdout.split('\n')
     version_str = casadm_output[1].split(',')[-1]
     return CasVersion.from_version_string(version_str)
+
+
+def get_io_class_list(cache_id: int):
+    ret = []
+    casadm_output = casadm.list_io_classes(cache_id, OutputFormat.csv).stdout.splitlines()
+    casadm_output.pop(0)  # Remove header
+    for line in casadm_output:
+        values = line.split(",")
+        ioclass = {
+            "id": int(values[0]),
+            "rule": values[1],
+            "eviction_priority": int(values[2]),
+            "allocation": float(values[3]),
+        }
+        ret.append(ioclass)
+    return ret

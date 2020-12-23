@@ -21,6 +21,9 @@ default_config_file_path = "/tmp/opencas_ioclass.conf"
 
 MAX_IO_CLASS_ID = 32
 MAX_IO_CLASS_PRIORITY = 255
+DEFAULT_IO_CLASS_ID = 0
+DEFAULT_IO_CLASS_PRIORITY = 255
+DEFAULT_IO_CLASS_RULE = "unclassified"
 MAX_CLASSIFICATION_DELAY = timedelta(seconds=6)
 IO_CLASS_CONFIG_HEADER = "IO class id,IO class name,Eviction priority,Allocation"
 
@@ -28,7 +31,7 @@ IO_CLASS_CONFIG_HEADER = "IO class id,IO class name,Eviction priority,Allocation
 @functools.total_ordering
 class IoClass:
     def __init__(self, class_id: int, rule: str = '', priority: int = None,
-                 allocation: bool = True):
+                 allocation: str = "1.00"):
         self.id = class_id
         self.rule = rule
         self.priority = priority
@@ -36,7 +39,7 @@ class IoClass:
 
     def __str__(self):
         return (f'{self.id},{self.rule},{"" if self.priority is None else self.priority}'
-                f',{int(self.allocation)}')
+                f',{self.allocation}')
 
     def __eq__(self, other):
         return ((self.id, self.rule, self.priority, self.allocation)
@@ -53,7 +56,7 @@ class IoClass:
             class_id=int(parts[0]),
             rule=parts[1],
             priority=int(parts[2]),
-            allocation=parts[3] in ['1', 'YES'])
+            allocation=parts[3])
 
     @staticmethod
     def list_to_csv(ioclass_list: [], add_default_rule: bool = True):
@@ -81,8 +84,8 @@ class IoClass:
                             IoClass.list_to_csv(ioclass_list, add_default_rule))
 
     @staticmethod
-    def default(priority: int = 255, allocation: bool = True):
-        return IoClass(0, 'unclassified', priority, allocation)
+    def default(priority=DEFAULT_IO_CLASS_PRIORITY, allocation="1.00"):
+        return IoClass(DEFAULT_IO_CLASS_ID, DEFAULT_IO_CLASS_RULE, priority, allocation)
 
     @staticmethod
     def compare_ioclass_lists(list1: [], list2: []):
@@ -91,10 +94,10 @@ class IoClass:
     @staticmethod
     def generate_random_ioclass_list(count: int, max_priority: int = MAX_IO_CLASS_PRIORITY):
         random_list = [IoClass.default(priority=random.randint(0, max_priority),
-                                       allocation=bool(random.randint(0, 1)))]
+                                       allocation=f"{random.randint(0,100)/100:0.2f}")]
         for i in range(1, count):
             random_list.append(IoClass(i, priority=random.randint(0, max_priority),
-                                       allocation=bool(random.randint(0, 1)))
+                                       allocation=f"{random.randint(0,100)/100:0.2f}")
                                .set_random_rule())
         return random_list
 
@@ -146,9 +149,11 @@ def create_ioclass_config(
             "Failed to create ioclass config file. "
             + f"stdout: {output.stdout} \n stderr :{output.stderr}"
         )
+
     if add_default_rule:
         output = TestRun.executor.run(
-            f'echo "0,unclassified,22,1" >> {ioclass_config_path}'
+            f'echo "{DEFAULT_IO_CLASS_ID},{DEFAULT_IO_CLASS_RULE},{DEFAULT_IO_CLASS_PRIORITY},"'
+            + f'"1.00" >> {ioclass_config_path}'
         )
         if output.exit_code != 0:
             raise Exception(
@@ -171,10 +176,10 @@ def add_ioclass(
         ioclass_id: int,
         rule: str,
         eviction_priority: int,
-        allocation: bool,
+        allocation,
         ioclass_config_path: str = default_config_file_path,
 ):
-    new_ioclass = f"{ioclass_id},{rule},{eviction_priority},{int(allocation)}"
+    new_ioclass = f"{ioclass_id},{rule},{eviction_priority},{allocation}"
     TestRun.LOGGER.info(
         f"Adding rule {new_ioclass} " + f"to config file {ioclass_config_path}"
     )
@@ -191,7 +196,7 @@ def add_ioclass(
 
 def get_ioclass(ioclass_id: int, ioclass_config_path: str = default_config_file_path):
     TestRun.LOGGER.info(
-        f"Retrieving rule no.{ioclass_id} " + f"from config file {ioclass_config_path}"
+        f"Retrieving rule no. {ioclass_id} " + f"from config file {ioclass_config_path}"
     )
     output = TestRun.executor.run(f"cat {ioclass_config_path}")
     if output.exit_code != 0:

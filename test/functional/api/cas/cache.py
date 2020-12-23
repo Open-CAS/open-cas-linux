@@ -139,8 +139,8 @@ class Cache:
     def load_io_class(self, file_path: str):
         return casadm.load_io_classes(self.cache_id, file_path)
 
-    def list_io_classes(self, output_format: OutputFormat):
-        return casadm.list_io_classes(self.cache_id, output_format)
+    def list_io_classes(self):
+        return get_io_class_list(self.cache_id)
 
     def set_seq_cutoff_parameters(self, seq_cutoff_param: SeqCutOffParameters):
         return casadm.set_param_cutoff(self.cache_id,
