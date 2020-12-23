@@ -40,10 +40,10 @@ def test_data_integrity_12h(cache_mode):
         cache, core = prepare(cache_mode)
 
     with TestRun.step("Fill cache"):
-        fill_cache(core.system_path)
+        fill_cache(core.path)
 
     with TestRun.step("Run test workloads with verification"):
-        run_workload(core.system_path)
+        run_workload(core.path)
 
 
 def prepare(cache_mode):

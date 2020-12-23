@@ -44,7 +44,7 @@ def test_discard_on_huge_core():
         # RCU-sched type stall sometimes appears in dmesg log after more
         # than one execution of blkdiscard.
         for _ in range(8):
-            TestRun.executor.run_expect_success(f"blkdiscard {core.system_path}")
+            TestRun.executor.run_expect_success(f"blkdiscard {core.path}")
 
     with TestRun.step("Check dmesg for RCU-sched stall."):
         check_for_rcu_sched_type_stall()

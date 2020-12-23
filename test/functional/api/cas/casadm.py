@@ -35,7 +35,7 @@ def start_cache(cache_dev: Device, cache_mode: CacheMode = None,
     _cache_id = None if cache_id is None else str(cache_id)
     _cache_mode = None if cache_mode is None else cache_mode.name.lower()
     output = TestRun.executor.run(start_cmd(
-        cache_dev=cache_dev.system_path, cache_mode=_cache_mode, cache_line_size=_cache_line_size,
+        cache_dev=cache_dev.path, cache_mode=_cache_mode, cache_line_size=_cache_line_size,
         cache_id=_cache_id, force=force, load=load, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to start cache.", output)
@@ -53,11 +53,11 @@ def stop_cache(cache_id: int, no_data_flush: bool = False, shortcut: bool = Fals
 def add_core(cache: Cache, core_dev: Device, core_id: int = None, shortcut: bool = False):
     _core_id = None if core_id is None else str(core_id)
     output = TestRun.executor.run(
-        add_core_cmd(cache_id=str(cache.cache_id), core_dev=core_dev.system_path,
+        add_core_cmd(cache_id=str(cache.cache_id), core_dev=core_dev.path,
                      core_id=_core_id, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to add core.", output)
-    core = Core(core_dev.system_path, cache.cache_id)
+    core = Core(core_dev.path, cache.cache_id)
     return core
 
 
@@ -71,18 +71,18 @@ def remove_core(cache_id: int, core_id: int, force: bool = False, shortcut: bool
 
 def remove_detached(core_device: Device, shortcut: bool = False):
     output = TestRun.executor.run(
-        remove_detached_cmd(core_device=core_device.system_path, shortcut=shortcut))
+        remove_detached_cmd(core_device=core_device.path, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to remove detached core.", output)
     return output
 
 
 def try_add(core_device: Device, cache_id: int, core_id: int = None):
-    output = TestRun.executor.run(script_try_add_cmd(str(cache_id), core_device.system_path,
+    output = TestRun.executor.run(script_try_add_cmd(str(cache_id), core_device.path,
                                                      str(core_id) if core_id is not None else None))
     if output.exit_code != 0:
         raise CmdException("Failed to execute try add script command.", output)
-    return Core(core_device.system_path, cache_id)
+    return Core(core_device.path, cache_id)
 
 
 def purge_cache(cache_id: int):
@@ -128,16 +128,17 @@ def flush(cache_id: int, core_id: int = None, shortcut: bool = False):
 
 def load_cache(device: Device, shortcut: bool = False):
     output = TestRun.executor.run(
-        load_cmd(cache_dev=device.system_path, shortcut=shortcut))
+        load_cmd(cache_dev=device.path, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to load cache.", output)
     return Cache(device)
 
 
-def list_caches(output_format: OutputFormat = None, shortcut: bool = False):
+def list_caches(output_format: OutputFormat = None, by_id_path: bool = True,
+                shortcut: bool = False):
     _output_format = None if output_format is None else output_format.name
     output = TestRun.executor.run(
-        list_cmd(output_format=_output_format, shortcut=shortcut))
+        list_cmd(output_format=_output_format, by_id_path=by_id_path, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to list caches.", output)
     return output
@@ -154,7 +155,7 @@ def print_version(output_format: OutputFormat = None, shortcut: bool = False):
 
 def zero_metadata(cache_dev: Device, shortcut: bool = False):
     output = TestRun.executor.run(
-        zero_metadata_cmd(cache_dev=cache_dev.system_path, shortcut=shortcut))
+        zero_metadata_cmd(cache_dev=cache_dev.path, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to wipe metadata.", output)
     return output
@@ -179,7 +180,8 @@ def remove_all_detached_cores():
 
 def print_statistics(cache_id: int, core_id: int = None, per_io_class: bool = False,
                      io_class_id: int = None, filter: List[StatsFilter] = None,
-                     output_format: OutputFormat = None, shortcut: bool = False):
+                     output_format: OutputFormat = None, by_id_path: bool = True,
+                     shortcut: bool = False):
     _output_format = None if output_format is None else output_format.name
     _core_id = None if core_id is None else str(core_id)
     _io_class_id = None if io_class_id is None else str(io_class_id)
@@ -192,7 +194,8 @@ def print_statistics(cache_id: int, core_id: int = None, per_io_class: bool = Fa
         print_statistics_cmd(
             cache_id=str(cache_id), core_id=_core_id,
             per_io_class=per_io_class, io_class_id=_io_class_id,
-            filter=_filter, output_format=_output_format, shortcut=shortcut))
+            filter=_filter, output_format=_output_format,
+            by_id_path=by_id_path, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Printing statistics failed.", output)
     return output

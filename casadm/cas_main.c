@@ -60,6 +60,7 @@ struct command_args{
 	uint32_t params_type;
 	uint32_t params_count;
 	bool verbose;
+	bool by_id_path;
 };
 
 static struct command_args command_args_values = {
@@ -83,6 +84,7 @@ static struct command_args command_args_values = {
 		.no_flush = false,
 		.cache_device = NULL,
 		.core_device = NULL,
+		.by_id_path = false,
 
 		.params_type = 0,
 		.params_count = 0,
@@ -153,6 +155,8 @@ int command_handle_option(char *opt, const char **arg)
 		command_args_values.detach = true;
 	} else if (!strcmp(opt, "no-flush")) {
 		command_args_values.no_flush = true;
+	} else if (!strcmp(opt, "by-id-path")) {
+		command_args_values.by_id_path = true;
 	} else {
 		return FAILURE;
 	}
@@ -344,12 +348,13 @@ int handle_start()
 
 static cli_option list_options[] = {
 	{'o', "output-format", "Output format: {table|csv}", 1, "FORMAT", 0},
+	{'b', "by-id-path", "Display by-id path to disks instead of short form /dev/sdx"},
 	{0}
 };
 
 int handle_list()
 {
-	return list_caches(command_args_values.output_format);
+	return list_caches(command_args_values.output_format, command_args_values.by_id_path);
 }
 
 static cli_option stats_options[] = {
@@ -358,6 +363,7 @@ static cli_option stats_options[] = {
 	{'d', "io-class-id", "Display per IO class statistics", 1, "ID", CLI_OPTION_OPTIONAL_ARG},
 	{'f', "filter", "Apply filters from the following set: {all, conf, usage, req, blk, err}", 1, "FILTER-SPEC"},
 	{'o', "output-format", "Output format: {table|csv}", 1, "FORMAT"},
+	{'b', "by-id-path", "Display by-id path to disks instead of short form /dev/sdx"},
 	{0}
 };
 
@@ -396,6 +402,10 @@ int stats_command_handle_option(char *opt, const char **arg)
 		command_args_values.output_format = validate_str_output_format(arg[0]);
 		if (OUTPUT_FORMAT_INVALID == command_args_values.output_format)
 			return FAILURE;
+	} else if (!strcmp(opt, "by-id-path")) {
+		command_args_values.by_id_path = true;
+		if (command_args_values.by_id_path == false)
+			return FAILURE;
 	} else {
 		return FAILURE;
 	}
@@ -409,7 +419,8 @@ int handle_stats()
 			    command_args_values.core_id,
 			    command_args_values.io_class_id,
 			    command_args_values.stats_filters,
-			    command_args_values.output_format);
+			    command_args_values.output_format,
+			    command_args_values.by_id_path);
 }
 
 static cli_option stop_options[] = {

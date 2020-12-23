@@ -53,7 +53,7 @@ def test_ioclass_file_extension():
         )
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
-    with TestRun.step(f"Prepare filesystem and mount {core.system_path} at {mountpoint}."):
+    with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}."):
         core.create_filesystem(Filesystem.ext3)
         core.mount(mountpoint)
 
@@ -128,7 +128,7 @@ def test_ioclass_file_name_prefix():
         )
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
-    with TestRun.step(f"Prepare filesystem and mount {core.system_path} at {mountpoint}"):
+    with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}"):
         previous_occupancy = cache.get_occupancy()
 
         core.create_filesystem(Filesystem.ext3)
@@ -285,7 +285,7 @@ def test_ioclass_file_offset():
         )
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
-    with TestRun.step(f"Prepare filesystem and mount {core.system_path} at {mountpoint}."):
+    with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}."):
         core.create_filesystem(Filesystem.ext3)
         core.mount(mountpoint)
 
@@ -374,7 +374,7 @@ def test_ioclass_file_size(filesystem):
     with TestRun.step("Prepare and load IO class config."):
         load_file_size_io_classes(cache, base_size)
 
-    with TestRun.step(f"Prepare {filesystem.name} filesystem and mount {core.system_path} "
+    with TestRun.step(f"Prepare {filesystem.name} filesystem and mount {core.path} "
                       f"at {mountpoint}."):
         core.create_filesystem(filesystem)
         core.mount(mountpoint)

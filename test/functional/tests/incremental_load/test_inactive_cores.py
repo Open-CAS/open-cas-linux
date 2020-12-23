@@ -72,7 +72,7 @@ def test_core_inactive_stats():
         dd = (
             Dd()
             .input("/dev/zero")
-            .output(core.system_path)
+            .output(core.path)
             .count(1000)
             .block_size(Size(4, Unit.KibiByte))
         ).run()

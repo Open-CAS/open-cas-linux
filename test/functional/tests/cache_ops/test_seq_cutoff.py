@@ -84,14 +84,14 @@ def test_seq_cutoff_multi_core(thresholds_list, cache_mode, io_type, io_type_las
             fio_job = fio.add_job(job_name=f"core_{core.core_id}")
             fio_job.size(io_sizes[i])
             fio_job.read_write(io_type)
-            fio_job.target(core.system_path)
+            fio_job.target(core.path)
             writes_before.append(core.get_statistics().block_stats.cache.writes)
 
         # Run random IO against the last core
         fio_job = fio.add_job(job_name=f"core_{cores[-1].core_id}")
         fio_job.size(io_sizes[-1])
         fio_job.read_write(io_type_last)
-        fio_job.target(cores[-1].system_path)
+        fio_job.target(cores[-1].path)
         writes_before.append(cores[-1].get_statistics().block_stats.cache.writes)
 
     with TestRun.step("Running IO against all cores"):
@@ -150,7 +150,7 @@ def test_seq_cutoff_thresh(threshold_param, cls, io_dir, policy, verify_type):
               .io_engine(IoEngine.libaio)
               .size(io_size)
               .read_write(io_dir)
-              .target(f"{cores[0].system_path}")
+              .target(f"{cores[0].path}")
               .direct()
          ).run()
 
@@ -194,7 +194,7 @@ def test_seq_cutoff_thresh_fill(threshold_param, cls, io_dir):
               .io_engine(IoEngine.libaio)
               .size(cache.cache_device.size)
               .read_write(io_dir)
-              .target(f"{cores[0].system_path}")
+              .target(f"{cores[0].path}")
               .direct()
          ).run()
 
@@ -218,7 +218,7 @@ def test_seq_cutoff_thresh_fill(threshold_param, cls, io_dir):
               .io_engine(IoEngine.libaio)
               .size(io_size)
               .read_write(io_dir)
-              .target(f"{cores[0].system_path}")
+              .target(f"{cores[0].path}")
               .direct()
          ).run()
 

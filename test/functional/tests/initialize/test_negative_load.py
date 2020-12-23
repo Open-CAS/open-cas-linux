@@ -51,7 +51,7 @@ def test_load_occupied_id():
         caches = casadm_parser.get_caches()
         if len(caches) != 1:
             TestRun.LOGGER.error("Inappropriate number of caches after load!")
-        if caches[0].cache_device.system_path != cache_device_2.system_path:
+        if caches[0].cache_device.path != cache_device_2.path:
             TestRun.LOGGER.error("Wrong cache device system path!")
         if caches[0].cache_id != 1:
             TestRun.LOGGER.error("Wrong cache id.")

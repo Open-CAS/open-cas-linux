@@ -292,7 +292,7 @@ def check_seqcutoff_parameters(core, seqcutoff_params):
     if failed_params:
         TestRun.LOGGER.error(
             f"Sequential cut-off parameters are not correct "
-            f"for {core.system_path}:\n{failed_params}"
+            f"for {core.path}:\n{failed_params}"
         )
 
 

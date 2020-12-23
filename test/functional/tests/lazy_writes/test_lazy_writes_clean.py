@@ -60,7 +60,7 @@ def test_clean_stop_cache(cache_mode):
 
     with TestRun.step("Write data to the exported object."):
         test_file_main = create_random_test_file("/tmp/test_file_main", Size(64, Unit.MebiByte))
-        dd = Dd().output(core.system_path) \
+        dd = Dd().output(core.path) \
             .input(test_file_main.full_path) \
             .block_size(bs) \
             .count(int(test_file_main.size / bs)) \
@@ -85,7 +85,7 @@ def test_clean_stop_cache(cache_mode):
     with TestRun.step("Read data from the exported object."):
         test_file_1 = File.create_file("/tmp/test_file_1")
         dd = Dd().output(test_file_1.full_path) \
-            .input(core.system_path) \
+            .input(core.path) \
             .block_size(bs) \
             .count(int(test_file_main.size / bs)) \
             .oflag("direct")
@@ -100,7 +100,7 @@ def test_clean_stop_cache(cache_mode):
     with TestRun.step("Read data from the core device."):
         test_file_2 = File.create_file("/tmp/test_file_2")
         dd = Dd().output(test_file_2.full_path) \
-            .input(core_part.system_path) \
+            .input(core_part.path) \
             .block_size(bs) \
             .count(int(test_file_main.size / bs)) \
             .oflag("direct")
@@ -133,7 +133,7 @@ def test_clean_stop_cache(cache_mode):
     with TestRun.step("Read data from the core device."):
         test_file_3 = File.create_file("/tmp/test_file_2")
         dd = Dd().output(test_file_3.full_path) \
-            .input(core_part.system_path) \
+            .input(core_part.path) \
             .block_size(bs) \
             .count(int(test_file_main.size / bs)) \
             .oflag("direct")
@@ -277,7 +277,7 @@ def test_clean_remove_core_without_fs(cache_mode):
 
     with TestRun.step("Write data to exported object."):
         test_file_main = create_random_test_file("/tmp/test_file_main", Size(64, Unit.MebiByte))
-        dd = Dd().output(core.system_path) \
+        dd = Dd().output(core.path) \
             .input(test_file_main.full_path) \
             .block_size(bs) \
             .count(int(test_file_main.size / bs)) \
@@ -302,7 +302,7 @@ def test_clean_remove_core_without_fs(cache_mode):
     with TestRun.step("Read data from the exported object."):
         test_file_1 = File.create_file("/tmp/test_file_1")
         dd = Dd().output(test_file_1.full_path) \
-            .input(core.system_path) \
+            .input(core.path) \
             .block_size(bs) \
             .count(int(test_file_main.size / bs)) \
             .oflag("direct")
@@ -317,7 +317,7 @@ def test_clean_remove_core_without_fs(cache_mode):
     with TestRun.step("Read data from the core device."):
         test_file_2 = File.create_file("/tmp/test_file_2")
         dd = Dd().output(test_file_2.full_path) \
-            .input(core_part.system_path) \
+            .input(core_part.path) \
             .block_size(bs) \
             .count(int(test_file_main.size / bs)) \
             .oflag("direct")
@@ -350,7 +350,7 @@ def test_clean_remove_core_without_fs(cache_mode):
     with TestRun.step("Read data from core device again."):
         test_file_3 = File.create_file("/tmp/test_file_3")
         dd = Dd().output(test_file_3.full_path) \
-            .input(core_part.system_path) \
+            .input(core_part.path) \
             .block_size(bs) \
             .count(int(test_file_main.size / bs)) \
             .oflag("direct")

@@ -86,7 +86,7 @@ def test_load_x_to_one_without_params(cache_mode, cleaning_policy, cache_line_si
                .num_jobs(cores_amount)
                .cpus_allowed_policy(CpusAllowedPolicy.split))
         for core in cores:
-            fio.add_job(f"job_{core.core_id}").target(core.system_path)
+            fio.add_job(f"job_{core.core_id}").target(core.path)
         fio.run()
 
     with TestRun.step("Stop cache."):
@@ -134,7 +134,7 @@ def test_load_x_to_one_without_params(cache_mode, cleaning_policy, cache_line_si
                .num_jobs(cores_amount)
                .cpus_allowed_policy(CpusAllowedPolicy.split))
         for core in cores:
-            fio.add_job(f"job_{core.core_id}").target(core.system_path)
+            fio.add_job(f"job_{core.core_id}").target(core.path)
         fio.run()
 
     with TestRun.step("Check if there are no error statistics."):
@@ -213,7 +213,7 @@ def test_load_x_to_one_with_params(cache_mode, cleaning_policy, cache_line_size,
                .num_jobs(cores_amount)
                .cpus_allowed_policy(CpusAllowedPolicy.split))
         for core in cores:
-            fio.add_job(f"job_{core.core_id}").target(core.system_path)
+            fio.add_job(f"job_{core.core_id}").target(core.path)
         fio.run()
 
     with TestRun.step("Stop cache."):
@@ -261,7 +261,7 @@ def test_load_x_to_one_with_params(cache_mode, cleaning_policy, cache_line_size,
                .num_jobs(cores_amount)
                .cpus_allowed_policy(CpusAllowedPolicy.split))
         for core in cores:
-            fio.add_job(f"job_{core.core_id}").target(core.system_path)
+            fio.add_job(f"job_{core.core_id}").target(core.path)
         fio.run()
 
     with TestRun.step("Check if there are no error statistics."):
@@ -347,7 +347,7 @@ def test_load_x_to_one_diff_params(cache_mode, cleaning_policy, cache_line_size,
                .num_jobs(cores_amount)
                .cpus_allowed_policy(CpusAllowedPolicy.split))
         for core in cores:
-            fio.add_job(f"job_{core.core_id}").target(core.system_path)
+            fio.add_job(f"job_{core.core_id}").target(core.path)
         fio.run()
 
     with TestRun.step("Stop cache."):
@@ -403,7 +403,7 @@ def test_load_x_to_one_diff_params(cache_mode, cleaning_policy, cache_line_size,
                .num_jobs(cores_amount)
                .cpus_allowed_policy(CpusAllowedPolicy.split))
         for core in cores:
-            fio.add_job(f"job_{core.core_id}").target(core.system_path)
+            fio.add_job(f"job_{core.core_id}").target(core.path)
         fio.run()
 
     with TestRun.step("Check if there are no error statistics."):

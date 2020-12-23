@@ -100,7 +100,7 @@ def test_block_stats_write(cache_mode, zero_stats):
         dd = (
             Dd()
             .input("/dev/zero")
-            .output(f"{core.system_path}")
+            .output(f"{core.path}")
             .count(dd_count)
             .block_size(dd_size)
             .oflag("direct")
@@ -225,7 +225,7 @@ def test_block_stats_read(cache_mode, zero_stats):
         dd = (
             Dd()
             .output("/dev/zero")
-            .input(f"{core.system_path}")
+            .input(f"{core.path}")
             .count(dd_count)
             .block_size(dd_size)
             .iflag("direct")

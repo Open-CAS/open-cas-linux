@@ -64,7 +64,7 @@ def test_load_after_clean_shutdown(reboot_type, cache_mode, filesystem):
         else:
             power_control = TestRun.plugin_manager.get_plugin('power_control')
             power_control.power_cycle()
-        cache_dev.system_path = cache_dev_link.get_target()
+        cache_dev.path = cache_dev_link.get_target()
 
     with TestRun.step("Load cache."):
         casadm.load_cache(cache_dev)

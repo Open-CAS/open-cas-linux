@@ -31,16 +31,16 @@ TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION="2000M" PARTITION_IDS
 TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="4000M" PARTITION_IDS_OPTION="1 2 3" make_primary_partitions
 
 # Start cache on CACHE_DEVICE1 (/dev/sdd1, for example) with ID=1 and add a core device using CORE_DEVICE1 (/dev/sde1, for example)
-CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" CACHE_FORCE_OPTION="1" CACHE_MODE_OPTION=$CACHE_MODE start_cache
-CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
+CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" CACHE_FORCE_OPTION="1" CACHE_MODE_OPTION=$CACHE_MODE start_cache
+CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}-part1" add_core
 
 # Start cache on CACHE_DEVICE2 (/dev/sdd2, for example) with ID=2 and add a core device using CORE_DEVICE2 (/dev/sde2, for example)
-CACHE_ID_OPTION="2" CACHE_DEVICE_OPTION="${CACHE_DEVICE}2" CACHE_FORCE_OPTION="1" CACHE_MODE_OPTION=$CACHE_MODE start_cache
-CACHE_ID_OPTION="2" CORE_DEVICE_OPTION="${CORE_DEVICE}2" add_core
+CACHE_ID_OPTION="2" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part2" CACHE_FORCE_OPTION="1" CACHE_MODE_OPTION=$CACHE_MODE start_cache
+CACHE_ID_OPTION="2" CORE_DEVICE_OPTION="${CORE_DEVICE}-part2" add_core
 
 # Start cache on CACHE_DEVICE3 (/dev/sdd3, for example) with ID=3 and add a core device using CORE_DEVICE3 (/dev/sde3, for example)
-CACHE_ID_OPTION="3" CACHE_DEVICE_OPTION="${CACHE_DEVICE}3" CACHE_FORCE_OPTION="1" CACHE_MODE_OPTION=$CACHE_MODE start_cache
-CACHE_ID_OPTION="3" CORE_DEVICE_OPTION="${CORE_DEVICE}3" add_core
+CACHE_ID_OPTION="3" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part3" CACHE_FORCE_OPTION="1" CACHE_MODE_OPTION=$CACHE_MODE start_cache
+CACHE_ID_OPTION="3" CORE_DEVICE_OPTION="${CORE_DEVICE}-part3" add_core
 
 # Create filesystems on cached devices - we do this using run_cmd because it is not in the API (and probably won't be).
 # The test framework will accept invoking the commands directly (e.g. "mkfs.ext3 [...]" without the "run_cmd"), but the
@@ -67,8 +67,8 @@ for ID in 1 2 3 ; do
     run_cmd "umount ${MOUNTPOINT}-${ID}-1"
     CACHE_ID_OPTION="$ID" flush_cache
     CACHE_ID_OPTION="$ID" CACHE_DONT_FLUSH_DATA_OPTION="1" stop_cache
-    run_cmd dd if=/dev/zero of="${CACHE_DEVICE}${ID}" bs=1M count=1 oflag=direct
-    run_cmd "mount ${CORE_DEVICE}${ID} ${MOUNTPOINT}-${ID}-1"
+    run_cmd dd if=/dev/zero of="${CACHE_DEVICE}-part${ID}" bs=1M count=1 oflag=direct
+    run_cmd "mount ${CORE_DEVICE}-part${ID} ${MOUNTPOINT}-${ID}-1"
 done
 
 # Now check for files' presence and umount core devices

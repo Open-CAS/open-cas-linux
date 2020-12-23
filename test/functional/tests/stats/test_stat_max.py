@@ -78,7 +78,7 @@ def test_stat_max_cache():
         fio = fio_prepare()
         for i in range(caches_count):
             for j in range(cores_per_cache):
-                fio.add_job().target(cores[i][j].system_path)
+                fio.add_job().target(cores[i][j].path)
         fio.run()
         sleep(3)
 
@@ -128,7 +128,7 @@ def test_stat_max_core(cache_mode):
     with TestRun.step("Run 'fio'"):
         fio = fio_prepare()
         for j in range(cores_per_cache):
-            fio.add_job().target(cores[j].system_path)
+            fio.add_job().target(cores[j].path)
         fio.run()
         sleep(3)
 

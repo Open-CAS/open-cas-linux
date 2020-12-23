@@ -516,7 +516,7 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 }
 
 int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
-		     unsigned int cache_id, FILE *outfile)
+		     unsigned int cache_id, FILE *outfile, bool by_id_path)
 {
 	float flush_progress = 0;
 	float value;
@@ -526,10 +526,10 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 	char dev_path[MAX_STR_LEN];
 	int inactive_cores;
 
-	if (get_dev_path(cache_info->cache_path_name, dev_path, sizeof(dev_path)) != SUCCESS)
-		cache_path = cache_info->cache_path_name;
-	else
+	if (!by_id_path && get_dev_path(cache_info->cache_path_name, dev_path, sizeof(dev_path)) == SUCCESS)
 		cache_path = dev_path;
+	else
+		cache_path = cache_info->cache_path_name;
 
 	flush_progress = calculate_flush_progress(cache_info->info.dirty,
 			cache_info->info.flushed);
@@ -602,7 +602,8 @@ void cache_stats_counters(struct kcas_get_stats *cache_stats, FILE *outfile,
 }
 
 static int cache_stats(int ctrl_fd, const struct kcas_cache_info *cache_info,
-		      unsigned int cache_id, FILE *outfile, unsigned int stats_filters)
+		      unsigned int cache_id, FILE *outfile, unsigned int stats_filters,
+		      bool by_id_path)
 {
 	struct kcas_get_stats cache_stats = {};
 	cache_stats.cache_id = cache_id;
@@ -615,7 +616,7 @@ static int cache_stats(int ctrl_fd, const struct kcas_cache_info *cache_info,
 	begin_record(outfile);
 
 	if (stats_filters & STATS_FILTER_CONF)
-		cache_stats_conf(ctrl_fd, cache_info, cache_id, outfile);
+		cache_stats_conf(ctrl_fd, cache_info, cache_id, outfile, by_id_path);
 
 	if (stats_filters & STATS_FILTER_USAGE)
 		print_usage_stats(&cache_stats.usage, outfile);
@@ -633,12 +634,12 @@ static int cache_stats(int ctrl_fd, const struct kcas_cache_info *cache_info,
 
 int cache_stats_cores(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		      unsigned int cache_id, unsigned int core_id, int io_class_id,
-		      FILE *outfile, unsigned int stats_filters)
+		      FILE *outfile, unsigned int stats_filters, bool by_id_path)
 {
 	struct kcas_core_info core_info;
 	struct kcas_get_stats stats;
 
-	if (get_core_info(ctrl_fd, cache_id, core_id, &core_info)) {
+	if (get_core_info(ctrl_fd, cache_id, core_id, &core_info, by_id_path)) {
 		cas_printf(LOG_ERR, "Error while retrieving stats for core %d\n", core_id);
 		print_err(core_info.ext_err_code);
 		return FAILURE;
@@ -695,7 +696,7 @@ void *stats_printout(void *ctx)
  * @return SUCCESS upon successful printing of statistic. FAILURE if any error happens
  */
 int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
-		 unsigned int stats_filters, unsigned int output_format)
+		 unsigned int stats_filters, unsigned int output_format, bool by_id_path)
 {
 	int ctrl_fd, i;
 	int ret = SUCCESS;
@@ -763,13 +764,14 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 		}
 	} else if (core_id == OCF_CORE_ID_INVALID) {
 		if (cache_stats(ctrl_fd, &cache_info, cache_id, intermediate_file[1],
-					stats_filters)) {
+					stats_filters, by_id_path)) {
 			ret = FAILURE;
 			goto cleanup;
 		}
 	} else {
 		if (cache_stats_cores(ctrl_fd, &cache_info, cache_id, core_id,
-					io_class_id, intermediate_file[1], stats_filters)) {
+					io_class_id, intermediate_file[1],
+					stats_filters, by_id_path)) {
 			ret = FAILURE;
 			goto cleanup;
 		}

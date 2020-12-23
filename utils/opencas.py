@@ -39,31 +39,32 @@ class casadm:
     @classmethod
     def get_version(cls):
         cmd = [cls.casadm_path,
-                '--version',
-                '--output-format', 'csv']
+               '--version',
+               '--output-format', 'csv']
         return cls.run_cmd(cmd)
 
     @classmethod
     def list_caches(cls):
         cmd = [cls.casadm_path,
-                    '--list-caches',
-                    '--output-format', 'csv']
+               '--list-caches',
+               '--output-format', 'csv',
+               '--by-id-path']
         return cls.run_cmd(cmd)
 
     @classmethod
     def check_cache_device(cls, device):
         cmd = [cls.casadm_path,
-                    '--script',
-                    '--check-cache-device',
-                    '--cache-device', device]
+               '--script',
+               '--check-cache-device',
+               '--cache-device', device]
         return cls.run_cmd(cmd)
 
     @classmethod
     def start_cache(cls, device, cache_id=None, cache_mode=None,
                     cache_line_size=None, load=False, force=False):
         cmd = [cls.casadm_path,
-                    '--start-cache',
-                    '--cache-device', device]
+               '--start-cache',
+               '--cache-device', device]
         if cache_id:
             cmd += ['--cache-id', str(cache_id)]
         if cache_mode:
@@ -79,10 +80,10 @@ class casadm:
     @classmethod
     def add_core(cls, device, cache_id, core_id=None, try_add=False):
         cmd = [cls.casadm_path,
-                    '--script',
-                    '--add-core',
-                    '--core-device', device,
-                    '--cache-id', str(cache_id)]
+               '--script',
+               '--add-core',
+               '--core-device', device,
+               '--cache-id', str(cache_id)]
         if core_id is not None:
             cmd += ['--core-id', str(core_id)]
         if try_add:
@@ -92,8 +93,8 @@ class casadm:
     @classmethod
     def stop_cache(cls, cache_id, no_flush=False):
         cmd = [cls.casadm_path,
-                    '--stop-cache',
-                    '--cache-id', str(cache_id)]
+               '--stop-cache',
+               '--cache-id', str(cache_id)]
         if no_flush:
             cmd += ['--no-data-flush']
         return cls.run_cmd(cmd)
@@ -101,10 +102,10 @@ class casadm:
     @classmethod
     def remove_core(cls, cache_id, core_id, detach=False, force=False):
         cmd = [cls.casadm_path,
-                    '--script',
-                    '--remove-core',
-                    '--cache-id', str(cache_id),
-                    '--core-id', str(core_id)]
+               '--script',
+               '--remove-core',
+               '--cache-id', str(cache_id),
+               '--core-id', str(core_id)]
         if detach:
             cmd += ['--detach']
         if force:
@@ -114,8 +115,8 @@ class casadm:
     @classmethod
     def set_param(cls, namespace, cache_id, **kwargs):
         cmd = [cls.casadm_path,
-                    '--set-param', '--name', namespace,
-                    '--cache-id', str(cache_id)]
+               '--set-param', '--name', namespace,
+               '--cache-id', str(cache_id)]
 
         for param, value in kwargs.items():
             cmd += ['--'+param.replace('_', '-'), str(value)]
@@ -125,8 +126,8 @@ class casadm:
     @classmethod
     def get_params(cls, namespace, cache_id, **kwargs):
         cmd = [cls.casadm_path,
-                    '--get-param', '--name', namespace,
-                    '--cache-id', str(cache_id)]
+               '--get-param', '--name', namespace,
+               '--cache-id', str(cache_id)]
 
         for param, value in kwargs.items():
             cmd += ['--'+param.replace('_', '-'), str(value)]
@@ -138,18 +139,18 @@ class casadm:
     @classmethod
     def flush_parameters(cls, cache_id, policy_type):
         cmd = [cls.casadm_path,
-                    '--flush-parameters',
-                    '--cache-id', str(cache_id),
-                    '--cleaning-policy-type', policy_type]
+               '--flush-parameters',
+               '--cache-id', str(cache_id),
+               '--cleaning-policy-type', policy_type]
         return cls.run_cmd(cmd)
 
     @classmethod
     def io_class_load_config(cls, cache_id, ioclass_file):
         cmd = [cls.casadm_path,
-                    '--io-class',
-                    '--load-config',
-                    '--cache-id', str(cache_id),
-                    '--file', ioclass_file]
+               '--io-class',
+               '--load-config',
+               '--cache-id', str(cache_id),
+               '--file', ioclass_file]
         return cls.run_cmd(cmd)
 
     @classmethod
@@ -163,6 +164,7 @@ class casadm:
 
 class cas_config(object):
     default_location = '/etc/opencas/opencas.conf'
+    _by_id_dir = '/dev/disk/by-id'
 
     class ConflictingConfigException(ValueError):
         pass
@@ -172,30 +174,29 @@ class cas_config(object):
 
     @staticmethod
     def get_by_id_path(path):
-        blocklist = ["lvm", "md-name"]
+        path = os.path.abspath(path)
 
-        for id_path in os.listdir('/dev/disk/by-id'):
-            if any([id_path.startswith(x) for x in blocklist]):
-                continue
+        if os.path.exists(path) or cas_config._is_exp_obj_path(path):
+            return path
+        else:
+            raise ValueError(f"Given path {path} isn't correct by-id path.")
 
-            full_path = '/dev/disk/by-id/{0}'.format(id_path)
-            if os.path.realpath(full_path) == os.path.realpath(path):
-                return full_path
-
-        raise ValueError('By-id device link not found for {0}'.format(path))
+    @staticmethod
+    def _is_exp_obj_path(path):
+        return re.search(r"cas\d+-\d+", path) is not None
 
     @staticmethod
     def check_block_device(path):
         if not os.path.exists(path) and path.startswith('/dev/cas'):
-                return
+            return
 
         try:
             mode = os.stat(path).st_mode
         except:
-            raise ValueError('{0} not found'.format(path))
+            raise ValueError(f'{path} not found')
 
         if not stat.S_ISBLK(mode):
-            raise ValueError('{0} is not block device'.format(path))
+            raise ValueError(f'{path} is not block device')
 
     class cache_config(object):
         def __init__(self, cache_id, device, cache_mode, **params):
@@ -255,12 +256,12 @@ class cas_config(object):
             elif param_name == "lazy_startup":
                 self.check_lazy_startup_valid(param_value)
             else:
-                raise ValueError('{0} is invalid parameter name'.format(param_name))
+                raise ValueError(f'{param_name} is invalid parameter name')
 
         @staticmethod
         def check_cache_id_valid(cache_id):
             if not 1 <= int(cache_id) <= 16384:
-                raise ValueError('{0} is invalid cache id'.format(cache_id))
+                raise ValueError(f'{cache_id} is invalid cache id')
 
         def check_cache_device_empty(self):
             try:
@@ -273,17 +274,16 @@ class cas_config(object):
 
             if len(list(filter(lambda a: a != '', result.stdout.split('\n')))) > 1:
                 raise ValueError(
-                        'Partitions found on device {0}. Use force option to ignore'.
-                        format(self.device))
+                    'Partitions found on device {self.device}. Use force option to ignore'
+                )
 
         def check_cache_mode_valid(self, cache_mode):
             if cache_mode.lower() not in ['wt', 'pt', 'wa', 'wb', 'wo']:
-                raise ValueError('Invalid cache mode {0}'.format(cache_mode))
+                raise ValueError(f'Invalid cache mode {cache_mode}')
 
         def check_cleaning_policy_valid(self, cleaning_policy):
             if cleaning_policy.lower() not in ['acp', 'alru', 'nop']:
-                raise ValueError('{0} is invalid cleaning policy name'.format(
-                    cleaning_policy))
+                raise ValueError(f'{cleaning_policy} is invalid cleaning policy name')
 
         def check_lazy_startup_valid(self, lazy_startup):
             if lazy_startup.lower() not in ["true", "false"]:
@@ -291,13 +291,11 @@ class cas_config(object):
 
         def check_promotion_policy_valid(self, promotion_policy):
             if promotion_policy.lower() not in ['always', 'nhit']:
-                raise ValueError('{0} is invalid promotion policy name'.format(
-                    promotion_policy))
+                raise ValueError(f'{promotion_policy} is invalid promotion policy name')
 
         def check_cache_line_size_valid(self, cache_line_size):
             if cache_line_size not in ['4', '8', '16', '32', '64']:
-                raise ValueError('{0} is invalid cache line size'.format(
-                    cache_line_size))
+                raise ValueError(f'{cache_line_size} is invalid cache line size')
 
         def check_recursive(self):
             if not self.device.startswith('/dev/cas'):
@@ -310,7 +308,7 @@ class cas_config(object):
                 raise ValueError('Recursive configuration detected')
 
         def to_line(self):
-            ret = '{0}\t{1}\t{2}'.format(self.cache_id, self.device, self.cache_mode)
+            ret = f'{self.cache_id}\t{self.device}\t{self.cache_mode}'
             if len(self.params) > 0:
                 i = 0
                 for param, value in self.params.items():
@@ -319,7 +317,7 @@ class cas_config(object):
                     else:
                         ret += '\t'
 
-                    ret += '{0}={1}'.format(param, value)
+                    ret += f'{param}={value}'
                     i += 1
             ret += '\n'
 
@@ -378,16 +376,14 @@ class cas_config(object):
             if param_name == "lazy_startup":
                 if param_value.lower() not in ["true", "false"]:
                     raise ValueError(
-                        "{} is invalid value for '{}' core param".format(
-                            param_value, param_name
-                        )
+                        f"{param_value} is invalid value for '{param_name}' core param"
                     )
             else:
-                raise ValueError("'{}' is invalid core param name".format(param_name))
+                raise ValueError(f"'{param_name}' is invalid core param name")
 
         def check_core_id_valid(self):
             if not 0 <= int(self.core_id) <= 4095:
-                raise ValueError('{0} is invalid core id'.format(self.core_id))
+                raise ValueError(f'{self.core_id} is invalid core id')
 
         def check_recursive(self):
             if not self.device.startswith('/dev/cas'):
@@ -400,11 +396,11 @@ class cas_config(object):
                 raise ValueError('Recursive configuration detected')
 
         def to_line(self):
-            ret = "{0}\t{1}\t{2}".format(self.cache_id, self.core_id, self.device)
+            ret = f"{self.cache_id}\t{self.core_id}\t{self.device}"
             for i, (param, value) in enumerate(self.params.items()):
                 ret += "," if i > 0 else "\t"
 
-                ret += "{0}={1}".format(param, value)
+                ret += f"{param}={value}"
             ret += "\n"
 
             return ret
@@ -493,7 +489,7 @@ class cas_config(object):
 
     def insert_core(self, new_core_config):
         if new_core_config.cache_id not in self.caches:
-            raise KeyError('Cache id {0} doesn\'t exist'.format(new_core_config.cache_id))
+            raise KeyError(f'Cache id {new_core_config.cache_id} doesn\'t exist')
 
         try:
             for cache_id, cache in self.caches.items():
@@ -537,7 +533,7 @@ class cas_config(object):
     def write(self, config_file):
         try:
             with open(config_file, 'w') as conf:
-                conf.write('{0}\n'.format(self.version_tag))
+                conf.write(f'{self.version_tag}\n')
                 conf.write('# This config was automatically generated\n')
 
                 conf.write('[caches]\n')
@@ -547,7 +543,6 @@ class cas_config(object):
                 conf.write('\n[cores]\n')
                 for core in self.cores:
                     conf.write(core.to_line())
-
         except:
             raise Exception('Couldn\'t write config file')
 
@@ -562,6 +557,7 @@ def start_cache(cache, load, force=False):
             cache_line_size=cache.params.get('cache_line_size'),
             load=load,
             force=force)
+
 
 def configure_cache(cache):
     if "cleaning_policy" in cache.params:
@@ -587,6 +583,7 @@ def add_core(core, attach):
 
 # Another helper functions
 
+
 def is_cache_started(cache_config):
     dev_list = get_caches_list()
     for dev in dev_list:
@@ -594,6 +591,7 @@ def is_cache_started(cache_config):
             return True
 
     return False
+
 
 def is_core_added(core_config):
     dev_list = get_caches_list()
@@ -609,13 +607,16 @@ def is_core_added(core_config):
 
     return False
 
+
 def get_caches_list():
     result = casadm.list_caches()
     return list(csv.DictReader(result.stdout.split('\n')))
 
+
 def check_cache_device(device):
     result = casadm.check_cache_device(device)
     return list(csv.DictReader(result.stdout.split('\n')))[0]
+
 
 def get_cas_version():
     version = casadm.get_version()
@@ -640,7 +641,7 @@ class CompoundException(Exception):
         s = "Multiple exceptions occured:\n" if len(self.exception_list) > 1 else ""
 
         for e in self.exception_list:
-            s += '{0}\n'.format(str(e))
+            s += f'{str(e)}\n'
 
         return s
 
@@ -659,6 +660,7 @@ class CompoundException(Exception):
         else:
             raise self
 
+
 def detach_core_recursive(cache_id, core_id, flush):
     # Catching exceptions is left to uppermost caller of detach_core_recursive
     # as the immediate caller that made a recursive call depends on the callee
@@ -668,12 +670,13 @@ def detach_core_recursive(cache_id, core_id, flush):
         if dev['type'] == 'cache':
             l_cache_id = dev['id']
         elif dev['type'] == 'core' and dev['status'] == 'Active':
-            if '/dev/cas{0}-{1}'.format(cache_id, core_id) in dev['disk']:
+            if f'/dev/cas{cache_id}-{core_id}' in dev['disk']:
                 detach_core_recursive(l_cache_id, dev['id'], flush)
         elif l_cache_id == cache_id and dev['id'] == core_id and dev['status'] != 'Active':
             return
 
-    casadm.remove_core(cache_id, core_id, detach = True, force = not flush)
+    casadm.remove_core(cache_id, core_id, detach=True, force=not flush)
+
 
 def detach_all_cores(flush):
     error = CompoundException()
@@ -681,8 +684,7 @@ def detach_all_cores(flush):
     try:
         dev_list = get_caches_list()
     except casadm.CasadmError as e:
-        raise Exception('Unable to list caches. Reason:\n{0}'.format(
-            e.result.stderr))
+        raise Exception(f'Unable to list caches. Reason:\n{e.result.stderr}')
     except:
         raise Exception('Unable to list caches.')
 
@@ -696,13 +698,12 @@ def detach_all_cores(flush):
                 detach_core_recursive(cache_id, dev['id'], flush)
             except casadm.CasadmError as e:
                 error.add_exception(Exception(
-                    'Unable to detach core {0}. Reason:\n{1}'.format(
-                        dev['disk'], e.result.stderr)))
+                    f"Unable to detach core {dev['disk']}. Reason:\n{e.result.stderr}"))
             except:
-                error.add_exception(Exception(
-                    'Unable to detach core {0}.'.format(dev['disk'])))
+                error.add_exception(Exception(f"Unable to detach core {dev['disk']}."))
 
     error.raise_nonempty()
+
 
 def stop_all_caches(flush):
     error = CompoundException()
@@ -710,8 +711,7 @@ def stop_all_caches(flush):
     try:
         dev_list = get_caches_list()
     except casadm.CasadmError as e:
-        raise Exception('Unable to list caches. Reason:\n{0}'.format(
-            e.result.stderr))
+        raise Exception(f'Unable to list caches. Reason:\n{e.result.stderr}')
     except:
         raise Exception('Unable to list caches.')
 
@@ -723,13 +723,12 @@ def stop_all_caches(flush):
                 casadm.stop_cache(dev['id'], not flush)
             except casadm.CasadmError as e:
                 error.add_exception(Exception(
-                    'Unable to stop cache {0}. Reason:\n{1}'.format(
-                        dev['disk'], e.result.stderr)))
+                    f"Unable to stop cache {dev['disk']}. Reason:\n{e.result.stderr}"))
             except:
-                error.add_exception(Exception(
-                    'Unable to stop cache {0}.'.format(dev['disk'])))
+                error.add_exception(Exception(f"Unable to stop cache {dev['disk']}."))
 
     error.raise_nonempty()
+
 
 def stop(flush):
     error = CompoundException()
@@ -837,7 +836,7 @@ def wait_for_startup(timeout=300, interval=5):
             cas_config.default_location, allow_incomplete=True
         )
     except Exception as e:
-        raise Exception("Unable to load opencas config. Reason: {0}".format(str(e)))
+        raise Exception(f"Unable to load opencas config. Reason: {str(e)}")
 
     not_initialized = _get_uninitialized_devices(config)
     if not not_initialized:

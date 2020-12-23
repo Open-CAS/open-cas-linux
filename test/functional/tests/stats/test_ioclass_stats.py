@@ -310,7 +310,7 @@ def prepare(random_cls, cache_count=1, cores_per_cache=1):
     Udev.disable()
     caches, cores = [], []
     for i, cache_device in enumerate(cache_devices):
-        TestRun.LOGGER.info(f"Starting cache on {cache_device.system_path}")
+        TestRun.LOGGER.info(f"Starting cache on {cache_device.path}")
         cache = casadm.start_cache(cache_device,
                                    force=True,
                                    cache_mode=cache_modes[i],
@@ -320,7 +320,7 @@ def prepare(random_cls, cache_count=1, cores_per_cache=1):
         cache.set_cleaning_policy(CleaningPolicy.nop)
         for core_device in core_devices[i * cores_per_cache:(i + 1) * cores_per_cache]:
             TestRun.LOGGER.info(
-                f"Adding core device {core_device.system_path} to cache {cache.cache_id}")
+                f"Adding core device {core_device.path} to cache {cache.cache_id}")
             core = cache.add_core(core_dev=core_device)
             core.reset_counters()
             cores.append(core)

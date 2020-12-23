@@ -76,7 +76,7 @@ def test_user_cli():
 
     with TestRun.step("Try to start cache."):
         try:
-            output = run_as_other_user(cli.start_cmd(cache_dev.system_path), user_name)
+            output = run_as_other_user(cli.start_cmd(cache_dev.path), user_name)
             if output.exit_code == 0:
                 TestRun.LOGGER.error("Starting cache should fail!")
         except CmdException:
@@ -105,7 +105,7 @@ def test_user_cli():
     with TestRun.step("Try to add core to cache."):
         try:
             output = run_as_other_user(cli.add_core_cmd(str(cache.cache_id),
-                                                        core_part2.system_path), user_name)
+                                                        core_part2.path), user_name)
             if output.exit_code == 0:
                 TestRun.LOGGER.error("Adding core to cache should fail!")
         except CmdException:
@@ -244,7 +244,7 @@ def test_user_cli():
 
     with TestRun.step("Try to start cache with 'sudo'."):
         try:
-            run_as_other_user(cli.start_cmd(cache_dev.system_path, force=True), user_name, True)
+            run_as_other_user(cli.start_cmd(cache_dev.path, force=True), user_name, True)
         except CmdException:
             TestRun.LOGGER.error("Non-root sudoer user should be able to start cache.")
 
@@ -259,7 +259,7 @@ def test_user_cli():
     with TestRun.step("Try to add core to cache with 'sudo'."):
         try:
             run_as_other_user(cli.add_core_cmd(str(cache.cache_id),
-                                               core_part1.system_path), user_name, True)
+                                               core_part1.path), user_name, True)
         except CmdException:
             TestRun.LOGGER.error("Non-root sudoer user should be able to add core to cache.")
 

@@ -81,7 +81,7 @@ def test_ioclass_core_id(filesystem):
         if filesystem:
             dd_dst_paths = [cached_mountpoint + "/test_file", not_cached_mountpoint + "/test_file"]
         else:
-            dd_dst_paths = [core_1.system_path, core_2.system_path]
+            dd_dst_paths = [core_1.path, core_2.path]
 
         for path in dd_dst_paths:
             dd = (

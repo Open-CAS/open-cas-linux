@@ -39,8 +39,8 @@ def test_trim_start_discard():
         non_cas_part = dev.partitions[1]
 
     with TestRun.step("Writing different pattern on partitions"):
-        cas_fio = write_pattern(cas_part.system_path)
-        non_cas_fio = write_pattern(non_cas_part.system_path)
+        cas_fio = write_pattern(cas_part.path)
+        non_cas_fio = write_pattern(non_cas_part.path)
         cas_fio.run()
         non_cas_fio.run()
 

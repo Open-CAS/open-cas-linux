@@ -34,7 +34,7 @@ eviction_policy_init() {
     # Create 1 primary partitions on CACHE_DEVICE
     TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION=$CACHE_DEVICE_SIZE PARTITION_IDS_OPTION="1" make_primary_partitions
     # Make empty cache device, clear previous content, clear previous metadata
-    dd if=/dev/zero of="${CACHE_DEVICE}1" bs="4k" count=$CACHE_DEVICE_SIZE &>/dev/null
+    dd if=/dev/zero of="${CACHE_DEVICE}-part1" bs="4k" count=$CACHE_DEVICE_SIZE &>/dev/null
 
     # Create 1 primary partitions on CORE_DEVICE
     TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION=$CORE_DEVICE_SIZE PARTITION_IDS_OPTION="1" make_primary_partitions
@@ -50,10 +50,10 @@ eviction_policy_init() {
     fi
 
     # Start cache on CACHE_DEVICE1
-    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
+    CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" start_cache
 
     # Add a core device using CORE_DEVICE1
-    CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
+    CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}-part1" add_core
 }
 
 eviction_policy_flush() {
@@ -315,7 +315,7 @@ test_log_start
 
 run_cmd eviction_policy_init "YES"
 
-run_cmd eviction_policy_test $TEST_DEVICE "${CORE_DEVICE}1" $(get_bytes $CORE_DEVICE_SIZE)
+run_cmd eviction_policy_test $TEST_DEVICE "${CORE_DEVICE}-part1" $(get_bytes $CORE_DEVICE_SIZE)
 
 run_cmd eviction_policy_deinit
 

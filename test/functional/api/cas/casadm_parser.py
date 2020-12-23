@@ -2,24 +2,20 @@
 # Copyright(c) 2019-2020 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
-import csv
 
+import csv
 import json
 import re
-from api.cas import casadm
-from test_utils.output import CmdException
-from test_utils.size import parse_unit
-from storage_devices.device import Device
-from api.cas.cache_config import *
-from api.cas.casadm_params import *
-from api.cas.version import CasVersion
 from datetime import timedelta
 from typing import List
 
 from api.cas import casadm
 from api.cas.cache_config import *
 from api.cas.casadm_params import *
+from api.cas.version import CasVersion
+from storage_devices.device import Device
 from test_utils.size import parse_unit
+from test_utils.output import CmdException
 
 
 class Stats(dict):

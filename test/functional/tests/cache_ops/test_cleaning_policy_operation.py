@@ -73,7 +73,7 @@ def test_cleaning_policies_in_write_back(cleaning_policy):
     with TestRun.step("Run 'fio'"):
         fio = fio_prepare()
         for i in range(cores_count):
-            fio.add_job().target(core[i].system_path)
+            fio.add_job().target(core[i].path)
         fio.run()
         time.sleep(3)
         core_writes_before_wait_for_cleaning = (
@@ -138,7 +138,7 @@ def test_cleaning_policies_in_write_through(cleaning_policy):
     with TestRun.step("Run 'fio'"):
         fio = fio_prepare()
         for i in range(cores_count):
-            fio.add_job().target(core[i].system_path)
+            fio.add_job().target(core[i].path)
         fio.run()
         time.sleep(3)
 

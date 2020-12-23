@@ -105,5 +105,5 @@ def run_io(exported_objects):
             .io_depth(32) \
             .run_time(timedelta(minutes=5)) \
             .num_jobs(5) \
-            .target(exported_objects[i].system_path)
+            .target(exported_objects[i].path)
         fio.run_in_background()

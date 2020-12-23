@@ -79,7 +79,7 @@ def test_stress_small_cas_device(cache_line_size, cores_number, cache_config):
                .num_jobs(cores_number)
                .cpus_allowed_policy(CpusAllowedPolicy.split))
         for core in cores:
-            fio.add_job(f"job_{core.core_id}").target(core.system_path)
+            fio.add_job(f"job_{core.core_id}").target(core.path)
         output = fio.run()[0]
         TestRun.LOGGER.info(f"Total read I/O [KiB]: {str(output.read_io())}\n"
                             f"Total write I/O [KiB]: {str(output.write_io())}")
@@ -88,7 +88,7 @@ def test_stress_small_cas_device(cache_line_size, cores_number, cache_config):
         md5sum_core = []
         for core in cores:
             md5sum_core.append(TestRun.executor.run(
-                f"md5sum -b {core.system_path}").stdout.split(" ")[0])
+                f"md5sum -b {core.path}").stdout.split(" ")[0])
 
     with TestRun.step("Stop cache."):
         cache.stop()
@@ -97,7 +97,7 @@ def test_stress_small_cas_device(cache_line_size, cores_number, cache_config):
         md5sum_core_dev = []
         for core_dev in core_dev.partitions:
             md5sum_core_dev.append(TestRun.executor.run(
-                f"md5sum -b {core_dev.system_path}").stdout.split(" ")[0])
+                f"md5sum -b {core_dev.path}").stdout.split(" ")[0])
 
     with TestRun.step("Compare md5 sum of exported objects and cores."):
         if md5sum_core_dev != md5sum_core:

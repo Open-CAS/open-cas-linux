@@ -172,7 +172,7 @@ command there is a different list of available options:
 
 .TP
 .B -d, --cache-device <DEVICE>
-Path to caching device to be used e.g. SSD device (/dev/sdb).
+Path to caching device using by-id link (e.g. /dev/disk/by-id/nvme-INTEL_SSDP...).
 
 .TP
 .B -i, --cache-id <ID>
@@ -460,7 +460,7 @@ Identifier of cache instance <1-16384>.
 
 .TP
 .B -d, --core-device <DEVICE>
-Path to core device e.g. HDD device.
+Path to core device using by-id link (e.g. /dev/disk/by-id/wwn-0x1234567890b100d).
 
 .TP
 .B -j, --core-id <ID>
@@ -491,6 +491,11 @@ Path to core device to be removed from core pool.
 .B -o, --output-format {table|csv}
 Defines output format for list of all cache instances and core devices. It can be either \fBtable\fR (default) or \fBcsv\fR.
 
+.TP
+.B -b --by-id-path
+Display path to devices in long format (/dev/disk/by-id/some_link).
+If this option is not given, displays path in short format (/dev/sdx) instead.
+
 .SH Options that are valid with --stats (-P) are:
 .TP
 .B -i, --cache-id <ID>
@@ -499,7 +504,7 @@ Identifier of cache instance <1-16384>.
 .TP
 .B -j, --core-id <ID>
 Identifier of core instance <0-4095> within given cache instance. If this option is
-not given, aggregate statistics for whole cache instance are printed instead.
+not given, aggregated statistics for whole cache instance are printed instead.
 
 .TP
 .B -d, --io-class-id <ID>
@@ -530,6 +535,11 @@ Default for --filter option is \fBall\fR.
 .B -o --output-format {table|csv}
 Defines output format for statistics. It can be either \fBtable\fR
 (default) or \fBcsv\fR.
+
+.TP
+.B -b --by-id-path
+Display path to device in long format (/dev/disk/by-id/some_link).
+If this option is not given, displays path in short format (/dev/sdx) instead.
 
 .SH Options that are valid with --reset-counters (-Z) are:
 .TP
@@ -575,19 +585,6 @@ Identifier of cache instance <1-16384>.
 .B -o --output-format {table|csv}
 Defines output format for printed IO class configuration. It can be either
 \fBtable\fR (default) or \fBcsv\fR.
-
-.SH Options that are valid with --nvme --format (-N -F) are:
-
-.TP
-.B -d, --device <DEVICE>
-Path to NVMe device to be formatted (e.g. /dev/nvme0).
-
-.TP
-.B -f, --force
-Force to format NVMe device. By default device will not be formatted if utility
-detects on the device file system or presence of dirty data after cache dirty
-shutdown. This parameter formats NVMe namespace regardless to this situations.
-
 
 .SH Command --help (-H) does not accept any options.
 .BR

@@ -66,7 +66,7 @@ def test_cache_config_stats():
         fio = fio_prepare()
         for i in range(caches_count):
             for j in range(cores_per_cache):
-                fio.add_job().target(cores[i][j].system_path)
+                fio.add_job().target(cores[i][j].path)
         fio_pid = fio.run_in_background()
 
     with TestRun.step(f"Wait {time_to_wait} seconds"):
@@ -107,7 +107,7 @@ def test_core_config_stats():
         fio = fio_prepare()
         for i in range(caches_count):
             for j in range(cores_per_cache):
-                fio.add_job().target(cores[i][j].system_path)
+                fio.add_job().target(cores[i][j].path)
         fio_pid = fio.run_in_background()
 
     with TestRun.step(f"Wait {time_to_wait} seconds"):
@@ -255,11 +255,11 @@ def validate_cache_config_statistics(caches, after_io: bool = False):
             failed_stats += (
                 f"For cache number {caches[i].cache_id} cache ID is "
                 f"{caches_stats[i].config_stats.cache_id}\n")
-        if caches_stats[i].config_stats.cache_dev != caches[i].cache_device.system_path:
+        if caches_stats[i].config_stats.cache_dev != caches[i].cache_device.path:
             failed_stats += (
                 f"For cache number {caches[i].cache_id} cache device "
                 f"is {caches_stats[i].config_stats.cache_dev}, "
-                f"should be {caches[i].cache_device.system_path}\n")
+                f"should be {caches[i].cache_device.path}\n")
         if caches_stats[i].config_stats.cache_size.value != caches[i].size.value:
             failed_stats += (
                 f"For cache number {caches[i].cache_id} cache size is "
@@ -344,23 +344,23 @@ def validate_core_config_statistics(cores, caches=None):
             for j in range(cores_per_cache)
         ]
         for j in range(cores_per_cache):
-            if cores_stats[j].config_stats.exp_obj != cores[i][j].system_path:
+            if cores_stats[j].config_stats.exp_obj != cores[i][j].path:
                 failed_stats += (
-                    f"For exported object {cores[i][j].system_path} "
+                    f"For exported object {cores[i][j].path} "
                     f"value in stats is {cores_stats[j].config_stats.exp_obj}\n")
             if cores_stats[j].config_stats.core_id != cores[i][j].core_id:
                 failed_stats += (
-                    f"For exported object {cores[i][j].system_path} "
+                    f"For exported object {cores[i][j].path} "
                     f"core ID is {cores_stats[j].config_stats.core_id}, "
                     f"should be {cores[i][j].core_id}\n")
-            if cores_stats[j].config_stats.core_dev != cores[i][j].core_device.system_path:
+            if cores_stats[j].config_stats.core_dev != cores[i][j].core_device.path:
                 failed_stats += (
-                    f"For exported object {cores[i][j].system_path} "
+                    f"For exported object {cores[i][j].path} "
                     f"core device is {cores_stats[j].config_stats.core_dev}, "
-                    f"should be {cores[i][j].core_device.system_path}\n")
+                    f"should be {cores[i][j].core_device.path}\n")
             if cores_stats[j].config_stats.core_size.value != cores[i][j].size.value:
                 failed_stats += (
-                    f"For exported object {cores[i][j].system_path} "
+                    f"For exported object {cores[i][j].path} "
                     f"core size is {cores_stats[j].config_stats.core_size.value}, "
                     f"should be {cores[i][j].size.value}\n")
             if (
@@ -368,16 +368,16 @@ def validate_core_config_statistics(cores, caches=None):
                 != cores[i][j].get_status()
             ):
                 failed_stats += (
-                    f"For exported object {cores[i][j].system_path} core "
+                    f"For exported object {cores[i][j].path} core "
                     f"status is {cores_stats[j].config_stats.status}, should be "
                     f"{str(cores[i][j].get_status()).split('.')[1].capitalize()}\n")
             if cores_stats[j].config_stats.seq_cutoff_policy is None:
                 failed_stats += (
-                    f"For exported object {cores[i][j].system_path} value of "
+                    f"For exported object {cores[i][j].path} value of "
                     f"Sequential cut-off policy should not be empty\n")
             if cores_stats[j].config_stats.seq_cutoff_threshold.value <= 0:
                 failed_stats += (
-                    f"For exported object {cores[i][j].system_path} value of "
+                    f"For exported object {cores[i][j].path} value of "
                     f"Sequential cut-off threshold should be greater then 0\n")
             if caches:
                 cache_mode = CacheMode[
@@ -386,21 +386,21 @@ def validate_core_config_statistics(cores, caches=None):
                 if CacheModeTrait.LazyWrites in CacheMode.get_traits(cache_mode):
                     if cores_stats[j].config_stats.dirty_for.total_seconds() <= 0:
                         failed_stats += (
-                            f"For exported object {cores[i][j].system_path} in "
+                            f"For exported object {cores[i][j].path} in "
                             f"{cache_mode} cache mode, value of 'Dirty for' "
                             f"after IO is {cores_stats[j].config_stats.dirty_for}, "
                             f"should be greater then 0\n")
                 else:
                     if cores_stats[j].config_stats.dirty_for.total_seconds() != 0:
                         failed_stats += (
-                            f"For exported object {cores[i][j].system_path} in "
+                            f"For exported object {cores[i][j].path} in "
                             f"{cache_mode} cache mode, value of 'Dirty for' "
                             f"after IO is {cores_stats[j].config_stats.dirty_for}, "
                             f"should equal 0\n")
             else:
                 if cores_stats[j].config_stats.dirty_for.total_seconds() < 0:
                     failed_stats += (
-                        f"For exported object {cores[i][j].system_path} value of "
+                        f"For exported object {cores[i][j].path} value of "
                         f"'Dirty for' is {cores_stats[j].config_stats.dirty_for}, "
                         f"should be greater or equal 0\n")
 
@@ -412,7 +412,7 @@ def validate_core_config_statistics(cores, caches=None):
 
 def validate_statistics_flat(device, stats, stat_filter, per_core: bool):
     device_name = (
-        f"core device {device.system_path}" if per_core else
+        f"core device {device.path}" if per_core else
         f"cache number {device.cache_id}")
     failed_stats = ""
     if stat_filter == StatsFilter.usage:

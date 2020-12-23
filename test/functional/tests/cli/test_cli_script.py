@@ -44,7 +44,7 @@ def test_purge(purge_target):
         dd = (
             Dd()
             .input("/dev/zero")
-            .output(core.system_path)
+            .output(core.path)
             .count(100)
             .block_size(Size(1, Unit.Blocks512))
             .oflag("direct")

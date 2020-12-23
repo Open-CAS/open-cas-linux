@@ -271,8 +271,8 @@ def dd_builder(cache_mode, cache_line_size, count, device):
           .count(count))
 
     if CacheModeTrait.InsertRead in CacheMode.get_traits(cache_mode):
-        dd.input(device.system_path).output("/dev/null").iflag("direct")
+        dd.input(device.path).output("/dev/null").iflag("direct")
     else:
-        dd.input("/dev/urandom").output(device.system_path).oflag("direct")
+        dd.input("/dev/urandom").output(device.path).oflag("direct")
 
     return dd

@@ -28,21 +28,21 @@ TARGET_DEVICE_OPTION="$CORE_DEVICE" remove_partitions
 TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION="2000M" PARTITION_IDS_OPTION="1 2 3" make_primary_partitions
 # Create 3 primary partitions on CORE_DEVICE, each of 4000M size
 TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="4000M" PARTITION_IDS_OPTION="1 2 3" make_primary_partitions
-run_cmd dd if=/dev/zero of="${CORE_DEVICE}1" bs=1M count=1 oflag=direct
-run_cmd dd if=/dev/zero of="${CORE_DEVICE}2" bs=1M count=1 oflag=direct
-run_cmd dd if=/dev/zero of="${CORE_DEVICE}3" bs=1M count=1 oflag=direct
+run_cmd dd if=/dev/zero of="${CORE_DEVICE}-part1" bs=1M count=1 oflag=direct
+run_cmd dd if=/dev/zero of="${CORE_DEVICE}-part2" bs=1M count=1 oflag=direct
+run_cmd dd if=/dev/zero of="${CORE_DEVICE}-part3" bs=1M count=1 oflag=direct
 
 # Start cache on CACHE_DEVICE1 (/dev/sdd1, for example) with ID=1 and add a core device using CORE_DEVICE1 (/dev/sde1, for example)
-CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}1" start_cache
-CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}1" add_core
+CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" start_cache
+CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}-part1" add_core
 
 # Start cache on CACHE_DEVICE2 (/dev/sdd2, for example) with ID=2 and add a core device using CORE_DEVICE2 (/dev/sde2, for example)
-CACHE_ID_OPTION="2" CACHE_DEVICE_OPTION="${CACHE_DEVICE}2" start_cache
-CACHE_ID_OPTION="2" CORE_DEVICE_OPTION="${CORE_DEVICE}2" add_core
+CACHE_ID_OPTION="2" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part2" start_cache
+CACHE_ID_OPTION="2" CORE_DEVICE_OPTION="${CORE_DEVICE}-part2" add_core
 
 # Start cache on CACHE_DEVICE3 (/dev/sdd3, for example) with ID=3 and add a core device using CORE_DEVICE3 (/dev/sde3, for example)
-CACHE_ID_OPTION="3" CACHE_DEVICE_OPTION="${CACHE_DEVICE}3" start_cache
-CACHE_ID_OPTION="3" CORE_DEVICE_OPTION="${CORE_DEVICE}3" add_core
+CACHE_ID_OPTION="3" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part3" start_cache
+CACHE_ID_OPTION="3" CORE_DEVICE_OPTION="${CORE_DEVICE}-part3" add_core
 
 # Create filesystems on cached devices - we do this using run_cmd because it is not in the API (and probably won't be).
 # The test framework will accept invoking the commands directly (e.g. "mkfs.ext3 [...]" without the "run_cmd"), but the
@@ -68,7 +68,7 @@ done
 for ID in 1 2 3 ; do
     run_cmd "umount ${MOUNTPOINT}-${ID}-1"
     CACHE_ID_OPTION="$ID" stop_cache
-    run_cmd "mount ${CORE_DEVICE}${ID} ${MOUNTPOINT}-${ID}-1"
+    run_cmd "mount ${CORE_DEVICE}-part${ID} ${MOUNTPOINT}-${ID}-1"
 done
 
 # Now check for files' presence and umount core devices

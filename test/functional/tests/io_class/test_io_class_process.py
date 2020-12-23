@@ -53,7 +53,7 @@ def test_ioclass_process_name():
             dd = (
                 Dd()
                 .input("/dev/zero")
-                .output(core.system_path)
+                .output(core.path)
                 .count(dd_count)
                 .block_size(dd_size)
                 .seek(i)
@@ -91,7 +91,7 @@ def test_ioclass_pid():
         dd_command = str(
             Dd()
             .input("/dev/zero")
-            .output(core.system_path)
+            .output(core.path)
             .count(dd_count)
             .block_size(dd_size)
         )

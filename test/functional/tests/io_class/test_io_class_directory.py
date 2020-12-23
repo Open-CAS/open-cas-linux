@@ -39,7 +39,7 @@ def test_ioclass_directory_depth(filesystem):
         cache, core = prepare()
         Udev.disable()
 
-    with TestRun.step(f"Prepare {filesystem.name} filesystem and mount {core.system_path} "
+    with TestRun.step(f"Prepare {filesystem.name} filesystem and mount {core.path} "
                       f"at {mountpoint}."):
         core.create_filesystem(filesystem)
         core.mount(mountpoint)
@@ -157,7 +157,7 @@ def test_ioclass_directory_file_operations(filesystem):
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
     with TestRun.step(f"Prepare {filesystem.name} filesystem "
-                      f"and mounting {core.system_path} at {mountpoint}."):
+                      f"and mounting {core.path} at {mountpoint}."):
         core.create_filesystem(fs_type=filesystem)
         core.mount(mount_point=mountpoint)
         sync()
@@ -290,7 +290,7 @@ def test_ioclass_directory_dir_operations(filesystem):
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
     with TestRun.step(f"Prepare {filesystem.name} filesystem "
-                      f"and mount {core.system_path} at {mountpoint}."):
+                      f"and mount {core.path} at {mountpoint}."):
         core.create_filesystem(fs_type=filesystem)
         core.mount(mount_point=mountpoint)
         sync()

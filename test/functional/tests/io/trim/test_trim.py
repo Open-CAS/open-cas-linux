@@ -41,8 +41,8 @@ def test_trim_start_discard():
         non_cas_part = dev.partitions[1]
 
     with TestRun.step("Writing different pattern on partitions"):
-        cas_fio = write_pattern(cas_part.system_path)
-        non_cas_fio = write_pattern(non_cas_part.system_path)
+        cas_fio = write_pattern(cas_part.path)
+        non_cas_fio = write_pattern(non_cas_part.path)
         cas_fio.run()
         non_cas_fio.run()
 
@@ -206,15 +206,15 @@ def check_discards(discards_count, device, discards_expected):
     if discards_expected:
         if discards_count > 0:
             TestRun.LOGGER.info(
-                f"{discards_count} TRIM instructions generated for {device.system_path}")
+                f"{discards_count} TRIM instructions generated for {device.path}")
         else:
-            TestRun.LOGGER.error(f"No TRIM instructions found in requests to {device.system_path}")
+            TestRun.LOGGER.error(f"No TRIM instructions found in requests to {device.path}")
     else:
         if discards_count > 0:
             TestRun.LOGGER.error(
-                f"{discards_count} TRIM instructions generated for {device.system_path}")
+                f"{discards_count} TRIM instructions generated for {device.path}")
         else:
-            TestRun.LOGGER.info(f"No TRIM instructions found in requests to {device.system_path}")
+            TestRun.LOGGER.info(f"No TRIM instructions found in requests to {device.path}")
 
 
 def start_monitoring(core_dev, cache_dev, cas_dev):
