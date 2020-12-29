@@ -20,7 +20,7 @@ try:
     config = opencas.cas_config.from_file('/etc/opencas/opencas.conf',
                                           allow_incomplete=True)
 except Exception as e:
-    sl.syslog(sl.LOG_ERR, 'Unable to load opencas config. Reason: {str(e)}')
+    sl.syslog(sl.LOG_ERR, f'Unable to load opencas config. Reason: {str(e)}')
     exit(1)
 
 for cache in config.caches.values():
