@@ -250,7 +250,7 @@ int cas_create_cleaner_thread(ocf_cleaner_t c)
 	int result;
 
 	result = _cas_create_thread(&info, _cas_cleaner_thread, c,
-			CAS_CPUS_ALL, "cas_clean_%s",
+			CAS_CPUS_ALL, "cas_cl_%s",
 			ocf_cache_get_name(cache));
 	if (!result) {
 		ocf_cleaner_set_priv(c, info);

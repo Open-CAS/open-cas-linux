@@ -33,7 +33,7 @@ io_size = Size(10000, Unit.Blocks4096)
 time_to_wait = 30
 
 # Name of CAS cleaner to search for in running processes:
-cas_cleaner_process_name = "cas_clean"
+cas_cleaner_process_name = "cas_cl_"
 
 
 @pytest.mark.parametrize("cleaning_policy", CleaningPolicy)
