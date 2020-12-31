@@ -2376,14 +2376,20 @@ put:
 	return status;
 }
 
+struct cache_mngt_list_ctx {
+	struct kcas_cache_list *list;
+	int pos;
+};
+
 static int cache_mngt_list_caches_visitor(ocf_cache_t cache, void *cntx)
 {
-	struct kcas_cache_list *list = cntx;
+	struct cache_mngt_list_ctx *context = cntx;
+	struct kcas_cache_list *list = context->list;
 	uint16_t id;
 
 	BUG_ON(cache_id_from_name(&id, ocf_cache_get_name(cache)));
 
-	if (list->id_position >= id)
+	if (context->pos++ < list->id_position)
 		return 0;
 
 	if (list->in_out_num >= ARRAY_SIZE(list->cache_id_tab))
@@ -2397,8 +2403,14 @@ static int cache_mngt_list_caches_visitor(ocf_cache_t cache, void *cntx)
 
 int cache_mngt_list_caches(struct kcas_cache_list *list)
 {
+	struct cache_mngt_list_ctx context = {
+		.list = list,
+		.pos = 0
+	};
+
 	list->in_out_num = 0;
-	return ocf_mngt_cache_visit(cas_ctx, cache_mngt_list_caches_visitor, list);
+	return ocf_mngt_cache_visit(cas_ctx, cache_mngt_list_caches_visitor,
+			&context);
 }
 
 int cache_mngt_interrupt_flushing(const char *cache_name, size_t name_len)
