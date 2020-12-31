@@ -52,18 +52,6 @@ static int _cache_mngt_async_callee_set_result(
 	return ret == ASYNC_CALL_FINISHED ? 0 : ret;
 }
 
-static int _cache_mngt_async_callee_peek_result(
-	struct _cache_mngt_async_context *context)
-{
-	int result;
-
-	spin_lock(&context->lock);
-	result = context->result;
-	spin_unlock(&context->lock);
-
-	return result;
-}
-
 static int _cache_mngt_async_caller_set_result(
 	struct _cache_mngt_async_context *context,
 	int error)
@@ -1834,72 +1822,26 @@ static void init_instance_complete(struct _cache_mngt_attach_context *ctx,
 				name, MAX_ELEVATOR_NAME);
 }
 
-static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv,
-		int error);
-
-static void cache_start_finalize(struct work_struct *work)
-{
-	struct cache_priv *cache_priv =
-		container_of(work, struct cache_priv, start_worker);
-	struct task_struct *rollback_thread;
-	struct _cache_mngt_attach_context *ctx = cache_priv->attach_context;
-	int result;
-	ocf_cache_t cache = ctx->cache;
-
-	result = cas_cls_init(cache);
-	if (result) {
-		ctx->ocf_start_error = result;
-		return _cache_mngt_start_complete(cache, ctx, result);
-	}
-	ctx->cls_inited = true;
-
-	result = cache_mngt_initialize_core_objects(cache);
-	if (result) {
-		ctx->ocf_start_error = result;
-		return _cache_mngt_start_complete(cache, ctx, result);
-	}
-
-	ocf_core_visit(cache, _cache_mngt_core_device_loaded_visitor,
-			NULL, false);
-
-	init_instance_complete(ctx, cache);
-
-	rollback_thread = ctx->rollback_thread;
-
-	if (_cache_mngt_async_callee_set_result(&ctx->async, 0)) {
-		/* caller interrupted */
-		ctx->ocf_start_error = 0;
-		ocf_mngt_cache_stop(cache,
-				_cache_mngt_cache_stop_rollback_complete, ctx);
-		return;
-	}
-
-	kthread_stop(rollback_thread);
-
-	ocf_mngt_cache_unlock(cache);
-}
-
 static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv, int error)
 {
 	struct _cache_mngt_attach_context *ctx = priv;
-	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
-	int caller_status = _cache_mngt_async_callee_peek_result(&ctx->async);
+	int caller_status;
 
-	if (caller_status || error) {
-		if (error == -OCF_ERR_NO_FREE_RAM && ctx->cmd) {
-			ocf_mngt_get_ram_needed(cache, ctx->device_cfg,
-					&ctx->cmd->min_free_ram);
-		} else if (caller_status == -KCAS_ERR_WAITING_INTERRUPTED) {
+	if (error == -OCF_ERR_NO_FREE_RAM && ctx->cmd) {
+		ocf_mngt_get_ram_needed(cache, ctx->device_cfg,
+				&ctx->cmd->min_free_ram);
+	}
+
+	caller_status =_cache_mngt_async_callee_set_result(&ctx->async, error);
+	if (caller_status == -KCAS_ERR_WAITING_INTERRUPTED) {
+		/* Attach/load was interrupted. Rollback asynchronously. */
+		if (!error) {
 			printk(KERN_WARNING "Cache added successfully, "
 					"but waiting interrupted. Rollback\n");
 		}
 		ctx->ocf_start_error = error;
-		ocf_mngt_cache_stop(cache, _cache_mngt_cache_stop_rollback_complete,
-				ctx);
-	} else {
-		_cache_mngt_log_cache_device_path(cache, ctx->device_cfg);
-
-		schedule_work(&cache_priv->start_worker);
+		ocf_mngt_cache_stop(cache,
+				_cache_mngt_cache_stop_rollback_complete, ctx);
 	}
 }
 
@@ -1921,7 +1863,6 @@ static int _cache_mngt_cache_priv_init(ocf_cache_t cache)
 	}
 
 	atomic_set(&cache_priv->flush_interrupt_enabled, 1);
-	INIT_WORK(&cache_priv->start_worker , cache_start_finalize);
 
 	ocf_cache_set_priv(cache, cache_priv);
 
@@ -1986,6 +1927,35 @@ static int _cache_mngt_check_metadata(struct ocf_mngt_cache_config *cfg,
 out_bdev:
 	blkdev_put(bdev, (FMODE_EXCL|FMODE_READ));
 	return result;
+}
+
+static int _cache_start_finalize(ocf_cache_t cache)
+{
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+	struct _cache_mngt_attach_context *ctx = cache_priv->attach_context;
+	int result;
+
+	_cache_mngt_log_cache_device_path(cache, ctx->device_cfg);
+
+	result = cas_cls_init(cache);
+	if (result) {
+		ctx->ocf_start_error = result;
+		return result;
+	}
+	ctx->cls_inited = true;
+
+	result = cache_mngt_initialize_core_objects(cache);
+	if (result) {
+		ctx->ocf_start_error = result;
+		return result;
+	}
+
+	ocf_core_visit(cache, _cache_mngt_core_device_loaded_visitor,
+			NULL, false);
+
+	init_instance_complete(ctx, cache);
+
+	return 0;
 }
 
 int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
@@ -2060,15 +2030,26 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	result = wait_for_completion_interruptible(&context->async.cmpl);
 
 	result = _cache_mngt_async_caller_set_result(&context->async, result);
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
+		return result;
 
-	if (result != -KCAS_ERR_WAITING_INTERRUPTED)
-		kfree(context);
+	if (result)
+		goto err;
 
-	if (!result)
-		cache_priv->attach_context = NULL;
+	result = _cache_start_finalize(cache);
+	if (result)
+		goto err;
+
+	kthread_stop(context->rollback_thread);
+
+	kfree(context);
+	cache_priv->attach_context = NULL;
+
+	ocf_mngt_cache_unlock(cache);
 
 	return result;
 err:
+	_cache_mngt_async_context_init(&context->async);
 	ocf_mngt_cache_stop(cache, _cache_mngt_cache_stop_rollback_complete,
 			context);
 	rollback_result = wait_for_completion_interruptible(&context->async.cmpl);
@@ -2306,7 +2287,6 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 
 	cache_priv = ocf_cache_get_priv(cache);
 	mngt_queue = cache_priv->mngt_queue;
-	cancel_work_sync(&cache_priv->start_worker);
 
 	/*
 	 * Flush cache. Flushing may take a long time, so we allow user
