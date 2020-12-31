@@ -642,8 +642,10 @@ int set_device_path(char *dest_path, size_t dest_len, const char *src_path, size
 	int result;
 
 	/* save given path as absolute path in temporary variable */
-	if (get_abs_path(abs_dev_path, sizeof(abs_dev_path), src_path, src_len) < 0)
+	if (get_abs_path(abs_dev_path, sizeof(abs_dev_path), src_path, src_len) < 0) {
+		cas_printf(LOG_ERR, "Failed to resolve path.\n");
 		return FAILURE;
+	}
 
 	/* check if given dev_path is whitelisted and then pass it as path or not */
 	if (is_dev_link_whitelisted(abs_dev_path)){
@@ -657,6 +659,11 @@ int set_device_path(char *dest_path, size_t dest_len, const char *src_path, size
 		    strnlen_s(abs_dev_path, sizeof(abs_dev_path)));
 		if (!result)
 			return SUCCESS;
+		else
+			cas_printf(LOG_ERR, "Internal error copying device path\n");
+	} else {
+		cas_printf(LOG_ERR, "Please use correct by-id path to the device "
+			   "%s.\n", src_path);
 	}
 
 	return FAILURE;
@@ -1033,8 +1040,6 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	cmd.init_cache = cache_init;
 	if (set_device_path(cmd.cache_path_name, sizeof(cmd.cache_path_name),
 			    cache_device, MAX_STR_LEN) != SUCCESS) {
-		cas_printf(LOG_ERR, "Please use correct by-id path to the device "
-			   "%s.\n", cache_device);
 		close(fd);
 		return FAILURE;
 	}
@@ -1755,7 +1760,6 @@ int add_core(unsigned int cache_id, unsigned int core_id, const char *core_devic
 	memset(&cmd, 0, sizeof(cmd));
 	if (set_device_path(cmd.core_path_name, sizeof(cmd.core_path_name),
 			    core_device, MAX_STR_LEN) != SUCCESS) {
-		cas_printf(LOG_ERR, "Failed to copy core path\n");
 		return FAILURE;
 	}
 
@@ -1905,7 +1909,6 @@ int core_pool_remove(const char *core_device)
 
 	if (set_device_path(cmd.core_path_name, sizeof(cmd.core_path_name),
 			    core_device, MAX_STR_LEN) != SUCCESS) {
-		cas_printf(LOG_ERR, "Failed to copy core path\n");
 		close(fd);
 		return FAILURE;
 	}
