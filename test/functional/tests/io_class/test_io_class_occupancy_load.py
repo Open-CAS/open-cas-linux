@@ -40,7 +40,7 @@ def test_ioclass_occuppancy_load(cache_line_size):
         Udev.disable()
 
     with TestRun.step(
-        f"Prepare filesystem and mount {core.system_path} at {mountpoint}"
+        f"Prepare filesystem and mount {core.path} at {mountpoint}"
     ):
         filesystem = Filesystem.xfs
         core.create_filesystem(filesystem)
@@ -121,7 +121,7 @@ def test_ioclass_occuppancy_load(cache_line_size):
             original_usage_stats[io_class.id] = get_io_class_usage(cache, io_class.id)
 
         original_ioclass_list = cache.list_io_classes()
-        cache_disk_path = cache.cache_device.system_path
+        cache_disk_path = cache.cache_device.path
         core.unmount()
         cache.stop(no_data_flush=True)
 

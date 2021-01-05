@@ -40,7 +40,7 @@ def test_ioclass_repart(cache_mode, cache_line_size, ioclass_size_multiplicatior
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Prepare filesystem and mount {core.system_path} at {mountpoint}"):
+    with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}"):
         filesystem = Filesystem.xfs
         core.create_filesystem(filesystem)
         core.mount(mountpoint)
