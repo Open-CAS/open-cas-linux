@@ -661,9 +661,6 @@ int set_device_path(char *dest_path, size_t dest_len, const char *src_path, size
 			return SUCCESS;
 		else
 			cas_printf(LOG_ERR, "Internal error copying device path\n");
-	} else {
-		cas_printf(LOG_ERR, "Please use correct by-id path to the device "
-			   "%s.\n", src_path);
 	}
 
 	return FAILURE;
@@ -1040,6 +1037,8 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	cmd.init_cache = cache_init;
 	if (set_device_path(cmd.cache_path_name, sizeof(cmd.cache_path_name),
 			    cache_device, MAX_STR_LEN) != SUCCESS) {
+		cas_printf(LOG_ERR, "Please use correct by-id path to the device "
+			   "%s.\n", cache_device);
 		close(fd);
 		return FAILURE;
 	}
@@ -1760,6 +1759,8 @@ int add_core(unsigned int cache_id, unsigned int core_id, const char *core_devic
 	memset(&cmd, 0, sizeof(cmd));
 	if (set_device_path(cmd.core_path_name, sizeof(cmd.core_path_name),
 			    core_device, MAX_STR_LEN) != SUCCESS) {
+		cas_printf(LOG_ERR, "Please use correct by-id path to the device "
+			   "%s.\n", core_device);
 		return FAILURE;
 	}
 
@@ -1909,6 +1910,8 @@ int core_pool_remove(const char *core_device)
 
 	if (set_device_path(cmd.core_path_name, sizeof(cmd.core_path_name),
 			    core_device, MAX_STR_LEN) != SUCCESS) {
+		cas_printf(LOG_ERR, "Please use correct by-id path to the device "
+			   "%s.\n", core_device);
 		close(fd);
 		return FAILURE;
 	}
@@ -2824,11 +2827,6 @@ int _check_cache_device(const char *device_path,
 {
 	int result, fd;
 
-	if (set_device_path(cmd_info->path_name, sizeof(cmd_info->path_name),
-			    device_path, MAX_STR_LEN) != SUCCESS) {
-		return FAILURE;
-	}
-
 	fd = open_ctrl_device();
 	if (fd == -1)
 		return FAILURE;
@@ -2845,6 +2843,13 @@ int check_cache_device(const char *device_path)
 	struct kcas_cache_check_device cmd_info;
 	FILE *intermediate_file[2];
 	int result;
+
+	if (set_device_path(cmd_info.path_name, sizeof(cmd_info.path_name),
+			    device_path, MAX_STR_LEN) != SUCCESS) {
+		cas_printf(LOG_ERR, "Please use correct by-id path to the device "
+			   "%s.\n", device_path);
+		return FAILURE;
+	}
 
 	result = _check_cache_device(device_path, &cmd_info);
 
