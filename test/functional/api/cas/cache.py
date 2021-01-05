@@ -19,7 +19,7 @@ class Cache:
         self.__metadata_size = None
 
     def __get_cache_id(self):
-        cmd = f"{list_cmd(by_id_path=False)} | grep {self.cache_device.short_path}"
+        cmd = f"{list_cmd(by_id_path=False)} | grep {self.cache_device.get_device_id()}"
         output = TestRun.executor.run(cmd)
         if output.exit_code == 0 and output.stdout.strip():
             return output.stdout.split()[1]
