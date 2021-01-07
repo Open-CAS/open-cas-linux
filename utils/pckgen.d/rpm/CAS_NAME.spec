@@ -84,15 +84,32 @@ fi
 depmod
 . /etc/os-release
 if [[ ! "$ID_LIKE" =~ suse|sles ]]; then
-    modules=( $(realpath $(modinfo -F filename cas_cache cas_disk)) )
+    # Determine the exact location of installed modules to add them to weak-modules
+    for file in $(rpm -ql $(rpm -qa | grep <CAS_NAME>-modules)); do
+        if [[ "$file" =~ cas_.*\.ko$ ]]; then
+            # realpath to resolve any possible symlinks (needed for weak-modules)
+            modules+=( $(realpath "$file") )
+        fi
+    done
     printf "%s\n" "${modules[@]}" | weak-modules --no-initramfs --add-modules
+fi
+
+%preun modules_%{kver_filename}
+if [ $1 -eq 0 ]; then
+    . /etc/os-release
+    if [[ ! "$ID_LIKE" =~ suse|sles ]]; then
+        # Search for all CAS modules to remove them from weak-modules
+        find /lib/modules/*/extra/ -name "cas_*.ko" >/var/run/rpm-open-cas-linux-modules
+    fi
 fi
 
 %postun modules_%{kver_filename}
 if [ $1 -eq 0 ]; then
     . /etc/os-release
     if [[ ! "$ID_LIKE" =~ suse|sles ]]; then
-        modules=( $(realpath $(modinfo -F filename cas_cache cas_disk 2>/dev/null)) )
+        # realpath to resolve any possible symlinks (needed for weak-modules)
+        modules=( $(realpath $(cat /var/run/rpm-open-cas-linux-modules)) )
+        rm -f /var/run/rpm-open-cas-linux-modules
         printf "%s\n" "${modules[@]}" | weak-modules --no-initramfs --remove-modules
     fi
     depmod
@@ -131,6 +148,8 @@ fi
 
 
 %changelog
+* Tue Jan 5 2021 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.12-1
+- Fix resolving modules path for weak-modules
 * Fri Sep 11 2020 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.09-1
 - SLES related modifications
 - Add some missing info about a package
