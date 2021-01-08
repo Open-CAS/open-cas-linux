@@ -12,6 +12,8 @@ import paramiko
 import pytest
 import yaml
 
+from test_tools.fs_utils import readlink
+
 sys.path.append(os.path.join(os.path.dirname(__file__), "../test-framework"))
 
 from core.test_run_utils import TestRun
@@ -188,8 +190,8 @@ def base_prepare(item):
             # stop only those RAIDs, which are comprised of test disks
             if all(map(lambda device:
                        any(map(lambda disk_path:
-                               disk_path in device.path,
-                               [bd.path for bd in TestRun.dut.disks])),
+                               disk_path in readlink(device.path),
+                               [readlink(bd.path) for bd in TestRun.dut.disks])),
                        raid.array_devices)):
                 raid.umount_all_partitions()
                 raid.remove_partitions()
