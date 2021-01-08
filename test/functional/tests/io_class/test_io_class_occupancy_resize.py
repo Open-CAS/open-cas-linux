@@ -36,7 +36,7 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Prepare filesystem and mount {core.system_path} at {mountpoint}"):
+    with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}"):
         filesystem = Filesystem.xfs
         core.create_filesystem(filesystem)
         core.mount(mountpoint)

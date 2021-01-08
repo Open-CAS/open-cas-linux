@@ -41,7 +41,7 @@ def test_ioclass_occupancy_directory_write(io_size_multiplication, cache_mode, c
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Prepare filesystem and mount {core.system_path} at {mountpoint}"):
+    with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}"):
         filesystem = Filesystem.xfs
         core.create_filesystem(filesystem)
         core.mount(mountpoint)
@@ -168,7 +168,7 @@ def test_ioclass_occupancy_directory_read(io_size_multiplication, cache_line_siz
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Prepare filesystem and mount {core.system_path} at {mountpoint}"):
+    with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}"):
         filesystem = Filesystem.xfs
         core.create_filesystem(filesystem)
         core.mount(mountpoint)
@@ -297,7 +297,7 @@ def test_ioclass_occupancy_sum_cache():
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Prepare filesystem and mount {core.system_path} at {mountpoint}"):
+    with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}"):
         filesystem = Filesystem.xfs
         core.create_filesystem(filesystem)
         core.mount(mountpoint)

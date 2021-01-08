@@ -38,7 +38,7 @@ def test_ioclass_eviction_priority(cache_line_size):
         Udev.disable()
 
     with TestRun.step(
-        f"Preparing filesystem and mounting {core.system_path} at {mountpoint}"
+        f"Preparing filesystem and mounting {core.path} at {mountpoint}"
     ):
         filesystem = Filesystem.xfs
         core.create_filesystem(filesystem)

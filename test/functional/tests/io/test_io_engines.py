@@ -43,7 +43,7 @@ def test_io_engines(cache_mode, filesystem, io_engine):
 
         cache = casadm.start_cache(cache_dev, cache_mode, force=True)
 
-        TestRun.LOGGER.info(f"Create filesystem '{filesystem}' on '{core_dev.system_path}'")
+        TestRun.LOGGER.info(f"Create filesystem '{filesystem}' on '{core_dev.path}'")
         core_dev.create_filesystem(filesystem)
         core = cache.add_core(core_dev)
         core.mount(mount_point)

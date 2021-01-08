@@ -42,9 +42,9 @@ def test_fault_power_hit_init(cache_mode):
         power_control.power_cycle()
 
     with TestRun.step("Start cache with re-initialization."):
-        cache_dev.system_path = cache_device_link.get_target()
+        cache_dev.path = cache_device_link.get_target()
         TestRun.executor.run_expect_success(cli.start_cmd(
-            cache_dev=str(cache_dev.system_path),
+            cache_dev=str(cache_dev.path),
             cache_mode=str(cache_mode.name.lower()),
             force=True,
             load=False))

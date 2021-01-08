@@ -65,7 +65,7 @@ def test_multistream_seq_cutoff_functional(threshold, streams_number):
             TestRun.LOGGER.info(f"Statistics before I/O:\n{core_statistics_before}")
 
             offset = Size(offsets[i], Unit.KibiByte)
-            run_dd(core.system_path, count=int(threshold.get_value(Unit.Blocks4096) - 1),
+            run_dd(core.path, count=int(threshold.get_value(Unit.Blocks4096) - 1),
                    seek=int(offset.get_value(Unit.Blocks4096)))
 
             core_statistics_after = core.get_statistics()
@@ -85,7 +85,7 @@ def test_multistream_seq_cutoff_functional(threshold, streams_number):
             additional_4k_blocks_writes = random.randint(1, kib_between_streams / 4)
             offset = Size(offsets[i], Unit.KibiByte)
             run_dd(
-                core.system_path, count=additional_4k_blocks_writes,
+                core.path, count=additional_4k_blocks_writes,
                 seek=int(offset.get_value(Unit.Blocks4096)
                          + threshold.get_value(Unit.Blocks4096) - 1))
 
@@ -170,7 +170,7 @@ def test_multistream_seq_cutoff_stress_raw(streams_seq_rand):
         for i in range(0, sequential_streams + random_streams):
             fio_job = fio.add_job(job_name=f"stream_{i}")
             fio_job.size(stream_size)
-            fio_job.target(core.system_path)
+            fio_job.target(core.path)
             if i < sequential_streams:
                 fio_job.read_write(ReadWrite.write)
             else:
