@@ -15,11 +15,9 @@ import yaml
 sys.path.append(os.path.join(os.path.dirname(__file__), "../test-framework"))
 
 from core.test_run_utils import TestRun
-from api.cas import installer
-from api.cas import casadm
-from api.cas import git
 from storage_devices.raid import Raid
-from test_utils.os_utils import Udev, kill_all_io
+from api.cas import casadm, git, installer
+from test_utils.os_utils import Udev, kill_all_io, got_compatible_kernels, got_incompatible_kernels
 from test_tools.disk_utils import PartitionTable, create_partition_table
 from test_tools.device_mapper import DeviceMapper
 from test_tools.mdadm import Mdadm
@@ -125,6 +123,7 @@ def pytest_runtest_teardown():
 
 
 def pytest_configure(config):
+    add_marks(config)
     TestRun.configure(config)
 
 
@@ -169,6 +168,7 @@ def get_force_param(item):
 def base_prepare(item):
     with TestRun.LOGGER.step("Cleanup before test"):
         TestRun.executor.run("pkill --signal=SIGKILL fsck")
+        check_marks()
         Udev.enable()
         kill_all_io()
         DeviceMapper.remove_all()
@@ -215,3 +215,24 @@ def base_prepare(item):
         TestRun.LOGGER.add_build_info(f"{git.get_current_commit_hash()}")
         TestRun.LOGGER.add_build_info(f'Commit message:')
         TestRun.LOGGER.add_build_info(f'{git.get_current_commit_message()}')
+
+
+def add_marks(config):
+    config.addinivalue_line(
+        "markers",
+        "require_compatible_kernel: require minimum two compatible kernel versions"
+    )
+    config.addinivalue_line(
+        "markers",
+        "require_incompatible_kernel: require minimum two incompatible kernel versions"
+    )
+
+
+def check_marks():
+    if list(TestRun.item.iter_markers(name="require_compatible_kernel")):
+        if not got_compatible_kernels():
+            pytest.skip()
+
+    if list(TestRun.item.iter_markers(name="require_incompatible_kernel")):
+        if not got_incompatible_kernels():
+            pytest.skip()
