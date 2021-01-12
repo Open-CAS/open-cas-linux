@@ -119,3 +119,100 @@ def get_added_core_path_from_dmesg():
     path = [item for item in path_line.split() if '/dev/disk/by-id/' in item][0]
     return path
 
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_add_core_path_not_by_id():
+    """
+    title: Negative test for adding core with non-by-id path.
+    description: |
+      Check if OpenCAS does not accept any other than by-id path to disks added as cores.
+    pass_criteria:
+      - Cores are not added to cache
+    """
+    with TestRun.step("Prepare partitions for cache and for cores."):
+        cache_dev = TestRun.disks['cache']
+        cache_dev.create_partitions([Size(200, Unit.MebiByte)])
+        cache_part = cache_dev.partitions[0]
+        core_dev = TestRun.disks['core']
+        core_dev.create_partitions([Size(400, Unit.MebiByte)] * cores_number)
+
+    with TestRun.step("Start cache."):
+        cache = casadm.start_cache(cache_part, force=True)
+
+    with TestRun.step(
+            f"Create symlinks for {core_dev.path} partitions in {custom_dir} directory."
+    ):
+        for i, partition in enumerate(core_dev.partitions):
+            create_symlink(f"{symlink_name}-part{i + 1}", custom_dir, readlink(partition.path))
+
+    with TestRun.step(f"Find various symlinks to {core_dev.path}."):
+        core_dev_links = []
+        links = [
+            Symlink(os.path.join(custom_dir, item.full_path))       # parse_ls_output returns
+            for item in parse_ls_output(ls(custom_dir), custom_dir)  # symlinks without path
+            if isinstance(item, Symlink)
+        ]
+
+        for i in range(cores_number):
+            links.append(Symlink(get_by_partuuid_link(core_dev.partitions[i].path)))
+            links.append(Symlink(readlink(core_dev.partitions[i].path)))
+            core_dev_links.extend([
+                link for link in links if readlink(core_dev.partitions[i].path) in link.get_target()
+            ])
+
+    with TestRun.step(f"Select different links to {core_dev.path} partitions."):
+        selected_links = select_random_links(core_dev_links)
+
+    with TestRun.step(f"Try to add {cores_number} cores with non-by-id path."):
+        for i in range(cores_number):
+            core_dev.partitions[i].path = selected_links[i].full_path
+            try:
+                cache.add_core(core_dev.partitions[i])
+                TestRun.fail(f"Core {core_dev.path} is added!")
+            except CmdException:
+                pass
+        TestRun.LOGGER.info("Cannot add cores as expected.")
+
+    with TestRun.step("Check if cores are not added."):
+        added_cores_number = len(get_cores(cache.cache_id))
+        if added_cores_number > 0:
+            remove(f"{os.path.join(custom_dir, symlink_name)}*", True)
+            TestRun.fail(f"Expected 0 cores, got {added_cores_number}!")
+
+    with TestRun.step("Cleanup test symlinks."):
+        remove(f"{os.path.join(custom_dir, symlink_name)}*", True)
+
+
+def get_by_partuuid_link(path):
+    output = TestRun.executor.run(f"blkid {path}")
+    if "PARTUUID" not in output.stdout:
+        return path
+
+    uuid = output.stdout.split()[-1]
+    start = uuid.index('"')
+    end = uuid.index('"', start + 1)
+    uuid = uuid[start + 1:end]
+
+    return f"/dev/disk/by-partuuid/{uuid}"
+
+
+def select_random_links(links):
+    shuffle(links)
+    selected_links = []
+    prev_ends_with = " "
+    links_cycle = cycle(links)
+
+    while len(selected_links) < cores_number:
+        link = next(links_cycle)
+        target = link.get_target()
+        if 'p' not in target:
+            continue
+        if (
+                target not in [sel_link.get_target() for sel_link in selected_links]
+                and not target.endswith(prev_ends_with)
+        ):
+            selected_links.append(link)
+            prev_ends_with = target.split('p')[-1]
+
+    return selected_links
