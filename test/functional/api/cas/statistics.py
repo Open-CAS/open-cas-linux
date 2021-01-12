@@ -15,6 +15,7 @@ config_stats_core = [
 ]
 config_stats_ioclass = ["io class id", "io class name", "eviction priority", "selective allocation"]
 usage_stats = ["occupancy", "free", "clean", "dirty"]
+usage_stats_ioclass = ["occupancy", "clean", "dirty"]
 inactive_usage_stats = ["inactive occupancy", "inactive clean", "inactive dirty"]
 request_stats = [
     "read hits", "read partial misses", "read full misses", "read total",
@@ -175,8 +176,8 @@ class IoClassStats:
         except KeyError:
             pass
         try:
-            self.usage_stats = UsageStats(
-                *[stats[stat] for stat in usage_stats]
+            self.usage_stats = IoClassUsageStats(
+                *[stats[stat] for stat in usage_stats_ioclass]
             )
         except KeyError:
             pass
@@ -414,6 +415,49 @@ class UsageStats:
     def __iadd__(self, other):
         self.occupancy += other.occupancy
         self.free += other.free
+        self.clean += other.clean
+        self.dirty += other.dirty
+        return self
+
+
+class IoClassUsageStats:
+    def __init__(self, occupancy, clean, dirty):
+        self.occupancy = occupancy
+        self.clean = clean
+        self.dirty = dirty
+
+    def __str__(self):
+        return (
+            f"Usage stats:\n"
+            f"Occupancy: {self.occupancy}\n"
+            f"Clean: {self.clean}\n"
+            f"Dirty: {self.dirty}\n"
+        )
+
+    def __repr__(self):
+        return str(self)
+
+    def __eq__(self, other):
+        if not other:
+            return False
+        return (
+            self.occupancy == other.occupancy
+            and self.clean == other.clean
+            and self.dirty == other.dirty
+        )
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __add__(self, other):
+        return UsageStats(
+            self.occupancy + other.occupancy,
+            self.clean + other.clean,
+            self.dirty + other.dirty
+        )
+
+    def __iadd__(self, other):
+        self.occupancy += other.occupancy
         self.clean += other.clean
         self.dirty += other.dirty
         return self
