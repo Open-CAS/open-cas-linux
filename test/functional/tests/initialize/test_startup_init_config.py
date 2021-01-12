@@ -254,6 +254,59 @@ def test_cas_startup_core_path_by_id(cache_mode, reboot_type):
                 TestRun.fail(f"Core {core.get('device')} isn't detached as expected.")
 
 
+@pytest.mark.remote_only
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.parametrizex("cache_mode", CacheMode)
+@pytest.mark.parametrizex("reboot_type", ["soft", "hard"])
+def test_cas_startup_core_path_not_by_id(cache_mode, reboot_type):
+    """
+    title: Negative test for CAS startup when cores are set in config with short path.
+    description: |
+      Start cache, add to config short path (/dev/sdX) to devices that make up the
+      cache and check if cache start fails after reboot. Clear cache metadata before reboot.
+    pass_criteria:
+      - System does not crash
+      - Cache is not running after startup
+      - No cores after startup
+    """
+    with TestRun.step("Clearing dmesg"):
+        TestRun.executor.run_expect_success("dmesg -C")
+
+    with TestRun.step("Prepare partitions for cache and for cores."):
+        cache_dev = TestRun.disks['cache']
+        cache_dev.create_partitions([Size(200, Unit.MebiByte)])
+        cache_part = cache_dev.partitions[0]
+        core_dev = TestRun.disks['core']
+        core_dev.create_partitions([Size(400, Unit.MebiByte)] * cores_number)
+
+    with TestRun.step("Start cache and add cores."):
+        cores = []
+        cache = casadm.start_cache(cache_part, cache_mode, force=True)
+        for i in range(cores_number):
+            cores.append(cache.add_core(core_dev.partitions[i]))
+
+    with TestRun.step("Create opencas.conf."):
+        create_init_config(cache, cores, [readlink(part.path) for part in core_dev.partitions])
+        drop_caches()
+        sync()
+
+    with TestRun.step("Stop cache and clear metadata before reboot."):
+        cache.stop()
+        casadm.zero_metadata(cache_part)
+
+    with TestRun.step("Reset platform."):
+        if reboot_type == "soft":
+            TestRun.executor.reboot()
+        else:           # wait few seconds to simulate power failure during normal system run
+            sleep(5)    # not when configuring Open CAS
+            power_control = TestRun.plugin_manager.get_plugin('power_control')
+            power_control.power_cycle()
+
+    with TestRun.step("Check if cache is not running."):
+        check_stdout_msg(list_caches(), no_caches_running)
+
+
 def select_links(links):
     selected_links = []
     prev_starts_with = " "
