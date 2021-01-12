@@ -11,7 +11,7 @@ import pytest
 from .io_class_common import *
 from api.cas.cache_config import CacheMode, CacheLineSize
 from api.cas.ioclass_config import IoClass
-from api.cas.statistics import UsageStats
+from api.cas.statistics import IoClassUsageStats
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
@@ -337,7 +337,7 @@ def test_ioclass_occupancy_sum_cache():
         cache.purge_cache()
 
     with TestRun.step("Verify stats before IO"):
-        usage_stats_sum = UsageStats(Size(0), Size(0), Size(0), Size(0))
+        usage_stats_sum = IoClassUsageStats(Size(0), Size(0), Size(0))
         for i in io_classes:
             usage_stats_sum += get_io_class_usage(cache, i.id)
         usage_stats_sum += get_io_class_usage(cache, default_ioclass_id)
@@ -364,7 +364,7 @@ def test_ioclass_occupancy_sum_cache():
             )
 
     with TestRun.step("Verify stats after IO"):
-        usage_stats_sum = UsageStats(Size(0), Size(0), Size(0), Size(0))
+        usage_stats_sum = IoClassUsageStats(Size(0), Size(0), Size(0))
         for i in io_classes:
             usage_stats_sum += get_io_class_usage(cache, i.id)
         usage_stats_sum += get_io_class_usage(cache, default_ioclass_id)

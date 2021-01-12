@@ -8,7 +8,7 @@ from collections import namedtuple
 import pytest
 
 from api.cas import ioclass_config, casadm
-from api.cas.statistics import UsageStats
+from api.cas.statistics import IoClassUsageStats
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
@@ -108,7 +108,7 @@ def get_io_class_usage(cache, io_class_id):
 def verify_ioclass_usage_stats(cache, ioclasses_ids):
     cache_size = cache.get_statistics().config_stats.cache_size
 
-    usage_stats_sum = UsageStats(Size(0), Size(0), Size(0), Size(0))
+    usage_stats_sum = IoClassUsageStats(Size(0), Size(0), Size(0))
     for i in ioclasses_ids:
         usage_stats_sum += get_io_class_usage(cache, i)
 

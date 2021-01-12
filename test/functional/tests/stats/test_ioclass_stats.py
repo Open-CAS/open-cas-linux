@@ -16,7 +16,12 @@ from api.cas.cli_messages import (
     get_stats_ioclass_id_out_of_range
 )
 from api.cas.statistics import (
-    config_stats_ioclass, usage_stats, request_stats, block_stats_core, block_stats_cache
+    config_stats_ioclass,
+    usage_stats,
+    usage_stats_ioclass,
+    request_stats,
+    block_stats_core,
+    block_stats_cache
 )
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
@@ -147,7 +152,7 @@ def test_ioclass_stats_sum(random_cls):
 
     with TestRun.step("Check if per class cache IO class statistics sum up to cache statistics"):
         # Name of stats, which should not be compared
-        not_compare_stats = ["clean", "occupancy"]
+        not_compare_stats = ["clean", "occupancy", "free"]
         ioclass_id_list = list(range(min_ioclass_id, max_ioclass_id))
         # Append default IO class id
         ioclass_id_list.append(0)
@@ -275,7 +280,7 @@ def get_checked_statistics(stat_filter: StatsFilter, per_core: bool):
     if stat_filter == StatsFilter.conf:
         return config_stats_ioclass
     if stat_filter == StatsFilter.usage:
-        return usage_stats
+        return usage_stats_ioclass
     if stat_filter == StatsFilter.blk:
         return block_stats_core if per_core else block_stats_cache
     if stat_filter == StatsFilter.req:
