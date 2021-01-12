@@ -231,6 +231,18 @@ static void print_usage_stats(struct ocf_stats_usage *stats, FILE* outfile)
 					stats->dirty.fraction, "%lu", stats->dirty.value);
 }
 
+static void print_ioclass_usage_stats(struct ocf_stats_usage *stats, FILE* outfile)
+{
+	print_usage_header(outfile);
+
+	print_val_perc_table_row(outfile, "Occupancy", UNIT_BLOCKS,
+					stats->occupancy.fraction, "%lu", stats->occupancy.value);
+	print_val_perc_table_row(outfile, "Clean", UNIT_BLOCKS,
+					stats->clean.fraction, "%lu", stats->clean.value);
+	print_val_perc_table_row(outfile, "Dirty", UNIT_BLOCKS,
+					stats->dirty.fraction, "%lu", stats->dirty.value);
+}
+
 static void print_req_stats(const struct ocf_stats_requests *stats,
 		FILE *outfile)
 {
@@ -435,7 +447,7 @@ void print_stats_ioclass(struct kcas_io_class *io_class,
 		print_stats_ioclass_conf(io_class, outfile);
 
 	if (stats_filters & STATS_FILTER_USAGE)
-		print_usage_stats(&stats->usage, outfile);
+		print_ioclass_usage_stats(&stats->usage, outfile);
 
 	if (stats_filters & STATS_FILTER_REQ)
 		print_req_stats(&stats->req, outfile);
