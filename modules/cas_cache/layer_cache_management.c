@@ -1882,7 +1882,11 @@ static void cache_mngt_check_metadata_end(void *priv, int error,
 
 	*context->result = error;
 
-	if (error == -OCF_ERR_NO_METADATA || error == -OCF_ERR_METADATA_VER) {
+	if (error == -OCF_ERR_NO_METADATA) {
+		printk(KERN_ERR "No cache metadata found!\n");
+	} else if (error == -OCF_ERR_METADATA_VER) {
+		printk(KERN_ERR "Cache metadata version mismatch\n");
+	} else if (error) {
 		printk(KERN_ERR "Failed to load cache metadata!\n");
 	} else if (strncmp(status->cache_name, context->cache_name,
 			OCF_CACHE_NAME_SIZE)) {
