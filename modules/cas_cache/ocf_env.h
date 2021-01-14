@@ -21,7 +21,7 @@
 
 static inline uint64_t env_get_free_memory(void)
 {
-	return cas_get_free_mem();
+	return cas_global_zone_page_state(NR_FREE_PAGES) << PAGE_SHIFT;
 }
 
 static inline void *env_malloc(size_t size, int flags)
