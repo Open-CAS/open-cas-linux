@@ -49,8 +49,6 @@ def test_recovery_all_options(cache_mode, cache_line_size, cleaning_policy, file
         core_disk.create_partitions([Size(2000, Unit.MebiByte)] * 2)
         cache_device = cache_disk.partitions[0]
         core_device = core_disk.partitions[0]
-        core_device_link = core_device.get_device_link("/dev/disk/by-id")
-        cache_device_link = cache_device.get_device_link("/dev/disk/by-id")
 
         test_file = File(os.path.join(mount_point, filename))
         file_operation(test_file.full_path, pattern, ReadWrite.write)
@@ -88,8 +86,6 @@ def test_recovery_all_options(cache_mode, cache_line_size, cleaning_policy, file
         core.unmount()
         TestRun.LOGGER.info(f"Number of dirty blocks in cache: {cache.get_dirty_blocks()}")
         power_cycle_dut()
-        cache_device.path = cache_device_link.get_target()
-        core_device.path = core_device_link.get_target()
 
     with TestRun.step("Try to start cache without load and force option."):
         try:

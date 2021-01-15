@@ -3,17 +3,19 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
-from recordclass import recordclass
-
 import pytest
-
-from .io_class_common import *
+from api.cas import ioclass_config, casadm
+from core.test_run import TestRun
+from test_utils.size import Unit, Size
+from tests.io_class.io_class_common import mountpoint, prepare, ioclass_config_path, \
+    get_io_class_occupancy, run_io_dir
 from api.cas.cache_config import CacheMode, CacheLineSize
 from api.cas.ioclass_config import IoClass
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from test_utils.os_utils import sync, Udev
+from recordclass import recordclass
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

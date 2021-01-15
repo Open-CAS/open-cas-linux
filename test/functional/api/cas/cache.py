@@ -6,7 +6,6 @@
 from api.cas.casadm_parser import *
 from api.cas.cli import *
 from api.cas.statistics import CacheStats, CacheIoClassStats
-from storage_devices.device import Device
 from test_utils.os_utils import *
 
 
@@ -24,7 +23,7 @@ class Cache:
         if output.exit_code == 0 and output.stdout.strip():
             return output.stdout.split()[1]
         else:
-            raise Exception(f"There is no cache started on {self.cache_device.path}.")
+            raise Exception(f"There is no cache started on {self.cache_device.get_device_id()}.")
 
     def get_core_devices(self):
         return get_cores(self.cache_id)

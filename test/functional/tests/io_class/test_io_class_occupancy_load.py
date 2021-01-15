@@ -3,14 +3,13 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
+import pytest
 from collections import namedtuple
 from math import isclose
-
-import pytest
-
-from .io_class_common import *
+from api.cas import ioclass_config, casadm
+from tests.io_class.io_class_common import prepare, mountpoint, TestRun, Unit, \
+    ioclass_config_path, run_io_dir, get_io_class_dirty, get_io_class_usage, get_io_class_occupancy
 from api.cas.cache_config import CacheMode, CacheLineSize
-from api.cas.casadm_params import OutputFormat
 from api.cas.ioclass_config import IoClass
 from storage_devices.device import Device
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
