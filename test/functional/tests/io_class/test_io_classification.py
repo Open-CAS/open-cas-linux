@@ -50,7 +50,7 @@ def test_ioclass_lba():
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"lba:ge:{min_cached_lba}&lba:le:{max_cached_lba}&done",
             ioclass_config_path=ioclass_config_path,
         )
@@ -124,7 +124,7 @@ def test_ioclass_request_size():
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"request_size:ge:8192&request_size:le:16384&done",
             ioclass_config_path=ioclass_config_path,
         )
@@ -201,7 +201,7 @@ def test_ioclass_direct(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule="direct",
             ioclass_config_path=ioclass_config_path,
         )
@@ -299,7 +299,7 @@ def test_ioclass_metadata(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule="metadata&done",
             ioclass_config_path=ioclass_config_path,
         )
@@ -397,7 +397,7 @@ def test_ioclass_id_as_condition(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=1,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"directory:{base_dir_path}",
             ioclass_config_path=ioclass_config_path,
         )
@@ -405,7 +405,7 @@ def test_ioclass_id_as_condition(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=2,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"file_size:eq:{ioclass_file_size_bytes}",
             ioclass_config_path=ioclass_config_path,
         )
@@ -413,7 +413,7 @@ def test_ioclass_id_as_condition(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=3,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule="direct",
             ioclass_config_path=ioclass_config_path,
         )
@@ -421,7 +421,7 @@ def test_ioclass_id_as_condition(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=4,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule="io_class:1|io_class:2",
             ioclass_config_path=ioclass_config_path,
         )
@@ -429,7 +429,7 @@ def test_ioclass_id_as_condition(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=5,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"io_class:4&file_size:eq:{ioclass_file_size_bytes}",
             ioclass_config_path=ioclass_config_path,
         )
@@ -437,7 +437,7 @@ def test_ioclass_id_as_condition(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=6,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule="io_class:3",
             ioclass_config_path=ioclass_config_path,
         )
@@ -545,7 +545,7 @@ def test_ioclass_conditions_or(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=1,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"directory:{mountpoint}/dir1|directory:{mountpoint}/dir2|directory:"
                  f"{mountpoint}/dir3|directory:{mountpoint}/dir4|directory:{mountpoint}/dir5",
             ioclass_config_path=ioclass_config_path,
@@ -605,7 +605,7 @@ def test_ioclass_conditions_and(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=1,
             eviction_priority=1,
-            allocation=True,
+            allocation="1.00",
             rule=f"file_size:gt:{file_size_bytes}&file_size:lt:{file_size_bytes}&"
                  f"file_size:ge:{file_size_bytes}&file_size:le:{file_size_bytes}&"
                  f"file_size:eq:{file_size_bytes}",
@@ -651,7 +651,7 @@ def test_ioclass_effective_ioclass(filesystem):
          - In every iteration second IO is classified to the IO class with '&done' annotation
     """
     with TestRun.LOGGER.step(f"Test prepare"):
-        cache, core = prepare()
+        cache, core = prepare(default_allocation="1.00")
         Udev.disable()
         file_size = Size(10, Unit.Blocks4096)
         file_size_bytes = int(file_size.get_value(Unit.Byte))
@@ -719,7 +719,7 @@ def load_io_classes_in_permutation_order(rules, permutation, cache):
     )
     # To make test more precise all workload except of tested ioclass should be
     # put in pass-through mode
-    ioclass_list = [IoClass.default(allocation=False)]
+    ioclass_list = [IoClass.default(allocation="0.0")]
     for n in range(len(rules)):
         ioclass_list.append(IoClass(class_id=permutation[n], rule=rules[n]))
     IoClass.save_list_to_config_file(ioclass_list,

@@ -369,7 +369,7 @@ def test_ioclass_file_size(filesystem):
     }
 
     with TestRun.step("Prepare cache and core."):
-        cache, core = prepare()
+        cache, core = prepare(default_allocation="1.00")
 
     with TestRun.step("Prepare and load IO class config."):
         load_file_size_io_classes(cache, base_size)
@@ -405,8 +405,15 @@ def test_ioclass_file_size(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=0,
             eviction_priority=22,
-            allocation="0.00",
+            allocation="1.00",
             rule="unclassified",
+            ioclass_config_path=ioclass_config_path,
+        )
+        ioclass_config.add_ioclass(
+            ioclass_id=6,
+            eviction_priority=1,
+            allocation="0.00",
+            rule=f"metadata",
             ioclass_config_path=ioclass_config_path,
         )
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
@@ -430,7 +437,7 @@ def test_ioclass_file_size(filesystem):
         ioclass_config.add_ioclass(
             ioclass_id=0,
             eviction_priority=22,
-            allocation="0.00",
+            allocation="1.00",
             rule="unclassified",
             ioclass_config_path=ioclass_config_path,
         )
@@ -461,6 +468,13 @@ def test_ioclass_file_size(filesystem):
 def load_file_size_io_classes(cache, base_size):
     # IO class order intentional, do not change
     base_size_bytes = int(base_size.get_value(Unit.Byte))
+    ioclass_config.add_ioclass(
+        ioclass_id=6,
+        eviction_priority=1,
+        allocation="0.00",
+        rule=f"metadata",
+        ioclass_config_path=ioclass_config_path,
+    )
     ioclass_config.add_ioclass(
         ioclass_id=1,
         eviction_priority=1,
@@ -496,4 +510,5 @@ def load_file_size_io_classes(cache, base_size):
         rule=f"file_size:ge:{2 * base_size_bytes}",
         ioclass_config_path=ioclass_config_path,
     )
+
     casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)

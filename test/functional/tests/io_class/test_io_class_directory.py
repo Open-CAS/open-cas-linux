@@ -141,7 +141,7 @@ def test_ioclass_directory_file_operations(filesystem):
     dd_blocks = random.randint(5, 50)
 
     with TestRun.step("Prepare cache and core."):
-        cache, core = prepare()
+        cache, core = prepare(default_allocation="1.00")
         Udev.disable()
 
     with TestRun.step("Create and load IO class config file."):
@@ -263,7 +263,7 @@ def test_ioclass_directory_dir_operations(filesystem):
     non_classified_dir_path = f"{mountpoint}/non_classified"
 
     with TestRun.step("Prepare cache and core."):
-        cache, core = prepare()
+        cache, core = prepare(default_allocation="1.00")
         Udev.disable()
 
     with TestRun.step("Create and load IO class config file."):
@@ -437,8 +437,7 @@ def read_files_with_reclassification_check(cache, target_ioclass_id: int, source
 
 def check_occupancy(expected: Size, actual: Size):
     if expected != actual:
-        TestRun.LOGGER.error("Occupancy check failed!\n"
-                     f"Expected: {expected}, actual: {actual}")
+        TestRun.LOGGER.error(f"Occupancy check failed!\nExpected: {expected}, actual: {actual}")
 
 
 def ioclass_is_enabled(cache, ioclass_id: int):
