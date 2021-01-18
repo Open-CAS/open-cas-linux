@@ -585,8 +585,9 @@ static void _cache_mngt_cache_stop_complete(ocf_cache_t cache, void *priv,
 {
 	struct _cache_mngt_stop_context *context = priv;
 	context->error = error;
-
-	BUG_ON(!wake_up_process(context->finish_thread));
+	if (!IS_ERR(context->finish_thread)
+			&& (context->finish_thread->state != -1))
+		BUG_ON(!wake_up_process(context->finish_thread));
 }
 
 static int _cache_mngt_cache_stop_sync(ocf_cache_t cache)
@@ -597,12 +598,6 @@ static int _cache_mngt_cache_stop_sync(ocf_cache_t cache)
 
 	cache_priv = ocf_cache_get_priv(cache);
 	context = cache_priv->stop_context;
-
-	context->finish_thread = kthread_create(
-			exit_instance_finish, cache_priv->stop_context, "cas_%s_stop",
-			ocf_cache_get_name(cache));
-	if (!context->finish_thread)
-		return -ENOMEM;
 
 	_cache_mngt_async_context_init(&context->async);
 	context->error = 0;
@@ -1990,10 +1985,10 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 
 	context->rollback_thread = kthread_create(cache_start_rollback, context,
 			"cas_cache_rollback_complete");
-	if (!context->rollback_thread) {
+	if (IS_ERR(context->rollback_thread)) {
 		kfree(context);
 		module_put(THIS_MODULE);
-		return -ENOMEM;
+		return PTR_ERR(context->rollback_thread);
 	}
 
 	context->device_cfg = device_cfg;
@@ -2283,6 +2278,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	struct cache_priv *cache_priv;
 	ocf_queue_t mngt_queue;
 	int status = 0, flush_status = 0;
+	struct _cache_mngt_stop_context *context;
 
 	status = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
 					name_len, &cache);
@@ -2291,6 +2287,14 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 
 	cache_priv = ocf_cache_get_priv(cache);
 	mngt_queue = cache_priv->mngt_queue;
+	context = cache_priv->stop_context;
+
+	context->finish_thread = kthread_create(exit_instance_finish,
+			context, "cas_%s_stop", cache_name);
+	if (IS_ERR(context->finish_thread)) {
+		status = PTR_ERR(context->finish_thread);
+		goto put;
+	}
 
 	/*
 	 * Flush cache. Flushing may take a long time, so we allow user
@@ -2307,7 +2311,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	case -OCF_ERR_CACHE_IN_INCOMPLETE_STATE:
 	case -OCF_ERR_FLUSHING_INTERRUPTED:
 	case -KCAS_ERR_WAITING_INTERRUPTED:
-		goto put;
+		goto stop_thread;
 	default:
 		flush_status = status;
 		break;
@@ -2315,7 +2319,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 
 	status = _cache_mngt_lock_sync(cache);
 	if (status)
-		goto put;
+		goto stop_thread;
 
 	if (!cas_upgrade_is_in_upgrade()) {
 		/* If we are not in upgrade - destroy cache devices */
@@ -2344,17 +2348,19 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	if (flush && !flush_status)
 		BUG_ON(ocf_mngt_cache_is_dirty(cache));
 
-	/* Stop cache device */
+	/* Stop cache device - ignore interrupts */
 	status = _cache_mngt_cache_stop_sync(cache);
-	if (status == -ENOMEM)
-		goto unlock;
-
-	ocf_queue_put(mngt_queue);
+	if (status == -KCAS_ERR_WAITING_INTERRUPTED)
+		printk(KERN_WARNING
+				"An attempt to interrupt stopping cache "
+				"was made. Ignored.\n");
 
 	return status;
 
 unlock:
 	ocf_mngt_cache_unlock(cache);
+stop_thread:
+	kthread_stop(context->finish_thread);
 put:
 	ocf_mngt_cache_put(cache);
 	return status;
