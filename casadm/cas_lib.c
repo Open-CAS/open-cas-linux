@@ -653,8 +653,7 @@ int set_device_path(char *dest_path, size_t dest_len, const char *src_path, size
 
 	/* check if given dev_path is whitelisted and then pass it as path or not */
 	if (is_dev_link_whitelisted(abs_dev_path)){
-		result = strncpy_s(dest_path, dest_len, abs_dev_path,
-		    strnlen_s(abs_dev_path, sizeof(abs_dev_path)));
+		result = strncpy_s(dest_path, dest_len, abs_dev_path, sizeof(abs_dev_path));
 		return result ?: SUCCESS;
 	}
 
