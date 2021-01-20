@@ -1984,9 +1984,10 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	context->rollback_thread = kthread_create(cache_start_rollback, context,
 			"cas_cache_rollback_complete");
 	if (IS_ERR(context->rollback_thread)) {
+		result = PTR_ERR(context->rollback_thread);
 		kfree(context);
 		module_put(THIS_MODULE);
-		return PTR_ERR(context->rollback_thread);
+		return result;
 	}
 
 	context->device_cfg = device_cfg;
