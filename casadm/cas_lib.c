@@ -630,6 +630,7 @@ static bool is_dev_link_whitelisted(const char* path)
 	return false;
 }
 
+/* Call this only AFTER normalizing path */
 static int _is_by_id_path(const char* dev_path)
 {
 	static const char dev_by_id_dir[] = "/dev/disk/by-id";
