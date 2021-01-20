@@ -159,10 +159,24 @@ cas_printf_t cas_printf = std_printf;
 int validate_dev(const char *dev_path)
 {
 	struct fstab *fstab_entry;
+	struct stat status;
+
 	fstab_entry = getfsspec(dev_path);
 	if (fstab_entry != NULL) {
+		printf("Device entry present in fstab, please remove it.\n");
 		return FAILURE;
 	}
+
+	if (stat(dev_path, &status) == -1) {
+		printf("Failed to query device status.\n");
+		return FAILURE;
+	}
+
+	if (!S_ISBLK(status.st_mode)) {
+		printf("Path does not describe a block device\n");
+		return FAILURE;
+	}
+
 	return SUCCESS;
 }
 
