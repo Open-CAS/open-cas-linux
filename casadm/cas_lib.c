@@ -2923,13 +2923,6 @@ int zero_md(const char *cache_device){
 	}
 	close(fd);
 
-	/* don't delete metadata if cache is in use */
-	if (check_cache_already_added(cache_device) == FAILURE) {
-		cas_printf(LOG_ERR, "Cache device '%s' is already used as cache. "
-				"Please stop cache to clear metadata.\n", cache_device);
-		return FAILURE;
-	}
-
 	result = _check_cache_device(cache_device, &cmd_info);
 	if (result == FAILURE) {
 		cas_printf(LOG_ERR, "Failed to retrieve device's information.\n");
@@ -2942,9 +2935,11 @@ int zero_md(const char *cache_device){
 		return FAILURE;
 	}
 
-	fd = open(cache_device, O_WRONLY | O_SYNC);
+	fd = open(cache_device, O_WRONLY | O_SYNC | O_EXCL);
 	if (fd < 0) {
-		cas_printf(LOG_ERR, "Error while opening '%s' to purge metadata.\n", cache_device);
+		cas_printf(LOG_ERR, "Error while opening '%s'exclusively. This can be due to\n"
+				    "cache instance running on this device. In such case please\n"
+				    "stop the cache and try again.\n", cache_device);
 		return FAILURE;
 	}
 
