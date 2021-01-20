@@ -819,11 +819,8 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 	cache->expected_core_count = info->info.core_count;
 	cache->id = cache_id;
 	cache->state = info->info.state;
-	if (set_device_path(cache->device, sizeof(cache->device), info->cache_path_name,
-			    sizeof(info->cache_path_name)) != SUCCESS) {
-		free(cache);
-		return NULL;
-	}
+	strncpy_s(cache->device, sizeof(cache->device), info->cache_path_name,
+		  strnlen_s(info->cache_path_name, sizeof(info->cache_path_name)));
 	cache->mode = info->info.cache_mode;
 	cache->dirty = info->info.dirty;
 	cache->flushed = info->info.flushed;
@@ -2752,8 +2749,11 @@ int list_caches(unsigned int list_format, bool by_id_path)
 		float core_flush_prog;
 
 		if (!by_id_path) {
-			get_dev_path(curr_cache->device, curr_cache->device,
-				     sizeof(curr_cache->device));
+			if (get_dev_path(curr_cache->device, curr_cache->device,
+				     sizeof(curr_cache->device))) {
+				cas_printf(LOG_WARNING, "WARNING: Cannot resolve path "
+					   "to cache. By-id path will be shown for that cache.\n");
+			}
 		}
 
 		cache_flush_prog = calculate_flush_progress(curr_cache->dirty, curr_cache->flushed);
