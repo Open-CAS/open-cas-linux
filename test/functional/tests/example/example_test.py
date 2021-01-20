@@ -21,6 +21,7 @@ from test_utils.filesystem.file import File
 from test_utils.size import Size, Unit
 from test_utils.emergency_escape import EmergencyEscape
 from test_utils.fstab import add_mountpoint
+from storage_devices.lvm import Lvm
 
 
 def setup_module():
@@ -257,3 +258,39 @@ def test_example_emergency_escape():
     assert not escape.verify_trigger_in_log(
         dmesg_out
     ), "Emergency Escape trigger marker found in dmesg"
+
+
+@pytest.mark.require_disk("cache1", DiskTypeSet([DiskType.hdd, DiskType.hdd4k, DiskType.sata]))
+@pytest.mark.require_disk("cache2", DiskTypeSet([DiskType.hdd, DiskType.hdd4k, DiskType.sata]))
+def test_lvm_example():
+    """
+        title: Example test using LVM API.
+        description: Create and discover Logical Volumes.
+        pass_criteria:
+          - LVMs created.
+          - LVMs discovered.
+    """
+    with TestRun.step("Prepare"):
+        disk_1 = TestRun.disks['cache1']
+        disk_1.create_partitions([Size(8, Unit.GiB)] * 2)
+        test_disk_1 = disk_1.partitions[0]
+        test_disk_3 = disk_1.partitions[1]
+
+        disk_2 = TestRun.disks['cache2']
+        disk_2.create_partitions([Size(8, Unit.GiB)] * 2)
+        test_disk_2 = disk_2.partitions[0]
+        test_disk_4 = disk_2.partitions[1]
+
+    with TestRun.step("Create LVMs"):
+        lvm1 = Lvm.create(Size(5, Unit.GiB), [test_disk_1, test_disk_2], "lvm5")
+        lvm2 = Lvm.create(70, [test_disk_3, test_disk_4], "lvm7")
+
+    with TestRun.step("Discover LVMs"):
+        lvms = Lvm.discover()
+
+    with TestRun.step("Check if created LVMs were discovered"):
+        for lvm in (lvm1, lvm2):
+            if lvm not in lvms:
+                TestRun.LOGGER.error(f"Created LVM {lvm.volume_name} not discovered in system!")
+
+        TestRun.LOGGER.info(f"Created LVMs present in the system.")
