@@ -540,11 +540,9 @@ const char *get_core_state_name(int core_state)
 /* check if device is atomic and print information about potential slow start */
 void print_slow_atomic_cache_start_info(const char *device_path)
 {
-	char buff[MAX_STR_LEN];
 	struct kcas_cache_check_device cmd_info;
 	int ret;
 
-	get_dev_path(device_path, buff, sizeof(buff));
 	ret = _check_cache_device(device_path, &cmd_info);
 
 	if (!ret && cmd_info.format_atomic) {
