@@ -2915,10 +2915,12 @@ int zero_md(const char *cache_device){
 	int fd = 0;
 	int result;
 
-	/* check if given cache device exists */
-	fd = open(cache_device, O_RDONLY);
+	/* check if device is available */
+	fd = open(cache_device, O_WRONLY | O_SYNC | O_EXCL);
 	if (fd < 0) {
-		cas_printf(LOG_ERR, "Device '%s' not found.\n", cache_device);
+		cas_printf(LOG_ERR, "Error while opening '%s'exclusively. This can be due to\n"
+				    "cache instance running on this device. In such case please "
+				    "stop the cache and try again.\n", cache_device);
 		return FAILURE;
 	}
 	close(fd);
