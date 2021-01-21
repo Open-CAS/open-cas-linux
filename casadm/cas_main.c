@@ -92,16 +92,13 @@ static struct command_args command_args_values = {
 };
 
 int validate_device_name(const char *dev_name) {
-	if (validate_dev(dev_name)) {
-		cas_printf(LOG_ERR, "Cache creation aborted, %s entry exists in /etc/fstab. Please remove it!\n",
-				dev_name);
+	if (strnlen(dev_name, MAX_STR_LEN) >= MAX_STR_LEN) {
+		cas_printf(LOG_ERR, "Illegal device name\n");
 		return FAILURE;
 	}
 
-	if (strnlen(dev_name, MAX_STR_LEN) >= MAX_STR_LEN) {
-		cas_printf(LOG_ERR, "Illegal device %s\n", dev_name);
+	if (validate_dev(dev_name))
 		return FAILURE;
-	}
 
 	return SUCCESS;
 }

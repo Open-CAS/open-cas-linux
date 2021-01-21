@@ -159,10 +159,24 @@ cas_printf_t cas_printf = std_printf;
 int validate_dev(const char *dev_path)
 {
 	struct fstab *fstab_entry;
+	struct stat status;
+
 	fstab_entry = getfsspec(dev_path);
 	if (fstab_entry != NULL) {
+		printf("Device entry present in fstab, please remove it.\n");
 		return FAILURE;
 	}
+
+	if (stat(dev_path, &status) == -1) {
+		printf("Failed to query device status.\n");
+		return FAILURE;
+	}
+
+	if (!S_ISBLK(status.st_mode)) {
+		printf("Path does not describe a block device\n");
+		return FAILURE;
+	}
+
 	return SUCCESS;
 }
 
@@ -540,11 +554,9 @@ const char *get_core_state_name(int core_state)
 /* check if device is atomic and print information about potential slow start */
 void print_slow_atomic_cache_start_info(const char *device_path)
 {
-	char buff[MAX_STR_LEN];
 	struct kcas_cache_check_device cmd_info;
 	int ret;
 
-	get_dev_path(device_path, buff, sizeof(buff));
 	ret = _check_cache_device(device_path, &cmd_info);
 
 	if (!ret && cmd_info.format_atomic) {
@@ -632,6 +644,7 @@ static bool is_dev_link_whitelisted(const char* path)
 	return false;
 }
 
+/* Call this only AFTER normalizing path */
 static int _is_by_id_path(const char* dev_path)
 {
 	static const char dev_by_id_dir[] = "/dev/disk/by-id";
@@ -653,8 +666,7 @@ int set_device_path(char *dest_path, size_t dest_len, const char *src_path, size
 
 	/* check if given dev_path is whitelisted and then pass it as path or not */
 	if (is_dev_link_whitelisted(abs_dev_path)){
-		result = strncpy_s(dest_path, dest_len, abs_dev_path,
-		    strnlen_s(abs_dev_path, sizeof(abs_dev_path)));
+		result = strncpy_s(dest_path, dest_len, abs_dev_path, sizeof(abs_dev_path));
 		return result ?: SUCCESS;
 	}
 
@@ -820,11 +832,14 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 	cache->expected_core_count = info->info.core_count;
 	cache->id = cache_id;
 	cache->state = info->info.state;
-	if (set_device_path(cache->device, sizeof(cache->device), info->cache_path_name,
-			    sizeof(info->cache_path_name)) != SUCCESS) {
+
+	if (strncpy_s(cache->device, sizeof(cache->device),
+			info->cache_path_name,
+			sizeof(info->cache_path_name))) {
 		free(cache);
 		return NULL;
 	}
+
 	cache->mode = info->info.cache_mode;
 	cache->dirty = info->info.dirty;
 	cache->flushed = info->info.flushed;
@@ -2753,8 +2768,11 @@ int list_caches(unsigned int list_format, bool by_id_path)
 		float core_flush_prog;
 
 		if (!by_id_path) {
-			get_dev_path(curr_cache->device, curr_cache->device,
-				     sizeof(curr_cache->device));
+			if (get_dev_path(curr_cache->device, curr_cache->device,
+					sizeof(curr_cache->device))) {
+				cas_printf(LOG_WARNING, "WARNING: Cannot resolve path "
+					"to cache. By-id path will be shown for that cache.\n");
+			}
 		}
 
 		cache_flush_prog = calculate_flush_progress(curr_cache->dirty, curr_cache->flushed);
@@ -2831,6 +2849,11 @@ int _check_cache_device(const char *device_path,
 {
 	int result, fd;
 
+	if (strncpy_s(cmd_info->path_name, sizeof(cmd_info->path_name),
+			device_path, MAX_STR_LEN)) {
+		return FAILURE;
+	}
+
 	fd = open_ctrl_device();
 	if (fd == -1)
 		return FAILURE;
@@ -2839,7 +2862,7 @@ int _check_cache_device(const char *device_path,
 
 	close(fd);
 
-	return result;
+	return result ? FAILURE : SUCCESS;
 }
 
 int check_cache_device(const char *device_path)
@@ -2892,20 +2915,15 @@ int zero_md(const char *cache_device){
 	int fd = 0;
 	int result;
 
-	/* check if given cache device exists */
-	fd = open(cache_device, O_RDONLY);
+	/* check if device is available */
+	fd = open(cache_device, O_WRONLY | O_SYNC | O_EXCL);
 	if (fd < 0) {
-		cas_printf(LOG_ERR, "Device '%s' not found.\n", cache_device);
+		cas_printf(LOG_ERR, "Error while opening '%s'exclusively. This can be due to\n"
+				    "cache instance running on this device. In such case please "
+				    "stop the cache and try again.\n", cache_device);
 		return FAILURE;
 	}
 	close(fd);
-
-	/* don't delete metadata if cache is in use */
-	if (check_cache_already_added(cache_device) == FAILURE) {
-		cas_printf(LOG_ERR, "Cache device '%s' is already used as cache. "
-				"Please stop cache to clear metadata.\n", cache_device);
-		return FAILURE;
-	}
 
 	result = _check_cache_device(cache_device, &cmd_info);
 	if (result == FAILURE) {
@@ -2919,9 +2937,11 @@ int zero_md(const char *cache_device){
 		return FAILURE;
 	}
 
-	fd = open(cache_device, O_WRONLY | O_SYNC);
+	fd = open(cache_device, O_WRONLY | O_SYNC | O_EXCL);
 	if (fd < 0) {
-		cas_printf(LOG_ERR, "Error while opening '%s' to purge metadata.\n", cache_device);
+		cas_printf(LOG_ERR, "Error while opening '%s'exclusively. This can be due to\n"
+				    "cache instance running on this device. In such case please\n"
+				    "stop the cache and try again.\n", cache_device);
 		return FAILURE;
 	}
 
