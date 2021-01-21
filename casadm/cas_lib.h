@@ -266,9 +266,11 @@ int validate_str_metadata_mode(const char* s);
  * @brief clear metadata
  *
  * @param[in] cache_device device to which zeroing cache's metadata applies
+ * @param[in] force enforce metadata erasure despite dirty data, metadata
+ * 		mistmatch and/or dirty shutdown
  * @return 0 if succeed, 1 if failed
  */
-int zero_md(const char *cache_device);
+int zero_md(const char *cache_device, bool force);
 
 /**
  * @brief calculate flush progress
