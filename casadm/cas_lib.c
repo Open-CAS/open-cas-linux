@@ -2849,6 +2849,11 @@ int _check_cache_device(const char *device_path,
 {
 	int result, fd;
 
+	if (strncpy_s(cmd_info->path_name, sizeof(cmd_info->path_name),
+			device_path, MAX_STR_LEN)) {
+		return FAILURE;
+	}
+
 	fd = open_ctrl_device();
 	if (fd == -1)
 		return FAILURE;
@@ -2857,7 +2862,7 @@ int _check_cache_device(const char *device_path,
 
 	close(fd);
 
-	return result;
+	return result ? FAILURE : SUCCESS;
 }
 
 int check_cache_device(const char *device_path)
