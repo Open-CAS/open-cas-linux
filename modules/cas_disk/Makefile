@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2012-2020 Intel Corporation
+# Copyright(c) 2012-2021 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 include $(M)/config.mk
