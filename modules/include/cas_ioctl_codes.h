@@ -314,7 +314,12 @@ struct kcas_core_pool_remove {
 
 struct kcas_cache_check_device {
 	char path_name[MAX_STR_LEN]; /**< path to a device */
-	bool is_cache_device;
+	bool is_cache_device; /* OCF metadata detected */
+
+	/* following bool flags are defined is_cache_device == 1 */
+	bool metadata_compatible; /* OCF metadata is in current version */
+
+	/* following bool flags are defined iff is_metadata_compatible == 1 */
 	bool clean_shutdown;
 	bool cache_dirty;
 	bool format_atomic;

@@ -1832,12 +1832,15 @@ static int handle_help();
 
 struct {
 	const char *device;
+	bool force;
 } static zero_params = {
-	.device = ""
+	.device = "",
+	.force = false
 };
 
 static cli_option zero_options[] = {
 	{'d', "device", "Path to device on which metadata would be cleared", 1, "DEVICE", CLI_OPTION_REQUIRED},
+	{'f', "force", "Ignore potential dirty data on cache device"},
 	{0}
 };
 
@@ -1848,7 +1851,8 @@ int zero_handle_option(char *opt, const char **arg)
 		if(validate_device_name(arg[0]) == FAILURE)
 			return FAILURE;
 		zero_params.device = arg[0];
-
+	} else if (!strcmp(opt, "force")){
+		zero_params.force = 1;
 	} else {
 		return FAILURE;
 	}
@@ -1872,7 +1876,7 @@ int handle_zero()
 		return FAILURE;
 	}
 
-	return zero_md(zero_params.device);
+	return zero_md(zero_params.device, zero_params.force);
 }
 
 static cli_command cas_commands[] = {

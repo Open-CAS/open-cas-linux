@@ -2894,7 +2894,7 @@ int check_cache_device(const char *device_path)
 	fprintf(intermediate_file[1], TAG(TABLE_HEADER) "Is cache,Clean Shutdown,Cache dirty\n");
 
 	fprintf(intermediate_file[1], TAG(TABLE_ROW));
-	if (cmd_info.is_cache_device) {
+	if (cmd_info.is_cache_device && cmd_info.metadata_compatible) {
 		fprintf(intermediate_file[1], "yes,%s,%s\n",
 				cmd_info.clean_shutdown ? "yes" : "no",
 				cmd_info.cache_dirty ? "yes" : "no");
@@ -2909,7 +2909,8 @@ int check_cache_device(const char *device_path)
 	return SUCCESS;
 }
 
-int zero_md(const char *cache_device){
+int zero_md(const char *cache_device, bool force)
+{
 	struct kcas_cache_check_device cmd_info = {};
 	char zero_page[4096] = {0};
 	int fd = 0;
@@ -2935,6 +2936,37 @@ int zero_md(const char *cache_device){
 	if (!cmd_info.is_cache_device) {
 		cas_printf(LOG_ERR, "Device '%s' does not contain OpenCAS's metadata.\n", cache_device);
 		return FAILURE;
+	}
+
+	if (!cmd_info.metadata_compatible) {
+		if (!force) {
+			cas_printf(LOG_ERR, "Unable to determine whether cache contains dirty data due to metadata mismatch.\n"
+				"Clearing metadata might result in loss of dirty data. In order to inspect cache content\n"
+				"please load cache instance using matching OpenCAS version. Alternatively, if you wish to clear\n"
+				"metadata anyway, please use '--force' option.\n");
+			return FAILURE;
+		} else {
+			cas_printf(LOG_WARNING, "Clearing metadata with unknown version - potential loss of dirty data.\n");
+		}
+	} else if (!cmd_info.clean_shutdown) {
+		if (!force) {
+			cas_printf(LOG_ERR, "Cache instance did not shut down cleanly. It might contain dirty data. \n"
+					"Clearing metadata might result in loss of dirty data. Please recover cache instance\n"
+					"by loading it and flush dirty data in order to preserve then on the core device.\n"
+					"Alternatively, if you wish to clear metadata anyway, please use '--force' option. \n");
+			return FAILURE;
+		} else {
+			cas_printf(LOG_WARNING, "Clearing metadata after dirty shutdown - potential loss of dirty data.\n");
+		}
+	} else if (cmd_info.cache_dirty) {
+		if (!force) {
+			cas_printf(LOG_ERR, "Cache instance contains dirty data. Clearing metadata will result in loss of dirty data.\n"
+					"Please load cache instance and flush dirty data in order to preserve them on the core device.\n"
+					"Alternatively, if you wish to clear metadata anyway, please use '--force' option. \n");
+			return FAILURE;
+		} else {
+			cas_printf(LOG_WARNING, "Clearing metadata for dirty pages - dirty cache data is being discarded. \n");
+		}
 	}
 
 	fd = open(cache_device, O_WRONLY | O_SYNC | O_EXCL);
