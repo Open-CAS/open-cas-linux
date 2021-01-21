@@ -2894,7 +2894,7 @@ int check_cache_device(const char *device_path)
 	fprintf(intermediate_file[1], TAG(TABLE_HEADER) "Is cache,Clean Shutdown,Cache dirty\n");
 
 	fprintf(intermediate_file[1], TAG(TABLE_ROW));
-	if (cmd_info.is_cache_device) {
+	if (cmd_info.is_cache_device && cmd_info.metadata_compatible) {
 		fprintf(intermediate_file[1], "yes,%s,%s\n",
 				cmd_info.clean_shutdown ? "yes" : "no",
 				cmd_info.cache_dirty ? "yes" : "no");

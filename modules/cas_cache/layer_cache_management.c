@@ -1012,11 +1012,17 @@ static void cache_mngt_metadata_probe_end(void *priv, int error,
 
 	*context->result = error;
 
-	if (error == -OCF_ERR_NO_METADATA || error == -OCF_ERR_METADATA_VER) {
+	if (error == -OCF_ERR_NO_METADATA) {
 		cmd_info->is_cache_device = false;
+		cmd_info->metadata_compatible = false;
+		*context->result = 0;
+	} else if (error == -OCF_ERR_METADATA_VER) {
+		cmd_info->is_cache_device = true;
+		cmd_info->metadata_compatible = false;
 		*context->result = 0;
 	} else if (error == 0) {
 		cmd_info->is_cache_device = true;
+		cmd_info->metadata_compatible = true;
 		cmd_info->clean_shutdown = status->clean_shutdown;
 		cmd_info->cache_dirty = status->cache_dirty;
 	}
