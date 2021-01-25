@@ -2988,17 +2988,7 @@ int zero_md(const char *cache_device, bool force)
 		return FAILURE;
 	}
 
-	if (!cmd_info.metadata_compatible) {
-		if (!force) {
-			cas_printf(LOG_ERR, "Unable to determine whether cache contains dirty data due to metadata mismatch.\n"
-				"Clearing metadata might result in loss of dirty data. In order to inspect cache content\n"
-				"please load cache instance using matching OpenCAS version. Alternatively, if you wish to clear\n"
-				"metadata anyway, please use '--force' option.\n");
-			return FAILURE;
-		} else {
-			cas_printf(LOG_WARNING, "Clearing metadata with unknown version - potential loss of dirty data.\n");
-		}
-	} else if (!cmd_info.clean_shutdown) {
+	if (!cmd_info.clean_shutdown) {
 		if (!force) {
 			cas_printf(LOG_ERR, "Cache instance did not shut down cleanly. It might contain dirty data. \n"
 					"Clearing metadata might result in loss of dirty data. Please recover cache instance\n"
