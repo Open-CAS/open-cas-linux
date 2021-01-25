@@ -1,3 +1,4 @@
 attotime>=0.2.0
 schema==0.7.2
 recordclass>=0.8.4
+pytest-asyncio>=0.14.0
