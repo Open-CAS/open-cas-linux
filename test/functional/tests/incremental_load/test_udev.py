@@ -137,7 +137,11 @@ def test_udev_raid_core():
         cache_disk.create_partitions([Size(1, Unit.GibiByte)])
         cache_dev = cache_disk.partitions[0]
         core_disk = TestRun.disks["core"]
+        core_disk.create_partitions([Size(2, Unit.GibiByte)])
+        core_disk = core_disk.partitions[0]
         core_disk2 = TestRun.disks["core2"]
+        core_disk2.create_partitions([Size(2, Unit.GibiByte)])
+        core_disk2 = core_disk2.partitions[0]
 
     with TestRun.step("Create RAID0 volume."):
         config = RaidConfiguration(

@@ -38,7 +38,6 @@ def test_load_after_clean_shutdown(reboot_type, cache_mode, filesystem):
         cache_disk = TestRun.disks['cache']
         cache_disk.create_partitions([Size(1, Unit.GibiByte)])
         cache_dev = cache_disk.partitions[0]
-        cache_dev_link = cache_dev.get_device_link("/dev/disk/by-id")
         core_dev = TestRun.disks['core']
         cache = casadm.start_cache(cache_dev, cache_mode, force=True)
         core = cache.add_core(core_dev)
@@ -64,7 +63,6 @@ def test_load_after_clean_shutdown(reboot_type, cache_mode, filesystem):
         else:
             power_control = TestRun.plugin_manager.get_plugin('power_control')
             power_control.power_cycle()
-        cache_dev.path = cache_dev_link.get_target()
 
     with TestRun.step("Load cache."):
         casadm.load_cache(cache_dev)

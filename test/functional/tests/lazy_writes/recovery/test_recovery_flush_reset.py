@@ -11,6 +11,7 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.dd import Dd
 from test_tools.disk_utils import Filesystem
+from test_tools.fs_utils import readlink
 from test_utils import os_utils
 from test_utils.os_utils import Udev
 from test_utils.output import CmdException
@@ -43,8 +44,6 @@ def test_recovery_flush_reset_raw(cache_mode):
         core_disk.create_partitions([Size(16, Unit.GibiByte)] * 2)
         cache_device = cache_disk.partitions[0]
         core_device = core_disk.partitions[0]
-        core_device_link = core_device.get_device_link("/dev/disk/by-id")
-        cache_device_link = cache_device.get_device_link("/dev/disk/by-id")
 
     with TestRun.step("Create test files."):
         source_file, target_file = create_test_files(test_file_size)
@@ -70,12 +69,10 @@ def test_recovery_flush_reset_raw(cache_mode):
 
     with TestRun.step("Hard reset DUT during data flushing."):
         power_cycle_dut(wait_for_flush_begin=True, core_device=core_device)
-        cache_device.path = cache_device_link.get_target()
-        core_device.path = core_device_link.get_target()
 
     with TestRun.step("Copy file from core and check if current md5sum is different than "
                       "before restart."):
-        copy_file(source=core_device_link.get_target(), target=target_file.full_path,
+        copy_file(source=readlink(core_device.path), target=target_file.full_path,
                   size=test_file_size, direct="iflag")
         compare_files(source_file, target_file, should_differ=True)
 
@@ -92,7 +89,7 @@ def test_recovery_flush_reset_raw(cache_mode):
 
     with TestRun.step("Copy test file from core device to temporary location. "
                       "Compare it with the first version – they should be the same."):
-        copy_file(source=core_device_link.get_target(), target=target_file.full_path,
+        copy_file(source=readlink(core_device.path), target=target_file.full_path,
                   size=test_file_size, direct="iflag")
         compare_files(source_file, target_file)
 
@@ -123,8 +120,6 @@ def test_recovery_flush_reset_fs(cache_mode, fs):
         core_disk.create_partitions([Size(16, Unit.GibiByte)] * 2)
         cache_device = cache_disk.partitions[0]
         core_device = core_disk.partitions[0]
-        core_device_link = core_device.get_device_link("/dev/disk/by-id")
-        cache_device_link = cache_device.get_device_link("/dev/disk/by-id")
 
     with TestRun.step(f"Create {fs} filesystem on core."):
         core_device.create_filesystem(fs)
@@ -155,8 +150,6 @@ def test_recovery_flush_reset_fs(cache_mode, fs):
 
     with TestRun.step("Hard reset DUT during data flushing."):
         power_cycle_dut(True, core_device)
-        cache_device.path = cache_device_link.get_target()
-        core_device.path = core_device_link.get_target()
 
     with TestRun.step("Load cache."):
         cache = casadm.load_cache(cache_device)
