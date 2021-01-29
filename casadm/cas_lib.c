@@ -38,6 +38,7 @@
 #include "psort.h"
 #include <libgen.h>
 #include <regex.h>
+#include <math.h>
 
 #define PRINT_STAT(x) header->cmd_input.cache_stats.x
 
@@ -2212,7 +2213,7 @@ static int calculate_max_allocation(uint16_t cache_id, const char *allocation,
 	if (allocation + strnlen(allocation, MAX_STR_LEN) != end)
 		return FAILURE;
 
-	*part_size = (uint32_t)(alloc * 100);
+	*part_size = (uint32_t)round(alloc * 100);
 
 	return SUCCESS;
 }
