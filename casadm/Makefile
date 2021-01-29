@@ -83,7 +83,7 @@ CFLAGS    += -Wall -Werror -z relro -z now -fstack-protector -fPIC -Wformat -Wfo
 #
 # Flags for linking
 #
-LDFLAGS    = -z noexecstack -z relro -z now -pie -pthread
+LDFLAGS    = -z noexecstack -z relro -z now -pie -pthread -lm
 #
 # Targets
 #
