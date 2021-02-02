@@ -91,7 +91,15 @@ if [[ ! "$ID_LIKE" =~ suse|sles ]]; then
             modules+=( $(realpath "$file") )
         fi
     done
+    # Pass modules location to weak-modules...
     printf "%s\n" "${modules[@]}" | weak-modules --no-initramfs --add-modules
+    # ...and check if symlinks were created in case of different kernel version
+    for module in "${modules[@]}"; do
+        if [[ ! $(find /lib/modules/$(uname -r)/ -name $(basename "$module") 2>/dev/null) ]]; then
+            echo "WARNING: CAS module '$(basename $module)' is not" \
+                 "compatible with current kernel version $(uname -r)"
+        fi
+    done
 fi
 
 %preun modules_%{kver_filename}
