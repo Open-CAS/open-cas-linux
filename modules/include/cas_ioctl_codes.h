@@ -330,6 +330,7 @@ struct kcas_cache_check_device {
 enum kcas_core_param_id {
 	core_param_seq_cutoff_threshold,
 	core_param_seq_cutoff_policy,
+	core_param_seq_cutoff_promotion_count,
 	core_param_id_max,
 };
 
