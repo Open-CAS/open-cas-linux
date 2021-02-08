@@ -10,6 +10,7 @@
 #
 
 
+%global __python %{__python3}
 %define debug_package %{nil}
 %define kver %(uname -r)
 %define kver_filename k%{expand:%(kname="%{kver}"; echo "${kname%.*}" | sed -r "y/-/_/;")}
@@ -72,6 +73,8 @@ systemctl -q enable open-cas
 if [ $1 -eq 0 ]; then
     systemctl -q disable open-cas-shutdown
     systemctl -q disable open-cas
+
+    rm -rf /lib/opencas/{__pycache__,*.py[co]} &>/dev/null
 fi
 
 %postun
@@ -143,6 +146,7 @@ fi
 %ghost /var/log/opencas.log
 %ghost /lib/opencas/opencas.pyc
 %ghost /lib/opencas/opencas.pyo
+%ghost /lib/opencas/__pycache__
 
 %files  modules_%{kver_filename}
 %defattr(-, root, root)
@@ -151,6 +155,8 @@ fi
 
 
 %changelog
+* Mon Feb 8 2021 Rafal Stefanowski <rafal.stefanowski@intel.com> - 21.03-1
+- Improve python files handling
 * Tue Jan 5 2021 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.12-1
 - Fix resolving modules path for weak-modules
 * Fri Sep 11 2020 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.09-1
