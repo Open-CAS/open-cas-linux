@@ -539,17 +539,34 @@ static inline int env_in_interrupt(void)
 /* *** TIME *** */
 static inline uint64_t env_get_tick_count(void)
 {
-	return jiffies;
-}
-
-static inline uint64_t env_ticks_to_msecs(uint64_t j)
-{
-	return jiffies_to_msecs(j);
+	struct timespec ts;
+	getnstimeofday(&ts);
+	return ts.tv_sec * 1000000000UL + ts.tv_nsec;
 }
 
 static inline uint64_t env_ticks_to_nsecs(uint64_t j)
 {
-	return jiffies_to_usecs(j) * NSEC_PER_USEC;
+	return j;
+}
+
+static inline uint64_t env_ticks_to_usecs(uint64_t j)
+{
+	return j / 1000UL;
+}
+
+static inline uint64_t env_ticks_to_msecs(uint64_t j)
+{
+	return j / 1000000UL;
+}
+
+static inline uint64_t env_ticks_to_secs(uint64_t j)
+{
+	return j / 1000000000UL;
+}
+
+static inline uint64_t env_secs_to_ticks(uint64_t j)
+{
+	return j * 1000000000UL;
 }
 
 static inline bool env_time_after(uint64_t a, uint64_t b)
@@ -557,14 +574,9 @@ static inline bool env_time_after(uint64_t a, uint64_t b)
 	return time_after64(a,b);
 }
 
-static inline uint64_t env_ticks_to_secs(uint64_t j)
+static inline void env_msleep(uint64_t n)
 {
-	return j >> SHIFT_HZ;
-}
-
-static inline uint64_t env_secs_to_ticks(uint64_t j)
-{
-	return j << SHIFT_HZ;
+	msleep(n);
 }
 
 /* *** BIT OPERATIONS *** */
@@ -582,11 +594,6 @@ static inline void env_bit_clear(int nr, volatile void *addr)
 static inline int env_bit_test(int nr, const void *addr)
 {
 	return test_bit(nr, addr);
-}
-
-static inline void env_msleep(uint64_t n)
-{
-	msleep(n);
 }
 
 /* *** STRING OPERATIONS *** */
