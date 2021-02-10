@@ -101,7 +101,7 @@ sync:
 #
 $(TARGET): $(TARGET).a
 	@echo "  LD " $@
-	@$(CC) $(CFLAGS) $(LDFLAGS) -o $(TARGET) $<
+	@$(CC) $(CFLAGS) -o $(TARGET) $< $(LDFLAGS)
 
 $(TARGET).a: $(patsubst %,$(OBJDIR)%,$(OBJS))
 	@echo "  AR " $@
