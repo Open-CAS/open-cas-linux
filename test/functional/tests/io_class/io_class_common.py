@@ -27,10 +27,11 @@ mountpoint = "/tmp/cas1-1"
 
 
 def prepare(
-    cache_size=Size(500, Unit.MebiByte),
-    core_size=Size(10, Unit.GibiByte),
+    cache_size=Size(10, Unit.GibiByte),
+    core_size=Size(40, Unit.GibiByte),
     cache_mode=CacheMode.WB,
     cache_line_size=CacheLineSize.LINE_4KiB,
+    default_allocation="0.00"
 ):
     ioclass_config.remove_ioclass_config()
     cache_device = TestRun.disks["cache"]
@@ -62,7 +63,7 @@ def prepare(
     ioclass_config.add_ioclass(
         ioclass_id=ioclass_config.DEFAULT_IO_CLASS_ID,
         eviction_priority=ioclass_config.DEFAULT_IO_CLASS_PRIORITY,
-        allocation="0.00",
+        allocation=default_allocation,
         rule=ioclass_config.DEFAULT_IO_CLASS_RULE,
         ioclass_config_path=ioclass_config_path,
     )
@@ -97,14 +98,18 @@ def run_io_dir(path, size_4k):
         .block_size(Size(1, Unit.Blocks4096))
     )
     TestRun.LOGGER.info(f"{dd}")
-    dd.run()
+    output = dd.run()
+    if output.exit_code != 0:
+        TestRun.fail(f"Failed to execute dd.\n {output.stdout}\n{output.stderr}")
     sync()
     drop_caches(DropCachesMode.ALL)
 
 
 def run_io_dir_read(path):
     dd = Dd().output("/dev/null").input(f"{path}")
-    dd.run()
+    output = dd.run()
+    if output.exit_code != 0:
+        TestRun.fail(f"Failed to execute dd.\n {output.stdout}\n{output.stderr}")
     sync()
     drop_caches(DropCachesMode.ALL)
 
