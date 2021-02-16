@@ -18,8 +18,8 @@ assignees: ''
 * OpenCAS version (commit hash or tag):
 * Operating System:
 * Kernel version:
-* Cache device type (model):
-* Core device type (model):
+* Cache device type (NAND/Optane/other):
+* Core device type (HDD/SSD/other):
 * Cache configuration:
 * * Cache mode: (default: wt)
 * * Cache line size: (default: 4)
