@@ -138,23 +138,6 @@ Manage IO classes.
   2. \fB-L, --list\fR - print current IO class configuration. Allowed output formats: table or CSV.
 
 .TP
-.B -N, --nvme
-Manage NVMe device.
-.br
-
-  1. \fB-F, --format\fR <MODE> {normal|atomic} - format NVMe device to one of supported modes.
-     \fBNOTE:\fR After formatting NVMe device platform reboot is required.
-
-.br
-Defines cache metadata mode.
-In normal mode NVMe namespace uses LBA of size 512 bytes. Cache data and metadata
-are written to disk in separate requests in the same way that it happens with
-standard SSD device.
-Atomic mode exploits extended NVMe metadata features. In this mode namespace
-uses 520 bytes LBA allowing to write cache data and metadata in a single
-request (atomically).
-
-.TP
 .B --zero-metadata
 Remove metadata from previously used cache device.
 
