@@ -1484,6 +1484,60 @@ put:
 	return result;
 }
 
+int cache_mngt_remove_inactive_core(struct kcas_remove_inactive *cmd)
+{
+	struct _cache_mngt_sync_context context;
+	int result = 0;
+	ocf_cache_t cache;
+	ocf_core_t core;
+
+	result = mngt_get_cache_by_id(cas_ctx, cmd->cache_id, &cache);
+	if (result)
+		return result;
+
+	result = _cache_mngt_lock_sync(cache);
+	if (result)
+		goto put;
+
+	result = get_core_by_id(cache, cmd->core_id, &core);
+	if (result < 0) {
+		goto unlock;
+	}
+
+	result = (ocf_core_get_state(core) == ocf_core_state_active);
+	if (result) {
+		result = -KCAS_ERR_CORE_IN_ACTIVE_STATE;
+		goto unlock;
+	}
+
+	/*
+	 * Destroy exported object - in case of error during destruction of
+	 * exported object, instead of trying rolling this back we rather 
+	 * inform user about error.
+	 */
+	result = block_dev_destroy_exported_object(core);
+	if (result)
+		goto unlock;
+
+	init_completion(&context.cmpl);
+	context.result = &result;
+
+	ocf_mngt_cache_remove_core(core, _cache_mngt_remove_core_complete,
+			&context);
+
+	wait_for_completion(&context.cmpl);
+
+	if (!result) {
+		mark_core_id_free(cache, cmd->core_id);
+	}
+
+unlock:
+	ocf_mngt_cache_unlock(cache);
+put:
+	ocf_mngt_cache_put(cache);
+	return result;
+}
+
 int cache_mngt_reset_stats(const char *cache_name, size_t cache_name_len,
 				const char *core_name, size_t core_name_len)
 {
