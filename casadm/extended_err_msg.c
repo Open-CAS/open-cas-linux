@@ -256,7 +256,11 @@ struct {
 		KCAS_ERR_CACHE_STOPPING,
 		"Cache being stopped"
 	},
+	{
 
+		KCAS_ERR_CORE_IN_ACTIVE_STATE,
+		"Core device is in active state"
+	},
 
 };
 

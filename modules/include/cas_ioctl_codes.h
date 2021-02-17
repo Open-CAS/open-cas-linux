@@ -589,6 +589,9 @@ enum kcas_error {
 
 	/** Cache already being stopped*/
 	KCAS_ERR_CACHE_STOPPING,
+
+	/** Core device is in active state */
+	KCAS_ERR_CORE_IN_ACTIVE_STATE
 };
 
 #endif
