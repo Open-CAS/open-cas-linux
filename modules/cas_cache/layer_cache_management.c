@@ -1363,26 +1363,18 @@ static int _cache_mngt_remove_core_flush(ocf_cache_t cache,
 
 	core_active = (ocf_core_get_state(core) == ocf_core_state_active);
 
-	if (cmd->detach && !core_active) {
-		printk(KERN_WARNING OCF_PREFIX_SHORT
-				"Cannot detach core which "
-				"is already inactive!\n");
-		return -OCF_ERR_CORE_IN_INACTIVE_STATE;
-	}
-
-	if (core_active) {
-		return _cache_mngt_core_flush_sync(core,
-				true, _cache_read_unlock_put_cmpl);
-	} else if (!ocf_mngt_core_is_dirty(core)) {
-		result = 0;
-		goto unlock;
-	} else {
-		printk(KERN_WARNING OCF_PREFIX_SHORT
-				"Cannot remove dirty inactive core "
-				"without force option\n");
+	if (!core_active) {
 		result = -OCF_ERR_CORE_IN_INACTIVE_STATE;
 		goto unlock;
 	}
+
+	if (!ocf_mngt_core_is_dirty(core)) {
+		result = 0;
+		goto unlock;
+	}
+
+	return _cache_mngt_core_flush_sync(core, true,
+				_cache_read_unlock_put_cmpl);
 
 unlock:
 	ocf_mngt_cache_read_unlock(cache);
@@ -1399,21 +1391,23 @@ static int _cache_mngt_remove_core_prepare(ocf_cache_t cache, ocf_core_t core,
 
 	core_active = ocf_core_get_state(core) == ocf_core_state_active;
 
-	if (cmd->detach && !core_active) {
-		printk(KERN_WARNING OCF_PREFIX_SHORT
-				"Cannot detach core which "
-				"is already inactive!\n");
+	if (!core_active) {
+		if (cmd->detach) {
+			printk(KERN_WARNING OCF_PREFIX_SHORT
+					"Cannot detach core which "
+					"is already inactive!\n");
+		}
 		return -OCF_ERR_CORE_IN_INACTIVE_STATE;
-	}
-
-	if (core_active) {
+	} else {
 		result = block_dev_destroy_exported_object(core);
 		if (result)
 			return result;
 	}
 
-	if (!cmd->force_no_flush)
-		result = _cache_mngt_core_flush_uninterruptible(core);
+	if (cmd->force_no_flush)
+		return -KCAS_ERR_REMOVED_DIRTY;
+
+	result = _cache_mngt_core_flush_uninterruptible(core);
 
 	return result ? -KCAS_ERR_REMOVED_DIRTY : 0;
 }
@@ -1463,7 +1457,7 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 	init_completion(&context.cmpl);
 	context.result = &result;
 
-	if (cmd->detach || prepare_result == -KCAS_ERR_REMOVED_DIRTY) {
+	if (cmd->detach) {
 		ocf_mngt_cache_detach_core(core,
 				_cache_mngt_remove_core_complete, &context);
 	} else {
