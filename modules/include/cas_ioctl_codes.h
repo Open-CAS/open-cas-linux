@@ -117,7 +117,7 @@ struct kcas_insert_core {
 struct kcas_remove_core {
 	uint16_t cache_id; /**< id of an running cache */
 	uint16_t core_id; /**< id core object to be removed */
-	bool force_no_flush; /**< remove core without flushing */
+	bool force_no_flush; /**< remove active core without flushing */
 	bool detach; /**< detach core without removing it from cache metadata */
 
 	int ext_err_code;
@@ -473,7 +473,7 @@ struct kcas_get_cache_param {
 /** Add core object to an running cache instance */
 #define KCAS_IOCTL_INSERT_CORE _IOWR(KCAS_IOCTL_MAGIC, 22, struct kcas_insert_core)
 
-/** Remove core object from an running cache instance */
+/** Remove active core object from an running cache instance */
 #define KCAS_IOCTL_REMOVE_CORE _IOR(KCAS_IOCTL_MAGIC, 23, struct kcas_remove_core)
 
 /** Retrieve properties of a running cache instance (incl. mode etc.) */
@@ -566,7 +566,7 @@ enum kcas_error {
 	/** Given device is a partition */
 	KCAS_ERR_A_PART,
 
-	/** Core has been removed with flush error */
+	/** Core has been removed, but it may contain dirty data */
 	KCAS_ERR_REMOVED_DIRTY,
 
 	/** Cache has been stopped, but it may contain dirty data */
@@ -584,7 +584,7 @@ enum kcas_error {
 	/** Condition token does not identify any known condition */
 	KCAS_ERR_CLS_RULE_UNKNOWN_CONDITION,
 
-	/** Waiting for async operation was interrupted*/
+	/** Waiting for async operation was interrupted */
 	KCAS_ERR_WAITING_INTERRUPTED,
 
 	/** Cache already being stopped*/

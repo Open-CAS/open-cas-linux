@@ -1109,7 +1109,7 @@ int handle_add()
 static cli_option remove_options[] = {
 	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
 	{'j', "core-id", CORE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
-	{'f', "force", "Force remove inactive core"},
+	{'f', "force", "Force active core removal without data flush"},
 	{0}
 };
 
@@ -1961,7 +1961,7 @@ static cli_command cas_commands[] = {
 		{
 			.name = "remove-core",
 			.short_name = 'R',
-			.desc = "Remove core device from cache instance",
+			.desc = "Remove active core device from cache instance",
 			.long_desc = NULL,
 			.options = remove_options,
 			.command_handle_opts = remove_core_command_handle_option,
