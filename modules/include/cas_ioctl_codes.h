@@ -123,6 +123,13 @@ struct kcas_remove_core {
 	int ext_err_code;
 };
 
+struct kcas_remove_inactive {
+	uint16_t cache_id; /**< id of an running cache */
+	uint16_t core_id; /**< id core object to be removed */
+
+	int ext_err_code;
+};
+
 struct kcas_reset_stats {
 	uint16_t cache_id; /**< id of an running cache */
 	uint16_t core_id; /**< id core object to be removed */
@@ -419,6 +426,7 @@ struct kcas_get_cache_param {
  *    34    *    KCAS_IOCTL_GET_STATS                       *    OK            *
  *    35    *    KCAS_IOCTL_PURGE_CACHE                     *    OK            *
  *    36    *    KCAS_IOCTL_PURGE_CORE                      *    OK            *
+ *    37    *    KCAS_IOCTL_REMOVE_INACTIVE                 *    OK            *
  *******************************************************************************
  */
 
@@ -516,6 +524,9 @@ struct kcas_get_cache_param {
 /* Flush dirty data from running core object
  * and invalidate all valid cache lines associated with given core. */
 #define KCAS_IOCTL_PURGE_CORE _IOWR(KCAS_IOCTL_MAGIC, 36, struct kcas_flush_core)
+
+/** Remove inactive core object from an running cache instance */
+#define KCAS_IOCTL_REMOVE_INACTIVE _IOR(KCAS_IOCTL_MAGIC, 37, struct kcas_remove_inactive)
 
 /**
  * Extended kernel CAS error codes

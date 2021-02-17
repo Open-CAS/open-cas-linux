@@ -132,6 +132,16 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
 
+	case KCAS_IOCTL_REMOVE_INACTIVE: {
+		struct kcas_remove_inactive *cmd_info;
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		retval = cache_mngt_remove_inactive_core(cmd_info);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+
 	case KCAS_IOCTL_RESET_STATS: {
 		struct kcas_reset_stats *cmd_info;
 		char cache_name[OCF_CACHE_NAME_SIZE];
