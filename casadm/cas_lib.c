@@ -1931,6 +1931,43 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
 	return SUCCESS;
 }
 
+int remove_inactive_core(unsigned int cache_id, unsigned int core_id)
+{
+	int fd = 0;
+	struct kcas_remove_inactive cmd;
+
+	/* don't even attempt ioctl if filesystem is mounted */
+	if (SUCCESS != check_if_mounted(cache_id, core_id)) {
+		return FAILURE;
+	}
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.cache_id = cache_id;
+	cmd.core_id = core_id;
+
+	if (run_ioctl(fd, KCAS_IOCTL_REMOVE_INACTIVE, &cmd) < 0) {
+		close(fd);
+		if (cmd.ext_err_code == KCAS_ERR_CORE_IN_ACTIVE_STATE) {
+			cas_printf(LOG_ERR, "Core is active. "
+					"To manage the active core use "
+					"'--remove-core' command.\n");
+		} else {
+			cas_printf(LOG_ERR, "Error while removing inactive "
+					"core device %d from cache instance "
+					"%d\n", core_id, cache_id);
+			print_err(cmd.ext_err_code);
+		}
+		return FAILURE;
+	}
+	close(fd);
+
+	return SUCCESS;
+}
+
 int core_pool_remove(const char *core_device)
 {
 	struct kcas_core_pool_remove cmd;

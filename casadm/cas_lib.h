@@ -215,6 +215,15 @@ int get_core_info(int fd, int cache_id, int core_id, struct kcas_core_info *info
 int remove_core(unsigned int cache_id, unsigned int core_id,
 		bool detach, bool force_no_flush);
 
+/**
+ * @brief remove inactive core device from a cache
+ *
+ * @param cache_id cache from which inactive core is being removed
+ * @param cache_id inactive core which is being removed
+ * @return 0 upon successful core removal, 1 upon failure
+ */
+int remove_inactive_core(unsigned int cache_id, unsigned int core_id);
+
 int core_pool_remove(const char *core_device);
 int get_core_pool_count(int fd);
 
