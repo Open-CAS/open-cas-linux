@@ -1,0 +1,42 @@
+---
+group: Requirement group title
+---
+
+Requirement group description.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Requirement about requirements
+id: req_syntax
+---
+
+It shall be possible specify requirement header and body.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Markdown in requirements body
+id: req_body_markdown
+---
+
+It shall be possible use markdown language in requirement body.
+The feature list includes:
+
+- **bold**, *italics* text
+- ordered and unordered lists
+- tables
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: YAML in requirements header
+id: req_header_yaml
+---
+
+It shall be possible to put any YAML content in the requirement header
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Multiple requirements
+id: multiple_requirements
+---
+
+It shall be possible to place multiple requirements in one file.
