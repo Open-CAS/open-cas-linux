@@ -84,7 +84,7 @@ def test_core_device_error(io_dir, cache_mode, cache_line_size):
         if fio_errors != core_errors_in_cache:
             TestRun.fail(
                 f"Core errors in cache stats({core_errors_in_cache}) should be equal to number of"
-                " fio errors ({fio_errors})"
+                f" fio errors ({fio_errors})"
             )
 
     with TestRun.step("Wait for fio on good core"):
@@ -96,7 +96,7 @@ def test_core_device_error(io_dir, cache_mode, cache_line_size):
         if stats.error_stats.core.total != 0:
             TestRun.fail(
                 f"No errors should be reported for good core. "
-                "Actual result: {stats.error_stats.total}"
+                f"Actual result: {stats.error_stats.total}"
             )
 
     with TestRun.step("Stop the cache"):

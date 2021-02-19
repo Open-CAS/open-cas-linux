@@ -73,7 +73,7 @@ def test_cache_insert_error(cache_mode, cache_line_size):
         if cache_writes != cache_errors:
             TestRun.fail(
                 f"Cache errors ({cache_errors}) should equal to number of"
-                " requests to cache ({cache_writes})"
+                f" requests to cache ({cache_writes})"
             )
 
     if cache_mode not in [CacheMode.WB, CacheMode.WO]:
@@ -133,7 +133,7 @@ def test_cache_write_lazy_insert_error(cache_mode, cache_line_size):
         if cache_writes != cache_errors:
             TestRun.fail(
                 f"Cache errors ({cache_errors}) should equal to number of requests to"
-                " cache ({cache_writes})"
+                f" cache ({cache_writes})"
             )
 
         state = cache.get_status()
