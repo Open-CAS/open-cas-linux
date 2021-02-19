@@ -1,0 +1,83 @@
+---
+group: IO class
+---
+
+The IO classes provide ability to control how data is cached with better
+granularity. Every IO can be analyzed on the fly to determine its attributes,
+attributes of an issuing process or a destination file. Using IO class configuration
+settings, Open CAS Linux may be tuned for a specific workload. The IO class mechanism
+can determine whether or not data shall be cached or with which priority it shall be
+evicted.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Setting occupancy limit
+id: occupancy
+---
+
+It shall be possible to set a maximum size of an IO class.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Allowed occupancy values
+id: occupancy_allowed_values
+---
+
+The product shall accept integer and fixed point values for a max size of an IO class
+in range from 0.00 to 1.00 and interpret them as a fraction of a cache size.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Default occupancy limit
+id: occupancy_default_limit
+---
+
+When initializing a cache the software shall set IO class's max occupancy to 1.00.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Setting an occupancy limit on loading a cache
+id: occupancy_limit_on_load
+---
+
+When a cache state is loaded, the occupancy limit for each IO class shall be set
+to the value used before the cache had been shut down.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Display an occupancy limit value
+id: occupancy_display_limit
+---
+
+It shall be possible to display the currently set value of the occupancy limit
+for each configured ioclass. The value shall be displayed as a fraction of a cache
+size.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Respecting occupancy limit on a cache miss
+id: occupancy_respecting_limit_on_miss
+---
+
+When an IO request is a miss and the target IO class has reached its occupancy limit,
+the software shall evict a number of missing cache blocks from the target IO class
+before inserting new data into it.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: IO request to a disabled IO class
+id: occupancy_disabled_io_class
+---
+
+When a target IO class max occupancy has been set to 0.00 the software shall submit
+IO requests in the Pass-Through mode.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Reassign cachelines to another IO class regardless of occupancy limit
+id: occupancy_limit_on_repart
+---
+
+When an IO request is a hit and triggers reassigning a cache line to another
+IO class, the software shall reassign the cache line regardless of the target
+IO class's occupancy limit.
