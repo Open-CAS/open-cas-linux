@@ -19,6 +19,327 @@ It shall be possible to set a maximum size of an IO class.
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
+title: Respecting occupancy limit on a cache miss
+id: occupancy_respecting_limit_on_miss
+---
+
+When an IO request is a miss and the target IO class has reached its occupancy limit,
+the software shall evict a number of missing clean cache blocks from the target
+IO class and insert the data to the freed cache lines.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: A miss to completely dirty IO class
+id: miss_to_dirty
+---
+
+When an IO request is a miss, the target IO class has reached its occupancy limit,
+but all the cache blocks are dirty, the request shall be submited in the Pass-Through
+mode. Additonally, and at most 128 dirty cache lines shall be flushed.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: IO request to a disabled IO class
+id: occupancy_disabled_io_class
+---
+
+When a target IO class max occupancy is set to 0.00 the software shall submit
+IO requests in the Pass-Through mode.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Reassign cache lines to another IO class regardless of occupancy limit
+id: occupancy_limit_on_repart
+---
+
+When an IO request is a hit and it triggers reassigning a cache line to another
+IO class, the software shall reassign the cache line regardless of the target
+IO class's occupancy limit.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Directory based classification
+id: rule_directory
+---
+
+The product shall allow to classify the file IO requests based on an absolute
+path to a directory. The classification condition shall be fulfilled when the target
+file is located in the directory or in any of its subdirectories.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Directory removal
+id: rule_directory_removal
+---
+
+The product shall react to removal of a directory referenced in a classification
+rule within up to 5 seconds. After this period no I/O shall be inserted into the
+referencing IO class.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Directory move detection
+id: rule_directory_move
+---
+
+The product shall react to changing location of a directory referenced in a classification
+rule within up to 5 seconds. After this period no I/O shall be into inserted the
+referencing IO class.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Directory non existance detection
+id: rule_non_existing_directory
+---
+
+If a directory referenced by a classification rule does not exist at the moment
+of configuring I/O class, the product shall react to creation of the directory
+within 1 second. After this period I/O to files within the directory or any of
+its subdirectories shall fulfill the criteria of directory based classification
+for rules referencing the directories.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Classifying direct IO requests
+id: rule_direct
+---
+
+The product shall allow to classify IO requests based on O_DIRECT flag.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Classifying filesystem metadata
+id: rule_metadata
+---
+
+The product shall allow to specify classification rule to match filesystem
+metadata for the following filesystems:
+
+1. ext3
+2. ext4
+3. xfs
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Core id based classification
+id: rule_core_id
+---
+
+The product shall allow to classify IO requests based on an id of a target core.
+It shall be possible to specify range of applicable core ids.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: File size based classification
+id: rule_file_size
+---
+
+The product shall allow to classify IO requests based on a size of target file.
+It shall be possible to specify range of applicable sizes.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: IO class based classification
+id: rule_io_class
+---
+
+The product shall allow to classify IO requests based on a previously defined
+IO class id. It shall be possible to specify range of applicable IO class ids.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: File extension based classification
+id: rule_extension_based
+---
+
+The product shall allow to classify IO requests based on an extension of a target
+file.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: File name prefix based classification
+id: rule_prefix
+---
+
+The product shall allow to classify IO requests based on target file name prefix.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: LBA based classification
+id: rule_lba
+---
+
+The product shall allow to classify IO requests based on LBA. It shall be possible
+to specify range of applicable LBAs.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: PID based classification
+id: rule_pid
+---
+
+The product shall allow to classify IO requests based on a submitter process PID.
+It shall be possible to specify range of applicable PIDs.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Process name based classification
+id: rule_process_name
+---
+
+The product shall allow to classify IO requests based on a submitter process name.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: File offset based classification
+id: rule_file_offset
+---
+
+The product shall allow to classify IO requests based on an offset within a target
+file. It shall be possible to specify range of applicable offsets.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Request size based classification
+id: rule_request_size
+---
+
+The product shall allow to classify IO requests based on its size. It shall be possible
+to specify range of applicable sizes.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: WLTH based classification
+id: rule_wlth
+---
+
+The product shall allow to classify IO requests based on write life time hints.
+It shall be possible to specify range of applicable write life time hints.
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Unclassified rule
+id: rule_unclassified
+---
+
+When an IO request does not match any of the configured classification rules
+the system shall classify it as **unclassified**.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Combining multiple conditions in one rule
+id: combining_rules
+---
+
+The product shall allow to combine multiple classification rules into one
+classification rule.
+
+It shall be possible to combine rules using the following boolean operators:
+
+1. And
+2. Or
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Display an IO class configuration
+id: display_configuration
+---
+
+The product shall provide an option to display current configuration of IO classes.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Export an IO class configuration to csv
+id: export_csv
+---
+
+The product shall provide an option to export current IO class configuration in
+a format compatilbe with a config file.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Load configuration from file
+id: config_file
+---
+
+The product shall provide an option to load IO class configuration from a file.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Setting an IO class configuration on loading a cache
+id: load_config
+---
+
+When a cache is loaded, IO class configuration shall be restored to the values
+used before the cache had been shut down.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Max number of IO classes
+id: max_configured
+---
+
+The product shall allow to configure up to 33 IO classes.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Attributes
+id: attributes
+---
+
+The IO class configuration shall include the following attributes for each IO class:
+
+1. Id
+2. Classification rule
+3. Eviction priority
+4. Occupancy limit
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Allowed ids
+id: id_allowed_values
+---
+
+The product shall accept the IO class ids in range 0-32 inclusive.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Allowed eviction priorities
+id: eviction_priorities_allowed_values
+---
+
+The product shall accept the eviction priorities in range 0-255 inclusive.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Eviction order
+id: eviction_order
+---
+
+The software shall evict the data from the IO classes in order specified by the
+eviction priorities.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Empty eviction priority
+id: empty_priority
+---
+
+The product shall allow to omit eviction priority in IO class configuration.
+The IO class with empty eviction priority shall be considered as pinned.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Pinning IO class
+id: pinning
+---
+
+The product shall allow to pin an IO class. Data from the pinned IO class shall
+not be evicted unless its occupancy limit is exceeded.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 title: Allowed occupancy values
 id: occupancy_allowed_values
 ---
@@ -28,56 +349,49 @@ in range from 0.00 to 1.00 and interpret them as a fraction of a cache size.
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
-title: Default occupancy limit
-id: occupancy_default_limit
+title: Rules testing order
+id: rules_testing_order
 ---
 
-When initializing a cache the software shall set IO class's max occupancy to 1.00.
+IO request shall be tested against classification rules in the order of
+increasing id.
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
-title: Setting an occupancy limit on loading a cache
-id: occupancy_limit_on_load
+title: Effective IO Class
+id: effective
 ---
 
-When a cache state is loaded, the occupancy limit for each IO class shall be set
-to the value used before the cache had been shut down.
+Effective IO class for given IO request shall be the latest one for which
+the IO request fulfill the condition.
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
-title: Display an occupancy limit value
-id: occupancy_display_limit
+title: Last processed rule
+id: last_processed
 ---
 
-It shall be possible to display the currently set value of the occupancy limit
-for each configured ioclass. The value shall be displayed as a fraction of a cache
-size.
+The product shall allow to mark classification rule as a terminating one. When
+an IO request matches a terminating rule the IO class is resolved as an effecitve
+one and no further processing is being performed.
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
-title: Respecting occupancy limit on a cache miss
-id: occupancy_respecting_limit_on_miss
+title: Default IO class attribute
+id: default_ioclass_attribute
 ---
 
-When an IO request is a miss and the target IO class has reached its occupancy limit,
-the software shall evict a number of missing cache blocks from the target IO class
-before inserting new data into it.
+The product shall initialize default IO class with attributes:
+
+1. Id equal to 0
+2. Classification rule **unclassified**
+3. Eviction priority equal to 255
+4. Occupancy limit equal to 1.00
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
-title: IO request to a disabled IO class
-id: occupancy_disabled_io_class
+title: Immutable default rule
+id: immutable_default
 ---
 
-When a target IO class max occupancy has been set to 0.00 the software shall submit
-IO requests in the Pass-Through mode.
-
---------------------------------------------------------------------------------
---------------------------------------------------------------------------------
-title: Reassign cachelines to another IO class regardless of occupancy limit
-id: occupancy_limit_on_repart
----
-
-When an IO request is a hit and triggers reassigning a cache line to another
-IO class, the software shall reassign the cache line regardless of the target
-IO class's occupancy limit.
+The default IO class rule shall be immutable.
