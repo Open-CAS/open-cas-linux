@@ -254,6 +254,7 @@ zero_metadata_help = [
     r"Clear metadata from caching device",
     r"Options that are valid with --zero-metadata are:",
     r"-d  --device \<DEVICE\>               Path to device on which metadata would be cleared"
+    r"-f  --force                         Ignore potential dirty data on cache device"
 ]
 
 unrecognized_stderr = [

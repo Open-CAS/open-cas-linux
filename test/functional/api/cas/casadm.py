@@ -153,9 +153,9 @@ def print_version(output_format: OutputFormat = None, shortcut: bool = False):
     return output
 
 
-def zero_metadata(cache_dev: Device, shortcut: bool = False):
+def zero_metadata(cache_dev: Device, force: bool = False, shortcut: bool = False):
     output = TestRun.executor.run(
-        zero_metadata_cmd(cache_dev=cache_dev.path, shortcut=shortcut))
+        zero_metadata_cmd(cache_dev=cache_dev.path, force=force, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to wipe metadata.", output)
     return output
