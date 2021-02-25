@@ -10,6 +10,7 @@
 #include "linux_kernel_version.h"
 #include "utils/utils_gc.h"
 #include "ocf/ocf_err.h"
+#include "utils/utils_mpool.h"
 
 /* linux sector 512-bytes */
 #define ENV_SECTOR_SHIFT	9

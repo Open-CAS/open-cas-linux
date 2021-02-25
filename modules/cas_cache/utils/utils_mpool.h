@@ -6,55 +6,51 @@
 #ifndef UTILS_MPOOL_H_
 #define UTILS_MPOOL_H_
 
-#define ALLOCATOR_NAME_MAX 128
+#include <linux/types.h>
+
+#define MPOOL_ALLOCATOR_NAME_MAX 128
 
 enum {
-	cas_mpool_1,
-	cas_mpool_2,
-	cas_mpool_4,
-	cas_mpool_8,
-	cas_mpool_16,
-	cas_mpool_32,
-	cas_mpool_64,
-	cas_mpool_128,
+	env_mpool_1,
+	env_mpool_2,
+	env_mpool_4,
+	env_mpool_8,
+	env_mpool_16,
+	env_mpool_32,
+	env_mpool_64,
+	env_mpool_128,
 
-	cas_mpool_max
+	env_mpool_max
 };
 
-struct cas_mpool {
-	uint32_t item_size;
-		/*!< Size of specific item of memory pool */
-
-	uint32_t hdr_size;
-		/*!< Header size before items */
-
-	env_allocator *allocator[cas_mpool_max];
-		/*!< OS handle to memory pool */
-
-	int flags;
-		/*!< Allocation flags */
-};
+struct env_mpool;
 
 /**
  * @brief Create CAS memory pool
  *
- * @param hdr_size Header size before array of items
- * @param size Size of particular item
+ * @param hdr_size size of constant allocation part
+ * @param elem_size size increment for each element
  * @param flags Allocation flags
  * @param mpool_max Maximal allocator size (power of two)
+ * @param fallback Should allocations fall back to vmalloc if allocator fails
+ * @param limits Array of rpool preallocation limits per each mpool allocation
+ * 		order or NULL if defaults are to be used. Array should have
+ * 		mpool_max elements
  * @param name_prefix Format name prefix
  *
  * @return CAS memory pool
  */
-struct cas_mpool *cas_mpool_create(uint32_t hdr_size, uint32_t size, int flags,
-		int mpool_max, const char *name_perfix);
+struct env_mpool *env_mpool_create(uint32_t hdr_size, uint32_t elem_size,
+		int flags, int mpool_max, bool fallback,
+		const uint32_t limits[env_mpool_max],
+		const char *name_perfix);
 
 /**
  * @brief Destroy existing memory pool
  *
  * @param mpool memory pool
  */
-void cas_mpool_destroy(struct cas_mpool *mpool);
+void env_mpool_destroy(struct env_mpool *mpool);
 
 /**
  * @brief Allocate new items of memory pool
@@ -67,7 +63,7 @@ void cas_mpool_destroy(struct cas_mpool *mpool);
  *
  * @return Pointer to the new items
  */
-void *cas_mpool_new(struct cas_mpool *mpool, uint32_t count);
+void *env_mpool_new(struct env_mpool *mpool, uint32_t count);
 
 /**
  * @brief Allocate new items of memory pool with specified allocation flag
@@ -78,7 +74,7 @@ void *cas_mpool_new(struct cas_mpool *mpool, uint32_t count);
  *
  * @return Pointer to the new items
  */
-void *cas_mpool_new_f(struct cas_mpool *mpool, uint32_t count, int flags);
+void *env_mpool_new_f(struct env_mpool *mpool, uint32_t count, int flags);
 
 /**
  * @brief Free existing items of memory pool
@@ -86,7 +82,9 @@ void *cas_mpool_new_f(struct cas_mpool *mpool, uint32_t count, int flags);
  * @param mpool CAS memory pool reference
  * @param items Items to be freed
  * @param count - Count of elements to be free
+ *
+ * @return Allocation was freed
  */
-void cas_mpool_del(struct cas_mpool *mpool, void *items, uint32_t count);
+bool env_mpool_del(struct env_mpool *mpool, void *items, uint32_t count);
 
 #endif /* UTILS_MPOOL_H_ */
