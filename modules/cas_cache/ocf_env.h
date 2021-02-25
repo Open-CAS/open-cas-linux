@@ -78,6 +78,9 @@ static inline void env_secure_free(const void *ptr, size_t size)
 
 typedef struct _env_allocator env_allocator;
 
+env_allocator *env_allocator_create_extended(uint32_t size, const char *name,
+	int rpool_limit);
+
 env_allocator *env_allocator_create(uint32_t size, const char *name);
 
 void env_allocator_destroy(env_allocator *allocator);
