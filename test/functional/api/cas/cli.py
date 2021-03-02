@@ -258,6 +258,23 @@ def set_param_cleaning_acp_cmd(cache_id: str, wake_up: str = None,
                           additional_params=add_param, shortcut=shortcut)
 
 
+def set_param_promotion_cmd(cache_id: str, policy: str, shortcut: bool = False):
+    add_params = (" -p " if shortcut else " --policy ") + policy
+    return _set_param_cmd(namespace="promotion", cache_id=cache_id,
+                          additional_params=add_params, shortcut=shortcut)
+
+
+def set_param_promotion_nhit_cmd(cache_id: str, threshold: str = None,
+                                 trigger: str = None, shortcut: bool = False):
+    add_param = ""
+    if threshold is not None:
+        add_param += (" -t " if shortcut else " --threshold ") + threshold
+    if trigger is not None:
+        add_param += (" -o " if shortcut else " --trigger ") + trigger
+    return _set_param_cmd(namespace="promotion-nhit", cache_id=cache_id,
+                          additional_params=add_param, shortcut=shortcut)
+
+
 def ctl_help(shortcut: bool = False):
     return casctl + " --help" if shortcut else " -h"
 

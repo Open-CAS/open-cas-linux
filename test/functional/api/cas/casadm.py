@@ -7,7 +7,7 @@ from typing import List
 
 from api.cas.cache import Cache
 from api.cas.cache_config import CacheLineSize, CacheMode, SeqCutOffPolicy, CleaningPolicy, \
-    KernelParameters
+    KernelParameters, PromotionPolicy
 from api.cas.core import Core
 from core.test_run import TestRun
 from storage_devices.device import Device
@@ -321,4 +321,23 @@ def set_param_cleaning_acp(cache_id: int, wake_up: int = None, flush_max_buffers
             flush_max_buffers=str(flush_max_buffers) if flush_max_buffers else None))
     if output.exit_code != 0:
         raise CmdException("Error while setting acp cleaning policy parameters.", output)
+    return output
+
+
+def set_param_promotion(cache_id: int, policy: PromotionPolicy):
+    output = TestRun.executor.run(
+        set_param_promotion_cmd(cache_id=str(cache_id), policy=policy.name))
+    if output.exit_code != 0:
+        raise CmdException("Error while setting cleaning policy.", output)
+    return output
+
+
+def set_param_promotion_nhit(cache_id: int, threshold: int = None, trigger: int = None):
+    output = TestRun.executor.run(
+        set_param_promotion_nhit_cmd(
+            cache_id=cache_id,
+            threshold=threshold,
+            trigger=trigger))
+    if output.exit_code != 0:
+        raise CmdException("Error while setting alru cleaning policy parameters.", output)
     return output
