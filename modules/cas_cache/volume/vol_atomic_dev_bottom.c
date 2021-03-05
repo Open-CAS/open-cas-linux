@@ -61,7 +61,7 @@ struct cas_atomic_io {
 	struct bio_vec_iter iter;
 };
 
-static struct cas_mpool *atomic_io_allocator;
+static struct env_mpool *atomic_io_allocator;
 
 static inline uint32_t cas_atomic_max_io_sectors(void)
 {
@@ -96,7 +96,7 @@ static void cas_atomic_dealloc(struct cas_atomic_io *atomics)
 		}
 	}
 
-	cas_mpool_del(atomic_io_allocator, atomics, atomics->count);
+	env_mpool_del(atomic_io_allocator, atomics, atomics->count);
 }
 
 static struct cas_atomic_io *cas_atomic_alloc(int dir, struct ocf_io *io, bool write_zero)
@@ -138,7 +138,7 @@ static struct cas_atomic_io *cas_atomic_alloc(int dir, struct ocf_io *io, bool w
 	/* Get number of IOs to be issued */
 	ios_count = DIV_ROUND_UP(bytes, max_io_size);
 
-	atoms = cas_mpool_new(atomic_io_allocator,
+	atoms = env_mpool_new(atomic_io_allocator,
 			ios_count);
 	if (!atoms)
 		return NULL;
@@ -793,7 +793,7 @@ void cas_atomic_submit_discard(struct ocf_io *io)
 	}
 
 	/* Allocate and setup control structure. */
-	atom = cas_mpool_new(atomic_io_allocator, 1);
+	atom = env_mpool_new(atomic_io_allocator, 1);
 	if (!atom) {
 		CAS_PRINT_RL(KERN_ERR "Couldn't allocate memory for IO ctrl\n");
 		io->end(io, -ENOMEM);
@@ -854,7 +854,7 @@ void cas_atomic_submit_flush(struct ocf_io *io)
 	}
 
 	/* Allocate and setup control structure. */
-	atom = cas_mpool_new(atomic_io_allocator, 1);
+	atom = env_mpool_new(atomic_io_allocator, 1);
 	if (!atom) {
 		CAS_PRINT_RL(KERN_ERR "Couldn't allocate memory for IO ctrl\n");
 		io->end(io, -ENOMEM);
@@ -1101,7 +1101,7 @@ error:
 static void atomic_dev_deinit(void)
 {
 	if (atomic_io_allocator) {
-		cas_mpool_destroy(atomic_io_allocator);
+		env_mpool_destroy(atomic_io_allocator);
 		atomic_io_allocator = NULL;
 	}
 }
@@ -1141,8 +1141,8 @@ int atomic_dev_init(void)
 	if (ret < 0)
 		return -EINVAL;
 
-	atomic_io_allocator = cas_mpool_create(0, sizeof(struct cas_atomic_io),
-			GFP_NOIO, 1, "cas_atomic_io");
+	atomic_io_allocator = env_mpool_create(0, sizeof(struct cas_atomic_io),
+			GFP_NOIO, 1, true, NULL, "cas_atomic_io");
 
 	if (!atomic_io_allocator) {
 		ocf_ctx_unregister_volume_type(cas_ctx, ATOMIC_DEVICE_VOLUME);

@@ -3,34 +3,60 @@
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
-#include "ocf_env.h"
 #include "utils_mpool.h"
+#include "ocf_env.h"
 
+struct env_mpool {
+	int mpool_max;
+		/*!< Max mpool allocation order */
 
-struct cas_mpool *cas_mpool_create(uint32_t hdr_size, uint32_t size, int flags,
-		int mpool_max, const char *name_perfix)
+	env_allocator *allocator[env_mpool_max];
+		/*!< OS handle to memory pool */
+
+	uint32_t hdr_size;
+		/*!< Data header size (constant allocation part) */
+
+	uint32_t elem_size;
+		/*!< Per element size increment (variable allocation part) */
+
+	bool fallback;
+		/*!< Should mpool fallback to vmalloc */
+
+	int flags;
+		/*!< Allocation flags */
+};
+
+struct env_mpool *env_mpool_create(uint32_t hdr_size, uint32_t elem_size,
+		int flags, int mpool_max, bool fallback,
+		const uint32_t limits[env_mpool_max],
+		const char *name_perfix)
 {
 	uint32_t i;
-	char name[ALLOCATOR_NAME_MAX] = { '\0' };
+	char name[MPOOL_ALLOCATOR_NAME_MAX] = { '\0' };
 	int result;
-	struct cas_mpool *mpool;
+	struct env_mpool *mpool;
+	size_t size;
 
 	mpool = env_zalloc(sizeof(*mpool), ENV_MEM_NORMAL);
 	if (!mpool)
 		return NULL;
 
-	mpool->item_size = size;
-	mpool->hdr_size = hdr_size;
 	mpool->flags = flags;
+	mpool->fallback = fallback;
+	mpool->mpool_max = mpool_max;
+	mpool->hdr_size = hdr_size;
+	mpool->elem_size = elem_size;
 
-	for (i = 0; i < min(cas_mpool_max, mpool_max + 1); i++) {
+	for (i = 0; i < min(env_mpool_max, mpool_max + 1); i++) {
 		result = snprintf(name, sizeof(name), "%s_%u", name_perfix,
 				(1 << i));
 		if (result < 0 || result >= sizeof(name))
 			goto err;
 
-		mpool->allocator[i] = env_allocator_create(
-				hdr_size + (size * (1 << i)), name);
+		size = hdr_size + (elem_size * (1 << i));
+
+		mpool->allocator[i] = env_allocator_create_extended(
+				size, name, limits ? limits[i] : -1);
 
 		if (!mpool->allocator[i])
 			goto err;
@@ -39,16 +65,16 @@ struct cas_mpool *cas_mpool_create(uint32_t hdr_size, uint32_t size, int flags,
 	return mpool;
 
 err:
-	cas_mpool_destroy(mpool);
+	env_mpool_destroy(mpool);
 	return NULL;
 }
 
-void cas_mpool_destroy(struct cas_mpool *mallocator)
+void env_mpool_destroy(struct env_mpool *mallocator)
 {
 	if (mallocator) {
 		uint32_t i;
 
-		for (i = 0; i < cas_mpool_max; i++)
+		for (i = 0; i < env_mpool_max; i++)
 			if (mallocator->allocator[i])
 				env_allocator_destroy(mallocator->allocator[i]);
 
@@ -56,38 +82,38 @@ void cas_mpool_destroy(struct cas_mpool *mallocator)
 	}
 }
 
-static env_allocator *cas_mpool_get_allocator(
-	struct cas_mpool *mallocator, uint32_t count)
+static env_allocator *env_mpool_get_allocator(
+	struct env_mpool *mallocator, uint32_t count)
 {
 	unsigned int idx;
 
 	if (unlikely(count == 0))
-		return cas_mpool_1;
+		return env_mpool_1;
 
 	idx = 31 - __builtin_clz(count);
 
 	if (__builtin_ffs(count) <= idx)
 		idx++;
 
-	if (idx >= cas_mpool_max)
+	if (idx >= env_mpool_max || idx > mallocator->mpool_max)
 		return NULL;
 
 	return mallocator->allocator[idx];
 }
 
-void *cas_mpool_new_f(struct cas_mpool *mpool, uint32_t count, int flags)
+void *env_mpool_new_f(struct env_mpool *mpool, uint32_t count, int flags)
 {
-	unsigned long size;
 	void *items = NULL;
 	env_allocator *allocator;
+	size_t size = mpool->hdr_size + (mpool->elem_size * count);
 
-	allocator = cas_mpool_get_allocator(mpool, count);
+	allocator = env_mpool_get_allocator(mpool, count);
 
 	if (allocator) {
 		items = env_allocator_new(allocator);
-	} else {
-		size = mpool->hdr_size + (mpool->item_size * count);
-		items = cas_vmalloc(size, flags | __GFP_ZERO | __GFP_HIGHMEM);
+	} else if(mpool->fallback) {
+		items = cas_vmalloc(size,
+			flags | __GFP_ZERO | __GFP_HIGHMEM);
 	}
 
 #ifdef ZERO_OR_NULL_PTR
@@ -98,20 +124,24 @@ void *cas_mpool_new_f(struct cas_mpool *mpool, uint32_t count, int flags)
 	return items;
 }
 
-void *cas_mpool_new(struct cas_mpool *mpool, uint32_t count)
+void *env_mpool_new(struct env_mpool *mpool, uint32_t count)
 {
-	return cas_mpool_new_f(mpool, count, mpool->flags);
+	return env_mpool_new_f(mpool, count, mpool->flags);
 }
 
-void cas_mpool_del(struct cas_mpool *mpool,
+bool env_mpool_del(struct env_mpool *mpool,
 		void *items, uint32_t count)
 {
 	env_allocator *allocator;
 
-	allocator = cas_mpool_get_allocator(mpool, count);
+	allocator = env_mpool_get_allocator(mpool, count);
 
 	if (allocator)
 		env_allocator_del(allocator, items);
-	else
+	else if (mpool->fallback)
 		cas_vfree(items);
+	else
+		return false;
+
+	return true;
 }

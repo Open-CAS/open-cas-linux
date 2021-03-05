@@ -10,6 +10,7 @@
 #include "linux_kernel_version.h"
 #include "utils/utils_gc.h"
 #include "ocf/ocf_err.h"
+#include "utils/utils_mpool.h"
 
 /* linux sector 512-bytes */
 #define ENV_SECTOR_SHIFT	9
@@ -77,6 +78,9 @@ static inline void env_secure_free(const void *ptr, size_t size)
 /* *** ALLOCATOR *** */
 
 typedef struct _env_allocator env_allocator;
+
+env_allocator *env_allocator_create_extended(uint32_t size, const char *name,
+	int rpool_limit);
 
 env_allocator *env_allocator_create(uint32_t size, const char *name);
 

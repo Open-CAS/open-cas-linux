@@ -45,7 +45,9 @@ void *env_allocator_new(env_allocator *allocator)
 	struct _env_allocator_item *item = NULL;
 	int cpu;
 
-	item = cas_rpool_try_get(allocator->rpool, &cpu);
+	if (allocator->rpool)
+		item = cas_rpool_try_get(allocator->rpool, &cpu);
+
 	if (item) {
 		memset(item->data, 0, allocator->item_size -
 			sizeof(struct _env_allocator_item));
@@ -91,7 +93,8 @@ static void env_allocator_del_rpool(void *allocator_ctx, void *_item)
 
 #define ENV_ALLOCATOR_NAME_MAX 128
 
-env_allocator *env_allocator_create(uint32_t size, const char *name)
+env_allocator *env_allocator_create_extended(uint32_t size, const char *name,
+	int rpool_limit)
 {
 	int error = -1;
 	bool retry = true;
@@ -112,13 +115,6 @@ env_allocator *env_allocator_create(uint32_t size, const char *name)
 	}
 
 	allocator->item_size = size + sizeof(struct _env_allocator_item);
-	if (allocator->item_size > PAGE_SIZE) {
-		printk(KERN_WARNING "Creating allocator with item size"
-			" greater than 4096B");
-		ENV_WARN(true, OCF_PREFIX_SHORT" Creating allocator"
-			" with item size greater than 4096B\n");
-	}
-
 	allocator->name = kstrdup(name, ENV_MEM_NORMAL);
 
 	if (!allocator->name) {
@@ -156,13 +152,17 @@ RETRY:
 #endif
 
 	/* Initialize reserve pool handler per cpu */
+	if (rpool_limit < 0)
+		rpool_limit = CAS_ALLOC_ALLOCATOR_LIMIT;
 
-	allocator->rpool = cas_rpool_create(CAS_ALLOC_ALLOCATOR_LIMIT,
-			allocator->name, allocator->item_size, env_allocator_new_rpool,
-			env_allocator_del_rpool, allocator);
-	if (!allocator->rpool) {
-		error = __LINE__;
-		goto err;
+	if (rpool_limit > 0) {
+		allocator->rpool = cas_rpool_create(rpool_limit,
+				allocator->name, allocator->item_size, env_allocator_new_rpool,
+				env_allocator_del_rpool, allocator);
+		if (!allocator->rpool) {
+			error = __LINE__;
+			goto err;
+		}
 	}
 
 	return allocator;
@@ -172,6 +172,11 @@ err:
 	env_allocator_destroy(allocator);
 
 	return NULL;
+}
+
+env_allocator *env_allocator_create(uint32_t size, const char *name)
+{
+	return env_allocator_create_extended(size, name, -1);
 }
 
 void env_allocator_del(env_allocator *allocator, void *obj)
@@ -195,9 +200,11 @@ void env_allocator_del(env_allocator *allocator, void *obj)
 void env_allocator_destroy(env_allocator *allocator)
 {
 	if (allocator) {
-		cas_rpool_destroy(allocator->rpool, env_allocator_del_rpool,
-			allocator);
-		allocator->rpool = NULL;
+		if (allocator->rpool) {
+			cas_rpool_destroy(allocator->rpool, env_allocator_del_rpool,
+				allocator);
+			allocator->rpool = NULL;
+		}
 
 		if (atomic_read(&allocator->count)) {
 			printk(KERN_CRIT "Not all object deallocated\n");
