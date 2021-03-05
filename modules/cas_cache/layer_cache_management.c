@@ -98,6 +98,13 @@ static int _cache_mngt_lock_sync(ocf_cache_t cache)
 	struct _cache_mngt_async_context *context;
 	int result;
 
+	if (!ocf_cache_is_running(cache)) {
+		printk(KERN_WARNING "%s is being stopped. "
+				"Can't perform management operations\n",
+				ocf_cache_get_name(cache));
+		return -KCAS_ERR_CACHE_STOPPING;
+	}
+
 	context = kmalloc(sizeof(*context), GFP_KERNEL);
 	if (!context)
 		return -ENOMEM;
@@ -134,6 +141,13 @@ static int _cache_mngt_read_lock_sync(ocf_cache_t cache)
 {
 	struct _cache_mngt_async_context *context;
 	int result;
+
+	if (!ocf_cache_is_running(cache)) {
+		printk(KERN_WARNING "%s is being stopped. "
+				"Can't perform management operations\n",
+				ocf_cache_get_name(cache));
+		return -KCAS_ERR_CACHE_STOPPING;
+	}
 
 	context = kmalloc(sizeof(*context), GFP_KERNEL);
 	if (!context)
@@ -2355,13 +2369,6 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	mngt_queue = cache_priv->mngt_queue;
 	context = cache_priv->stop_context;
 
-	context->finish_thread = kthread_create(exit_instance_finish,
-			context, "cas_%s_stop", cache_name);
-	if (IS_ERR(context->finish_thread)) {
-		status = PTR_ERR(context->finish_thread);
-		goto put;
-	}
-
 	/*
 	 * Flush cache. Flushing may take a long time, so we allow user
 	 * to interrupt this operation. Hence we do first flush before
@@ -2377,7 +2384,8 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	case -OCF_ERR_CACHE_IN_INCOMPLETE_STATE:
 	case -OCF_ERR_FLUSHING_INTERRUPTED:
 	case -KCAS_ERR_WAITING_INTERRUPTED:
-		goto stop_thread;
+	case -KCAS_ERR_CACHE_STOPPING:
+		goto put;
 	default:
 		flush_status = status;
 		break;
@@ -2385,7 +2393,14 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 
 	status = _cache_mngt_lock_sync(cache);
 	if (status)
-		goto stop_thread;
+		goto put;
+
+	context->finish_thread = kthread_create(exit_instance_finish,
+			context, "cas_%s_stop", cache_name);
+	if (IS_ERR(context->finish_thread)) {
+		status = PTR_ERR(context->finish_thread);
+		goto unlock;
+	}
 
 	if (!cas_upgrade_is_in_upgrade()) {
 		/* If we are not in upgrade - destroy cache devices */
@@ -2393,12 +2408,12 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 		if (status != 0) {
 			printk(KERN_WARNING
 				"Failed to remove all cached devices\n");
-			goto unlock;
+			goto stop_thread;
 		}
 	} else {
 		if (flush_status) {
 			status = flush_status;
-			goto unlock;
+			goto stop_thread;
 		}
 		/*
 		 * We are being switched to upgrade in flight mode -
@@ -2423,10 +2438,10 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 
 	return status;
 
-unlock:
-	ocf_mngt_cache_unlock(cache);
 stop_thread:
 	kthread_stop(context->finish_thread);
+unlock:
+	ocf_mngt_cache_unlock(cache);
 put:
 	ocf_mngt_cache_put(cache);
 	return status;

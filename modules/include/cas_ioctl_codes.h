@@ -586,6 +586,9 @@ enum kcas_error {
 
 	/** Waiting for async operation was interrupted*/
 	KCAS_ERR_WAITING_INTERRUPTED,
+
+	/** Cache already being stopped*/
+	KCAS_ERR_CACHE_STOPPING,
 };
 
 #endif
