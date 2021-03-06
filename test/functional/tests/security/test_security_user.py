@@ -120,6 +120,14 @@ def test_user_cli():
         except CmdException:
             TestRun.LOGGER.info("Non-root user cannot remove core.")
 
+    with TestRun.step("Try to zero metadata."):
+        try:
+            output = run_as_other_user(cli.zero_metadata_cmd(str(cache_dev)), user_name)
+            if output.exit_code == 0:
+                TestRun.LOGGER.error("Zeroing metadata should fail!")
+        except CmdException:
+            TestRun.LOGGER.info("Non-root user cannot zero metadata.")
+
     with TestRun.step("Try to list caches."):
         try:
             output = run_as_other_user(cli.list_cmd(), user_name)
@@ -343,6 +351,13 @@ def test_user_cli():
                               user_name, True)
         except CmdException:
             TestRun.LOGGER.error("Non-root sudoer user should be able to remove core from cache.")
+
+    with TestRun.step("Try to zero metadata with 'sudo'."):
+        try:
+            run_as_other_user(cli.zero_metadata_cmd(str(cache_dev)),
+                              user_name, True)
+        except CmdException:
+            TestRun.LOGGER.error("Non-root sudoer user should be able to zero metadata.")
 
     with TestRun.step("Try to print help for casadm with 'sudo'."):
         try:
