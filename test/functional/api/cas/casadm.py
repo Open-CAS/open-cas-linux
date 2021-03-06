@@ -106,6 +106,13 @@ def detach_core(cache_id: int, core_id: int):
     return output
 
 
+def remove_core_with_script_command(cache_id: int, core_id: int, no_flush: bool = False):
+    output = TestRun.executor.run(script_remove_core_cmd(str(cache_id), str(core_id), no_flush))
+    if output.exit_code != 0:
+        raise CmdException("Failed to execute remove core script command.", output)
+    return output
+
+
 def reset_counters(cache_id: int, core_id: int = None, shortcut: bool = False):
     _core_id = None if core_id is None else str(core_id)
     output = TestRun.executor.run(

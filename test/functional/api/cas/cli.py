@@ -40,6 +40,13 @@ def script_detach_core_cmd(cache_id: str, core_id: str):
            f"--core-id {core_id}"
 
 
+def script_remove_core_cmd(cache_id: str, core_id: str, no_flush: bool = False):
+    command = f"{casadm_bin} --script --remove-core --cache-id {cache_id} --core-id {core_id}"
+    if no_flush:
+        command += ' --no-flush'
+    return command
+
+
 def remove_core_cmd(cache_id: str, core_id: str, force: bool = False, shortcut: bool = False):
     command = f" -R -i {cache_id} -j {core_id}" if shortcut \
         else f" --remove-core --cache-id {cache_id} --core-id {core_id}"
