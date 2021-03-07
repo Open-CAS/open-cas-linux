@@ -1517,7 +1517,6 @@ static inline void io_class_info2cfg(ocf_part_id_t part_id,
 	cfg->name = info->name;
 	cfg->prio = info->priority;
 	cfg->cache_mode = info->cache_mode;
-	cfg->min_size = info->min_size;
 	cfg->max_size = info->max_size;
 }
 
