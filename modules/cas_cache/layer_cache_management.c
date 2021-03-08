@@ -1273,6 +1273,7 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	}
 
 	cfg->seq_cutoff_threshold = seq_cut_off_mb * MiB;
+	cfg->seq_cutoff_promotion_count = 8;
 
 	init_completion(&add_context.cmpl);
 	add_context.core = &core;
@@ -2137,6 +2138,43 @@ out:
 }
 
 /**
+ * @brief routine implementing dynamic sequential cutoff parameter switching
+ * @param[in] cache cache to which the change pertains
+ * @param[in] core core to which the change pertains
+ * or NULL for setting value for all cores attached to specified cache
+ * @param[in] count new sequential cutoff promotion request count value
+ * @return exit code of successful completion is 0;
+ * nonzero exit code means failure
+ */
+
+int cache_mngt_set_seq_cutoff_promotion_count(ocf_cache_t cache,
+		ocf_core_t core, uint32_t count)
+{
+	int result;
+
+	result = _cache_mngt_lock_sync(cache);
+	if (result)
+		return result;
+
+	if (core) {
+		result = ocf_mngt_core_set_seq_cutoff_promotion_count(core,
+				count);
+	} else {
+		result = ocf_mngt_core_set_seq_cutoff_promotion_count_all(cache,
+				count);
+	}
+
+	if (result)
+		goto out;
+
+	result = _cache_mngt_save_sync(cache);
+
+out:
+	ocf_mngt_cache_unlock(cache);
+	return result;
+}
+
+/**
  * @brief Get sequential cutoff threshold value
  * @param[in] core OCF core
  * @param[out] thresh sequential cutoff threshold value
@@ -2178,6 +2216,30 @@ int cache_mngt_get_seq_cutoff_policy(ocf_core_t core,
 		return result;
 
 	result = ocf_mngt_core_get_seq_cutoff_policy(core, policy);
+
+	ocf_mngt_cache_read_unlock(cache);
+	return result;
+}
+
+/**
+ * @brief Get sequential cutoff promotion request count value
+ * @param[in] core OCF core
+ * @param[out] count sequential cutoff promotion request count value
+ * @return exit code of successful completion is 0;
+ * nonzero exit code means failure
+ */
+
+int cache_mngt_get_seq_cutoff_promotion_count(ocf_core_t core,
+		uint32_t *count)
+{
+	ocf_cache_t cache = ocf_core_get_cache(core);
+	int result;
+
+	result = _cache_mngt_read_lock_sync(cache);
+	if (result)
+		return result;
+
+	result = ocf_mngt_core_get_seq_cutoff_promotion_count(core, count);
 
 	ocf_mngt_cache_read_unlock(cache);
 	return result;
@@ -2646,6 +2708,10 @@ int cache_mngt_set_core_params(struct kcas_set_core_param *info)
 		result = cache_mngt_set_seq_cutoff_policy(cache, core,
 				info->param_value);
 		break;
+	case core_param_seq_cutoff_promotion_count:
+		result = cache_mngt_set_seq_cutoff_promotion_count(cache,
+				core, info->param_value);
+		break;
 	default:
 		result = -EINVAL;
 	}
@@ -2676,6 +2742,10 @@ int cache_mngt_get_core_params(struct kcas_get_core_param *info)
 		break;
 	case core_param_seq_cutoff_policy:
 		result = cache_mngt_get_seq_cutoff_policy(core,
+				&info->param_value);
+		break;
+	case core_param_seq_cutoff_promotion_count:
+		result = cache_mngt_get_seq_cutoff_promotion_count(core,
 				&info->param_value);
 		break;
 	default:

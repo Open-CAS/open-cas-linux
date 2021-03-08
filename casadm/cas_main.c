@@ -564,6 +564,9 @@ static struct cas_param cas_core_params[] = {
 		.name = "Sequential cutoff policy",
 		.value_names = seq_cutoff_policy_values,
 	},
+	[core_param_seq_cutoff_promotion_count] = {
+		.name = "Sequential cutoff promotion request count threshold",
+	},
 	{0},
 };
 
@@ -632,6 +635,7 @@ static struct cas_param cas_cache_params[] = {
 #define SEQ_CUT_OFF_THRESHOLD_DESC "Sequential cutoff activation threshold [KiB]"
 #define SEQ_CUT_OFF_POLICY_DESC "Sequential cutoff policy. " \
 	"Available policies: {always|full|never}"
+#define SEQ_CUT_OFF_PROMO_COUNT_DESC "Sequential cutoff stream promotion request count threshold"
 
 #define CLEANING_POLICY_TYPE_DESC "Cleaning policy type. " \
 	"Available policy types: {nop|alru|acp}"
@@ -664,6 +668,7 @@ static cli_namespace set_param_namespace = {
 		CORE_PARAMS_NS_BEGIN("seq-cutoff", "Sequential cutoff parameters")
 			{'t', "threshold", SEQ_CUT_OFF_THRESHOLD_DESC, 1, "KiB", 0},
 			{'p', "policy", SEQ_CUT_OFF_POLICY_DESC, 1, "POLICY", 0},
+			{0, "promotion-count", SEQ_CUT_OFF_PROMO_COUNT_DESC, 1, "NUMBER", 0},
 		CORE_PARAMS_NS_END()
 
 		CACHE_PARAMS_NS_BEGIN("cleaning", "Cleaning policy parameters")
@@ -741,6 +746,12 @@ int set_param_seq_cutoff_handle_option(char *opt, const char **arg)
 			cas_printf(LOG_ERR, "Error: Invalid policy name.\n");
 			return FAILURE;
 		}
+	} else if (!strcmp(opt, "promotion-count")) {
+		if (validate_str_num(arg[0], "sequential cutoff promotion request count", 1,
+				65535) == FAILURE)
+			return FAILURE;
+
+		SET_CORE_PARAM(core_param_seq_cutoff_promotion_count, atoi(arg[0]));
 	} else {
 		return FAILURE;
 	}
@@ -973,6 +984,7 @@ int get_param_namespace_handle_option(char *namespace, char *opt, const char **a
 	if (!strcmp(namespace, "seq-cutoff")) {
 		SELECT_CORE_PARAM(core_param_seq_cutoff_threshold);
 		SELECT_CORE_PARAM(core_param_seq_cutoff_policy);
+		SELECT_CORE_PARAM(core_param_seq_cutoff_promotion_count);
 		return core_param_handle_option_generic(opt, arg,
 				get_param_handle_option);
 	} else if (!strcmp(namespace, "cleaning")) {
