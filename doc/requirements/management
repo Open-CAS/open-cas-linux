@@ -22,3 +22,23 @@ id: add_core_device_repeatedly
 While the core device is added to the cache instance, the management tool shall
 not allow to add the core device to any cache instance.
 
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Cache volume states
+id: cache_volume_states
+---
+
+The cache volume shall be allowed to switch between the following states:
+
+1. active
+2. inactive
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Cache volume default state
+id: cache_volume_default_state
+---
+
+When the cache volume is added to the cache instance its state is set to the
+_active_ state by default.
+
