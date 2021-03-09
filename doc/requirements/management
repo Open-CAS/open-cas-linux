@@ -134,3 +134,22 @@ management tool shall allow to interrupt the removal operation and the cache
 volume shall remain its previous state and proper information shall be
 displayed.
 
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Attach inactive cache volume
+id: attach_inactive_cache_volume
+---
+
+While the cache volume is in inactive state, the management tool shall allow to
+attach the cache volume to the cache instance to which core pool the cache
+volume belongs.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Attach active cache volume
+id: attach_inactive_cache_volume
+---
+
+While the cache volume is in active state, the management tool shall not allow
+to attach the cache volume to any cache instance.
+
