@@ -153,3 +153,12 @@ id: attach_inactive_cache_volume
 While the cache volume is in active state, the management tool shall not allow
 to attach the cache volume to any cache instance.
 
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Remove inactive cache volume
+id: remove_inactive_cache_volume
+---
+
+While the cache volume is in the inactive state, the management tool shall allow
+to remove the cache volume from the core pool of the cache instance to which the
+cache volume belongs.
