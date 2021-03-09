@@ -252,6 +252,10 @@ struct {
 		KCAS_ERR_WAITING_INTERRUPTED,
 		"Waiting for operation interrupted"
 	},
+	{
+		KCAS_ERR_CACHE_STOPPING,
+		"Cache being stopped"
+	},
 
 
 };
