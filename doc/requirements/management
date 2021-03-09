@@ -42,3 +42,44 @@ id: cache_volume_default_state
 When the cache volume is added to the cache instance its state is set to the
 _active_ state by default.
 
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Remove cache volume
+id: remove_cache_volume
+---
+
+The management tool shall allow to remove the cache volume from the cache
+instance.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Remove cache volume with flush
+id: remove_cache_volume_flush
+---
+
+When the removing operation is invoked while the cache volume contains the dirty
+data, the management tool shall trigger the flush before removing the cache
+volume from the cache instance as the default behaviour.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Remove cache volume without flush
+id: remove_cache_volume_no_flush
+---
+
+When the removing operation is invoked while the cache volume contains the dirty
+data and it is explicitly specified, the management tool shall not trigger the
+flush before removing the cache volume from the cache instance and shall inform
+about the consequences.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Interrupt flush during cache volume removal
+id: remove_cache_volume_flush_interrupt
+---
+
+While the cache volume that contains dirty data is removed with flush, the
+management tool shall allow to interrupt the removal operation and the cache
+volume shall remain its previous state and proper information shall be
+displayed.
+
