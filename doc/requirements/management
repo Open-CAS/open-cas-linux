@@ -1,0 +1,24 @@
+---
+group: Management
+---
+
+Management operations allows the user to control and maintain the Open CAS
+Linux. They are performed from console line with management tool.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Add core device
+id: add_core_device
+---
+
+The management tool shall allow to add the core device to the cache instance.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Add core device repeatedly
+id: add_core_device_repeatedly
+---
+
+While the core device is added to the cache instance, the management tool shall
+not allow to add the core device to any cache instance.
+
