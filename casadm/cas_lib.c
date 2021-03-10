@@ -1904,15 +1904,64 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
 	if (run_ioctl_interruptible(fd, KCAS_IOCTL_REMOVE_CORE, &cmd,
 			"Removing core", cache_id, core_id) < 0) {
 		close(fd);
-		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
-			cas_printf(LOG_ERR, "You have interrupted removal of core. CAS continues to operate normally.\n");
+		if (cmd.ext_err_code == OCF_ERR_FLUSHING_INTERRUPTED) {
+			cas_printf(LOG_ERR, "You have interrupted %s of core. "
+					"CAS continues to operate normally.\n",
+					detach ? "detaching" : "removal");
 			return INTERRUPTED;
+		} else if (cmd.ext_err_code == OCF_ERR_CORE_IN_INACTIVE_STATE) {
+			cas_printf(LOG_ERR, "Core is inactive. To manage the "
+					"inactive core use '--remove-inactive' "
+					"command.\n");
+			return FAILURE;
+		} else if (cmd.ext_err_code == KCAS_ERR_REMOVED_DIRTY) {
+			print_err(cmd.ext_err_code);
+			return SUCCESS;
 		} else {
-			cas_printf(LOG_ERR, "Error while removing core device %d from cache instance %d\n",
-				   core_id, cache_id);
+			cas_printf(LOG_ERR, "Error while %s core device %d "
+					"from cache instance %d\n",
+					detach ? "detaching" : "removing",
+					core_id, cache_id);
 			print_err(cmd.ext_err_code);
 			return FAILURE;
 		}
+	}
+	close(fd);
+
+	return SUCCESS;
+}
+
+int remove_inactive_core(unsigned int cache_id, unsigned int core_id)
+{
+	int fd = 0;
+	struct kcas_remove_inactive cmd;
+
+	/* don't even attempt ioctl if filesystem is mounted */
+	if (SUCCESS != check_if_mounted(cache_id, core_id)) {
+		return FAILURE;
+	}
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.cache_id = cache_id;
+	cmd.core_id = core_id;
+
+	if (run_ioctl(fd, KCAS_IOCTL_REMOVE_INACTIVE, &cmd) < 0) {
+		close(fd);
+		if (cmd.ext_err_code == KCAS_ERR_CORE_IN_ACTIVE_STATE) {
+			cas_printf(LOG_ERR, "Core is active. "
+					"To manage the active core use "
+					"'--remove-core' command.\n");
+		} else {
+			cas_printf(LOG_ERR, "Error while removing inactive "
+					"core device %d from cache instance "
+					"%d\n", core_id, cache_id);
+			print_err(cmd.ext_err_code);
+		}
+		return FAILURE;
 	}
 	close(fd);
 

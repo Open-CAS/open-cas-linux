@@ -65,6 +65,7 @@ struct {
 	{ KCAS_ERR_A_PART,			EINVAL	},
 	{ KCAS_ERR_REMOVED_DIRTY,		EIO	},
 	{ KCAS_ERR_STOPPED_DIRTY,		EIO	},
+	{ KCAS_ERR_CORE_IN_ACTIVE_STATE,	ENODEV	},
 };
 
 /*******************************************/

@@ -222,8 +222,8 @@ struct {
 	},
 	{
 		KCAS_ERR_REMOVED_DIRTY,
-		"Flush error occured. Core has been set to detached state.\n"
-		"Warning: Core device may contain inconsistent data.\n"
+		"Warning: Core has been removed or detached without flush.\n"
+		"Core device may contain inconsistent data.\n"
 		"To access your data please add core back to the cache."
 	},
 	{
@@ -256,7 +256,11 @@ struct {
 		KCAS_ERR_CACHE_STOPPING,
 		"Cache being stopped"
 	},
+	{
 
+		KCAS_ERR_CORE_IN_ACTIVE_STATE,
+		"Core device is in active state"
+	},
 
 };
 
