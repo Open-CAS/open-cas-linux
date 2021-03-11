@@ -158,6 +158,10 @@ struct {
 		OCF_ERR_INVAL_CACHE_DEV,
 		"Device does not meet requirements."
 	},
+	{
+		OCF_ERR_NO_LOCK,
+		"Failed to lock cache for management operation."
+	},
 
 	/* CAS kernel error mappings*/
 	{
