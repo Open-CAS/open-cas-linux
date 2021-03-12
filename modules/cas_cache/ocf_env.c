@@ -14,16 +14,16 @@ struct _env_allocator {
 	/*!< Memory pool ID unique name */
 	char *name;
 
-	/*!< Size of specific item of memory pool */
-	uint32_t item_size;
-
 	/*!< OS handle to memory pool */
 	struct kmem_cache *kmem_cache;
 
-	/*!< Number of currently allocated items in pool */
-	atomic_t count;
-
 	struct cas_reserve_pool *rpool;
+
+	/*!< Size of specific item of memory pool */
+	uint32_t item_size;
+
+	/*!< Number of currently allocated items in pool */
+	atomic_t count __attribute__((aligned(64)));
 };
 
 static inline size_t env_allocator_align(size_t size)

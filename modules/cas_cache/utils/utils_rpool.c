@@ -25,11 +25,17 @@
 #define CAS_DEBUG_PARAM(format, ...)
 #endif
 
+/* This is currently 24B padded/force aligned to 32B.
+ * With a 64B cacheline this means two structs on different cores may
+ * invalidate each other. This shouldn't happen between different physical
+ * CPUs and cause false sharing though, since with an even number of cores
+ * per CPU same cacheline shouldn't be polluted from the other physical CPU.
+ * */
 struct _cas_reserve_pool_per_cpu {
 	spinlock_t lock;
 	struct list_head list;
 	atomic_t count;
-};
+} __attribute__((__aligned__(32)));
 
 struct cas_reserve_pool {
 	uint32_t limit;
