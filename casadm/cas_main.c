@@ -744,8 +744,9 @@ static cli_namespace set_param_namespace = {
 int set_param_seq_cutoff_handle_option(char *opt, const char **arg)
 {
 	if (!strcmp(opt, "threshold")) {
-		if (validate_str_num(arg[0], "sequential cutoff threshold", 1,
-				4194181) == FAILURE)
+		if (validate_str_num(arg[0], "sequential cutoff threshold",
+					OCF_SEQ_CUTOFF_MIN_THRESHOLD,
+					OCF_SEQ_CUTOFF_MAX_THRESHOLD) == FAILURE)
 			return FAILURE;
 
 		SET_CORE_PARAM(core_param_seq_cutoff_threshold, atoi(arg[0]) * KiB);
@@ -764,8 +765,9 @@ int set_param_seq_cutoff_handle_option(char *opt, const char **arg)
 			return FAILURE;
 		}
 	} else if (!strcmp(opt, "promotion-count")) {
-		if (validate_str_num(arg[0], "sequential cutoff promotion request count", 1,
-				65535) == FAILURE)
+		if (validate_str_num(arg[0], "sequential cutoff promotion request count",
+					OCF_SEQ_CUTOFF_MIN_PROMOTION_COUNT,
+				OCF_SEQ_CUTOFF_MAX_PROMOTION_COUNT) == FAILURE)
 			return FAILURE;
 
 		SET_CORE_PARAM(core_param_seq_cutoff_promotion_count, atoi(arg[0]));
