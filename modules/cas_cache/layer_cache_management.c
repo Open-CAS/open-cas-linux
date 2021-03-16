@@ -98,13 +98,6 @@ static int _cache_mngt_lock_sync(ocf_cache_t cache)
 	struct _cache_mngt_async_context *context;
 	int result;
 
-	if (!ocf_cache_is_running(cache)) {
-		printk(KERN_WARNING "%s is being stopped. "
-				"Can't perform management operations\n",
-				ocf_cache_get_name(cache));
-		return -KCAS_ERR_CACHE_STOPPING;
-	}
-
 	context = kmalloc(sizeof(*context), GFP_KERNEL);
 	if (!context)
 		return -ENOMEM;
@@ -141,13 +134,6 @@ static int _cache_mngt_read_lock_sync(ocf_cache_t cache)
 {
 	struct _cache_mngt_async_context *context;
 	int result;
-
-	if (!ocf_cache_is_running(cache)) {
-		printk(KERN_WARNING "%s is being stopped. "
-				"Can't perform management operations\n",
-				ocf_cache_get_name(cache));
-		return -KCAS_ERR_CACHE_STOPPING;
-	}
 
 	context = kmalloc(sizeof(*context), GFP_KERNEL);
 	if (!context)
@@ -2432,7 +2418,6 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	case -OCF_ERR_CACHE_IN_INCOMPLETE_STATE:
 	case -OCF_ERR_FLUSHING_INTERRUPTED:
 	case -KCAS_ERR_WAITING_INTERRUPTED:
-	case -KCAS_ERR_CACHE_STOPPING:
 		goto put;
 	default:
 		flush_status = status;

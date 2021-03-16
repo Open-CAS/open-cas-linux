@@ -526,7 +526,7 @@ struct kcas_get_cache_param {
 #define KCAS_IOCTL_PURGE_CORE _IOWR(KCAS_IOCTL_MAGIC, 36, struct kcas_flush_core)
 
 /** Remove inactive core object from an running cache instance */
-#define KCAS_IOCTL_REMOVE_INACTIVE _IOR(KCAS_IOCTL_MAGIC, 37, struct kcas_remove_inactive)
+#define KCAS_IOCTL_REMOVE_INACTIVE _IOWR(KCAS_IOCTL_MAGIC, 37, struct kcas_remove_inactive)
 
 /**
  * Extended kernel CAS error codes
@@ -597,9 +597,6 @@ enum kcas_error {
 
 	/** Waiting for async operation was interrupted */
 	KCAS_ERR_WAITING_INTERRUPTED,
-
-	/** Cache already being stopped*/
-	KCAS_ERR_CACHE_STOPPING,
 
 	/** Core device is in active state */
 	KCAS_ERR_CORE_IN_ACTIVE_STATE
