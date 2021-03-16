@@ -16,7 +16,10 @@ from test_utils.size import Size, Unit
 
 
 def setup_module():
-    TestRun.LOGGER.warning("Entering setup method")
+    """
+    Function called by python
+    """
+    TestRun.LOGGER.info("Entering setup method")
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
