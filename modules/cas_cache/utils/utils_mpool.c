@@ -7,11 +7,11 @@
 #include "ocf_env.h"
 
 struct env_mpool {
-	int mpool_max;
-		/*!< Max mpool allocation order */
-
 	env_allocator *allocator[env_mpool_max];
 		/*!< OS handle to memory pool */
+
+	int mpool_max;
+		/*!< Max mpool allocation order */
 
 	uint32_t hdr_size;
 		/*!< Data header size (constant allocation part) */

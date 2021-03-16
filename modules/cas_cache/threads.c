@@ -9,14 +9,14 @@
 #define MAX_THREAD_NAME_SIZE 48
 
 struct cas_thread_info {
+	char name[MAX_THREAD_NAME_SIZE];
+	void *sync_data;
 	atomic_t stop;
+	atomic_t kicked;
 	struct completion compl;
 	struct completion sync_compl;
-	void *sync_data;
 	wait_queue_head_t wq;
-	atomic_t kicked;
 	struct task_struct *thread;
-	char name[MAX_THREAD_NAME_SIZE];
 };
 
 static int _cas_io_queue_thread(void *data)

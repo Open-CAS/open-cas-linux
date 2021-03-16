@@ -192,8 +192,8 @@ static int _cas_upgrade_dump_cache_conf_main(ocf_cache_t cache,
 }
 
 struct _ocf_core_visitor_ctx {
-	int i;
 	struct cas_properties *cache_props;
+	int i;
 	int error;
 };
 
@@ -710,9 +710,9 @@ static int _cas_upgrade_init_props_array(
 }
 
 struct _cas_cache_dump_conf_visitor_ctx {
-	int i;
 	struct cas_properties **caches_props_array;
 	struct casdsk_props_conf *caches_serialized_conf;
+	int i;
 	int error;
 
 };

@@ -39,17 +39,17 @@ struct _cas_reserve_pool_per_cpu {
 
 struct cas_reserve_pool {
 	uint32_t limit;
-	char *name;
 	uint32_t entry_size;
+	char *name;
 	struct _cas_reserve_pool_per_cpu *rpools;
 };
 
 struct _cas_rpool_pre_alloc_info {
 	struct work_struct ws;
+	struct completion cmpl;
 	struct cas_reserve_pool *rpool_master;
 	cas_rpool_new rpool_new;
 	void *allocator_ctx;
-	struct completion cmpl;
 	int error;
 };
 
