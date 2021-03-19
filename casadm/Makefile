@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
+include ../tools/helpers.mk
+
 PWD:=$(shell pwd)
 MODULESDIR:=$(PWD)/../modules
 METADATA_DIR:=$(PWD)/../.metadata
@@ -139,7 +141,7 @@ install_files:
 
 uninstall:
 	@echo "Uninstalling casadm"
-	@rm $(DESTDIR)$(BINARY_PATH)/$(TARGET)
-	@rm $(DESTDIR)/usr/share/man/man8/$(TARGET).8
+	$(call remove-file,$(DESTDIR)$(BINARY_PATH)/$(TARGET))
+	$(call remove-file,$(DESTDIR)/usr/share/man/man8/$(TARGET).8)
 
 .PHONY: clean distclean all sync build install uninstall
