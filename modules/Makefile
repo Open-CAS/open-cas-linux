@@ -15,6 +15,13 @@ obj-y += cas_disk/
 # line; invoke the kernel build system.
 else
 
+include ../tools/helpers.mk
+
+define remove-module
+	@if (lsmod | grep -q ${1}); then rmmod ${1}; \
+	else echo "WARNING: Module ${1} is not loaded"; fi
+endef
+
 OCFDIR=$(PWD)/../ocf
 PWD=$(shell pwd)
 KERNEL_VERSION ?= "$(shell uname -r)"
@@ -57,11 +64,11 @@ install_files:
 
 uninstall:
 	@echo "Uninstalling Open-CAS modules"
-	@$(RMMOD) $(CACHE_MODULE)
-	@$(RMMOD) $(DISK_MODULE)
+	$(call remove-module,$(CACHE_MODULE))
+	$(call remove-module,$(DISK_MODULE))
 
-	@rm $(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko
-	@rm $(DESTDIR)$(MODULES_DIR)/$(DISK_MODULE).ko
+	$(call remove-file,$(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko)
+	$(call remove-file,$(DESTDIR)$(MODULES_DIR)/$(DISK_MODULE).ko)
 
 	@$(DEPMOD)
 

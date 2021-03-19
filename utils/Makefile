@@ -3,8 +3,12 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
+include ../tools/helpers.mk
+
 CASCTL_DIR = /lib/opencas
 UDEVRULES_DIR = /lib/udev/rules.d
+METADATA_DIR:=$(PWD)/../.metadata
+UTILS_DIR:=$(PWD)/../utils
 UDEV:=$(shell which udevadm)
 SYSTEMCTL := $(shell which systemctl)
 PYTHON3 := $(shell which python3)
@@ -29,6 +33,14 @@ else
 
 install_files:
 	@echo "Installing Open-CAS utils"
+
+	@install -m 755 -d $(DESTDIR)/etc/opencas
+	@install -m 644 $(UTILS_DIR)/opencas.conf $(DESTDIR)/etc/opencas/opencas.conf
+	@install -m 444 $(UTILS_DIR)/ioclass-config.csv $(DESTDIR)/etc/opencas/ioclass-config.csv
+	@install -m 755 -d $(DESTDIR)/var/lib/opencas
+	@install -m 644 $(METADATA_DIR)/cas_version $(DESTDIR)/var/lib/opencas/cas_version
+	@mkdir -p $(DESTDIR)/usr/share/man/man5
+	@install -m 644 $(UTILS_DIR)/opencas.conf.5 $(DESTDIR)/usr/share/man/man5/opencas.conf.5
 
 	@install -m 755 -d $(DESTDIR)$(CASCTL_DIR)
 	@install -m 644 opencas.py $(DESTDIR)$(CASCTL_DIR)/opencas.py
@@ -58,28 +70,36 @@ install_files:
 endif
 
 uninstall:
-	@rm $(DESTDIR)$(CASCTL_DIR)/opencas.py
-	@rm $(DESTDIR)$(CASCTL_DIR)/casctl
-	@rm $(DESTDIR)$(CASCTL_DIR)/open-cas-loader
-	@rm -rf $(DESTDIR)$(CASCTL_DIR)
+	@echo "Uninstalling Open-CAS utils"
 
-	@rm $(DESTDIR)/etc/dracut.conf.d/opencas.conf
+	$(call remove-file,$(DESTDIR)/etc/opencas/opencas.conf)
+	$(call remove-file,$(DESTDIR)/etc/opencas/ioclass-config.csv)
+	$(call remove-directory,$(DESTDIR)/etc/opencas)
+	$(call remove-file,$(DESTDIR)/var/lib/opencas/cas_version)
+	$(call remove-directory,$(DESTDIR)/var/lib/opencas)
+	$(call remove-file,$(DESTDIR)/usr/share/man/man5/opencas.conf.5)
 
-	@rm $(DESTDIR)/sbin/casctl
+	$(call remove-file,$(DESTDIR)$(CASCTL_DIR)/opencas.py)
+	$(call remove-file,$(DESTDIR)$(CASCTL_DIR)/casctl)
+	$(call remove-file,$(DESTDIR)$(CASCTL_DIR)/open-cas-loader)
+	$(call remove-directory,$(DESTDIR)$(CASCTL_DIR))
 
-	@rm $(DESTDIR)/usr/share/man/man8/casctl.8
+	$(call remove-file,$(DESTDIR)/etc/dracut.conf.d/opencas.conf)
 
-	@rm $(DESTDIR)$(UDEVRULES_DIR)/60-persistent-storage-cas-load.rules
-	@rm $(DESTDIR)$(UDEVRULES_DIR)/60-persistent-storage-cas.rules
+	$(call remove-file,$(DESTDIR)/sbin/casctl)
+
+	$(call remove-file,$(DESTDIR)/usr/share/man/man8/casctl.8)
+
+	$(call remove-file,$(DESTDIR)$(UDEVRULES_DIR)/60-persistent-storage-cas-load.rules)
+	$(call remove-file,$(DESTDIR)$(UDEVRULES_DIR)/60-persistent-storage-cas.rules)
 	@$(UDEV) control --reload-rules
 
 	@$(SYSTEMCTL) -q disable open-cas-shutdown
 	@$(SYSTEMCTL) -q disable open-cas
 	@$(SYSTEMCTL) daemon-reload
 
-	@rm $(DESTDIR)$(SYSTEMD_DIR)/open-cas-shutdown.service
-	@rm $(DESTDIR)$(SYSTEMD_DIR)/open-cas.service
-	@rm $(DESTDIR)$(SYSTEMD_DIR)/../system-shutdown/open-cas.shutdown
-
+	$(call remove-file,$(DESTDIR)$(SYSTEMD_DIR)/open-cas-shutdown.service)
+	$(call remove-file,$(DESTDIR)$(SYSTEMD_DIR)/open-cas.service)
+	$(call remove-file,$(DESTDIR)$(SYSTEMD_DIR)/../system-shutdown/open-cas.shutdown)
 
 .PHONY: install uninstall clean distclean
