@@ -27,16 +27,16 @@ endif
 endif
 
 archives:
-	@utils/pckgen $(PWD) tar zip
+	@tools/pckgen $(PWD) tar zip
 
 rpm:
-	@utils/pckgen $(PWD) rpm --debug
+	@tools/pckgen $(PWD) rpm --debug
 
 srpm:
-	@utils/pckgen $(PWD) srpm --debug
+	@tools/pckgen $(PWD) srpm --debug
 
 deb:
-	@utils/pckgen $(PWD) deb
+	@tools/pckgen $(PWD) deb
 
 dsc:
-	@utils/pckgen $(PWD) dsc
+	@tools/pckgen $(PWD) dsc

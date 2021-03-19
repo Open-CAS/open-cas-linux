@@ -70,11 +70,11 @@ endif
 uninstall:
 	@echo "Uninstalling Open-CAS utils"
 
-        @rm $(DESTDIR)/etc/opencas/opencas.conf
-        @rm $(DESTDIR)/etc/opencas/ioclass-config.csv
-        @rm -rf $(DESTDIR)/etc/opencas
-        @rm $(DESTDIR)/var/lib/opencas/cas_version
-        @rm -rf $(DESTDIR)/var/lib/opencas
+	@rm $(DESTDIR)/etc/opencas/opencas.conf
+	@rm $(DESTDIR)/etc/opencas/ioclass-config.csv
+	@rm -rf $(DESTDIR)/etc/opencas
+	@rm $(DESTDIR)/var/lib/opencas/cas_version
+	@rm -rf $(DESTDIR)/var/lib/opencas
 	@rm $(DESTDIR)/usr/share/man/man5/opencas.conf.5
 
 	@rm $(DESTDIR)$(CASCTL_DIR)/opencas.py

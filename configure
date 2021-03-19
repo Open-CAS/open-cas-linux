@@ -79,7 +79,7 @@ fi
 
 # Run version generator with 'build' flag to
 # indicate that we are in the build process
-(cd utils && ./cas_version_gen build)
+(cd tools && ./cas_version_gen build)
 if [ $? -ne 0 ]; then
 	echo "Error: failed to obtain CAS version" >&2
 	exit 1
