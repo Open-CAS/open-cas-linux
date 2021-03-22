@@ -178,6 +178,16 @@ class Cache:
             int(alru_params.activity_threshold.total_milliseconds())
             if alru_params.activity_threshold is not None else None)
 
+    def set_promotion_policy(self, promotion_policy: PromotionPolicy):
+        return casadm.set_param_promotion(self.cache_id, promotion_policy)
+
+    def set_params_nhit(self, nhit_params: PromotionParametersNhit):
+        return casadm.set_param_promotion_nhit(self.cache_id,
+                                               int(nhit_params.threshold)
+                                               if nhit_params.threshold else None,
+                                               int(nhit_params.trigger)
+                                               if nhit_params.trigger else None)
+
     def get_cache_config(self):
         return CacheConfig(self.get_cache_line_size(),
                            self.get_cache_mode(),
