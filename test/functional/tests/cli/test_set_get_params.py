@@ -231,13 +231,11 @@ def cache_prepare(cache_mode, cache_dev, core_dev):
 
 
 def new_seqcutoff_parameters_random_values():
-    threshold_random_value = Size(random.randrange(1, 1000000), Unit.KibiByte)
-    policy_random_value = random.choice(list(SeqCutOffPolicy))
-    seqcutoff_params = SeqCutOffParameters()
-    seqcutoff_params.threshold = threshold_random_value
-    seqcutoff_params.policy = policy_random_value
-
-    return seqcutoff_params
+    return SeqCutOffParameters(
+        threshold = Size(random.randrange(1, 1000000), Unit.KibiByte),
+        policy = random.choice(list(SeqCutOffPolicy)),
+        promotion_count = random.randrange(1, 65535)
+    )
 
 
 def new_cleaning_parameters_random_values(cleaning_policy):

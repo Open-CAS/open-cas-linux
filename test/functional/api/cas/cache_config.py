@@ -215,22 +215,25 @@ class FlushParametersAcp:
 
 
 class SeqCutOffParameters:
-    def __init__(self, policy=None, threshold=None):
+    def __init__(self, policy=None, threshold=None, promotion_count=None):
         self.policy = policy
         self.threshold = threshold
+        self.promotion_count = promotion_count
 
     def __eq__(self, other):
         return (
             self.policy == other.policy
             and self.threshold == other.threshold
+            and self.promotion_count == other.promotion_count
         )
 
     @staticmethod
     def default_seq_cut_off_params():
-        seq_cut_off_params = SeqCutOffParameters()
-        seq_cut_off_params.policy = SeqCutOffPolicy.full
-        seq_cut_off_params.threshold = Size(1024, Unit.KibiByte)
-        return seq_cut_off_params
+        return SeqCutOffParameters(
+            threshold=Size(1024, Unit.KibiByte),
+            policy=SeqCutOffPolicy.full,
+            promotion_count=8
+        )
 
 
 class PromotionParametersNhit:

@@ -221,7 +221,7 @@ def _set_param_cmd(namespace: str, cache_id: str, additional_params: str = None,
 
 
 def set_param_cutoff_cmd(cache_id: str, core_id: str = None, threshold: str = None,
-                         policy: str = None, shortcut: bool = False):
+                         policy: str = None, promotion_count: str = None, shortcut: bool = False):
     add_params = ""
     if core_id is not None:
         add_params += (" -j " if shortcut else " --core-id ") + str(core_id)
@@ -229,6 +229,8 @@ def set_param_cutoff_cmd(cache_id: str, core_id: str = None, threshold: str = No
         add_params += (" -t " if shortcut else " --threshold ") + str(threshold)
     if policy is not None:
         add_params += (" -p " if shortcut else " --policy ") + policy
+    if promotion_count is not None:
+        add_params += " --promotion-count " + str(promotion_count)
     return _set_param_cmd(namespace="seq-cutoff", cache_id=cache_id,
                           additional_params=add_params, shortcut=shortcut)
 
