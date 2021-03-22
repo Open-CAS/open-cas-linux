@@ -232,9 +232,9 @@ def cache_prepare(cache_mode, cache_dev, core_dev):
 
 def new_seqcutoff_parameters_random_values():
     return SeqCutOffParameters(
-        threshold = Size(random.randrange(1, 1000000), Unit.KibiByte),
-        policy = random.choice(list(SeqCutOffPolicy)),
-        promotion_count = random.randrange(1, 65535)
+        threshold=Size(random.randrange(1, 1000000), Unit.KibiByte),
+        policy=random.choice(list(SeqCutOffPolicy)),
+        promotion_count=random.randrange(1, 65535)
     )
 
 
@@ -286,6 +286,11 @@ def check_seqcutoff_parameters(core, seqcutoff_params):
         failed_params += (
             f"Policy is {current_seqcutoff_params.policy}, "
             f"should be {seqcutoff_params.policy}\n"
+        )
+    if current_seqcutoff_params.promotion_count != seqcutoff_params.promotion_count:
+        failed_params += (
+            f"Promotion count is {current_seqcutoff_params.promotion_count}, "
+            f"should be {seqcutoff_params.promotion_count}\n"
         )
     if failed_params:
         TestRun.LOGGER.error(
