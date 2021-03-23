@@ -118,17 +118,21 @@ class Core(Device):
 
     def set_seq_cutoff_parameters(self, seq_cutoff_param: SeqCutOffParameters):
         return casadm.set_param_cutoff(self.cache_id, self.core_id,
-                                       seq_cutoff_param.threshold, seq_cutoff_param.policy)
+                                       seq_cutoff_param.threshold,
+                                       seq_cutoff_param.policy,
+                                       seq_cutoff_param.promotion_count)
 
     def set_seq_cutoff_threshold(self, threshold: Size):
         return casadm.set_param_cutoff(self.cache_id, self.core_id,
-                                       threshold=threshold,
-                                       policy=None)
+                                       threshold=threshold)
 
     def set_seq_cutoff_policy(self, policy: SeqCutOffPolicy):
         return casadm.set_param_cutoff(self.cache_id, self.core_id,
-                                       threshold=None,
                                        policy=policy)
+
+    def set_seq_cutoff_promotion_count(self, promotion_count: int):
+        return casadm.set_param_cutoff(self.cache_id, self.core_id,
+                                       promotion_count=promotion_count)
 
     def check_if_is_present_in_os(self, should_be_visible=True):
         device_in_system_message = "CAS device exists in OS."

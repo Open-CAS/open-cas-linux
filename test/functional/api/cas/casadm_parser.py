@@ -260,10 +260,12 @@ def get_seq_cut_off_parameters(cache_id: int, core_id: int):
         cache_id, core_id, casadm.OutputFormat.csv).stdout.splitlines()
     seq_cut_off_params = SeqCutOffParameters()
     for line in casadm_output:
-        if 'threshold' in line:
+        if 'Sequential cutoff threshold' in line:
             seq_cut_off_params.threshold = Size(int(line.split(',')[1]), Unit.KibiByte)
-        if 'policy' in line:
+        if 'Sequential cutoff policy' in line:
             seq_cut_off_params.policy = SeqCutOffPolicy.from_name(line.split(',')[1])
+        if 'Sequential cutoff promotion request count threshold' in line:
+            seq_cut_off_params.promotion_count = int(line.split(',')[1])
     return seq_cut_off_params
 
 

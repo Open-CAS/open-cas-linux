@@ -144,7 +144,8 @@ class Cache:
     def set_seq_cutoff_parameters(self, seq_cutoff_param: SeqCutOffParameters):
         return casadm.set_param_cutoff(self.cache_id,
                                        threshold=seq_cutoff_param.threshold,
-                                       policy=seq_cutoff_param.policy)
+                                       policy=seq_cutoff_param.policy,
+                                       promotion_count=seq_cutoff_param.promotion_count)
 
     def set_seq_cutoff_threshold(self, threshold: Size):
         return casadm.set_param_cutoff(self.cache_id,
