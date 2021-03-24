@@ -7,8 +7,9 @@ import math
 import pytest
 import os
 from api.cas import casadm, cli_messages
+from api.cas.cache_config import CacheLineSize
 from core.test_run import TestRun
-from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
+from storage_devices.disk import DiskTypeSet, DiskType
 from storage_devices.partition import Partition
 from test_tools import disk_utils, fs_utils
 from test_utils.output import CmdException
@@ -16,8 +17,8 @@ from test_utils.size import Size, Unit
 
 
 @pytest.mark.os_dependent
-@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane]))
+@pytest.mark.require_disk("core", DiskTypeSet([DiskType.nand]))
 @pytest.mark.require_plugin("scsi_debug")
 def test_device_capabilities():
     """
@@ -35,19 +36,21 @@ def test_device_capabilities():
                                     'queue/max_sectors_kb')
     default_max_io_size = fs_utils.read_file(max_io_size_path)
 
-    iteration_settings = [{"device": "SCSI-debug module",
-                           "dev_size_mb": 1024, "logical_block_size": 512, "max_sectors_kb": 1024},
-                          {"device": "SCSI-debug module",
-                           "dev_size_mb": 1024, "logical_block_size": 512, "max_sectors_kb": 256},
-                          {"device": "SCSI-debug module",
-                           "dev_size_mb": 1024, "logical_block_size": 512, "max_sectors_kb": 128},
-                          {"device": "SCSI-debug module",
-                           "dev_size_mb": 2048, "logical_block_size": 2048, "max_sectors_kb": 1024},
-                          {"device": "standard core device",
-                           "max_sectors_kb": int(default_max_io_size)},
-                          {"device": "standard core device", "max_sectors_kb": 128}]
+    iteration_settings = [
+        {"device": "SCSI-debug module",
+         "dev_size_mb": 1024, "logical_block_size": 512, "max_sectors_kb": 1024},
+        {"device": "SCSI-debug module",
+         "dev_size_mb": 1024, "logical_block_size": 512, "max_sectors_kb": 256},
+        {"device": "SCSI-debug module",
+         "dev_size_mb": 1024, "logical_block_size": 512, "max_sectors_kb": 128},
+        {"device": "SCSI-debug module",
+         "dev_size_mb": 2048, "logical_block_size": 2048, "max_sectors_kb": 1024},
+        {"device": "standard core device",
+         "max_sectors_kb": int(default_max_io_size)},
+        {"device": "standard core device", "max_sectors_kb": 128}
+    ]
 
-    for i in range(0, 6):
+    for i in range(0, len(iteration_settings)):
         device = iteration_settings[i]["device"]
         group_title = f"{device} | "
         if device == "SCSI-debug module":
@@ -99,7 +102,7 @@ def create_scsi_debug_device(sector_size: int, physblk_exp: int, dev_size_mb=102
 
 
 def prepare_cas_device(cache_device, core_device):
-    cache = casadm.start_cache(cache_device, force=True)
+    cache = casadm.start_cache(cache_device, cache_line_size=CacheLineSize.LINE_64KiB, force=True)
     try:
         cache_dev_bs = disk_utils.get_block_size(cache_device.get_device_id())
         core_dev_bs = disk_utils.get_block_size(core_device.get_device_id())

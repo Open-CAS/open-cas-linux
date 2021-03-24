@@ -68,6 +68,13 @@ def test_ioclass_repart(cache_mode, cache_line_size, ioclass_size_multiplicatior
 
     with TestRun.step("Add default ioclasses"):
         ioclass_config.add_ioclass(*str(IoClass.default(allocation="1.00")).split(","))
+        ioclass_config.add_ioclass(
+            ioclass_id=5,
+            rule="metadata",
+            eviction_priority=1,
+            allocation="1.00",
+            ioclass_config_path=ioclass_config_path
+        )
 
     with TestRun.step("Add ioclasses for all dirs"):
         for io_class in io_classes:
@@ -116,7 +123,7 @@ def test_ioclass_repart(cache_mode, cache_line_size, ioclass_size_multiplicatior
             actuall_occupancy = get_io_class_occupancy(cache, io_class.id)
 
             occupancy_limit = (
-                (io_class.max_occupancy * cache_size * ioclass_size_multiplicatior)
+                (io_class.max_occupancy * cache_size)
                 .align_down(Unit.Blocks4096.get_value())
                 .set_unit(Unit.Blocks4096)
             )

@@ -155,13 +155,13 @@ def test_ioclass_occuppancy_load(cache_line_size):
                 f"{len(ioclass_list_after_load)}"
             )
 
-        original_sorted = sorted(original_ioclass_list, key=lambda k: k["id"])
-        loaded_sorted = sorted(ioclass_list_after_load, key=lambda k: k["id"])
+        original_sorted = sorted(original_ioclass_list, key=lambda k: k.id)
+        loaded_sorted = sorted(ioclass_list_after_load, key=lambda k: k.id)
 
         for original, loaded in zip(original_sorted, loaded_sorted):
-            original_allocation = original["allocation"]
-            loaded_allocation = loaded["allocation"]
-            ioclass_id = original["id"]
+            original_allocation = original.allocation
+            loaded_allocation = loaded.allocation
+            ioclass_id = original.id
             if original_allocation != loaded_allocation:
                 TestRun.LOGGER.error(
                     f"Occupancy limit doesn't match for ioclass {ioclass_id}: "

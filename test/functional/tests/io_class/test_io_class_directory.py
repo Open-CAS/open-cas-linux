@@ -145,7 +145,12 @@ def test_ioclass_directory_file_operations(filesystem):
         Udev.disable()
 
     with TestRun.step("Create and load IO class config file."):
-        ioclass_id = random.randint(1, ioclass_config.MAX_IO_CLASS_ID)
+        ioclass_id = random.randint(2, ioclass_config.MAX_IO_CLASS_ID)
+        ioclass_config.add_ioclass(ioclass_id=1,
+                                   eviction_priority=1,
+                                   allocation="1.00",
+                                   rule="metadata",
+                                   ioclass_config_path=ioclass_config_path)
         # directory IO class
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id,
@@ -441,4 +446,4 @@ def check_occupancy(expected: Size, actual: Size):
 
 
 def ioclass_is_enabled(cache, ioclass_id: int):
-    return [i["allocation"] for i in cache.list_io_classes() if i["id"] == ioclass_id].pop() > 0.00
+    return [float(i.allocation) for i in cache.list_io_classes() if i.id == ioclass_id].pop() > 0.00

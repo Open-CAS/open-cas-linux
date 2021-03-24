@@ -18,10 +18,10 @@ from test_utils.os_utils import Udev
 from test_utils.size import Size, Unit
 
 random_thresholds = random.sample(range(1028, 1024 ** 2, 4), 3)
-random_stream_numbers = random.sample(range(2, 256), 3)
+random_stream_numbers = random.sample(range(2, 128), 3)
 
 
-@pytest.mark.parametrizex("streams_number", [1, 256] + random_stream_numbers)
+@pytest.mark.parametrizex("streams_number", [1, 128] + random_stream_numbers)
 @pytest.mark.parametrizex("threshold",
                           [Size(1, Unit.MebiByte), Size(1, Unit.GibiByte)]
                           + [Size(x, Unit.KibiByte) for x in random_thresholds])
@@ -50,6 +50,7 @@ def test_multistream_seq_cutoff_functional(threshold, streams_number):
                       f"and reset statistics counters."):
         core.set_seq_cutoff_policy(SeqCutOffPolicy.always)
         core.set_seq_cutoff_threshold(threshold)
+        core.set_seq_cutoff_promotion_count(1)
         core.reset_counters()
 
     with TestRun.step(f"Run {streams_number} I/O streams with amount of sequential writes equal to "

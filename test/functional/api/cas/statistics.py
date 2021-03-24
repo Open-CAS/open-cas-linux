@@ -13,7 +13,7 @@ config_stats_core = [
     "core id", "core device", "exported object", "core size", "dirty for", "status",
     "seq cutoff threshold", "seq cutoff policy"
 ]
-config_stats_ioclass = ["io class id", "io class name", "eviction priority", "selective allocation"]
+config_stats_ioclass = ["io class id", "io class name", "eviction priority", "max size"]
 usage_stats = ["occupancy", "free", "clean", "dirty"]
 usage_stats_ioclass = ["occupancy", "clean", "dirty"]
 inactive_usage_stats = ["inactive occupancy", "inactive clean", "inactive dirty"]
