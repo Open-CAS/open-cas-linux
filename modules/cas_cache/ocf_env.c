@@ -6,26 +6,44 @@
 #include "cas_cache.h"
 #include "utils/utils_rpool.h"
 
-/* *** ALLOCATOR *** */
+/** @addtogroup ALLOCATOR
+ * @{
+ */
 
+/**
+ * @def CAS_ALLOC_ALLOCATOR_LIMIT
+ * @brief max number of allocated items
+ */
 #define CAS_ALLOC_ALLOCATOR_LIMIT 256
 
+
+/**
+ * @struct _env_allocator
+ * @brief template of allocator struct
+ * @details contains:
+ * <tt>char *name</tt> - memory pool ID unique name 
+ * <tt>uint32_t item_size</tt> - size of specific item of memory pool
+ * <tt>struct kmem_cache *kmem_cache</tt> - OS handle to memory pool
+ * <tt>env_atomic count</tt> - number of currently allocated items in pool
+ * <tt>struct cas_reserve_pool *rpool</tt> - reserved memory pool
+ */
 struct _env_allocator {
-	/*!< Memory pool ID unique name */
 	char *name;
 
-	/*!< Size of specific item of memory pool */
 	uint32_t item_size;
 
-	/*!< OS handle to memory pool */
 	struct kmem_cache *kmem_cache;
 
-	/*!< Number of currently allocated items in pool */
 	atomic_t count;
 
 	struct cas_reserve_pool *rpool;
 };
 
+/**
+ * @brief aligns allocator
+ * @param size bytes of memory to be allocated
+ * @retval nearest power of two equal or higher than size
+ */
 static inline size_t env_allocator_align(size_t size)
 {
 	if (size <= 2)
@@ -33,6 +51,15 @@ static inline size_t env_allocator_align(size_t size)
 	return (1ULL << 32) >> __builtin_clz(size - 1);
 }
 
+/**
+ * @struct _env_allocator_item
+ * @brief template of allocator's item struct
+ * @details contains:
+ * <tt>uint32_t cpu</tt> - number of cpu to which item belongs
+ * <tt>uint32_t from_rpool</tt> - bit meaning if item is from reserved pool
+ * <tt>uint32_t used</tt> - is in use
+ * <tt>char data[]</tt> - array of data item contains
+ */
 struct _env_allocator_item {
 	uint32_t cpu : order_base_2(NR_CPUS);
 	uint32_t from_rpool : 1;
@@ -66,6 +93,12 @@ void *env_allocator_new(env_allocator *allocator)
 	}
 }
 
+/**
+ * @brief creates new allocator's item in reserved pool
+ * @param allocator_ctx pointer to allocator to which item should be added
+ * @param cpu number of cpu to which item would belong
+ * @retval created item
+ */
 static void *env_allocator_new_rpool(void *allocator_ctx, int cpu)
 {
 	env_allocator *allocator = (env_allocator*) allocator_ctx;
@@ -81,6 +114,12 @@ static void *env_allocator_new_rpool(void *allocator_ctx, int cpu)
 	return item;
 }
 
+/**
+ * @brief @brief deletes allocator's item from reserved pool and frees memory 
+ * block reserved by deleted item
+ * @param allocator pointer to allocator from which item should be removed
+ * @param item pointer to item which should be removed
+ */
 static void env_allocator_del_rpool(void *allocator_ctx, void *_item)
 {
 	struct _env_allocator_item *item = _item;
@@ -91,6 +130,10 @@ static void env_allocator_del_rpool(void *allocator_ctx, void *_item)
 	kmem_cache_free(allocator->kmem_cache, item);
 }
 
+/**
+ * @def ENV_ALLOCATOR_NAME_MAX
+ * @brief default allocator name size limit in bytes
+ */
 #define ENV_ALLOCATOR_NAME_MAX 128
 
 env_allocator *env_allocator_create_extended(uint32_t size, const char *name,
@@ -223,13 +266,29 @@ uint32_t env_allocator_item_count(env_allocator *allocator)
 {
 	return atomic_read(&allocator->count);
 }
+/** @} */
 
+/** @addtogroup SORTING
+ * @{
+ */
+
+/**
+ * @brief checks if structure elements are aligned
+ * @param base structure
+ * @param align byte to which each structure's element are aligned
+ */
 static int env_sort_is_aligned(const void *base, int align)
 {
 	return IS_ENABLED(CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS) ||
 		((unsigned long)base & (align - 1)) == 0;
 }
 
+/**
+ * @brief swaps 2 unsigned 32-bit ints
+ * @param a pointer to the first unsigned 32-bit int
+ * @param b pointer to the second unsigned 32-bit int
+ * @param size unused parameter
+ */
 static void env_sort_u32_swap(void *a, void *b, int size)
 {
 	u32 t = *(u32 *)a;
@@ -237,6 +296,12 @@ static void env_sort_u32_swap(void *a, void *b, int size)
 	*(u32 *)b = t;
 }
 
+/**
+ * @brief swaps 2 unsigned 64-bit ints
+ * @param a pointer to the first unsigned 64-bit int
+ * @param b pointer to the second unsigned 64-bit int
+ * @param size unused parameter
+ */
 static void env_sort_u64_swap(void *a, void *b, int size)
 {
 	u64 t = *(u64 *)a;
@@ -244,6 +309,12 @@ static void env_sort_u64_swap(void *a, void *b, int size)
 	*(u64 *)b = t;
 }
 
+/**
+ * @brief swaps 2 unknown type elements byte by byte
+ * @param a pointer to the first element
+ * @param b pointer to the second element
+ * @param size size of bigger element in bytes
+ */
 static void env_sort_generic_swap(void *a, void *b, int size)
 {
 	char t;
@@ -300,3 +371,4 @@ void env_sort(void *base, size_t num, size_t size,
 		env_cond_resched();
 	}
 }
+/** @} */
