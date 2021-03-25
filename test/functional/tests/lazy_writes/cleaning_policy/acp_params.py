@@ -11,9 +11,9 @@ from datetime import timedelta
 from test_utils.size import Size, Unit
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
+from test_tools.dd import Dd
 from test_tools.fio.fio import Fio
-from test_utils.os_utils import kill_all_io
+from test_utils.os_utils import kill_all_io, Udev
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from api.cas import casadm
 from api.cas.cache_config import (
@@ -22,9 +22,17 @@ from api.cas.cache_config import (
     CleaningPolicy,
     FlushParametersAcp,
     CacheLineSize,
-    Time,
+    SeqCutOffPolicy,
+    FlushParametersAlru,
 )
 from test_tools.blktrace import BlkTrace, BlkTraceMask, ActionKind, RwbsKind
+from test_utils.time import Time
+
+time_to_wait_nop = Time(seconds=(30 * 0.9))
+time_to_wait_alru_1st = Time(minutes=(1 * 0.9))
+time_to_wait_alru_2nd = 1.5 * time_to_wait_alru_1st
+time_to_wait_acp = Time(seconds=(10 * 0.9))
+blocks_to_flush = 50
 
 
 @pytest.mark.parametrizex(
@@ -216,6 +224,174 @@ def test_acp_param_wake_up_time(cache_line_size, cache_mode):
     with TestRun.step("Stop all caches"):
         kill_all_io()
         casadm.stop_all_caches()
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_cleaning_policy_config():
+    """
+
+    """
+    with TestRun.step("Prepare partitions."):
+        cache_dev = TestRun.disks["cache"]
+        cache_dev.create_partitions([Size(100, Unit.MiB)])
+        core_dev = TestRun.disks["core"]
+        core_dev.create_partitions([Size(200, Unit.MiB)])
+        Udev.disable()
+
+    with TestRun.step("Start cache with core."):
+        cache = casadm.start_cache(cache_dev.partitions[0], force=True, cache_mode=CacheMode.WB)
+        core = cache.add_core(core_dev.partitions[0])
+        cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+
+    with TestRun.step("Change cleaning policy to NOP."):
+        cache.set_cleaning_policy(CleaningPolicy.nop)
+        if cache.get_cleaning_policy() != CleaningPolicy.nop:
+            TestRun.fail("NOP cleaning policy is not set!")
+
+    with TestRun.step("Fill core with dirty data."):
+        dd = (
+            Dd().input("/dev/zero")
+                .output(core.path)
+                .block_size(Size(1, Unit.MiB))
+                .oflag("direct")
+        )
+        dd.run()
+
+    with TestRun.step("Check core statistics."):
+        core_dirty_blocks_before = int(core.get_dirty_blocks().get_value(Unit.Blocks4096))
+
+    with TestRun.step(f"Wait {int((time_to_wait_nop * 1.2).total_seconds())} seconds and check "
+                      f"statistics again."):
+        time.sleep(int((time_to_wait_nop * 1.2).total_seconds()))
+        core_dirty_blocks_after = int(core.get_dirty_blocks().get_value(Unit.Blocks4096))
+        if core_dirty_blocks_before != core_dirty_blocks_after:
+            TestRun.LOGGER.error(
+                f"Dirty data statistics differs despite the NOP policy was used.\n"
+                f"dirty data blocks before pause: {core_dirty_blocks_before}\n"
+                f"dirty data blocks after pause: {core_dirty_blocks_after}"
+            )
+
+    with TestRun.step("Flush all dirty data."):
+        cache.flush_cache()
+
+    with TestRun.step("Change cleaning policy to ALRU and set parameters."):
+        cache.set_cleaning_policy(CleaningPolicy.alru)
+        default_params = cache.get_flush_parameters_alru()
+
+        params = FlushParametersAlru(
+            wake_up_time=time_to_wait_alru_1st,
+            staleness_time=time_to_wait_alru_1st,
+            flush_max_buffers=blocks_to_flush,
+            activity_threshold=time_to_wait_alru_1st
+        )
+        cache.set_params_alru(params)
+        new_params = cache.get_flush_parameters_alru()
+
+    with TestRun.step("Check if ALRU parameters are configured successfully."):
+        if cache.get_cleaning_policy() != CleaningPolicy.alru:
+            TestRun.fail("ALRU cleaning policy is not set!")
+        if default_params == new_params:
+            TestRun.fail("ALRU parameters are not changed.")
+
+    with TestRun.step("Fill core with dirty data."):
+        dd = (
+            Dd().input("/dev/zero")
+                .output(core.path)
+                .block_size(Size(1, Unit.MiB))
+                .oflag("direct")
+        )
+        dd.run()
+
+    with TestRun.step("Check core statistics."):
+        core_dirty_blocks_before = int(core.get_dirty_blocks().get_value(Unit.Blocks4096))
+
+    with TestRun.step(f"Wait {int((time_to_wait_alru_1st * 1.2).total_seconds())} seconds "
+                      f"and check statistics again."):
+        time.sleep(int((time_to_wait_alru_1st * 1.2).total_seconds()))
+        core_dirty_blocks_after = int(core.get_dirty_blocks().get_value(Unit.Blocks4096))
+        if core_dirty_blocks_before == core_dirty_blocks_after:
+            TestRun.LOGGER.error(
+                f"Dirty data statistics are the same despite the ALRU policy was used.\n"
+                f"dirty data blocks before pause: {core_dirty_blocks_before}\n"
+                f"dirty data blocks after pause: {core_dirty_blocks_after}"
+            )
+        elif core_dirty_blocks_before != (core_dirty_blocks_after + blocks_to_flush):
+            TestRun.LOGGER.error(
+                f"Number of dirty blocks flushed differs from configured in policy.\n"
+                f"configured dirty data blocks to flush: {blocks_to_flush}\n"
+                f"currently dirty data blocks flushed: "
+                f"{core_dirty_blocks_before - core_dirty_blocks_after}"
+            )
+
+    with TestRun.step(f"Wait {int((time_to_wait_alru_2nd * 1.2).total_seconds())} seconds "
+                      f"and check statistics once again."):
+        core_dirty_blocks_before = int(core.get_dirty_blocks().get_value(Unit.Blocks4096))
+        time.sleep(int((time_to_wait_alru_2nd * 1.2).total_seconds()))
+        core_dirty_blocks_after = int(core.get_dirty_blocks().get_value(Unit.Blocks4096))
+        if core_dirty_blocks_before == core_dirty_blocks_after:
+            TestRun.LOGGER.error(
+                f"Dirty data statistics are the same despite the ALRU policy was used.\n"
+                f"dirty data blocks before pause: {core_dirty_blocks_before}\n"
+                f"dirty data blocks after pause: {core_dirty_blocks_after}"
+            )
+        elif core_dirty_blocks_before != (core_dirty_blocks_after + blocks_to_flush):
+            TestRun.LOGGER.error(
+                f"Number of dirty blocks flushed differs from configured in policy.\n"
+                f"configured dirty data blocks to flush: {blocks_to_flush}\n"
+                f"currently dirty data blocks flushed: "
+                f"{core_dirty_blocks_before - core_dirty_blocks_after}"
+            )
+
+    with TestRun.step("Flush all dirty data."):
+        cache.flush_cache()
+
+    with TestRun.step("Change cleaning policy to ACP and set parameters."):
+        cache.set_cleaning_policy(CleaningPolicy.acp)
+        default_params = cache.get_flush_parameters_acp()
+
+        params = FlushParametersAcp(
+            wake_up_time=time_to_wait_acp,
+            flush_max_buffers=blocks_to_flush,
+        )
+        cache.set_params_acp(params)
+        new_params = cache.get_flush_parameters_acp()
+
+    with TestRun.step("Check if ACP parameters are configured successfully."):
+        if cache.get_cleaning_policy() != CleaningPolicy.acp:
+            TestRun.fail("ACP cleaning policy is not set!")
+        if default_params == new_params:
+            TestRun.fail("ACP parameters are not changed.")
+
+    with TestRun.step("Fill core with dirty data."):
+        dd = (
+            Dd().input("/dev/zero")
+                .output(core.path)
+                .block_size(Size(1, Unit.MiB))
+                .oflag("direct")
+        )
+        dd.run()
+
+    with TestRun.step("Check core statistics."):
+        core_dirty_blocks_before = int(core.get_dirty_blocks().get_value(Unit.Blocks4096))
+
+    with TestRun.step(f"Wait {int(time_to_wait_acp.total_seconds())} seconds and check "
+                      f"statistics again."):
+        time.sleep(int(time_to_wait_acp.total_seconds()))
+        core_dirty_blocks_after = int(core.get_dirty_blocks().get_value(Unit.Blocks4096))
+        if core_dirty_blocks_before == core_dirty_blocks_after:
+            TestRun.LOGGER.error(
+                f"Dirty data statistics are the same despite the ACP policy was used.\n"
+                f"dirty data blocks before pause: {core_dirty_blocks_before}\n"
+                f"dirty data blocks after pause: {core_dirty_blocks_after}"
+            )
+        elif core_dirty_blocks_before != (core_dirty_blocks_after + blocks_to_flush):
+            TestRun.LOGGER.error(
+                f"Number of dirty blocks flushed differs from configured in policy.\n"
+                f"configured dirty data blocks to flush: {blocks_to_flush}\n"
+                f"currently dirty data blocks flushed: "
+                f"{core_dirty_blocks_before - core_dirty_blocks_after}"
+            )
 
 
 def get_random_list(min_val, max_val, n):
