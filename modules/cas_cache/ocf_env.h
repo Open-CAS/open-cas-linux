@@ -533,14 +533,14 @@ static inline void env_cond_resched(void)
 
 static inline int env_in_interrupt(void)
 {
-	return in_interrupt();;
+	return in_interrupt();
 }
 
 /* *** TIME *** */
 static inline uint64_t env_get_tick_count(void)
 {
-	struct timespec ts;
-	getnstimeofday(&ts);
+	struct timespec64 ts;
+	CAS_GET_CURRENT_TIME(&ts);
 	return ts.tv_sec * 1000000000UL + ts.tv_nsec;
 }
 
