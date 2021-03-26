@@ -30,7 +30,7 @@ struct cas_classifier {
 	struct workqueue_struct *wq;
 
 	/* Lock for rules list */
-	rwlock_t lock;
+	rwlock_t lock __attribute__((aligned(64)));
 };
 
 struct cas_cls_condition_handler;
