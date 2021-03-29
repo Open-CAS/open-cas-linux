@@ -65,7 +65,7 @@ static inline unsigned long bytes_to_4k(uint64_t size)
 	return (size + 4095UL) >> 12;
 }
 
-static float calc_gb(uint32_t clines)
+static float calc_gb(uint64_t clines)
 {
 	return (float) clines * 4 * KiB / GiB;
 }
