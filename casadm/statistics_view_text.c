@@ -702,15 +702,18 @@ static int finish_tree(struct view_t *this)
 static int print_word_break_lines(struct view_t *this,
 				  char *word,
 				  int word_len,
-				  int screen_width)
+				  int screen_width,
+				  int *words_in_line)
 {
 	struct text_out_prv *prv = this->ctx.text_prv;
-	if (prv->col_ptr + word_len > screen_width) {
+	if (prv->col_ptr + word_len > screen_width && *words_in_line) {
 		putc('\n', this->outfile);
 		prv->col_ptr = 1 + vector_get(&prv->col_w, 0);
 		print_spaces(this->outfile, prv->col_ptr);
+		*words_in_line = 0;
 	}
 	prv->col_ptr += word_len;
+	(*words_in_line)++;
 	return word_len != fwrite(word, 1, word_len, this->outfile);
 }
 
@@ -743,6 +746,7 @@ static int print_cell_break_lines(struct view_t *this,
 	if (prv->col_ptr + cell_len > screen_width) {
 		int off = 0;
 		int word_off = 0;
+		int words_in_line = 0;
 		do {
 			if (' ' == cell[word_off + off] ||
 			    !cell[word_off + off]) {
@@ -750,7 +754,8 @@ static int print_cell_break_lines(struct view_t *this,
 					print_spaces_state(this, 1, screen_width);
 				}
 				print_word_break_lines(this, cell + off,
-						       word_off, screen_width);
+						       word_off, screen_width,
+						       &words_in_line);
 				off += word_off + 1;
 				word_off = 0;
 			} else {
