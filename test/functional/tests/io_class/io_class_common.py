@@ -3,8 +3,6 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
-from datetime import timedelta
-
 from api.cas import casadm
 from api.cas import ioclass_config
 from api.cas.cache_config import (
@@ -89,13 +87,14 @@ def get_io_class_usage(cache, io_class_id, percent=False):
     ).usage_stats
 
 
-def run_io_dir(path, size_4k):
+def run_io_dir(path, size_4k, offset=0):
     dd = (
         Dd()
         .input("/dev/zero")
         .output(f"{path}")
         .count(size_4k)
         .block_size(Size(1, Unit.Blocks4096))
+        .seek(offset)
     )
     TestRun.LOGGER.info(f"{dd}")
     output = dd.run()
