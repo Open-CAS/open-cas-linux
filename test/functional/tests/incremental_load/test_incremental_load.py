@@ -5,6 +5,7 @@
 
 import time
 from random import shuffle
+
 import pytest
 
 from api.cas import casadm, cli, cli_messages

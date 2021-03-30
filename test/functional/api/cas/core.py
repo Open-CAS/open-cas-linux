@@ -36,7 +36,7 @@ class Core(Device):
         self.partitions = []
         self.block_size = None
 
-    def __get_core_info(self):
+    def __get_core_info(self, extended=False):
         output = TestRun.executor.run(
             list_cmd(OutputFormat.csv.name, by_id_path=False))
         if output.exit_code != 0:
@@ -44,9 +44,11 @@ class Core(Device):
         output_lines = output.stdout.splitlines()
         for line in output_lines:
             split_line = line.split(',')
-            if split_line[0] == "core" and (
-                    split_line[2] == os.path.join("/dev", self.core_device.get_device_id())
-                    or split_line[5] == self.path):
+            if not extended and split_line[0] == "core" and \
+                    split_line[2] == f"/dev/{self.core_device.get_device_id()}":
+                return {"core_id": split_line[1],
+                        "exp_obj": split_line[5]}
+            if extended and split_line[0] == "core" and split_line[1] == f"{self.core_id}":
                 return {"core_id": split_line[1],
                         "core_device": split_line[2],
                         "status": split_line[3],
@@ -79,7 +81,7 @@ class Core(Device):
                               stat_filter, percentage_val)
 
     def get_status(self):
-        return CoreStatus[self.__get_core_info()["status"].lower()]
+        return CoreStatus[self.__get_core_info(extended=True)["status"].lower()]
 
     def get_seq_cut_off_parameters(self):
         return get_seq_cut_off_parameters(self.cache_id, self.core_id)
