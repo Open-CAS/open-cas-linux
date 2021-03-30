@@ -122,7 +122,8 @@ def test_ioclass_pid():
         with TestRun.step(f"Run dd with pid {pid}."):
             # pid saved in 'ns_last_pid' has to be smaller by one than target dd pid
             dd_and_pid_command = (
-                f"echo {pid-1} > /proc/sys/kernel/ns_last_pid && {dd_command}"
+                f"echo {pid-1} > /proc/sys/kernel/ns_last_pid && {dd_command} "
+                f"&& cat /proc/sys/kernel/ns_last_pid"
             )
             output = TestRun.executor.run(dd_and_pid_command)
             if output.exit_code != 0:
