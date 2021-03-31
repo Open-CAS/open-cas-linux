@@ -39,6 +39,7 @@
 #include <linux/ratelimit.h>
 #include <linux/mm.h>
 #include <linux/blk-mq.h>
+#include <linux/ktime.h>
 
 #include "generated_defines.h"
 

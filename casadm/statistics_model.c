@@ -70,11 +70,11 @@ static float calc_gb(uint64_t clines)
 	return (float) clines * 4 * KiB / GiB;
 }
 
-static void print_dirty_for_time(uint32_t t, FILE *outfile)
+static void print_dirty_for_time(uint64_t t, FILE *outfile)
 {
 	uint32_t d, h, m, s;
 
-	fprintf(outfile, "%u,[s],", t);
+	fprintf(outfile, "%lu,[s],", t);
 
 	if (!t) {
 		fprintf(outfile, "Cache clean");
@@ -112,7 +112,7 @@ static void print_kv_pair(FILE *outfile, const char *title, const char *fmt, ...
 	fprintf(outfile, "\n");
 }
 
-static void print_kv_pair_time(FILE *outfile, const char *title, uint32_t time)
+static void print_kv_pair_time(FILE *outfile, const char *title, uint64_t time)
 {
 	fprintf(outfile, TAG(KV_PAIR) "\"%s\",", title);
 	print_dirty_for_time(time, outfile);
