@@ -5,17 +5,18 @@
 
 
 import time
+from datetime import timedelta
+
 import pytest
 
-from datetime import timedelta
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
-from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
-from test_utils.size import Size, Unit
-from test_utils.output import CmdException
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, ErrorFilter
+from test_utils.output import CmdException
+from test_utils.size import Size, Unit
 
 
 @pytest.mark.parametrizex("cache_mode", CacheMode)
@@ -208,7 +209,7 @@ def fio_prepare(core):
         .target(core.path)
         .continue_on_error(ErrorFilter.io)
         .direct(1)
-        .run_time(timedelta(seconds=30))
+        .run_time(timedelta(seconds=120))
         .time_based()
     )
     return fio
