@@ -116,7 +116,7 @@ def pytest_runtest_teardown():
                     InitConfig.create_default_init_config()
                 DeviceMapper.remove_all()
         except Exception as ex:
-            TestRun.LOGGER.warning(f"Exception occured during platform cleanup.\n"
+            TestRun.LOGGER.warning(f"Exception occurred during platform cleanup.\n"
                                    f"{str(ex)}\n{traceback.format_exc()}")
 
     TestRun.LOGGER.end()
