@@ -7,7 +7,6 @@ import re
 from core.test_run import TestRun
 from test_utils.output import Output
 
-
 load_inactive_core_missing = [
     r"WARNING: Can not resolve path to core \d+ from cache \d+\. By-id path will be shown for that "
     r"core\.",
@@ -81,6 +80,33 @@ try_add_core_sector_size_mismatch = [
 
 no_caches_running = [
     r"No caches running"
+]
+
+unavailable_device = [
+    r"Error while opening \'\S+\'exclusively\. This can be due to\n"
+    r"cache instance running on this device\. In such case please stop the cache and try again\."
+]
+
+error_handling = [
+    r"Error during options handling"
+]
+
+no_cas_metadata = [
+    r"Device \'\S+\' does not contain OpenCAS's metadata\."
+]
+
+cache_dirty_data = [
+    r"Cache instance contains dirty data\. Clearing metadata will result in loss of dirty data\.\n"
+    r"Please load cache instance and flush dirty data in order to preserve them on the core "
+    r"device\.\n"
+    r"Alternatively, if you wish to clear metadata anyway, please use \'--force\' option\."
+]
+
+cache_dirty_shutdown = [
+    r"Cache instance did not shut down cleanly\. It might contain dirty data\. \n"
+    r"Clearing metadata might result in loss of dirty data\. Please recover cache instance\n"
+    r"by loading it and flush dirty data in order to preserve them on the core device\.\n"
+    r"Alternatively, if you wish to clear metadata anyway, please use \'--force\' option\."
 ]
 
 
