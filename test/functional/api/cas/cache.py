@@ -126,8 +126,11 @@ class Cache:
     def add_core(self, core_dev, core_id: int = None):
         return casadm.add_core(self, core_dev, core_id)
 
-    def remove_core(self, core_id, force: bool = False):
+    def remove_core(self, core_id: int, force: bool = False):
         return casadm.remove_core(self.cache_id, core_id, force)
+
+    def remove_inactive_core(self, core_id: int, force: bool = False):
+        return casadm.remove_inactive(self.cache_id, core_id, force)
 
     def reset_counters(self):
         return casadm.reset_counters(self.cache_id)

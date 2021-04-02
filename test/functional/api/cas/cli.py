@@ -55,6 +55,14 @@ def remove_core_cmd(cache_id: str, core_id: str, force: bool = False, shortcut: 
     return casadm_bin + command
 
 
+def remove_inactive_cmd(cache_id: str, core_id: str, force: bool = False, shortcut: bool = False):
+    command = f" --remove-inactive {'-i' if shortcut else '--cache-id'} {cache_id} " \
+              f"{'-j' if shortcut else '--core-id'} {core_id}"
+    if force:
+        command += " -f" if shortcut else " --force"
+    return casadm_bin + command
+
+
 def remove_detached_cmd(core_device: str, shortcut: bool = False):
     command = " --remove-detached" + (" -d " if shortcut else " --device ") + core_device
     return casadm_bin + command

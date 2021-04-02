@@ -69,6 +69,14 @@ def remove_core(cache_id: int, core_id: int, force: bool = False, shortcut: bool
         raise CmdException("Failed to remove core.", output)
 
 
+def remove_inactive(cache_id: int, core_id: int, force: bool = False, shortcut: bool = False):
+    output = TestRun.executor.run(
+        remove_inactive_cmd(
+            cache_id=str(cache_id), core_id=str(core_id), force=force, shortcut=shortcut))
+    if output.exit_code != 0:
+        raise CmdException("Failed to remove inactive core.", output)
+
+
 def remove_detached(core_device: Device, shortcut: bool = False):
     output = TestRun.executor.run(
         remove_detached_cmd(core_device=core_device.path, shortcut=shortcut))

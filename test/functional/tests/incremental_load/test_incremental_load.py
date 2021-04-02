@@ -498,7 +498,7 @@ def test_print_statistics_inactive(cache_mode):
                          f"({inactive_stats_after.inactive_usage_stats.inactive_occupancy}).")
 
     with TestRun.step("Remove inactive core from cache and check if cache is in running state."):
-        cache.remove_core(second_core.core_id, force=True)
+        cache.remove_inactive_core(second_core.core_id)
         cache_status = cache.get_status()
         if cache_status != CacheStatus.running:
             TestRun.fail(f"Cache did not change status to 'running' after plugging core device. "
@@ -628,6 +628,7 @@ def test_remove_inactive_devices():
         cache.stop(no_data_flush=True)
 
     with TestRun.step("Unplug core disk."):
+        core_dev_id = core.core_device.get_device_id()
         plug_device.unplug()
 
     with TestRun.step("Load cache."):
@@ -636,31 +637,53 @@ def test_remove_inactive_devices():
     with TestRun.step("Verify that all previously created CAS devices are listed with "
                       "proper status."):
         for core in cores:
-            if core.get_status() != CoreStatus.inactive:
+            if core.get_status(core_dev_id) != CoreStatus.inactive:
                 TestRun.fail(f"Each core should be in inactive state. "
                              f"Actual states:\n{casadm.list_caches().stdout}")
 
-    with TestRun.step("Try removing CAS device without ‘force’ option. Verify that for "
-                      "dirty CAS devices operation is blocked, proper message is displayed "
-                      "and device is still listed."):
+    with TestRun.step("Try removing CAS devices using remove command. "
+                      "Operation should be blocked and proper message displayed."):
+        shuffle(cores)
+        for force in [False, True]:
+            for core in cores:
+                try:
+                    core.remove_core(force)
+                    TestRun.fail(f"Removing inactive CAS device should be possible by "
+                                 f"'remove-inactive' command only but it worked with 'remove' "
+                                 f"command with force option set to {force}.")
+                except CmdException as e:
+                    TestRun.LOGGER.info(f"Remove core operation is blocked for inactive CAS device "
+                                        f"as expected. Force option set to: {force}")
+                    cli_messages.check_stderr_msg(
+                        e.output, cli_messages.remove_inactive_core_with_remove_command)
+                    output = casadm.list_caches().stdout
+                    if core.path not in output:
+                        TestRun.fail(
+                            f"CAS device is not listed in casadm list output but it should be."
+                            f"\n{output}")
+
+    with TestRun.step("Try removing CAS devices using remove-inactive command without ‘force’ "
+                      "option. Verify that for dirty CAS devices operation is blocked, proper "
+                      "message is displayed and device is still listed."):
         shuffle(cores)
         for core in cores:
             try:
                 dirty_blocks = core.get_dirty_blocks()
-                core.remove_core()
+                core.remove_inactive()
                 if dirty_blocks != Size.zero():
-                    TestRun.fail("Removing dirty CAS device should be impossible but remove "
-                                 "command executed without any error.")
+                    TestRun.fail("Removing dirty inactive CAS device should be impossible without "
+                                 "force option but remove-inactive command executed without "
+                                 "any error.")
                 TestRun.LOGGER.info("Removing core with force option skipped for clean CAS device.")
             except CmdException as e:
-                TestRun.LOGGER.info("Remove operation without force option is blocked for "
+                TestRun.LOGGER.info("Remove-inactive operation without force option is blocked for "
                                     "dirty CAS device as expected.")
-                cli_messages.check_stderr_msg(e.output, cli_messages.remove_inactive_core)
+                cli_messages.check_stderr_msg(e.output, cli_messages.remove_inactive_dirty_core)
                 output = casadm.list_caches().stdout
                 if core.path not in output:
                     TestRun.fail(f"CAS device is not listed in casadm list output but it should be."
                                  f"\n{output}")
-                core.remove_core(force=True)
+                core.remove_inactive(force=True)
 
     with TestRun.step("Plug missing disk and stop cache."):
         plug_device.plug()

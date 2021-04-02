@@ -36,7 +36,7 @@ class Core(Device):
         self.partitions = []
         self.block_size = None
 
-    def __get_core_info(self):
+    def __get_core_info(self, core_id=None):
         output = TestRun.executor.run(
             list_cmd(OutputFormat.csv.name, by_id_path=False))
         if output.exit_code != 0:
@@ -44,8 +44,9 @@ class Core(Device):
         output_lines = output.stdout.splitlines()
         for line in output_lines:
             split_line = line.split(',')
+            core_dev_id = self.core_device.get_device_id() if core_id is None else core_id
             if split_line[0] == "core" and (
-                    split_line[2] == os.path.join("/dev", self.core_device.get_device_id())
+                    split_line[2] == os.path.join("/dev", core_dev_id)
                     or split_line[5] == self.path):
                 return {"core_id": split_line[1],
                         "core_device": split_line[2],
@@ -78,8 +79,8 @@ class Core(Device):
         return get_statistics(self.cache_id, self.core_id, io_class_id,
                               stat_filter, percentage_val)
 
-    def get_status(self):
-        return CoreStatus[self.__get_core_info()["status"].lower()]
+    def get_status(self, core_id=None):
+        return CoreStatus[self.__get_core_info(core_id)["status"].lower()]
 
     def get_seq_cut_off_parameters(self):
         return get_seq_cut_off_parameters(self.cache_id, self.core_id)
@@ -103,6 +104,9 @@ class Core(Device):
 
     def remove_core(self, force: bool = False):
         return casadm.remove_core(self.cache_id, self.core_id, force)
+
+    def remove_inactive(self, force: bool = False):
+        return casadm.remove_inactive(self.cache_id, self.core_id, force)
 
     def reset_counters(self):
         return casadm.reset_counters(self.cache_id, self.core_id)
