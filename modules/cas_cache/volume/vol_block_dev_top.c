@@ -38,11 +38,12 @@ static void _blockdev_set_bio_data(struct blk_data *data, struct bio *bio)
 {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0)
 	struct bio_vec *bvec;
-	uint32_t i = 0;
+	uint32_t iter = 0, i = 0;
 
-	bio_for_each_segment(bvec, bio, i) {
+	bio_for_each_segment(bvec, bio, iter) {
 		BUG_ON(i >= data->size);
 		data->vec[i] = *bvec;
+		i++;
 	}
 #else
 	struct bio_vec bvec;
