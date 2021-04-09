@@ -626,7 +626,13 @@ static bool is_dev_link_whitelisted(const char* path)
 {
 	regex_t regex;
 	int result;
-	static const char* const whitelist[] = {"/dev/cas[0-9]\\+-[0-9]\\+$"};
+	static const char* const whitelist[] = {
+			"/dev/cas[0-9]\\+-[0-9]\\+$",
+			"/dev/cas[0-9]\\+-[0-9]\\+p[0-9]\\+$",
+			"/dev/ram[0-9]\\+$",
+			"/dev/ram[0-9]\\+p[0-9]\\+$",
+			"/dev/nullb[0-9]\\+$"
+		};
 	static const unsigned count = ARRAY_SIZE(whitelist);
 	size_t i;
 
