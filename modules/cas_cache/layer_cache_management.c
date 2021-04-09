@@ -1320,6 +1320,19 @@ error_affter_lock:
 	return result;
 }
 
+static int _cache_mngt_create_exported_object(ocf_core_t core, void *cntx)
+{
+	int result;
+
+	result = block_dev_create_exported_object(core);
+	if (result)
+		return result;
+
+	result = block_dev_activate_exported_object(core);
+
+	return result;
+}
+
 static int _cache_mngt_remove_core_flush(ocf_cache_t cache,
 		struct kcas_remove_core *cmd)
 {
@@ -1366,35 +1379,6 @@ put:
 	return result;
 }
 
-static int _cache_mngt_remove_core_prepare(ocf_cache_t cache, ocf_core_t core,
-		struct kcas_remove_core *cmd)
-{
-	int result = 0;
-	bool core_active;
-
-	core_active = ocf_core_get_state(core) == ocf_core_state_active;
-
-	if (!core_active) {
-		if (cmd->detach) {
-			printk(KERN_WARNING OCF_PREFIX_SHORT
-					"Cannot detach core which "
-					"is already inactive!\n");
-		}
-		return -OCF_ERR_CORE_IN_INACTIVE_STATE;
-	} else {
-		result = block_dev_destroy_exported_object(core);
-		if (result)
-			return result;
-	}
-
-	if (cmd->force_no_flush)
-		return -KCAS_ERR_REMOVED_DIRTY;
-
-	result = _cache_mngt_core_flush_uninterruptible(core);
-
-	return result ? -KCAS_ERR_REMOVED_DIRTY : 0;
-}
-
 static void _cache_mngt_remove_core_complete(void *priv, int error)
 {
 	struct _cache_mngt_sync_context *context = priv;
@@ -1403,10 +1387,63 @@ static void _cache_mngt_remove_core_complete(void *priv, int error)
 	complete(&context->cmpl);
 }
 
+static void _cache_mngt_remove_core_fallback(ocf_cache_t cache, ocf_core_t core)
+{
+	struct _cache_mngt_sync_context context;
+	int result;
+
+	printk(KERN_ERR "Removing core failed. Detaching %s.%s\n",
+			ocf_cache_get_name(cache),
+			ocf_core_get_name(core));
+
+	init_completion(&context.cmpl);
+	context.result = &result;
+
+	ocf_mngt_cache_detach_core(core,
+			_cache_mngt_remove_core_complete, &context);
+
+	wait_for_completion(&context.cmpl);
+
+	if (!result)
+		return;
+
+	printk(KERN_ERR "Detaching %s.%s\n failed. Please retry the remove operation",
+			ocf_cache_get_name(cache),
+			ocf_core_get_name(core));
+}
+
+static int _cache_mngt_remove_core_prepare(ocf_cache_t cache, ocf_core_t core,
+		struct kcas_remove_core *cmd)
+{
+	int result = 0;
+	bool core_active;
+
+	core_active = ocf_core_get_state(core) == ocf_core_state_active;
+
+	if (!core_active)
+		return -OCF_ERR_CORE_IN_INACTIVE_STATE;
+
+	result = block_dev_destroy_exported_object(core);
+	if (result)
+		return result;
+
+	if (cmd->force_no_flush)
+		return 0;
+
+	result = _cache_mngt_core_flush_uninterruptible(core);
+
+	if (!result)
+		return 0;
+
+	_cache_mngt_remove_core_fallback(cache, core);
+
+	return -KCAS_ERR_DETACHED;
+}
+
 int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 {
 	struct _cache_mngt_sync_context context;
-	int result, prepare_result = 0;
+	int result;
 	ocf_cache_t cache;
 	ocf_core_t core;
 
@@ -1427,14 +1464,8 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 		goto unlock;
 	}
 
-	/*
-	 * Destroy exported object and flush core again but don't allow for
-	 * interruption - in case of flush error after exported object had been
-	 * destroyed, instead of trying rolling this back we rather detach core
-	 * and then inform user about error.
-	 */
-	prepare_result = _cache_mngt_remove_core_prepare(cache, core, cmd);
-	if (prepare_result && prepare_result != -KCAS_ERR_REMOVED_DIRTY)
+	result = _cache_mngt_remove_core_prepare(cache, core, cmd);
+	if (result)
 		goto unlock;
 
 	init_completion(&context.cmpl);
@@ -1448,19 +1479,12 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 				_cache_mngt_remove_core_complete, &context);
 	}
 
-	if (!cmd->force_no_flush && !prepare_result)
-		BUG_ON(ocf_mngt_core_is_dirty(core));
-
 	wait_for_completion(&context.cmpl);
 
-	if (!result && !cmd->detach) {
+	if (!result && !cmd->detach)
 		mark_core_id_free(cache, cmd->core_id);
-	}
 
 unlock:
-	if (!result && prepare_result)
-		result = prepare_result;
-
 	ocf_mngt_cache_unlock(cache);
 put:
 	ocf_mngt_cache_put(cache);
@@ -1495,7 +1519,7 @@ int cache_mngt_remove_inactive_core(struct kcas_remove_inactive *cmd)
 
 	/*
 	 * Destroy exported object - in case of error during destruction of
-	 * exported object, instead of trying rolling this back we rather 
+	 * exported object, instead of trying rolling this back we rather
 	 * inform user about error.
 	 */
 	result = block_dev_destroy_exported_object(core);
@@ -1632,19 +1656,6 @@ out_cls:
 	ocf_mngt_cache_put(cache);
 out_get:
 	kfree(io_class_cfg);
-	return result;
-}
-
-static int _cache_mngt_create_exported_object(ocf_core_t core, void *cntx)
-{
-	int result;
-
-	result = block_dev_create_exported_object(core);
-	if (result)
-		return result;
-
-	result = block_dev_activate_exported_object(core);
-
 	return result;
 }
 

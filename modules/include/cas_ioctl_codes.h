@@ -577,8 +577,8 @@ enum kcas_error {
 	/** Given device is a partition */
 	KCAS_ERR_A_PART,
 
-	/** Core has been removed, but it may contain dirty data */
-	KCAS_ERR_REMOVED_DIRTY,
+	/** Removing core failed and rollback failed too */
+	KCAS_ERR_DETACHED,
 
 	/** Cache has been stopped, but it may contain dirty data */
 	KCAS_ERR_STOPPED_DIRTY,

@@ -225,10 +225,8 @@ struct {
 		"Formatting of partition is unsupported."
 	},
 	{
-		KCAS_ERR_REMOVED_DIRTY,
-		"Warning: Core has been removed or detached without flush.\n"
-		"Core device may contain inconsistent data.\n"
-		"To access your data please add core back to the cache."
+		KCAS_ERR_DETACHED,
+		"Failed to remove core. See dmesg for more information"
 	},
 	{
 		KCAS_ERR_STOPPED_DIRTY,
