@@ -180,23 +180,6 @@ int remove_core_command_handle_option(char *opt, const char **arg)
 	return 0;
 }
 
-int remove_inactive_core_command_handle_option(char *opt, const char **arg)
-{
-	if (!strcmp(opt, "cache-id")){
-		if (validate_str_num(arg[0], "cache id", OCF_CACHE_ID_MIN, OCF_CACHE_ID_MAX) == FAILURE)
-			return FAILURE;
-
-		command_args_values.cache_id = atoi(arg[0]);
-	} else if (!strcmp(opt, "core-id")){
-		if (validate_str_num(arg[0], "core id", 0, OCF_CORE_ID_MAX) == FAILURE)
-			return FAILURE;
-
-		command_args_values.core_id = atoi(arg[0]);
-	}
-
-	return 0;
-}
-
 int core_pool_remove_command_handle_option(char *opt, const char **arg)
 {
 	if (!strcmp(opt, "device")) {
@@ -1143,13 +1126,14 @@ int handle_remove()
 static cli_option remove_inactive_options[] = {
 	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
 	{'j', "core-id", CORE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
+	{'f', "force", "Force dirty inactive core removal"},
 	{0}
 };
 
 int handle_remove_inactive()
 {
 	return remove_inactive_core(command_args_values.cache_id,
-			command_args_values.core_id);
+			command_args_values.core_id, command_args_values.force);
 }
 
 static cli_option core_pool_remove_options[] = {
@@ -2005,7 +1989,7 @@ static cli_command cas_commands[] = {
 			.desc = "Remove inactive core device from cache instance",
 			.long_desc = NULL,
 			.options = remove_inactive_options,
-			.command_handle_opts = remove_inactive_core_command_handle_option,
+			.command_handle_opts = remove_core_command_handle_option,
 			.handle = handle_remove_inactive,
 			.flags = CLI_SU_REQUIRED,
 			.help = NULL,

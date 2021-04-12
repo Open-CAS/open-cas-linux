@@ -1517,6 +1517,11 @@ int cache_mngt_remove_inactive_core(struct kcas_remove_inactive *cmd)
 		goto unlock;
 	}
 
+	if (ocf_mngt_core_is_dirty(core) && !cmd->force) {
+		result = -KCAS_ERR_INACTIVE_CORE_IS_DIRTY;
+		goto unlock;
+	}
+
 	/*
 	 * Destroy exported object - in case of error during destruction of
 	 * exported object, instead of trying rolling this back we rather

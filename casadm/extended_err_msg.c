@@ -258,7 +258,11 @@ struct {
 		KCAS_ERR_CORE_IN_ACTIVE_STATE,
 		"Core device is in active state"
 	},
-
+	{
+		KCAS_ERR_INACTIVE_CORE_IS_DIRTY,
+		"The cache contains dirty data assigned to the core. If you want to "
+		"continue, please use --force option.\nWarning: the data will be lost"
+	},
 };
 
 const char *cas_strerr(int cas_error_code)
