@@ -745,8 +745,8 @@ int set_param_seq_cutoff_handle_option(char *opt, const char **arg)
 {
 	if (!strcmp(opt, "threshold")) {
 		if (validate_str_num(arg[0], "sequential cutoff threshold",
-					OCF_SEQ_CUTOFF_MIN_THRESHOLD,
-					OCF_SEQ_CUTOFF_MAX_THRESHOLD) == FAILURE)
+					OCF_SEQ_CUTOFF_MIN_THRESHOLD / KiB,
+					OCF_SEQ_CUTOFF_MAX_THRESHOLD / KiB) == FAILURE)
 			return FAILURE;
 
 		SET_CORE_PARAM(core_param_seq_cutoff_threshold, atoi(arg[0]) * KiB);
