@@ -1908,7 +1908,7 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
 	cmd.detach = detach;
 
 	if (run_ioctl_interruptible(fd, KCAS_IOCTL_REMOVE_CORE, &cmd,
-			"Removing core", cache_id, core_id) < 0) {
+			cmd.detach?"Detaching core":"Removing core", cache_id, core_id) < 0) {
 		close(fd);
 		if (cmd.ext_err_code == OCF_ERR_FLUSHING_INTERRUPTED) {
 			cas_printf(LOG_ERR, "You have interrupted %s of core. "
@@ -1920,9 +1920,9 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
 					"inactive core use '--remove-inactive' "
 					"command.\n");
 			return FAILURE;
-		} else if (cmd.ext_err_code == KCAS_ERR_REMOVED_DIRTY) {
+		} else if (cmd.ext_err_code == KCAS_ERR_DETACHED) {
 			print_err(cmd.ext_err_code);
-			return SUCCESS;
+			return FAILURE;
 		} else {
 			cas_printf(LOG_ERR, "Error while %s core device %d "
 					"from cache instance %d\n",
