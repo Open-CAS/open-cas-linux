@@ -126,6 +126,7 @@ struct kcas_remove_core {
 struct kcas_remove_inactive {
 	uint16_t cache_id; /**< id of an running cache */
 	uint16_t core_id; /**< id core object to be removed */
+	bool force; /**< remove inactive core without flushing */
 
 	int ext_err_code;
 };
@@ -599,7 +600,10 @@ enum kcas_error {
 	KCAS_ERR_WAITING_INTERRUPTED,
 
 	/** Core device is in active state */
-	KCAS_ERR_CORE_IN_ACTIVE_STATE
+	KCAS_ERR_CORE_IN_ACTIVE_STATE,
+
+	/** Inactive core has dirty data assigned */
+	KCAS_ERR_INACTIVE_CORE_IS_DIRTY
 };
 
 #endif

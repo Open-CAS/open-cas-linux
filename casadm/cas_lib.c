@@ -1937,7 +1937,8 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
 	return SUCCESS;
 }
 
-int remove_inactive_core(unsigned int cache_id, unsigned int core_id)
+int remove_inactive_core(unsigned int cache_id, unsigned int core_id,
+		bool force)
 {
 	int fd = 0;
 	struct kcas_remove_inactive cmd;
@@ -1954,6 +1955,7 @@ int remove_inactive_core(unsigned int cache_id, unsigned int core_id)
 	memset(&cmd, 0, sizeof(cmd));
 	cmd.cache_id = cache_id;
 	cmd.core_id = core_id;
+	cmd.force = force;
 
 	if (run_ioctl(fd, KCAS_IOCTL_REMOVE_INACTIVE, &cmd) < 0) {
 		close(fd);

@@ -220,9 +220,10 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
  *
  * @param cache_id cache from which inactive core is being removed
  * @param cache_id inactive core which is being removed
+ * @param force remove inactive force even if it has dirty cache lines assigned
  * @return 0 upon successful core removal, 1 upon failure
  */
-int remove_inactive_core(unsigned int cache_id, unsigned int core_id);
+int remove_inactive_core(unsigned int cache_id, unsigned int core_id, bool force);
 
 int core_pool_remove(const char *core_device);
 int get_core_pool_count(int fd);
@@ -311,7 +312,7 @@ int get_dev_path(const char* disk, char* buf, size_t num);
 
 /**
  * @brief make sure device link is unique and write sanitized version to \a dest_path
- * 
+ *
  * @param[in] src_path link to device
  * @param[in] src_len length of \a src_path
  * @param[in] dest_len max length of \a dest_path
