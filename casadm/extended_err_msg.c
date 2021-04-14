@@ -70,6 +70,10 @@ struct {
 		"Core id already used"
 	},
 	{
+		OCF_ERR_CORE_UUID_EXISTS,
+		"Device already added as a core"
+	},
+	{
 		OCF_ERR_CORE_NOT_AVAIL,
 		"Core device not available"
 	},
