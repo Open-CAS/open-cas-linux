@@ -466,6 +466,7 @@ static int _cache_mngt_core_flush_uninterruptible(ocf_core_t core)
 struct _cache_mngt_stop_context {
 	struct _cache_mngt_async_context async;
 	int error;
+	int flush_status;
 	ocf_cache_t cache;
 	struct task_struct *finish_thread;
 };
@@ -484,21 +485,21 @@ static int exit_instance_finish(void *data)
 	struct cache_priv *cache_priv;
 	struct _cache_mngt_stop_context *ctx = data;
 	ocf_queue_t mngt_queue;
-	bool flush_status;
 	int result = 0;
 
 	if (kthread_should_stop())
 		return 0;
 
-	flush_status = ocf_mngt_cache_is_dirty(ctx->cache);
 	cache_priv = ocf_cache_get_priv(ctx->cache);
 	mngt_queue = cache_priv->mngt_queue;
 
 	if (ctx->error && ctx->error != -OCF_ERR_WRITE_CACHE)
 		BUG_ON(ctx->error);
 
-	if (!ctx->error && flush_status)
+	if (!ctx->error && ctx->flush_status)
 		result = -KCAS_ERR_STOPPED_DIRTY;
+	else
+		result = ctx->error;
 
 	cas_cls_deinit(ctx->cache);
 
@@ -2411,15 +2412,8 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	*/
 	if (flush)
 		status = _cache_flush_with_lock(cache);
-	switch (status) {
-	case -OCF_ERR_CACHE_IN_INCOMPLETE_STATE:
-	case -OCF_ERR_FLUSHING_INTERRUPTED:
-	case -KCAS_ERR_WAITING_INTERRUPTED:
+	if (status)
 		goto put;
-	default:
-		flush_status = status;
-		break;
-	}
 
 	status = _cache_mngt_lock_sync(cache);
 	if (status)
@@ -2441,10 +2435,6 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 			goto stop_thread;
 		}
 	} else {
-		if (flush_status) {
-			status = flush_status;
-			goto stop_thread;
-		}
 		/*
 		 * We are being switched to upgrade in flight mode -
 		 * wait for finishing pending core requests
@@ -2455,6 +2445,8 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	/* Flush cache again. This time we don't allow interruption. */
 	if (flush)
 		flush_status = _cache_mngt_cache_flush_uninterruptible(cache);
+	context->flush_status = flush_status;
+
 
 	if (flush && !flush_status)
 		BUG_ON(ocf_mngt_cache_is_dirty(cache));
@@ -2465,6 +2457,12 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 		printk(KERN_WARNING
 				"Waiting for cache stop interrupted. "
 				"Stop will finish asynchronously.\n");
+
+	if ((status == 0 || status == -KCAS_ERR_WAITING_INTERRUPTED) &&
+			flush_status) {
+		/* "removed dirty" error has a precedence over "interrupted" */
+		return KCAS_ERR_STOPPED_DIRTY;
+	}
 
 	return status;
 
