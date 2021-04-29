@@ -550,24 +550,6 @@ void _blockdev_set_exported_object_flush_fua(ocf_core_t core)
 #endif
 }
 
-static int _blockdev_calc_discard_alignment(ocf_cache_t cache,
-		struct block_device *core_bd)
-{
-	unsigned int granularity, offset;
-	sector_t start;
-
-	if (core_bd == core_bd->bd_contains)
-		return 0;
-
-	start = core_bd->bd_part->start_sect;
-	granularity = ocf_cache_get_line_size(cache) >> SECTOR_SHIFT;
-
-	offset = sector_div(start, granularity);
-	offset = (granularity - offset) % granularity;
-
-	return offset << SECTOR_SHIFT;
-}
-
 static void _blockdev_set_discard_properties(ocf_cache_t cache,
 		struct request_queue *exp_q, struct block_device *cache_bd,
 		struct block_device *core_bd, sector_t core_sectors)
@@ -588,11 +570,10 @@ static void _blockdev_set_discard_properties(ocf_cache_t cache,
 		exp_q->limits.discard_granularity =
 			core_q->limits.discard_granularity;
 	} else {
-		blk_queue_max_discard_sectors(exp_q, core_sectors);
-		exp_q->limits.discard_granularity =
-			ocf_cache_get_line_size(cache);
-		exp_q->limits.discard_alignment =
-			_blockdev_calc_discard_alignment(cache, core_bd);
+		blk_queue_max_discard_sectors(exp_q,
+				min((uint64_t)core_sectors, (uint64_t)UINT_MAX));
+		exp_q->limits.discard_granularity = queue_logical_block_size(exp_q);
+		exp_q->limits.discard_alignment = 0;
 	}
 }
 
