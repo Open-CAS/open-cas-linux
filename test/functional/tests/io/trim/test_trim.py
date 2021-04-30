@@ -10,7 +10,7 @@ from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheModeTrait, CleaningPolicy
 from core.test_run import TestRun
 from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools.disk_utils import Filesystem, check_if_device_supports_trim
 from test_utils import os_utils
 from test_utils.size import Size, Unit
 from test_tools.fio.fio import Fio
@@ -90,7 +90,6 @@ def test_trim_start_discard():
 @pytest.mark.parametrizex("trim_support_cache_core", [(False, True), (True, False), (True, True)])
 @pytest.mark.require_disk("ssd1", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("ssd2", DiskTypeSet([DiskType.optane, DiskType.nand]))
-@pytest.mark.require_disk("hdd", DiskTypeSet([DiskType.hdd, DiskType.hdd4k]))
 def test_trim_device_discard_support(
         trim_support_cache_core, cache_mode, filesystem, cleaning_policy):
     """
@@ -111,14 +110,22 @@ def test_trim_device_discard_support(
     with TestRun.step(f"Create partitions on SSD and HDD devices."):
         TestRun.disks["ssd1"].create_partitions([Size(1, Unit.GibiByte)])
         TestRun.disks["ssd2"].create_partitions([Size(1, Unit.GibiByte)])
-        TestRun.disks["hdd"].create_partitions([Size(1, Unit.GibiByte)])
+        disk_not_supporting_trim = None
+        for disk in TestRun.dut.disks:
+            if not check_if_device_supports_trim(disk):
+                disk_not_supporting_trim = disk
+                break
+        if disk_not_supporting_trim is None:
+            raise Exception("There is no device not supporting trim on given DUT.")
+
+        disk_not_supporting_trim.create_partitions([Size(1, Unit.GibiByte)])
         ssd1_dev = TestRun.disks["ssd1"].partitions[0]
         ssd2_dev = TestRun.disks["ssd2"].partitions[0]
-        hdd_dev = TestRun.disks["hdd"].partitions[0]
+        dev_not_supporting_trim = disk_not_supporting_trim.partitions[0]
 
     with TestRun.step(f"Start cache and add core."):
-        cache_dev = ssd1_dev if trim_support_cache_core[0] else hdd_dev
-        core_dev = ssd2_dev if trim_support_cache_core[1] else hdd_dev
+        cache_dev = ssd1_dev if trim_support_cache_core[0] else dev_not_supporting_trim
+        core_dev = ssd2_dev if trim_support_cache_core[1] else dev_not_supporting_trim
 
         cache = casadm.start_cache(cache_dev, cache_mode, force=True)
         cache.set_cleaning_policy(cleaning_policy)
