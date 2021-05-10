@@ -8,13 +8,13 @@ from math import isclose
 
 import pytest
 
-from .io_class_common import *
 from api.cas.cache_config import CacheMode, CacheLineSize
 from api.cas.ioclass_config import IoClass
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from test_utils.os_utils import sync, Udev
+from .io_class_common import *
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -130,11 +130,15 @@ def test_ioclass_eviction_priority(cache_line_size):
             ::-1
         ]  # List is ordered by eviction priority
         io_classes_evicted = []
+        io_offset = 0
         for io_class in io_classes_to_evict:
+            io_size = int((io_class.max_occupancy * cache_size) / Unit.Blocks4096)
             run_io_dir(
-                f"{target_io_class.dir_path}/tmp_file",
-                int((io_class.max_occupancy * cache_size) / Unit.Blocks4096),
+                f"{target_io_class.dir_path}/tmp_file_{io_class.id}",
+                io_size,
+                io_offset
             )
+            io_offset += io_size
             part_to_evict_end_occupancy = get_io_class_occupancy(
                 cache, io_class.id, percent=True
             )
