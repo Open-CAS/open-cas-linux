@@ -47,7 +47,7 @@ def test_trim_eviction(cache_mode, cache_line_size, filesystem, cleaning):
         cache_block_size = disk_utils.get_block_size(cache_disk)
 
     with TestRun.step("Start cache on device supporting trim and add core."):
-        cache = casadm.start_cache(cache_dev, cache_mode, cache_line_size)
+        cache = casadm.start_cache(cache_dev, cache_mode, cache_line_size, force=True)
         cache.set_cleaning_policy(cleaning)
         Udev.disable()
         core = cache.add_core(core_dev)

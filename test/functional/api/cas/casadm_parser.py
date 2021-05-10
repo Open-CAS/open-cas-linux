@@ -12,6 +12,7 @@ from typing import List
 from api.cas import casadm
 from api.cas.cache_config import *
 from api.cas.casadm_params import *
+from api.cas.ioclass_config import IoClass
 from api.cas.version import CasVersion
 from storage_devices.device import Device
 from test_utils.size import parse_unit
@@ -281,11 +282,6 @@ def get_io_class_list(cache_id: int):
     casadm_output.pop(0)  # Remove header
     for line in casadm_output:
         values = line.split(",")
-        ioclass = {
-            "id": int(values[0]),
-            "rule": values[1],
-            "eviction_priority": int(values[2]),
-            "allocation": float(values[3]),
-        }
+        ioclass = IoClass(int(values[0]), values[1], int(values[2]), values[3])
         ret.append(ioclass)
     return ret

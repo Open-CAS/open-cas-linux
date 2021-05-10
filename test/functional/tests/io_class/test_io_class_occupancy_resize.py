@@ -21,7 +21,7 @@ from recordclass import recordclass
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
-@pytest.mark.parametrize("new_occupancy", [0, 20, 70, 100])
+@pytest.mark.parametrize("new_occupancy", [25, 50, 70, 100])
 def test_ioclass_resize(cache_line_size, new_occupancy):
     """
         title: Resize ioclass
@@ -46,16 +46,24 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
 
     with TestRun.step("Prepare test dirs"):
         IoclassConfig = recordclass("IoclassConfig", "id eviction_prio max_occupancy dir_path")
-        io_class = IoclassConfig(1, 3, 0.50, f"{mountpoint}/A")
+        io_class = IoclassConfig(2, 3, 0.10, f"{mountpoint}/A")
 
-    fs_utils.create_directory(io_class.dir_path, parents=True)
+        fs_utils.create_directory(io_class.dir_path, parents=True)
 
     with TestRun.step("Remove old ioclass config"):
         ioclass_config.remove_ioclass_config()
         ioclass_config.create_ioclass_config(False)
 
     with TestRun.step("Add default ioclasses"):
+        ioclass_config.add_ioclass(
+            ioclass_id=1,
+            rule="metadata&done",
+            eviction_priority=1,
+            allocation="1.00",
+            ioclass_config_path=ioclass_config_path
+        )
         ioclass_config.add_ioclass(*str(IoClass.default(allocation="0.00")).split(","))
+
 
     with TestRun.step("Add directory for ioclass"):
         ioclass_config.add_ioclass(
@@ -91,7 +99,8 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
             .set_unit(Unit.Blocks4096)
         )
 
-        if actuall_occupancy > occupancy_limit:
+        # Divergency may be casued be rounding max occupancy
+        if actuall_occupancy > occupancy_limit + Size(100, Unit.Blocks4096):
             TestRun.LOGGER.error(
                 f"Occupancy for ioclass id exceeded: {io_class.id}. "
                 f"Limit: {occupancy_limit}, actuall: {actuall_occupancy}"
@@ -106,6 +115,13 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
 
         ioclass_config.add_ioclass(*str(IoClass.default(allocation="0.00")).split(","))
 
+        ioclass_config.add_ioclass(
+            ioclass_id=1,
+            rule="metadata&done",
+            eviction_priority=1,
+            allocation="1.00",
+            ioclass_config_path=ioclass_config_path
+        )
         ioclass_config.add_ioclass(
             io_class.id,
             f"directory:{io_class.dir_path}&done",

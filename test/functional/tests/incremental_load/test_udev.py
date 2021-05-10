@@ -18,7 +18,7 @@ from test_utils.size import Size, Unit
 
 @pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd, DiskType.sata]))
 def test_udev_core_partition():
     """
         title: |
