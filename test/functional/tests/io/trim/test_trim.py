@@ -3,20 +3,22 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 import os
-import time
-import pytest
 import re
+import time
+
+import pytest
+
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheModeTrait, CleaningPolicy
 from core.test_run import TestRun
+from storage_devices.disk import DiskType, DiskTypeSet
 from test_tools import fs_utils
+from test_tools.blktrace import BlkTrace, BlkTraceMask, RwbsKind
 from test_tools.disk_utils import Filesystem, check_if_device_supports_trim
+from test_tools.fio.fio import Fio
+from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_utils import os_utils
 from test_utils.size import Size, Unit
-from test_tools.fio.fio import Fio
-from test_tools.blktrace import BlkTrace, BlkTraceMask, RwbsKind
-from test_tools.fio.fio_param import ReadWrite, IoEngine
-from storage_devices.disk import DiskType, DiskTypeSet
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand]))
@@ -107,7 +109,7 @@ def test_trim_device_discard_support(
 
     mount_point = "/mnt"
 
-    with TestRun.step(f"Create partitions on SSD and HDD devices."):
+    with TestRun.step(f"Create partitions on SSD and HDD devices. Create filesystem."):
         TestRun.disks["ssd1"].create_partitions([Size(1, Unit.GibiByte)])
         TestRun.disks["ssd2"].create_partitions([Size(1, Unit.GibiByte)])
         disk_not_supporting_trim = None
@@ -129,10 +131,11 @@ def test_trim_device_discard_support(
 
         cache = casadm.start_cache(cache_dev, cache_mode, force=True)
         cache.set_cleaning_policy(cleaning_policy)
+
+        core_dev.create_filesystem(filesystem)
         core = cache.add_core(core_dev)
 
-    with TestRun.step("Make filesystem and mount it with discard option."):
-        core.create_filesystem(filesystem)
+    with TestRun.step("Mount filesystem with discard option."):
         core.mount(mount_point, ["discard"])
 
     with TestRun.step("Create random file."):
@@ -152,6 +155,8 @@ def test_trim_device_discard_support(
     with TestRun.step(
             "Ensure that discards were detected by blktrace on proper devices."):
         discard_expected = {"core": trim_support_cache_core[1], "cache": False, "cas": True}
+        TestRun.LOGGER.info(f"Discards expected: core - {trim_support_cache_core[1]}, "
+                            f"cache - False, cas - True")
         stop_monitoring_and_check_discards(blktraces, discard_expected)
 
     with TestRun.step("Ensure occupancy reduced."):
@@ -197,10 +202,10 @@ def compare_properties(value, expected_value, property_name):
 
 
 def stop_monitoring_and_check_discards(blktraces, discard_support):
-    time.sleep(10)
+    time.sleep(60)
     os_utils.sync()
     os_utils.drop_caches()
-    time.sleep(2)
+    time.sleep(5)
 
     discard_flag = RwbsKind.D  # Discard
     for key in blktraces.keys():
