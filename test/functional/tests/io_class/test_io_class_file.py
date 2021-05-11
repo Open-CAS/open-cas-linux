@@ -4,6 +4,7 @@
 #
 
 import random
+
 import pytest
 
 from api.cas import ioclass_config, casadm
@@ -387,6 +388,8 @@ def test_ioclass_file_size(filesystem):
                 io_class_id=ioclass_id).usage_stats.occupancy
             file_path = f"{mountpoint}/test_file_{size.get_value()}"
             Dd().input("/dev/zero").output(file_path).oflag("sync").block_size(size).count(1).run()
+            sync()
+            drop_caches(DropCachesMode.ALL)
             occupancy_after = cache.get_io_class_statistics(
                 io_class_id=ioclass_id).usage_stats.occupancy
             if occupancy_after != occupancy_before + size:
@@ -420,10 +423,13 @@ def test_ioclass_file_size(filesystem):
         occupancy_before = cache.get_io_class_statistics(io_class_id=0).usage_stats.occupancy
         for file in test_files:
             Dd().input(file.full_path).output("/dev/null").block_size(file.size).run()
+            sync()
+            drop_caches(DropCachesMode.ALL)
             occupancy_after = cache.get_io_class_statistics(io_class_id=0).usage_stats.occupancy
-            if occupancy_after != occupancy_before + file.size:
+            occupancy_expected = occupancy_before + file.size
+            if occupancy_after != occupancy_expected:
                 TestRun.fail("File not reclassified properly!\n"
-                             f"Expected {occupancy_before + file.size}\n"
+                             f"Expected {occupancy_expected}\n"
                              f"Actual {occupancy_after}")
             occupancy_before = occupancy_after
         sync()
@@ -453,6 +459,8 @@ def test_ioclass_file_size(filesystem):
             occupancy_before = cache.get_io_class_statistics(
                 io_class_id=ioclass_id).usage_stats.occupancy
             Dd().input(file.full_path).output("/dev/null").block_size(file.size).run()
+            sync()
+            drop_caches(DropCachesMode.ALL)
             occupancy_after = cache.get_io_class_statistics(
                 io_class_id=ioclass_id).usage_stats.occupancy
             actual_blocks = occupancy_after.get_value(Unit.Blocks4096)
