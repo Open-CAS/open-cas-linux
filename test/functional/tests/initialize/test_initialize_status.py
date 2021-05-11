@@ -2,6 +2,7 @@
 # Copyright(c) 2020-2021 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
+import time
 
 import pytest
 
@@ -22,6 +23,7 @@ def test_init_status():
           - CAS management device not present in OS when CAS modules are not loaded.
     """
     with TestRun.step("Check if CAS management device is present in OS."):
+        time.sleep(5)
         if cas_module.is_cas_management_dev_present():
             TestRun.LOGGER.info("CAS management device is present in OS when CAS module is loaded.")
         else:
@@ -34,6 +36,7 @@ def test_init_status():
         casctl.stop()
 
     with TestRun.step("Check if CAS management device is not present in OS."):
+        time.sleep(5)
         if not cas_module.is_cas_management_dev_present():
             TestRun.LOGGER.info(
                 "CAS management device is not present in OS when CAS module is not loaded.")
