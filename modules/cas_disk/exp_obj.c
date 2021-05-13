@@ -623,8 +623,7 @@ int casdsk_exp_obj_create(struct casdsk_disk *dsk, const char *dev_name,
 	return 0;
 
 error_set_geometry:
-	if (exp_obj->ops->cleanup_queue)
-		exp_obj->ops->cleanup_queue(dsk, queue, dsk->private);
+	blk_cleanup_queue(exp_obj->queue);
 error_init_queue:
 	blk_mq_free_tag_set(&dsk->tag_set);
 error_init_tag_set:
