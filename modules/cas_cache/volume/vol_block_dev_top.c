@@ -596,6 +596,18 @@ static void _blockdev_set_discard_properties(ocf_cache_t cache,
 	}
 }
 
+static void _blockdev_cleanup_queue(struct casdsk_disk *dsk)
+{
+	struct request_queue *exp_obj_q = NULL;
+
+	exp_obj_q = casdisk_functions.casdsk_exp_obj_get_queue(dsk);
+	BUG_ON(!exp_obj_q);
+
+	if (exp_obj_q) {
+		blk_cleanup_queue(exp_obj_q);
+	}
+}
+
 /**
  * Map geometry of underlying (core) object geometry (sectors etc.)
  * to geometry of exported object.
@@ -804,6 +816,7 @@ err:
 }
 
 static struct casdsk_exp_obj_ops _blockdev_exp_obj_ops = {
+	.cleanup_queue = _blockdev_cleanup_queue,
 	.set_geometry = _blockdev_set_geometry,
 	.make_request_fn = _blockdev_make_request_fast,
 	.queue_rq_fn = _block_dev_queue_request,

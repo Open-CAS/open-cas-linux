@@ -31,8 +31,7 @@ struct casdsk_exp_obj_ops {
 	 * @brief Cleanup request queue of exported object (top) block device.
 	 *	Could be NULL.
 	 */
-	void (*cleanup_queue)(struct casdsk_disk *dsk, struct request_queue *q,
-			      void *private);
+	void (*cleanup_queue)(struct casdsk_disk *dsk);
 
 	/**
 	 * @brief Set geometry of exported object (top) block device.
