@@ -816,7 +816,7 @@ int casdsk_exp_obj_destroy(struct casdsk_disk *dsk)
 }
 EXPORT_SYMBOL(casdsk_exp_obj_destroy);
 
-int casdsk_exp_obj_dettach(struct casdsk_disk *dsk)
+int casdsk_exp_obj_detach(struct casdsk_disk *dsk)
 {
 	module_put(dsk->exp_obj->owner);
 

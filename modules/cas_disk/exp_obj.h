@@ -42,7 +42,7 @@ void casdsk_deinit_exp_objs(void);
 
 void casdsk_exp_obj_free(struct casdsk_disk *dsk);
 
-int casdsk_exp_obj_dettach(struct casdsk_disk *dsk);
+int casdsk_exp_obj_detach(struct casdsk_disk *dsk);
 int casdsk_exp_obj_attach(struct casdsk_disk *dsk, struct module *owner,
 			struct casdsk_exp_obj_ops *ops);
 void casdsk_exp_obj_prepare_pt(struct casdsk_disk *dsk);

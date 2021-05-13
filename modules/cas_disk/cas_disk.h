@@ -177,11 +177,11 @@ int casdsk_disk_set_attached(struct casdsk_disk *dsk);
 int casdsk_disk_clear_pt(struct casdsk_disk *dsk);
 
 /**
- * @brief Dettach cas from cas_disk device
+ * @brief Detach cas from cas_disk device
  * @param dsk Pointer to casdsk_disk structure related to cas_disk device
  * @return 0 if success, errno if failure
  */
-int casdsk_disk_dettach(struct casdsk_disk *dsk);
+int casdsk_disk_detach(struct casdsk_disk *dsk);
 
 /**
  * @brief Attach cas to cas_disk device
@@ -231,7 +231,7 @@ int casdsk_exp_obj_activate(struct casdsk_disk *dsk);
  * @param dsk Pointer to casdsk_disk structure related to cas_disk device
  * @return true if exported object is active
  */
-bool casdsk_exp_obj_activated(struct casdsk_disk *ds);
+bool casdsk_exp_obj_activated(struct casdsk_disk *dsk);
 
 /**
  * @brief Lock exported object
