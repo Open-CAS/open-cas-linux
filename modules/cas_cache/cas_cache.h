@@ -70,7 +70,7 @@ extern ocf_ctx_t cas_ctx;
 extern struct casdsk_functions_mapper casdisk_functions;
 
 struct casdsk_functions_mapper {
-	int (*casdsk_disk_dettach)(struct casdsk_disk *dsk);
+	int (*casdsk_disk_detach)(struct casdsk_disk *dsk);
 	int (*casdsk_exp_obj_destroy)(struct casdsk_disk *dsk);
 	int (*casdsk_exp_obj_create)(struct casdsk_disk *dsk, const char *dev_name,
 		struct module *owner, struct casdsk_exp_obj_ops *ops);

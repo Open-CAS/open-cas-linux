@@ -377,7 +377,7 @@ int casdsk_disk_clear_pt(struct casdsk_disk *dsk)
 }
 EXPORT_SYMBOL(casdsk_disk_clear_pt);
 
-static inline int __casdsk_disk_dettach(struct casdsk_disk *dsk)
+static inline int __casdsk_disk_detach(struct casdsk_disk *dsk)
 {
 	int result;
 
@@ -385,7 +385,7 @@ static inline int __casdsk_disk_dettach(struct casdsk_disk *dsk)
 
 	atomic_set(&dsk->mode, CASDSK_MODE_PT);
 
-	result = casdsk_exp_obj_dettach(dsk);
+	result = casdsk_exp_obj_detach(dsk);
 	if (result) {
 		atomic_set(&dsk->mode, CASDSK_MODE_ATTACHED);
 		return result;
@@ -394,7 +394,7 @@ static inline int __casdsk_disk_dettach(struct casdsk_disk *dsk)
 	return 0;
 }
 
-int casdsk_disk_dettach(struct casdsk_disk *dsk)
+int casdsk_disk_detach(struct casdsk_disk *dsk)
 {
 	int result;
 
@@ -405,13 +405,13 @@ int casdsk_disk_dettach(struct casdsk_disk *dsk)
 		return 0;
 
 	casdsk_disk_lock(dsk);
-	result = __casdsk_disk_dettach(dsk);
+	result = __casdsk_disk_detach(dsk);
 	casdsk_disk_unlock(dsk);
 
 	return result;
 
 }
-EXPORT_SYMBOL(casdsk_disk_dettach);
+EXPORT_SYMBOL(casdsk_disk_detach);
 
 static inline int __casdsk_disk_attach(struct casdsk_disk *dsk,
 		struct module *owner, struct casdsk_exp_obj_ops *ops)

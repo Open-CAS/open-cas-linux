@@ -66,7 +66,7 @@ void block_dev_close_object(ocf_volume_t vol)
 		casdisk_functions.casdsk_disk_close(bdobj->dsk);
 	} else {
 		casdisk_functions.casdsk_disk_set_pt(bdobj->dsk);
-		casdisk_functions.casdsk_disk_dettach(bdobj->dsk);
+		casdisk_functions.casdsk_disk_detach(bdobj->dsk);
 	}
 }
 
