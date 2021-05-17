@@ -178,36 +178,6 @@ static int _blockdev_set_geometry(struct casdsk_disk *dsk, void *private)
 	return 0;
 }
 
-static void _blockdev_pending_req_inc(struct casdsk_disk *dsk, void *private)
-{
-	ocf_core_t core;
-	ocf_volume_t obj;
-	struct bd_object *bvol;
-
-	BUG_ON(!private);
-	core = private;
-	obj = ocf_core_get_volume(core);
-	bvol = bd_object(obj);
-	BUG_ON(!bvol);
-
-	atomic64_inc(&bvol->pending_rqs);
-}
-
-static void _blockdev_pending_req_dec(struct casdsk_disk *dsk, void *private)
-{
-	ocf_core_t core;
-	ocf_volume_t obj;
-	struct bd_object *bvol;
-
-	BUG_ON(!private);
-	core = private;
-	obj = ocf_core_get_volume(core);
-	bvol = bd_object(obj);
-	BUG_ON(!bvol);
-
-	atomic64_dec(&bvol->pending_rqs);
-}
-
 struct defer_bio_context {
 	struct work_struct io_work;
 	void (*cb)(ocf_core_t core, struct bio *bio);
@@ -424,8 +394,6 @@ static void _blockdev_submit_bio(struct casdsk_disk *dsk,
 static struct casdsk_exp_obj_ops _blockdev_exp_obj_ops = {
 	.set_geometry = _blockdev_set_geometry,
 	.submit_bio = _blockdev_submit_bio,
-	.pending_rq_inc = _blockdev_pending_req_inc,
-	.pending_rq_dec = _blockdev_pending_req_dec,
 };
 
 /**
