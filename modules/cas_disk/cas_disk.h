@@ -16,21 +16,6 @@
 struct casdsk_disk;
 
 struct casdsk_exp_obj_ops {
-
-	/**
-	 * @brief Prepare request queue of exported object (top) block device.
-	 *	Could be NULL.
-	 */
-	int (*prepare_queue)(struct casdsk_disk *dsk, struct request_queue *q,
-			     void *private);
-
-	/**
-	 * @brief Cleanup request queue of exported object (top) block device.
-	 *	Could be NULL.
-	 */
-	void (*cleanup_queue)(struct casdsk_disk *dsk, struct request_queue *q,
-			      void *private);
-
 	/**
 	 * @brief Set geometry of exported object (top) block device.
 	 *	Could be NULL.
@@ -44,23 +29,6 @@ struct casdsk_exp_obj_ops {
 	 */
 	void (*submit_bio)(struct casdsk_disk *dsk,
 			       struct bio *bio, void *private);
-
-	/**
-	 * @brief Increment exported object pending request counter.
-	 */
-	void (*pending_rq_inc)(struct casdsk_disk *dsk, void *private);
-
-	/**
-	 * @brief Decrement exported object pending request counter.
-	 */
-	void (*pending_rq_dec)(struct casdsk_disk *dsk, void *private);
-
-	/**
-	 * @brief ioctl handler of exported object (top) block device.
-	 * Called by cas_disk when cas_disk device is in attached mode.
-	 */
-	int (*ioctl)(struct casdsk_disk *dsk, unsigned int cmd, unsigned long arg,
-		     void *private);
 };
 
 /**
