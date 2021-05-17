@@ -46,13 +46,6 @@ struct casdsk_exp_obj_ops {
 			       struct bio *bio, void *private);
 
 	/**
-	 * @brief queue_rq_fn of exported object (top) block device.
-	 * Called by cas_disk when cas_disk device is in attached mode.
-	 */
-	CAS_BLK_STATUS_T (*queue_rq_fn)(struct casdsk_disk *dsk, struct request *rq,
-			   void *private);
-
-	/**
 	 * @brief Increment exported object pending request counter.
 	 */
 	void (*pending_rq_inc)(struct casdsk_disk *dsk, void *private);

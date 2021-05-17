@@ -461,30 +461,9 @@ static int _casdsk_exp_obj_init_kobject(struct casdsk_disk *dsk)
 }
 
 static CAS_BLK_STATUS_T _casdsk_exp_obj_queue_rq(struct blk_mq_hw_ctx *hctx,
-			const struct blk_mq_queue_data *bd)
+		const struct blk_mq_queue_data *bd)
 {
-	struct casdsk_disk *dsk = hctx->driver_data;
-	struct casdsk_exp_obj *exp_obj = dsk->exp_obj;
-	struct request *rq = bd->rq;
-	CAS_BLK_STATUS_T result = CAS_BLK_STS_OK;
-
-	if (likely(exp_obj->ops && exp_obj->ops->queue_rq_fn)) {
-		exp_obj->ops->pending_rq_inc(dsk, dsk->private);
-
-		result = exp_obj->ops->queue_rq_fn(dsk, rq, dsk->private);
-
-		exp_obj->ops->pending_rq_dec(dsk, dsk->private);
-	} else {
-		/*
-		* queue_rq_fn() is required, as we can't do any default
-		* action in attached mode. In PT mode we handle all bios
-		* directly in make_request_fn(), so queue_rq_fn() will not
-		* be called.
-		*/
-		BUG_ON(rq);
-	}
-
-	return result;
+	return CAS_BLK_STS_NOTSUPP;
 }
 
 static struct blk_mq_ops casdsk_mq_ops = {
