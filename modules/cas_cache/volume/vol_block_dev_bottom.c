@@ -267,7 +267,7 @@ static void block_dev_submit_flush(struct ocf_io *io)
 	bio->bi_private = io;
 
 	atomic_inc(&blkio->rq_remaning);
-	cas_submit_bio(CAS_WRITE_FLUSH, bio);
+	cas_submit_bio(CAS_SET_FLUSH(0), bio);
 
 out:
 	cas_bd_io_end(io, blkio->error);
@@ -412,8 +412,7 @@ static void block_dev_submit_io(struct ocf_io *io)
 	uint32_t bytes = io->bytes;
 	int dir = io->dir;
 
-	if (!CAS_IS_WRITE_FLUSH_FUA(io->flags) &&
-			CAS_IS_WRITE_FLUSH(io->flags)) {
+	if (CAS_IS_SET_FLUSH(io->flags)) {
 		CAS_DEBUG_MSG("Flush request");
 		/* It is flush requests handle it */
 		block_dev_submit_flush(io);

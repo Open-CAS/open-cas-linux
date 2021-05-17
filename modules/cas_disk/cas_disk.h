@@ -11,12 +11,9 @@
 /**
  * Version of cas_disk interface
  */
-#define CASDSK_IFACE_VERSION 2
+#define CASDSK_IFACE_VERSION 3
 
 struct casdsk_disk;
-
-#define CASDSK_BIO_NOT_HANDLED 0
-#define CASDSK_BIO_HANDLED 1
 
 struct casdsk_exp_obj_ops {
 
@@ -41,14 +38,11 @@ struct casdsk_exp_obj_ops {
 	int (*set_geometry)(struct casdsk_disk *dsk, void *private);
 
 	/**
-	 * @brief make_request_fn of exported object (top) block device.
+	 * @brief submit_bio of exported object (top) block device.
 	 * Called by cas_disk when cas_disk device is in attached mode.
 	 *
-	 * @return casdsk_BIO_HANDLED when bio was handled.
-	 * Otherwise casdsk_BIO_NOT_HANDLED. In this case bio will be submitted
-	 * to I/O scheduler and should be handled by request_fn.
 	 */
-	int (*make_request_fn)(struct casdsk_disk *dsk, struct request_queue *q,
+	void (*submit_bio)(struct casdsk_disk *dsk,
 			       struct bio *bio, void *private);
 
 	/**
