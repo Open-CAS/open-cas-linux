@@ -10,6 +10,7 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/kobject.h>
+#include <linux/blkdev.h>
 
 struct casdsk_stored_config {
 	size_t n_blobs;

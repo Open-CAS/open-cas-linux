@@ -67,17 +67,9 @@ void casdsk_deinit_exp_objs(void)
 }
 
 static inline void _casdsk_exp_obj_handle_bio_att(struct casdsk_disk *dsk,
-						struct request_queue *q,
 						struct bio *bio)
 {
-	int status = CASDSK_BIO_NOT_HANDLED;
-
-	if (likely(dsk->exp_obj->ops->make_request_fn))
-		status = dsk->exp_obj->ops->
-				make_request_fn(dsk, q, bio, dsk->private);
-
-	if (status == CASDSK_BIO_NOT_HANDLED)
-		cas_call_default_mk_request_fn(dsk->exp_obj->mk_rq_fn, q, bio);
+	dsk->exp_obj->ops->submit_bio(dsk, bio, dsk->private);
 }
 
 CAS_DECLARE_BLOCK_CALLBACK(_casdsk_exp_obj_bio_pt_io, struct bio *bio,
@@ -102,7 +94,6 @@ CAS_DECLARE_BLOCK_CALLBACK(_casdsk_exp_obj_bio_pt_io, struct bio *bio,
 }
 
 static inline void _casdsk_exp_obj_handle_bio_pt(struct casdsk_disk *dsk,
-					       struct request_queue *q,
 					       struct bio *bio)
 {
 	struct bio *cloned_bio;
@@ -133,13 +124,12 @@ static inline void _casdsk_exp_obj_handle_bio_pt(struct casdsk_disk *dsk,
 }
 
 static inline void _casdsk_exp_obj_handle_bio(struct casdsk_disk *dsk,
-					    struct request_queue *q,
 					    struct bio *bio)
 {
 	if (likely(casdsk_disk_is_attached(dsk)))
-		_casdsk_exp_obj_handle_bio_att(dsk, q, bio);
+		_casdsk_exp_obj_handle_bio_att(dsk, bio);
 	else if (casdsk_disk_is_pt(dsk))
-		_casdsk_exp_obj_handle_bio_pt(dsk, q, bio);
+		_casdsk_exp_obj_handle_bio_pt(dsk, bio);
 	else if (casdsk_disk_is_shutdown(dsk))
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-EIO));
 	else
@@ -176,24 +166,27 @@ retry:
 	return cpu;
 }
 
-static MAKE_RQ_RET_TYPE _casdsk_exp_obj_make_rq_fn(struct request_queue *q,
-						 struct bio *bio)
+static MAKE_RQ_RET_TYPE _casdsk_exp_obj_submit_bio(struct bio *bio)
 {
 	struct casdsk_disk *dsk;
 	unsigned int cpu;
 
 	BUG_ON(!bio);
-	BUG_ON(!q);
-	BUG_ON(!q->queuedata);
-	dsk = q->queuedata;
+	dsk = CAS_BIO_GET_GENDISK(bio)->private_data;
 
 	cpu = _casdsk_exp_obj_begin_rq(dsk);
 
-	_casdsk_exp_obj_handle_bio(dsk, q, bio);
+	_casdsk_exp_obj_handle_bio(dsk, bio);
 
 	_casdsk_exp_obj_end_rq(dsk, cpu);
 
 	KRETURN(0);
+}
+
+static MAKE_RQ_RET_TYPE _casdsk_exp_obj_make_rq_fn(struct request_queue *q,
+						 struct bio *bio)
+{
+	return _casdsk_exp_obj_submit_bio(bio);
 }
 
 static int _casdsk_get_next_part_no(struct block_device *bd)
@@ -369,6 +362,7 @@ static void _casdsk_exp_obj_clear_dev_t(struct casdsk_disk *dsk)
 
 static const struct block_device_operations _casdsk_exp_obj_ops = {
 	.owner = THIS_MODULE,
+	CAS_SET_SUBMIT_BIO(_casdsk_exp_obj_submit_bio)
 };
 
 static int casdsk_exp_obj_alloc(struct casdsk_disk *dsk)
@@ -611,7 +605,6 @@ int casdsk_exp_obj_create(struct casdsk_disk *dsk, const char *dev_name,
 	gd->private_data = dsk;
 	strlcpy(gd->disk_name, exp_obj->dev_name, sizeof(gd->disk_name));
 
-	dsk->exp_obj->mk_rq_fn = cas_get_default_mk_request_fn(queue);
 	cas_blk_queue_make_request(queue, _casdsk_exp_obj_make_rq_fn);
 
 	if (exp_obj->ops->set_geometry) {
