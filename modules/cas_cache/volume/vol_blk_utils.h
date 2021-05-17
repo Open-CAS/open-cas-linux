@@ -9,17 +9,6 @@
 #include "obj_blk.h"
 #include "context.h"
 
-static inline bool cas_blk_is_flush_io(unsigned long flags)
-{
-	if ((flags & CAS_WRITE_FLUSH) == CAS_WRITE_FLUSH)
-		return true;
-
-	if ((flags & CAS_WRITE_FLUSH_FUA) == CAS_WRITE_FLUSH_FUA)
-		return true;
-
-	return false;
-}
-
 struct blkio {
 	int error;
 	atomic_t rq_remaning;
