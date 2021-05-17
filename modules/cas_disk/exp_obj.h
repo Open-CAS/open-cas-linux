@@ -28,8 +28,6 @@ struct casdsk_exp_obj {
 
 	struct casdsk_exp_obj_ops *ops;
 
-	make_request_fn *mk_rq_fn;
-
 	const char *dev_name;
 	struct kobject kobj;
 
