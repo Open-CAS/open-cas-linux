@@ -627,7 +627,7 @@ static int _blockdev_set_geometry(struct casdsk_disk *dsk, void *private)
 		return -KCAS_ERR_UNALIGNED;
 	}
 
-	blk_queue_stack_limits(exp_q, core_q);
+	blk_stack_limits(&exp_q->limits, &core_q->limits, 0);
 
 	/* We don't want to receive splitted requests*/
 	CAS_SET_QUEUE_CHUNK_SECTORS(exp_q, 0);
