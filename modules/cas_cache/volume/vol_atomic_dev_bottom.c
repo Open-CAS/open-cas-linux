@@ -953,8 +953,8 @@ void cas_atomic_close_object(ocf_volume_t volume)
 {
 	struct bd_object *bdobj = bd_object(volume);
 
-	if(bdobj->workqueue)
-		destroy_workqueue(bdobj->workqueue);
+	if(bdobj->btm_wq)
+		destroy_workqueue(bdobj->btm_wq);
 
 	block_dev_close_object(volume);
 }
@@ -976,8 +976,8 @@ int cas_atomic_open_object(ocf_volume_t volume, void *volume_params)
 	memcpy(&bdobj->atomic_params, volume_params,
 			sizeof(bdobj->atomic_params));
 
-	bdobj->workqueue = create_workqueue("CAS_AT_ZER");
-	if (!bdobj->workqueue) {
+	bdobj->btm_wq = create_workqueue("CAS_AT_ZER");
+	if (!bdobj->btm_wq) {
 		cas_atomic_close_object(volume);
 		result = -ENOMEM;
 		goto end;
@@ -1036,7 +1036,7 @@ static void _cas_atomic_write_zeroes_step_cmpl(struct ocf_io *io, int error)
 		_cas_atomic_write_zeroes_end(ctx, error);
 	} else {
 		/* submit next IO from work context */
-		queue_work(bdobj->workqueue, &ctx->cmpl_work);
+		queue_work(bdobj->btm_wq, &ctx->cmpl_work);
 	}
 }
 
