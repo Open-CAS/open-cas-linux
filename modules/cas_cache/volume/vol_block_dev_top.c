@@ -66,7 +66,6 @@ static inline int _blkdev_can_hndl_bio(struct bio *bio)
 
 void _blockdev_set_exported_object_flush_fua(ocf_core_t core)
 {
-#ifdef CAS_FLUSH_SUPPORTED
 	ocf_cache_t cache = ocf_core_get_cache(core);
 	ocf_volume_t core_vol = ocf_core_get_volume(core);
 	ocf_volume_t cache_vol = ocf_cache_get_volume(cache);
@@ -87,7 +86,6 @@ void _blockdev_set_exported_object_flush_fua(ocf_core_t core)
 	fua = (CAS_CHECK_QUEUE_FUA(core_q) || CAS_CHECK_QUEUE_FUA(cache_q));
 
 	cas_set_queue_flush_fua(exp_q, flush, fua);
-#endif
 }
 
 static void _blockdev_set_discard_properties(ocf_cache_t cache,
