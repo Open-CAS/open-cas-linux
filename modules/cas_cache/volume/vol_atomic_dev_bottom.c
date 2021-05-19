@@ -832,7 +832,6 @@ out:
 
 void cas_atomic_submit_flush(struct ocf_io *io)
 {
-#ifdef CAS_FLUSH_SUPPORTED
 	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
 	struct block_device *bdev = bdobj->btm_bd;
 	struct request_queue *q = bdev_get_queue(bdev);
@@ -885,18 +884,6 @@ void cas_atomic_submit_flush(struct ocf_io *io)
 
 out:
 	cas_atomic_end_atom(atom, blkio->error);
-#else
-	/* Running operating system without support for REQ_FLUSH
-	 * (i.e. SLES 11 SP 1) CAS cannot use flushing requests to handle
-	 * power-fail safe Write-Back
-	 */
-	struct blkio *bdio = cas_io_to_blkio(io);
-
-	io->end(io, -EINVAL);
-	/* on SLES 11 SP 1 powerfail safety can only be achieved through
-	 * disabling volatile write cache of disk itself.
-	 */
-#endif
 }
 
 void cas_atomic_submit_io(struct ocf_io *io)

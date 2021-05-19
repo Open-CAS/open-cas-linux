@@ -229,7 +229,6 @@ CAS_DECLARE_BLOCK_CALLBACK(cas_bd_io_end, struct bio *bio,
 
 static void block_dev_submit_flush(struct ocf_io *io)
 {
-#ifdef CAS_FLUSH_SUPPORTED
 	struct blkio *blkio = cas_io_to_blkio(io);
 	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
 	struct block_device *bdev = bdobj->btm_bd;
@@ -271,18 +270,6 @@ static void block_dev_submit_flush(struct ocf_io *io)
 
 out:
 	cas_bd_io_end(io, blkio->error);
-
-#else
-	/* Running operating system without support for REQ_FLUSH
-	 * (i.e. SLES 11 SP 1) CAS cannot use flushing requests to
-	 * handle power-fail safe Write-Back
-	 */
-	io->end(io, -ENOTSUPP);
-
-	/* on SLES 11 SP 1 powerfail safety can only be achieved
-	 * through disabling volatile write cache of disk itself.
-	 */
-#endif
 }
 
 void block_dev_submit_discard(struct ocf_io *io)
