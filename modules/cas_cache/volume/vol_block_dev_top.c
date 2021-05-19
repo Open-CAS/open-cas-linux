@@ -45,13 +45,6 @@ static inline void _blockdev_end_io_acct(struct bio *bio,
 	cas_generic_end_io_acct(gd->queue, bio, &gd->part0, start_time);
 }
 
-void block_dev_start_bio(struct ocf_io *io)
-{
-	struct blk_data *data = ocf_io_get_data(io);
-	struct bio *bio = data->master_io_req;
-
-	data->start_time = _blockdev_start_io_acct(bio);
-}
 static inline int _blkdev_can_hndl_bio(struct bio *bio)
 {
 	if (CAS_CHECK_BARRIER(bio)) {
@@ -282,7 +275,7 @@ static void _blockdev_handle_data(ocf_core_t core, struct bio *bio)
 	}
 
 	ocf_io_set_cmpl(io, NULL, NULL, block_dev_complete_data);
-	ocf_io_set_start(io, block_dev_start_bio);
+	data->start_time = _blockdev_start_io_acct(bio);
 
 	ocf_core_submit_io(io);
 }
