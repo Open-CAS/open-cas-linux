@@ -84,9 +84,9 @@ uint64_t block_dev_get_byte_length(ocf_volume_t vol)
 	struct block_device *bd = bdobj->btm_bd;
 	uint64_t sector_length;
 
-	sector_length = (bd->bd_contains == bd) ?
+	sector_length = (cas_bdev_whole(bd) == bd) ?
 			get_capacity(bd->bd_disk) :
-			bd->bd_part->nr_sects;
+			cas_bdev_nr_sectors(bd);
 
 	return sector_length << SECTOR_SHIFT;
 }

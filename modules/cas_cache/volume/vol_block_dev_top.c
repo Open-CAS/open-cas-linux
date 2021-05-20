@@ -30,21 +30,6 @@ static void _blockdev_set_bio_data(struct blk_data *data, struct bio *bio)
 #endif
 }
 
-static inline unsigned long long _blockdev_start_io_acct(struct bio *bio)
-{
-	struct gendisk *gd = CAS_BIO_GET_DEV(bio);
-
-	return cas_generic_start_io_acct(gd->queue, bio, &gd->part0);
-}
-
-static inline void _blockdev_end_io_acct(struct bio *bio,
-		unsigned long start_time)
-{
-	struct gendisk *gd = CAS_BIO_GET_DEV(bio);
-
-	cas_generic_end_io_acct(gd->queue, bio, &gd->part0, start_time);
-}
-
 static inline int _blkdev_can_hndl_bio(struct bio *bio)
 {
 	if (CAS_CHECK_BARRIER(bio)) {
@@ -140,7 +125,7 @@ static int _blockdev_set_geometry(struct casdsk_disk *dsk, void *private)
 	cache_bd = casdisk_functions.casdsk_disk_get_blkdev(bd_cache_vol->dsk);
 	BUG_ON(!cache_bd);
 
-	core_q = core_bd->bd_contains->bd_disk->queue;
+	core_q = cas_bdev_whole(core_bd)->bd_disk->queue;
 	cache_q = cache_bd->bd_disk->queue;
 	exp_q = casdisk_functions.casdsk_exp_obj_get_queue(dsk);
 
@@ -215,7 +200,7 @@ static void block_dev_complete_data(struct ocf_io *io, int error)
 	struct blk_data *data = ocf_io_get_data(io);
 	struct bio *bio = data->master_io_req;
 
-	_blockdev_end_io_acct(bio, data->start_time);
+	cas_generic_end_io_acct(bio, data->start_time);
 
 	CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(error));
 	ocf_io_put(io);
@@ -275,7 +260,7 @@ static void _blockdev_handle_data(ocf_core_t core, struct bio *bio)
 	}
 
 	ocf_io_set_cmpl(io, NULL, NULL, block_dev_complete_data);
-	data->start_time = _blockdev_start_io_acct(bio);
+	data->start_time = cas_generic_start_io_acct(bio);
 
 	ocf_core_submit_io(io);
 }
@@ -296,7 +281,8 @@ static void _blockdev_handle_discard(ocf_core_t core, struct bio *bio)
 
 	io = ocf_core_new_io(core, cache_priv->io_queues[smp_processor_id()],
 			CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
-			CAS_BIO_BISIZE(bio), OCF_WRITE, 0, 0);
+			CAS_BIO_BISIZE(bio), OCF_WRITE, 0,
+			CAS_CLEAR_FLUSH(CAS_BIO_OP_FLAGS(bio)));
 
 	if (!io) {
 		CAS_PRINT_RL(KERN_CRIT
