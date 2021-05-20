@@ -281,9 +281,7 @@ struct request_queue *casdsk_disk_get_queue(struct casdsk_disk *dsk)
 {
 	BUG_ON(!dsk);
 	BUG_ON(!dsk->bd);
-	BUG_ON(!dsk->bd->bd_contains);
-	BUG_ON(!dsk->bd->bd_contains->bd_disk);
-	return dsk->bd->bd_contains->bd_disk->queue;
+	return cas_bdev_whole(dsk->bd)->bd_disk->queue;
 }
 EXPORT_SYMBOL(casdsk_disk_get_queue);
 

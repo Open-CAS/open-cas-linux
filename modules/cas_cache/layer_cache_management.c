@@ -1068,7 +1068,6 @@ out_bdev:
 int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 		struct kcas_insert_core *cmd_info)
 {
-	struct block_device *bdev;
 	char core_name[OCF_CORE_NAME_SIZE] = {};
 	ocf_cache_t cache;
 	uint16_t core_id;
@@ -1109,10 +1108,8 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 		return 0;
 	}
 
-	bdev = CAS_LOOKUP_BDEV(cfg->uuid.data);
-	if (IS_ERR(bdev))
+	if (!cas_bdev_exist(cfg->uuid.data))
 		return -OCF_ERR_INVAL_VOLUME_TYPE;
-	bdput(bdev);
 
 	if (cmd_info->update_path)
 		return 0;
@@ -1135,9 +1132,7 @@ static int cache_mngt_update_core_uuid(ocf_cache_t cache, const char *core_name,
 {
 	ocf_core_t core;
 	ocf_volume_t vol;
-	struct block_device *bdev;
 	struct bd_object *bdvol;
-	bool match;
 	int result;
 
 	if (ocf_core_get_by_name(cache, core_name, name_len, &core)) {
@@ -1154,19 +1149,7 @@ static int cache_mngt_update_core_uuid(ocf_cache_t cache, const char *core_name,
 	vol = ocf_core_get_volume(core);
 	bdvol = bd_object(vol);
 
-	/* lookup block device object for device pointed by uuid */
-	bdev =  CAS_LOOKUP_BDEV(uuid->data);
-	if (IS_ERR(bdev)) {
-		printk(KERN_ERR "failed to lookup bdev%s\n", (char*)uuid->data);
-		return -ENODEV;
-	}
-
-	/* check whether both core id and uuid point to the same block device */
-	match = (bdvol->btm_bd == bdev);
-
-	bdput(bdev);
-
-	if (!match) {
+	if (!cas_bdev_match(uuid->data, bdvol->btm_bd)) {
 		printk(KERN_ERR "UUID provided does not match target core device\n");
 		return -ENODEV;
 	}
@@ -1766,7 +1749,7 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 				-OCF_ERR_INVAL_VOLUME_TYPE;
 	}
 
-	is_part = (bdev->bd_contains != bdev);
+	is_part = (cas_bdev_whole(bdev) != bdev);
 	part_count = cas_blk_get_part_count(bdev);
 	blkdev_put(bdev, (FMODE_EXCL|FMODE_READ));
 
@@ -1872,7 +1855,7 @@ static void init_instance_complete(struct _cache_mngt_attach_context *ctx,
 	bdev = bd_cache_obj->btm_bd;
 
 	/* If we deal with whole device, reread partitions */
-	if (bdev->bd_contains == bdev)
+	if (cas_bdev_whole(bdev) == bdev)
 		cas_reread_partitions(bdev);
 
 	/* Set other back information */
