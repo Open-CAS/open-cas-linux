@@ -189,27 +189,6 @@ static MAKE_RQ_RET_TYPE _casdsk_exp_obj_make_rq_fn(struct request_queue *q,
 	return _casdsk_exp_obj_submit_bio(bio);
 }
 
-static int _casdsk_get_next_part_no(struct block_device *bd)
-{
-	int part_no = 0;
-	struct gendisk *disk = bd->bd_disk;
-	struct disk_part_iter piter;
-	struct hd_struct *part;
-
-	mutex_lock(&bd->bd_mutex);
-
-	disk_part_iter_init(&piter, disk, DISK_PITER_INCL_EMPTY);
-	while ((part = disk_part_iter_next(&piter))) {
-		part_no = part->partno;
-		break;
-	}
-	disk_part_iter_exit(&piter);
-
-	mutex_unlock(&bd->bd_mutex);
-
-	return part_no;
-}
-
 static int _casdsk_del_partitions(struct casdsk_disk *dsk)
 {
 	struct block_device *bd = casdsk_disk_get_blkdev(dsk);
@@ -249,7 +228,7 @@ static int _casdsk_del_partitions(struct casdsk_disk *dsk)
 		goto out_copy;
 	}
 
-	while ((part_no = _casdsk_get_next_part_no(bd))) {
+	while ((part_no = cas_bd_get_next_part(bd))) {
 		bpart.pno = part_no;
 		result = copy_to_user((void __user *)usr_bpart, &bpart,
 				sizeof(bpart));
@@ -288,7 +267,7 @@ static int _casdsk_exp_obj_hide_parts(struct casdsk_disk *dsk)
 	struct block_device *bd = casdsk_disk_get_blkdev(dsk);
 	struct gendisk *gdsk = casdsk_disk_get_gendisk(dsk);
 
-	if (bd != bd->bd_contains)
+	if (bd != cas_bdev_whole(bd))
 		/* It is partition, no more job required */
 		return 0;
 
@@ -325,7 +304,7 @@ static int _casdsk_exp_obj_set_dev_t(struct casdsk_disk *dsk, struct gendisk *gd
 	bdev = casdsk_disk_get_blkdev(dsk);
 	BUG_ON(!bdev);
 
-	if (bdev->bd_contains != bdev) {
+	if (cas_bdev_whole(bdev) != bdev) {
 		minors = 1;
 		flags = 0;
 	} else {
@@ -352,7 +331,7 @@ static void _casdsk_exp_obj_clear_dev_t(struct casdsk_disk *dsk)
 	struct block_device *bdev = casdsk_disk_get_blkdev(dsk);
 	struct gendisk *gdsk = casdsk_disk_get_gendisk(dsk);
 
-	if (bdev->bd_contains == bdev) {
+	if (cas_bdev_whole(bdev) == bdev) {
 		/* Restore previous configuration of bottom disk */
 		gdsk->minors = dsk->gd_minors;
 		gdsk->flags |= dsk->gd_flags;
@@ -718,7 +697,7 @@ int casdsk_exp_obj_lock(struct casdsk_disk *dsk)
 
 	exp_obj = dsk->exp_obj;
 
-	exp_obj->locked_bd = bdget_disk(exp_obj->gd, 0);
+	exp_obj->locked_bd = cas_bdget_disk(exp_obj->gd);
 	if (!exp_obj->locked_bd)
 		return -ENAVAIL;
 
