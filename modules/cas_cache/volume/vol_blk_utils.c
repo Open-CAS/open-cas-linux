@@ -303,7 +303,7 @@ int cas_blk_identify_type_by_bdev(struct block_device *bdev,
 		atomic_params_int.is_mode_optimal = 1;
 		break;
 #else
-		if (bdev == bdev->bd_contains) {
+		if (bdev == cas_bdev_whole(bdev)) {
 			/*
 			 * Entire device - format isn't optimal
 			 */
