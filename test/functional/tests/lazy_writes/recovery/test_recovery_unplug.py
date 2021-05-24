@@ -9,7 +9,6 @@ from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheModeTrait, CacheLineSize
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.dd import Dd
 from test_tools.disk_utils import Filesystem
 from test_utils.size import Size, Unit
 from tests.lazy_writes.recovery.recovery_tests_methods import create_test_files, copy_file, \
@@ -47,6 +46,7 @@ def test_recovery_unplug_cache_fs(cache_mode, cls, filesystem, direct):
 
     with TestRun.step("Create test files."):
         source_file, target_file = create_test_files(test_file_size)
+        source_file_md5 = source_file.md5sum()
 
     with TestRun.step("Create filesystem on core device."):
         core_device.create_filesystem(filesystem)
@@ -92,12 +92,17 @@ def test_recovery_unplug_cache_fs(cache_mode, cls, filesystem, direct):
     with TestRun.step("Copy file from core device and check md5sum."):
         copy_file(source=test_file_path, target=target_file.full_path,
                   size=test_file_size, direct="iflag" if direct else None)
-        compare_files(source_file, target_file)
+        target_file_md5 = target_file.md5sum()
+        compare_files(source_file_md5, target_file_md5)
 
     with TestRun.step("Unmount core device and remove files."):
         core_device.unmount()
-        target_file.remove()
-        source_file.remove()
+        try:
+            target_file.remove()
+            source_file.remove()
+        except Exception:
+            # On some OSes files at /tmp location are automatically removed after DUT hard reset
+            pass
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -125,6 +130,7 @@ def test_recovery_unplug_cache_raw(cache_mode, cls):
 
     with TestRun.step("Create test files."):
         source_file, target_file = create_test_files(test_file_size)
+        source_file_md5 = source_file.md5sum()
 
     with TestRun.step("Start cache and add core."):
         cache = casadm.start_cache(cache_device, cache_mode, cls)
@@ -158,8 +164,13 @@ def test_recovery_unplug_cache_raw(cache_mode, cls):
     with TestRun.step("Copy file from core device and check md5sum."):
         copy_file(source=core_device.path, target=target_file.full_path,
                   size=test_file_size, direct="iflag")
-        compare_files(source_file, target_file)
+        target_file_md5 = target_file.md5sum()
+        compare_files(source_file_md5, target_file_md5)
 
     with TestRun.step("Cleanup core device and remove test files."):
-        target_file.remove()
-        source_file.remove()
+        try:
+            target_file.remove()
+            source_file.remove()
+        except Exception:
+            # On some OSes files at /tmp location are automatically removed after DUT hard reset
+            pass

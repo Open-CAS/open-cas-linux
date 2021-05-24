@@ -9,7 +9,6 @@ from api.cas import casadm, cli
 from api.cas.cache_config import CacheMode, CacheModeTrait, CleaningPolicy, SeqCutOffPolicy
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.dd import Dd
 from test_tools.disk_utils import Filesystem
 from test_tools.fs_utils import readlink
 from test_utils import os_utils
@@ -47,6 +46,7 @@ def test_recovery_flush_reset_raw(cache_mode):
 
     with TestRun.step("Create test files."):
         source_file, target_file = create_test_files(test_file_size)
+        source_file_md5 = source_file.md5sum()
 
     with TestRun.step("Setup cache and add core."):
         cache = casadm.start_cache(cache_device, cache_mode)
@@ -74,7 +74,8 @@ def test_recovery_flush_reset_raw(cache_mode):
                       "before restart."):
         copy_file(source=readlink(core_device.path), target=target_file.full_path,
                   size=test_file_size, direct="iflag")
-        compare_files(source_file, target_file, should_differ=True)
+        target_file_md5 = target_file.md5sum()
+        compare_files(source_file_md5, target_file_md5, should_differ=True)
 
     with TestRun.step("Load cache."):
         cache = casadm.load_cache(cache_device)
@@ -91,11 +92,16 @@ def test_recovery_flush_reset_raw(cache_mode):
                       "Compare it with the first version – they should be the same."):
         copy_file(source=readlink(core_device.path), target=target_file.full_path,
                   size=test_file_size, direct="iflag")
-        compare_files(source_file, target_file)
+        target_file_md5 = target_file.md5sum()
+        compare_files(source_file_md5, target_file_md5)
 
     with TestRun.step("Cleanup core device and remove test files."):
-        target_file.remove()
-        source_file.remove()
+        try:
+            target_file.remove()
+            source_file.remove()
+        except Exception:
+            # On some OSes files at /tmp location are automatically removed after DUT hard reset
+            pass
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -126,6 +132,7 @@ def test_recovery_flush_reset_fs(cache_mode, fs):
 
     with TestRun.step("Create test files."):
         source_file, target_file = create_test_files(test_file_size)
+        source_file_md5 = source_file.md5sum()
 
     with TestRun.step("Setup cache and add core."):
         cache = casadm.start_cache(cache_device, cache_mode)
@@ -170,10 +177,15 @@ def test_recovery_flush_reset_fs(cache_mode, fs):
         copy_file(source=os.path.join(mount_point, "source_test_file"),
                   target=target_file.full_path,
                   size=test_file_size, direct="iflag")
-        compare_files(source_file, target_file)
+        target_file_md5 = target_file.md5sum()
+        compare_files(source_file_md5, target_file_md5)
 
     with TestRun.step("Unmount core device and remove test files."):
         core_device.unmount()
-        target_file.remove()
-        source_file.remove()
+        try:
+            target_file.remove()
+            source_file.remove()
+        except Exception:
+            # On some OSes files at /tmp location are automatically removed after DUT hard reset
+            pass
         Udev.enable()

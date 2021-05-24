@@ -28,9 +28,7 @@ def copy_file(source, target, size, direct=None):
     dd.run()
 
 
-def compare_files(file1, file2, should_differ=False):
-    file1_md5 = file1.md5sum()
-    file2_md5 = file2.md5sum()
+def compare_files(file1_md5, file2_md5, should_differ=False):
     if should_differ ^ (file1_md5 != file2_md5):
         if should_differ:
             TestRun.fail("Source and target file checksums are identical.")
