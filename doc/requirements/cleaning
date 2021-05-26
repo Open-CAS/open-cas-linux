@@ -1,0 +1,230 @@
+---
+group: Cleaning
+---
+
+Data in cache before being written to a primary storage is called dirty. Flushing
+may be deferred to some point in the future. Cleaning is a background process of
+flushing dirty data to a primary storage and depending on the needs it can be
+performed using different strategies. These strategies are referred to as cleaning
+policies.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Available cleaning policies
+id: available_policies
+---
+
+The following cleaning policies shall be available:
+
+1. NOP
+2. ALRU
+3. ACP
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: NOP cleaning policy
+id: nop
+---
+
+When NOP is set as the active cleaning policy the product shall not perform
+background cleaning.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ALRU wake up interval when IO requests are detected
+id: alru_wake_up_on_io
+---
+
+When ALRU is set as the active cleaning policy and the time passed since the last
+IO request to the cache instance is lower than ACTIVITY_THRESHOLD the product
+shall put the background worker to sleep for WAKE_UP.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ALRU flush conditions
+id: alru_flush_conditions
+---
+
+When ALRU is set as the active cleaning policy the product shall flush dirty cache
+lines which had not been written for at least STALENESS_TIME.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ALRU wake up interval when nothing to flush
+id: alru_wake_up_on_no_flush
+---
+
+When ALRU is set as the active cleaning policy and eligible cache lines to flush
+had not been found the product shall put the background worker to sleep for WAKE_UP.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ALRU max flushed cache lines
+id: alru_max_buffers
+---
+
+When ALRU is set as the active cleaning policy the product shall flush at most
+FLUSH_MAX_BUFFERS dirty cache lines in a single iteration.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ALRU valid wake up values
+id: alru_valid_wake_up
+---
+
+The product shall accept WAKE_UP values in range from 1 second to 3600 seconds
+inclusive.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ALRU valid staleness time values
+id: alru_valid_staleness_time
+---
+
+The product shall accept STALENESS_TIME values in range from 1 second to 3600
+seconds inclusive.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ALRU valid activity threshold values
+id: alru_valid_activity_threshold
+---
+
+The product shall accept ACTIVITY_THRESHOLD values in range from 0 to 1000000
+milliseconds inclusive.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ALRU valid flush max buffers values
+id: alru_valid_flush_max_buffers
+---
+
+The product shall accept FLUSH_MAX_BUFFERS values in range from 1 to 10000 cache
+lines inclusive.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ACP cleaning policy
+id: acp
+---
+
+When ACP is set as the active cleaning policy the product shall flush at most
+FLUSH_MAX_BUFFERS cache lines in WAKE_UP intervals.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ACP valid flush max buffers values
+id: acp_valid_flush_max_buffers
+---
+
+The product shall accept FLUSH_MAX_BUFFERS values in range from 1 to 10000 cache
+lines inclusive.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ACP valid wake up time values
+id: acp_valid_wake_up
+---
+
+The product shall accept WAKE_UP values in range from 0 to 10000 milliseconds
+inclusive.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ALRU display configured parameters
+id: alru_display_parameters
+---
+
+The product shall allow to display values of ALRU parameters.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ACP display configured parameters
+id: acp_display_parameters
+---
+
+The product shall allow to display values of ACP parameters.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Display configured policy
+id: display_policy
+---
+
+The product shall allow to display currently configured cleaning policy.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Policy on cache load
+id: load_policy
+---
+
+When a cache state is loaded the product shall restore the cleaning policy used
+before the cache shut down.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ALRU parameters on cache load
+id: alru_parameters_load
+---
+
+When a cache state is loaded the product shall restore the ALRU parameters to the
+values used before the cache shut down.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ACP parameters on cache load
+id: acp_parameters_load
+---
+
+When a cache state is loaded the product shall restore the ACP parameters to the
+values used before the cache shut down.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ALRU default parameters
+id: alru_default
+---
+
+The product shall initialize ALRU with the following parameters:
+
+1. WAKE_UP equal to 20 seconds
+2. STALENESS_TIME equal to 120 seconds
+3. FLUSH_MAX_BUFFERS equal to 100 cache lines
+4. ACTIVITY_THRESHOLD equal to 10000 milliseconds
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: ACP default parameters
+id: acp_default
+---
+
+The product shall initialize ACP with the following parameters:
+
+1. WAKE_UP equal to 10 milliseconds
+2. FLUSH_MAX_BUFFERS equal to 128 cache lines
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Default cleaning policy
+id: default_policy
+---
+
+When initializing a new cache instance the product shall set ALRU as the default
+cleaning policy.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Setting cleaning policy in runtime
+id: change_in_runtime
+---
+
+The product shall allow to change cleaning policy in runtime.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Setting cleaning policy parameters in runtime
+id: change_parameters_in_runtime
+---
+
+The product shall allow to change cleaning policy parameters in runtime.
