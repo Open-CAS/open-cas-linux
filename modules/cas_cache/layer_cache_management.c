@@ -1155,7 +1155,7 @@ static int cache_mngt_update_core_uuid(ocf_cache_t cache, const char *core_name,
 	bdvol = bd_object(vol);
 
 	/* lookup block device object for device pointed by uuid */
-	bdev =  CAS_LOOKUP_BDEV(uuid->data);
+	bdev = CAS_LOOKUP_BDEV(uuid->data);
 	if (IS_ERR(bdev)) {
 		printk(KERN_ERR "failed to lookup bdev%s\n", (char*)uuid->data);
 		return -ENODEV;
@@ -1223,6 +1223,20 @@ static void _cache_mngt_add_core_complete(ocf_cache_t cache,
 }
 
 static void _cache_mngt_remove_core_complete(void *priv, int error);
+
+static void _blockdev_set_rotational_property(ocf_core_t core)
+{
+	struct block_device *bdev;
+	struct request_queue *q;
+	char holder[] = "CHECK CORE ROTATIONAL\n";
+	const ocf_uuid_t core_uuid = (const ocf_uuid_t)ocf_core_get_uuid(core);
+	const char *core_path = (const char*)core_uuid->data;
+
+	bdev = blkdev_get_by_path(core_path, (FMODE_READ), holder);
+	q = bdev_get_queue(bdev);
+
+	ocf_core_set_rotational(core, (uint8_t)(!blk_queue_nonrot(q)));
+}
 
 int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 		struct ocf_mngt_core_config *cfg,
@@ -1301,6 +1315,7 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	ocf_mngt_cache_put(cache);
 
 	_cache_mngt_log_core_device_path(core);
+	_blockdev_set_rotational_property(core);
 
 	return 0;
 
