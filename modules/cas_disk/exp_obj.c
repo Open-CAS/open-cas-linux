@@ -67,17 +67,9 @@ void casdsk_deinit_exp_objs(void)
 }
 
 static inline void _casdsk_exp_obj_handle_bio_att(struct casdsk_disk *dsk,
-						struct request_queue *q,
 						struct bio *bio)
 {
-	int status = CASDSK_BIO_NOT_HANDLED;
-
-	if (likely(dsk->exp_obj->ops->make_request_fn))
-		status = dsk->exp_obj->ops->
-				make_request_fn(dsk, q, bio, dsk->private);
-
-	if (status == CASDSK_BIO_NOT_HANDLED)
-		cas_call_default_mk_request_fn(dsk->exp_obj->mk_rq_fn, q, bio);
+	dsk->exp_obj->ops->submit_bio(dsk, bio, dsk->private);
 }
 
 CAS_DECLARE_BLOCK_CALLBACK(_casdsk_exp_obj_bio_pt_io, struct bio *bio,
@@ -102,7 +94,6 @@ CAS_DECLARE_BLOCK_CALLBACK(_casdsk_exp_obj_bio_pt_io, struct bio *bio,
 }
 
 static inline void _casdsk_exp_obj_handle_bio_pt(struct casdsk_disk *dsk,
-					       struct request_queue *q,
 					       struct bio *bio)
 {
 	struct bio *cloned_bio;
@@ -133,13 +124,12 @@ static inline void _casdsk_exp_obj_handle_bio_pt(struct casdsk_disk *dsk,
 }
 
 static inline void _casdsk_exp_obj_handle_bio(struct casdsk_disk *dsk,
-					    struct request_queue *q,
 					    struct bio *bio)
 {
 	if (likely(casdsk_disk_is_attached(dsk)))
-		_casdsk_exp_obj_handle_bio_att(dsk, q, bio);
+		_casdsk_exp_obj_handle_bio_att(dsk, bio);
 	else if (casdsk_disk_is_pt(dsk))
-		_casdsk_exp_obj_handle_bio_pt(dsk, q, bio);
+		_casdsk_exp_obj_handle_bio_pt(dsk, bio);
 	else if (casdsk_disk_is_shutdown(dsk))
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-EIO));
 	else
@@ -176,45 +166,27 @@ retry:
 	return cpu;
 }
 
-static MAKE_RQ_RET_TYPE _casdsk_exp_obj_make_rq_fn(struct request_queue *q,
-						 struct bio *bio)
+static MAKE_RQ_RET_TYPE _casdsk_exp_obj_submit_bio(struct bio *bio)
 {
 	struct casdsk_disk *dsk;
 	unsigned int cpu;
 
 	BUG_ON(!bio);
-	BUG_ON(!q);
-	BUG_ON(!q->queuedata);
-	dsk = q->queuedata;
+	dsk = CAS_BIO_GET_GENDISK(bio)->private_data;
 
 	cpu = _casdsk_exp_obj_begin_rq(dsk);
 
-	_casdsk_exp_obj_handle_bio(dsk, q, bio);
+	_casdsk_exp_obj_handle_bio(dsk, bio);
 
 	_casdsk_exp_obj_end_rq(dsk, cpu);
 
 	KRETURN(0);
 }
 
-static int _casdsk_get_next_part_no(struct block_device *bd)
+static MAKE_RQ_RET_TYPE _casdsk_exp_obj_make_rq_fn(struct request_queue *q,
+						 struct bio *bio)
 {
-	int part_no = 0;
-	struct gendisk *disk = bd->bd_disk;
-	struct disk_part_iter piter;
-	struct hd_struct *part;
-
-	mutex_lock(&bd->bd_mutex);
-
-	disk_part_iter_init(&piter, disk, DISK_PITER_INCL_EMPTY);
-	while ((part = disk_part_iter_next(&piter))) {
-		part_no = part->partno;
-		break;
-	}
-	disk_part_iter_exit(&piter);
-
-	mutex_unlock(&bd->bd_mutex);
-
-	return part_no;
+	return _casdsk_exp_obj_submit_bio(bio);
 }
 
 static int _casdsk_del_partitions(struct casdsk_disk *dsk)
@@ -256,7 +228,7 @@ static int _casdsk_del_partitions(struct casdsk_disk *dsk)
 		goto out_copy;
 	}
 
-	while ((part_no = _casdsk_get_next_part_no(bd))) {
+	while ((part_no = cas_bd_get_next_part(bd))) {
 		bpart.pno = part_no;
 		result = copy_to_user((void __user *)usr_bpart, &bpart,
 				sizeof(bpart));
@@ -295,7 +267,7 @@ static int _casdsk_exp_obj_hide_parts(struct casdsk_disk *dsk)
 	struct block_device *bd = casdsk_disk_get_blkdev(dsk);
 	struct gendisk *gdsk = casdsk_disk_get_gendisk(dsk);
 
-	if (bd != bd->bd_contains)
+	if (bd != cas_bdev_whole(bd))
 		/* It is partition, no more job required */
 		return 0;
 
@@ -332,7 +304,7 @@ static int _casdsk_exp_obj_set_dev_t(struct casdsk_disk *dsk, struct gendisk *gd
 	bdev = casdsk_disk_get_blkdev(dsk);
 	BUG_ON(!bdev);
 
-	if (bdev->bd_contains != bdev) {
+	if (cas_bdev_whole(bdev) != bdev) {
 		minors = 1;
 		flags = 0;
 	} else {
@@ -359,7 +331,7 @@ static void _casdsk_exp_obj_clear_dev_t(struct casdsk_disk *dsk)
 	struct block_device *bdev = casdsk_disk_get_blkdev(dsk);
 	struct gendisk *gdsk = casdsk_disk_get_gendisk(dsk);
 
-	if (bdev->bd_contains == bdev) {
+	if (cas_bdev_whole(bdev) == bdev) {
 		/* Restore previous configuration of bottom disk */
 		gdsk->minors = dsk->gd_minors;
 		gdsk->flags |= dsk->gd_flags;
@@ -369,6 +341,7 @@ static void _casdsk_exp_obj_clear_dev_t(struct casdsk_disk *dsk)
 
 static const struct block_device_operations _casdsk_exp_obj_ops = {
 	.owner = THIS_MODULE,
+	CAS_SET_SUBMIT_BIO(_casdsk_exp_obj_submit_bio)
 };
 
 static int casdsk_exp_obj_alloc(struct casdsk_disk *dsk)
@@ -467,30 +440,9 @@ static int _casdsk_exp_obj_init_kobject(struct casdsk_disk *dsk)
 }
 
 static CAS_BLK_STATUS_T _casdsk_exp_obj_queue_rq(struct blk_mq_hw_ctx *hctx,
-			const struct blk_mq_queue_data *bd)
+		const struct blk_mq_queue_data *bd)
 {
-	struct casdsk_disk *dsk = hctx->driver_data;
-	struct casdsk_exp_obj *exp_obj = dsk->exp_obj;
-	struct request *rq = bd->rq;
-	CAS_BLK_STATUS_T result = CAS_BLK_STS_OK;
-
-	if (likely(exp_obj->ops && exp_obj->ops->queue_rq_fn)) {
-		exp_obj->ops->pending_rq_inc(dsk, dsk->private);
-
-		result = exp_obj->ops->queue_rq_fn(dsk, rq, dsk->private);
-
-		exp_obj->ops->pending_rq_dec(dsk, dsk->private);
-	} else {
-		/*
-		* queue_rq_fn() is required, as we can't do any default
-		* action in attached mode. In PT mode we handle all bios
-		* directly in make_request_fn(), so queue_rq_fn() will not
-		* be called.
-		*/
-		BUG_ON(rq);
-	}
-
-	return result;
+	return CAS_BLK_STS_NOTSUPP;
 }
 
 static struct blk_mq_ops casdsk_mq_ops = {
@@ -611,7 +563,6 @@ int casdsk_exp_obj_create(struct casdsk_disk *dsk, const char *dev_name,
 	gd->private_data = dsk;
 	strlcpy(gd->disk_name, exp_obj->dev_name, sizeof(gd->disk_name));
 
-	dsk->exp_obj->mk_rq_fn = cas_get_default_mk_request_fn(queue);
 	cas_blk_queue_make_request(queue, _casdsk_exp_obj_make_rq_fn);
 
 	if (exp_obj->ops->set_geometry) {
@@ -746,7 +697,7 @@ int casdsk_exp_obj_lock(struct casdsk_disk *dsk)
 
 	exp_obj = dsk->exp_obj;
 
-	exp_obj->locked_bd = bdget_disk(exp_obj->gd, 0);
+	exp_obj->locked_bd = cas_bdget_disk(exp_obj->gd);
 	if (!exp_obj->locked_bd)
 		return -ENAVAIL;
 

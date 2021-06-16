@@ -31,8 +31,11 @@ struct bd_object {
 	atomic64_t pending_rqs;
 		/*!< This fields describes in flight IO requests */
 
-	struct workqueue_struct *workqueue;
-		/*< Workqueue for internally trigerred I/O */
+	struct workqueue_struct *btm_wq;
+		/*< Workqueue for I/O internally trigerred in bottom vol */
+
+	struct workqueue_struct *expobj_wq;
+		/*< Workqueue for I/O handled by top vol */
 };
 
 static inline struct bd_object *bd_object(ocf_volume_t vol)

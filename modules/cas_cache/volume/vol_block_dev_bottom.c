@@ -84,9 +84,9 @@ uint64_t block_dev_get_byte_length(ocf_volume_t vol)
 	struct block_device *bd = bdobj->btm_bd;
 	uint64_t sector_length;
 
-	sector_length = (bd->bd_contains == bd) ?
+	sector_length = (cas_bdev_whole(bd) == bd) ?
 			get_capacity(bd->bd_disk) :
-			bd->bd_part->nr_sects;
+			cas_bdev_nr_sectors(bd);
 
 	return sector_length << SECTOR_SHIFT;
 }
@@ -229,7 +229,6 @@ CAS_DECLARE_BLOCK_CALLBACK(cas_bd_io_end, struct bio *bio,
 
 static void block_dev_submit_flush(struct ocf_io *io)
 {
-#ifdef CAS_FLUSH_SUPPORTED
 	struct blkio *blkio = cas_io_to_blkio(io);
 	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
 	struct block_device *bdev = bdobj->btm_bd;
@@ -267,22 +266,10 @@ static void block_dev_submit_flush(struct ocf_io *io)
 	bio->bi_private = io;
 
 	atomic_inc(&blkio->rq_remaning);
-	cas_submit_bio(CAS_WRITE_FLUSH, bio);
+	cas_submit_bio(CAS_SET_FLUSH(0), bio);
 
 out:
 	cas_bd_io_end(io, blkio->error);
-
-#else
-	/* Running operating system without support for REQ_FLUSH
-	 * (i.e. SLES 11 SP 1) CAS cannot use flushing requests to
-	 * handle power-fail safe Write-Back
-	 */
-	io->end(io, -ENOTSUPP);
-
-	/* on SLES 11 SP 1 powerfail safety can only be achieved
-	 * through disabling volatile write cache of disk itself.
-	 */
-#endif
 }
 
 void block_dev_submit_discard(struct ocf_io *io)
@@ -412,8 +399,7 @@ static void block_dev_submit_io(struct ocf_io *io)
 	uint32_t bytes = io->bytes;
 	int dir = io->dir;
 
-	if (!CAS_IS_WRITE_FLUSH_FUA(io->flags) &&
-			CAS_IS_WRITE_FLUSH(io->flags)) {
+	if (CAS_IS_SET_FLUSH(io->flags)) {
 		CAS_DEBUG_MSG("Flush request");
 		/* It is flush requests handle it */
 		block_dev_submit_flush(io);

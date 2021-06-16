@@ -52,6 +52,7 @@ compile_module(){
 		return 0;
 	}
 	void cleanup_module(void) {};
+    MODULE_LICENSE("GPL");
 	EOF
 	#######################################
 
