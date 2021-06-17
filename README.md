@@ -39,6 +39,8 @@ cd open-cas-linux
 git submodule update --init
 ```
 
+### Source compile and install
+
 To configure, build and install Open CAS Linux run following commands:
 
 ```
@@ -51,10 +53,31 @@ The `./configure` performs check for dependencies, so if some of them are missin
 command will print their names in output. After installing missing dependencies
 you need to run `./configure` once again - this time it should succeed.
 
-NOTE: If after installing CAS, your system boots into emergency mode due to the
-**"Failed to start opencas initialization service."** error, you need to force SELinux
-relabelling in permissive mode on your filesystem.\
-Refer to the [Open CAS documentation](https://open-cas.github.io/guide_running.html#rebooting-power-cycling-and-open-cas-linux-autostart) for details.
+> NOTE: If after installing CAS, your system boots into emergency mode due to the
+> **"Failed to start opencas initialization service."** error, you need to force SELinux
+> relabelling in permissive mode on your filesystem.\
+> Refer to the [Open CAS documentation](https://open-cas.github.io/guide_running.html#rebooting-power-cycling-and-open-cas-linux-autostart) for details.
+
+### RPM/DEB install
+
+Alternatively, you can generate RPM/DEB packages from downloaded sources and
+install those packages instead. To do so, simply run:
+
+__on RPM based systems:__
+```
+make rpm
+rm -f packages/*debug*
+dnf install ./packages/open-cas-linux*.rpm
+```
+
+__on DEB based systems:__
+```
+make deb
+apt install ./packages/open-cas-linux*.deb
+```
+
+Package generating script will inform you of any missing dependencies.
+You can find detailed instructions in the [Open CAS documentation](https://open-cas.github.io/guide_installing.html#creating-rpmdeb-packages)
 
 ## Getting Started
 
