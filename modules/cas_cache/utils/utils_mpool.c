@@ -29,7 +29,7 @@ struct env_mpool {
 struct env_mpool *env_mpool_create(uint32_t hdr_size, uint32_t elem_size,
 		int flags, int mpool_max, bool fallback,
 		const uint32_t limits[env_mpool_max],
-		const char *name_perfix)
+		const char *name_perfix, bool zero)
 {
 	uint32_t i;
 	char name[MPOOL_ALLOCATOR_NAME_MAX] = { '\0' };

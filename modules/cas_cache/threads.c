@@ -115,38 +115,6 @@ static int _cas_cleaner_thread(void *data)
 	return 0;
 }
 
-static int _cas_metadata_updater_thread(void *data)
-{
-	ocf_metadata_updater_t mu = data;
-	struct cas_thread_info *info;
-
-	BUG_ON(!mu);
-
-	/* complete the creation of the thread */
-	info = ocf_metadata_updater_get_priv(mu);
-	BUG_ON(!info);
-
-	CAS_DAEMONIZE(info->thread->comm);
-
-	complete(&info->compl);
-
-	do {
-		if (atomic_read(&info->stop))
-			break;
-
-		atomic_set(&info->kicked, 0);
-		if (ocf_metadata_updater_run(mu))
-			continue;
-
-		wait_event_interruptible(info->wq, atomic_read(&info->stop) ||
-				atomic_read(&info->kicked));
-	} while (true);
-
-	complete_and_exit(&info->compl, 0);
-
-	return 0;
-}
-
 static int _cas_create_thread(struct cas_thread_info **pinfo,
 		int (*threadfn)(void *), void *priv, int cpu,
 		const char *fmt, ...)
@@ -271,37 +239,6 @@ void cas_stop_cleaner_thread(ocf_cleaner_t c)
 {
 	struct cas_thread_info *info = ocf_cleaner_get_priv(c);
 	ocf_cleaner_set_priv(c, NULL);
-	_cas_stop_thread(info);
-}
-
-int cas_create_metadata_updater_thread(ocf_metadata_updater_t mu)
-{
-	struct cas_thread_info *info;
-	int result;
-
-	result = _cas_create_thread(&info, _cas_metadata_updater_thread,
-			mu, CAS_CPUS_ALL, "cas_mu_%s",
-			ocf_cache_get_name(ocf_metadata_updater_get_cache(mu)));
-	if (!result) {
-		ocf_metadata_updater_set_priv(mu, info);
-		_cas_start_thread(info);
-	}
-
-	return result;
-}
-
-void cas_kick_metadata_updater_thread(ocf_metadata_updater_t mu)
-{
-	struct cas_thread_info *info = ocf_metadata_updater_get_priv(mu);
-	atomic_set(&info->kicked, 1);
-	wake_up(&info->wq);
-}
-
-
-void cas_stop_metadata_updater_thread(ocf_metadata_updater_t mu)
-{
-	struct cas_thread_info *info = ocf_metadata_updater_get_priv(mu);
-	ocf_metadata_updater_set_priv(mu, NULL);
 	_cas_stop_thread(info);
 }
 

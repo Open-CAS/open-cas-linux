@@ -20,8 +20,4 @@ int cas_create_cleaner_thread(ocf_cleaner_t c);
 void cas_kick_cleaner_thread(ocf_cleaner_t c);
 void cas_stop_cleaner_thread(ocf_cleaner_t c);
 
-int cas_create_metadata_updater_thread(ocf_metadata_updater_t mu);
-void cas_kick_metadata_updater_thread(ocf_metadata_updater_t mu);
-void cas_stop_metadata_updater_thread(ocf_metadata_updater_t mu);
-
 #endif /* __THREADS_H__ */

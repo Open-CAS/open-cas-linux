@@ -2048,7 +2048,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	/* Start cache. Returned cache instance will be locked as it was set
 	 * in configuration.
 	 */
-	result = ocf_mngt_cache_start(cas_ctx, &cache, cfg);
+	result = ocf_mngt_cache_start(cas_ctx, &cache, cfg, NULL);
 	if (result) {
 		kthread_stop(context->rollback_thread);
 		kfree(context);

@@ -37,13 +37,14 @@ struct env_mpool;
  * 		order or NULL if defaults are to be used. Array should have
  * 		mpool_max elements
  * @param name_prefix Format name prefix
+ * @param zero Unused parameter
  *
  * @return CAS memory pool
  */
 struct env_mpool *env_mpool_create(uint32_t hdr_size, uint32_t elem_size,
 		int flags, int mpool_max, bool fallback,
 		const uint32_t limits[env_mpool_max],
-		const char *name_perfix);
+		const char *name_prefix, bool zero);
 
 /**
  * @brief Destroy existing memory pool
