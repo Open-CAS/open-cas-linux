@@ -44,7 +44,6 @@ struct command_args{
 	int stats_filters;
 	int output_format;
 	int io_class_id;
-	int eviction_policy_type;
 	int line_size;
 	int cache_state_flush;
 	int flush_data;
@@ -138,11 +137,6 @@ int command_handle_option(char *opt, const char **arg)
 		command_args_values.cleaning_policy_type = validate_str_cln_policy((const char*)arg[0]);
 
 		if (command_args_values.cleaning_policy_type < 0)
-			return FAILURE;
-	} else if (!strcmp(opt, "eviction-policy")) {
-		command_args_values.eviction_policy_type = validate_str_ev_policy((const char*)arg[0]);
-
-		if (command_args_values.eviction_policy_type < 0)
 			return FAILURE;
 	} else if (!strcmp(opt, "try-add")) {
 		command_args_values.try_add = true;
@@ -336,7 +330,6 @@ int handle_start()
 			command_args_values.state,
 			command_args_values.cache_device,
 			command_args_values.cache_mode,
-			command_args_values.eviction_policy_type,
 			command_args_values.line_size,
 			command_args_values.force);
 

@@ -1584,16 +1584,16 @@ int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 {
 	ocf_cache_t cache;
 	struct ocf_mngt_io_classes_config *io_class_cfg;
-	struct cas_cls_rule *cls_rule[OCF_IO_CLASS_MAX];
+	struct cas_cls_rule *cls_rule[OCF_USER_IO_CLASS_MAX];
 	ocf_part_id_t class_id;
 	int result;
 
 	io_class_cfg = kzalloc(sizeof(struct ocf_mngt_io_class_config) *
-			OCF_IO_CLASS_MAX, GFP_KERNEL);
+			OCF_USER_IO_CLASS_MAX, GFP_KERNEL);
 	if (!io_class_cfg)
 		return -OCF_ERR_NO_MEM;
 
-	for (class_id = 0; class_id < OCF_IO_CLASS_MAX; class_id++) {
+	for (class_id = 0; class_id < OCF_USER_IO_CLASS_MAX; class_id++) {
 		io_class_cfg->config[class_id].class_id = class_id;
 
 		if (!cfg->info[class_id].name[0]) {
@@ -1610,7 +1610,7 @@ int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 	if (result)
 		goto out_get;
 
-	for (class_id = 0; class_id < OCF_IO_CLASS_MAX; class_id++) {
+	for (class_id = 0; class_id < OCF_USER_IO_CLASS_MAX; class_id++) {
 		result = cas_cls_rule_create(cache, class_id,
 				cfg->info[class_id].name,
 				&cls_rule[class_id]);
@@ -1632,7 +1632,7 @@ int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 	if (result)
 		goto out_configure;
 
-	for (class_id = 0; class_id < OCF_IO_CLASS_MAX; class_id++)
+	for (class_id = 0; class_id < OCF_USER_IO_CLASS_MAX; class_id++)
 		cas_cls_rule_apply(cache, class_id, cls_rule[class_id]);
 
 out_configure:
@@ -1712,7 +1712,6 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	strncpy(cfg->name, cache_name, OCF_CACHE_NAME_SIZE - 1);
 	cfg->cache_mode = cmd->caching_mode;
 	cfg->cache_line_size = cmd->line_size;
-	cfg->eviction_policy = cmd->eviction_policy;
 	cfg->promotion_policy = ocf_promotion_default;
 	cfg->cache_line_size = cmd->line_size;
 	cfg->pt_unaligned_io = !unaligned_io;

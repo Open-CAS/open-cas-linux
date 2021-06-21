@@ -498,7 +498,7 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		return SUCCESS;
 	}
 
-	for (part_iter_id = 0; part_iter_id < OCF_IO_CLASS_MAX; part_iter_id++) {
+	for (part_iter_id = 0; part_iter_id < OCF_USER_IO_CLASS_MAX; part_iter_id++) {
 		info.cache_id = cache_id;
 		info.class_id = part_iter_id;
 		stats.cache_id = cache_id;
@@ -567,8 +567,6 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 
 	print_kv_pair(outfile, "Write Policy", "%s",
 		      cache_mode_to_name(cache_info->info.cache_mode));
-	print_kv_pair(outfile, "Eviction Policy", "%s",
-		      eviction_policy_to_name(cache_info->info.eviction_policy));
 	print_kv_pair(outfile, "Cleaning Policy", "%s",
 		      cleaning_policy_to_name(cache_info->info.cleaning_policy));
 	print_kv_pair(outfile, "Promotion Policy", "%s",

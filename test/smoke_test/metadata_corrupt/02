@@ -30,7 +30,7 @@ TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION="2000M" PARTITION_IDS
 # Create 1 primary partition on CORE_DEVICE, 4000M
 TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="4000M" PARTITION_IDS_OPTION="1" make_primary_partitions
 
-METADATA_SECTIONS_NAMES=("Super block config" "Super block runtime" "Reserved" "Cleaning" "Eviction" "Collision" "List info" "Hash" "Core config" "Core runtime" "Core UUID")
+METADATA_SECTIONS_NAMES=("Super block config" "Super block runtime" "Reserved" "Cleaning" "LRU list" "Collision" "List info" "Hash" "Core config" "Core runtime" "Core UUID")
 
 for SECTION in "${METADATA_SECTIONS_NAMES[@]}"
 do
