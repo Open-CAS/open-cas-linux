@@ -256,11 +256,6 @@ struct name_to_val_mapping {
 	int value;
 };
 
-static struct name_to_val_mapping eviction_policy_names[] = {
-	{ .short_name = "lru", .value = ocf_eviction_lru },
-	{ NULL }
-};
-
 static struct name_to_val_mapping cache_mode_names[] = {
 	{ .short_name = "wt", .long_name = "Write-Through", .value = ocf_cache_mode_wt },
 	{ .short_name = "wb", .long_name = "Write-Back", .value = ocf_cache_mode_wb },
@@ -415,19 +410,6 @@ static const char* val_to_short_name(int value, const struct name_to_val_mapping
 		}
 	}
 	return other_name;
-}
-
-/* Returns non-negative policy index or
- * negative number in case of error.
- */
-inline int validate_str_ev_policy(const char *s)
-{
-	return validate_str_val_mapping(s, eviction_policy_names, -1);
-}
-
-inline const char *eviction_policy_to_name(uint8_t policy)
-{
-	return val_to_short_name(policy, eviction_policy_names, "Unknown");
 }
 
 inline const char *cache_mode_to_name(uint8_t cache_mode)
@@ -850,7 +832,6 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 	cache->mode = info->info.cache_mode;
 	cache->dirty = info->info.dirty;
 	cache->flushed = info->info.flushed;
-	cache->eviction_policy = info->info.eviction_policy;
 	cache->cleaning_policy = info->info.cleaning_policy;
 	cache->promotion_policy = info->info.promotion_policy;
 	cache->size = info->info.cache_line_size;
@@ -1017,7 +998,6 @@ static void check_cache_scheduler(const char *cache_device, const char *elv_name
 
 int start_cache(uint16_t cache_id, unsigned int cache_init,
 		const char *cache_device, ocf_cache_mode_t cache_mode,
-		ocf_eviction_t eviction_policy_type,
 		ocf_cache_line_size_t line_size, int force)
 {
 	int fd = 0;
@@ -1069,7 +1049,6 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 		return FAILURE;
 	}
 	cmd.caching_mode = cache_mode;
-	cmd.eviction_policy = eviction_policy_type;
 	cmd.line_size = line_size;
 	cmd.force = (uint8_t)force;
 
@@ -2175,7 +2154,7 @@ int partition_list(unsigned int cache_id, unsigned int output_format)
 	}
 	fputc('\n', intermediate_file[1]);
 
-	for (i = 0; i < OCF_IO_CLASS_MAX; i++, io_class.ext_err_code = 0) {
+	for (i = 0; i < OCF_USER_IO_CLASS_MAX; i++, io_class.ext_err_code = 0) {
 		io_class.cache_id = cache_id;
 		io_class.class_id = i;
 

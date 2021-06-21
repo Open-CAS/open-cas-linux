@@ -174,7 +174,7 @@ err:
 	return NULL;
 }
 
-env_allocator *env_allocator_create(uint32_t size, const char *name)
+env_allocator *env_allocator_create(uint32_t size, const char *name, bool zero)
 {
 	return env_allocator_create_extended(size, name, -1);
 }

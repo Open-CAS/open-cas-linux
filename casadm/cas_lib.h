@@ -91,7 +91,6 @@ enum metadata_mode_t {
 
 #define STATS_FILTER_COUNTERS (STATS_FILTER_REQ | STATS_FILTER_BLK | STATS_FILTER_ERR)
 
-const char *eviction_policy_to_name(uint8_t policy);
 const char *cleaning_policy_to_name(uint8_t policy);
 const char *promotion_policy_to_name(uint8_t policy);
 const char *cache_mode_to_name(uint8_t cache_mode);
@@ -122,7 +121,6 @@ void metadata_memory_footprint(uint64_t size, float *footprint, const char **uni
 
 int start_cache(uint16_t cache_id, unsigned int cache_init,
 		const char *cache_device, ocf_cache_mode_t cache_mode,
-		ocf_eviction_t eviction_policy_type,
 		ocf_cache_line_size_t line_size, int force);
 int stop_cache(uint16_t cache_id, int flush);
 
@@ -264,7 +262,6 @@ int validate_str_unum(const char *source_str, const char *msg, unsigned int min,
 int validate_path(const char *path, int exist);
 
 int validate_str_cache_mode(const char *s);
-int validate_str_ev_policy(const char *s);
 int validate_str_cln_policy(const char *s);
 int validate_str_promotion_policy(const char *s);
 int validate_str_meta_variant(const char *s);

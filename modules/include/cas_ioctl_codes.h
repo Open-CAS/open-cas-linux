@@ -63,11 +63,6 @@ struct kcas_start_cache {
 	 */
 	ocf_cache_mode_t caching_mode;
 
-	/**
-	 * eviction policy to be used for newely configured cache instance.
-	 */
-	ocf_eviction_t eviction_policy;
-
 	uint8_t flush_data; /**< should data be flushed? */
 
 	/**
@@ -269,7 +264,7 @@ struct kcas_io_classes {
 };
 
 #define KCAS_IO_CLASSES_SIZE (sizeof(struct kcas_io_classes) \
-		+ OCF_IO_CLASS_MAX * sizeof(struct ocf_io_class_info))
+		+ OCF_USER_IO_CLASS_MAX * sizeof(struct ocf_io_class_info))
 
 /**
  * structure in which result of KCAS_IOCTL_LIST_CACHE is supplied from kernel module.

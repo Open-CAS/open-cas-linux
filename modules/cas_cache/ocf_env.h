@@ -82,7 +82,7 @@ typedef struct _env_allocator env_allocator;
 env_allocator *env_allocator_create_extended(uint32_t size, const char *name,
 	int rpool_limit);
 
-env_allocator *env_allocator_create(uint32_t size, const char *name);
+env_allocator *env_allocator_create(uint32_t size, const char *name, bool zero);
 
 void env_allocator_destroy(env_allocator *allocator);
 

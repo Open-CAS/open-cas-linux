@@ -1121,7 +1121,7 @@ int cas_cls_init(ocf_cache_t cache)
 
 	/* Update rules for all I/O classes except 0 - this is default for all
 	 * unclassified I/O */
-	for (i = 1; i < OCF_IO_CLASS_MAX; i++) {
+	for (i = 1; i < OCF_USER_IO_CLASS_MAX; i++) {
 		result = _cas_cls_rule_init(cache, i);
 		if (result)
 			break;
