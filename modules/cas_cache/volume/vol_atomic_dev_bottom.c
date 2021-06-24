@@ -1128,7 +1128,7 @@ int atomic_dev_init(void)
 		return -EINVAL;
 
 	atomic_io_allocator = env_mpool_create(0, sizeof(struct cas_atomic_io),
-			GFP_NOIO, 1, true, NULL, "cas_atomic_io");
+			GFP_NOIO, 1, true, NULL, "cas_atomic_io", true);
 
 	if (!atomic_io_allocator) {
 		ocf_ctx_unregister_volume_type(cas_ctx, ATOMIC_DEVICE_VOLUME);
