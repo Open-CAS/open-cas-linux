@@ -473,8 +473,6 @@ int block_dev_destroy_exported_object(ocf_core_t core)
 	if (!bvol->expobj_valid)
 		return 0;
 
-	destroy_workqueue(bvol->expobj_wq);
-
 	ret = casdisk_functions.casdsk_exp_obj_lock(bvol->dsk);
 	if (ret) {
 		if (-EBUSY == ret)
@@ -485,6 +483,8 @@ int block_dev_destroy_exported_object(ocf_core_t core)
 	ret = casdisk_functions.casdsk_exp_obj_destroy(bvol->dsk);
 	if (!ret)
 		bvol->expobj_valid = false;
+
+	destroy_workqueue(bvol->expobj_wq);
 
 	casdisk_functions.casdsk_exp_obj_unlock(bvol->dsk);
 
