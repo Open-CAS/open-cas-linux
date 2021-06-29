@@ -6,7 +6,7 @@
 # Order in arrays is important!
 config_stats_cache = [
     "cache id", "cache size", "cache device", "core devices", "inactive core devices",
-    "write policy", "eviction policy", "cleaning policy", "promotion policy", "cache line size",
+    "write policy", "cleaning policy", "promotion policy", "cache line size",
     "metadata memory footprint", "dirty for", "metadata mode", "status"
 ]
 config_stats_core = [
@@ -52,7 +52,7 @@ class CacheStats:
             self.config_stats = CacheConfigStats(
                 *[stats[stat] for stat in config_stats_cache]
             )
-        except KeyError:
+        except KeyError as e:
             pass
         try:
             self.usage_stats = UsageStats(
@@ -230,7 +230,6 @@ class CacheConfigStats:
         core_dev,
         inactive_core_dev,
         write_policy,
-        eviction_policy,
         cleaning_policy,
         promotion_policy,
         cache_line_size,
@@ -245,7 +244,6 @@ class CacheConfigStats:
         self.core_dev = core_dev
         self.inactive_core_dev = inactive_core_dev
         self.write_policy = write_policy
-        self.eviction_policy = eviction_policy
         self.cleaning_policy = cleaning_policy
         self.promotion_policy = promotion_policy
         self.cache_line_size = cache_line_size
@@ -263,7 +261,6 @@ class CacheConfigStats:
             f"Core devices: {self.core_dev}\n"
             f"Inactive core devices: {self.inactive_core_dev}\n"
             f"Write policy: {self.write_policy}\n"
-            f"Eviction policy: {self.eviction_policy}\n"
             f"Cleaning policy: {self.cleaning_policy}\n"
             f"Promotion policy: {self.promotion_policy}\n"
             f"Cache line size: {self.cache_line_size}\n"
@@ -283,7 +280,6 @@ class CacheConfigStats:
             and self.core_dev == other.core_dev
             and self.inactive_core_dev == other.inactive_core_dev
             and self.write_policy == other.write_policy
-            and self.eviction_policy == other.eviction_policy
             and self.cleaning_policy == other.cleaning_policy
             and self.promotion_policy == other.promotion_policy
             and self.cache_line_size == other.cache_line_size
