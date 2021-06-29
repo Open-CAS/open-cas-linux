@@ -10,7 +10,7 @@ from datetime import timedelta
 import pytest
 
 from api.cas import casadm
-from api.cas.cache_config import CacheMode
+from api.cas.cache_config import CacheMode, CacheStatus
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
@@ -50,6 +50,8 @@ def test_soft_hot_plug_cache(cache_mode):
 
     with TestRun.step("Soft hot unplug cache device"):
         cache_dev.unplug()
+        if cache_dev.is_detected():
+            TestRun.block("Failed to unplug the device!")
         try:
             cache.get_status()
         except CmdException:
@@ -135,6 +137,8 @@ def test_soft_hot_plug_core(cache_mode):
 
     with TestRun.step("Soft hot unplug one core device"):
         core_dev_unplugged.unplug()
+        if core_dev_unplugged.is_detected():
+            TestRun.block("Failed to unplug the device!")
         try:
             cache.get_status()
         except CmdException:
