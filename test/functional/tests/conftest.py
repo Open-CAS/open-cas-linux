@@ -20,6 +20,7 @@ from api.cas import casadm
 from api.cas import git
 from storage_devices.raid import Raid
 from test_utils.os_utils import Udev, kill_all_io
+from test_utils.disk_finder import get_disk_serial_number
 from test_tools.disk_utils import PartitionTable, create_partition_table
 from test_tools.device_mapper import DeviceMapper
 from test_tools.mdadm import Mdadm
@@ -199,6 +200,13 @@ def base_prepare(item):
                     Udev.settle()
 
         for disk in TestRun.dut.disks:
+            disk_serial = get_disk_serial_number(disk.path)
+            if disk.serial_number != disk_serial:
+                raise Exception(
+                    f"Serial for {disk.path} doesn't match the one from the config."
+                    f"Serial from config {disk.serial_number}, actual serial {disk_serial}"
+                )
+
             disk.umount_all_partitions()
             Mdadm.zero_superblock(os.path.join('/dev', disk.get_device_id()))
             TestRun.executor.run_expect_success("udevadm settle")
