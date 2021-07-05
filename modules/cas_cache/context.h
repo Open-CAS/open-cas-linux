@@ -25,19 +25,19 @@ struct blk_data {
 	atomic_t master_remaining;
 
 	/**
-	 * @brief Core device request context (core private info)
+	 * @brief Master bio request
 	 */
-	void *master_io_req;
+	struct bio *bio;
+
+	/**
+	 * @brief Size of master request
+	 */
+	uint32_t master_size;
 
 	/**
 	 * @brief CAS IO with which data is associated
 	 */
 	struct ocf_io *io;
-
-	/**
-	 * @brief List item used for IO splitting
-	 */
-	struct list_head list;
 
 	/**
 	 * @brief Timestamp of start processing request
