@@ -195,19 +195,43 @@ static void _blockdev_defer_bio(ocf_core_t core, struct bio *bio,
 	queue_work(bvol->expobj_wq, &context->io_work);
 }
 
-static void block_dev_complete_data(struct ocf_io *io, int error)
+static void _block_dev_complete_data(struct blk_data *master, int error)
 {
-	struct blk_data *data = ocf_io_get_data(io);
-	struct bio *bio = data->master_io_req;
+	master->error = master->error ?: error;
 
-	cas_generic_end_io_acct(bio, data->start_time);
+	if (atomic_dec_return(&master->master_remaining))
+		return;
 
-	CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(error));
-	ocf_io_put(io);
-	cas_free_blk_data(data);
+	cas_generic_end_io_acct(master->bio, master->start_time);
+
+	CAS_BIO_ENDIO(master->bio, master->master_size, CAS_ERRNO_TO_BLK_STS(error));
+	cas_free_blk_data(master);
 }
 
-static void _blockdev_handle_data(ocf_core_t core, struct bio *bio)
+static void block_dev_complete_data(struct ocf_io *io, int error)
+{
+	struct bio *bio = io->priv1;
+	struct blk_data *master = io->priv2;
+	struct blk_data *data = ocf_io_get_data(io);
+
+	ocf_io_put(io);
+	if (data != master)
+		cas_free_blk_data(data);
+	if (bio != master->bio)
+		bio_put(bio);
+
+	_block_dev_complete_data(master, error);
+}
+
+struct blockdev_data_master_ctx {
+	struct blk_data *data;
+	struct bio *bio;
+	uint32_t master_size;
+	unsigned long long start_time;
+};
+
+static int _blockdev_handle_data_single(ocf_core_t core, struct bio *bio,
+		struct blockdev_data_master_ctx *master_ctx)
 {
 	ocf_cache_t cache;
 	struct cache_priv *cache_priv;
@@ -219,24 +243,13 @@ static void _blockdev_handle_data(ocf_core_t core, struct bio *bio)
 	cache = ocf_core_get_cache(core);
 	cache_priv = ocf_cache_get_priv(cache);
 
-	if (unlikely(CAS_BIO_BISIZE(bio) == 0)) {
-		CAS_PRINT_RL(KERN_ERR
-			"Not able to handle empty BIO, flags = "
-			CAS_BIO_OP_FLAGS_FORMAT "\n",  CAS_BIO_OP_FLAGS(bio));
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-EINVAL));
-		return;
-	}
-
 	data = cas_alloc_blk_data(bio_segments(bio), GFP_NOIO);
 	if (!data) {
 		CAS_PRINT_RL(KERN_CRIT "BIO data vector allocation error\n");
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));
-		return;
+		return -ENOMEM;
 	}
 
 	_blockdev_set_bio_data(data, bio);
-
-	data->master_io_req = bio;
 
 	io = ocf_core_new_io(core, cache_priv->io_queues[smp_processor_id()],
 			CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
@@ -247,22 +260,82 @@ static void _blockdev_handle_data(ocf_core_t core, struct bio *bio)
 	if (!io) {
 		printk(KERN_CRIT "Out of memory. Ending IO processing.\n");
 		cas_free_blk_data(data);
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));
-		return;
+		return -ENOMEM;
 	}
 
 	ret = ocf_io_set_data(io, data, 0);
 	if (ret < 0) {
 		ocf_io_put(io);
 		cas_free_blk_data(data);
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-EINVAL));
+		return -EINVAL;
+	}
+
+	if (!master_ctx->data) {
+		atomic_set(&data->master_remaining, 1);
+		data->bio = master_ctx->bio;
+		data->master_size = master_ctx->master_size;
+		data->start_time = master_ctx->start_time;
+		master_ctx->data = data;
+	}
+
+	atomic_inc(&master_ctx->data->master_remaining);
+
+	ocf_io_set_cmpl(io, bio, master_ctx->data, block_dev_complete_data);
+
+	ocf_core_submit_io(io);
+
+	return 0;
+}
+
+static void _blockdev_handle_data(ocf_core_t core, struct bio *bio)
+{
+	const uint32_t max_io_sectors = (32*MiB) >> SECTOR_SHIFT;
+	const uint32_t align_sectors = (128*KiB) >> SECTOR_SHIFT;
+	struct bio *split = NULL;
+	uint32_t sectors, to_submit;
+	int error;
+	struct blockdev_data_master_ctx master_ctx = {
+		.bio = bio,
+		.master_size = CAS_BIO_BISIZE(bio),
+	};
+
+	if (unlikely(CAS_BIO_BISIZE(bio) == 0)) {
+		CAS_PRINT_RL(KERN_ERR
+			"Not able to handle empty BIO, flags = "
+			CAS_BIO_OP_FLAGS_FORMAT "\n",  CAS_BIO_OP_FLAGS(bio));
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio),
+				CAS_ERRNO_TO_BLK_STS(-EINVAL));
 		return;
 	}
 
-	ocf_io_set_cmpl(io, NULL, NULL, block_dev_complete_data);
-	data->start_time = cas_generic_start_io_acct(bio);
+	master_ctx.start_time = cas_generic_start_io_acct(bio);
+	for (sectors = bio_sectors(bio); sectors > 0;) {
+		if (sectors <= max_io_sectors) {
+			split = bio;
+			sectors = 0;
+		} else {
+			to_submit = max_io_sectors -
+					CAS_BIO_BISECTOR(bio) % align_sectors;
+			split = cas_bio_split(bio, to_submit);
+			sectors -= to_submit;
+		}
 
-	ocf_core_submit_io(io);
+		error = _blockdev_handle_data_single(core, split, &master_ctx);
+		if (error)
+			goto err;
+	}
+
+	_block_dev_complete_data(master_ctx.data, 0);
+
+	return;
+
+err:
+	if (split != bio)
+		bio_put(split);
+	if (master_ctx.data)
+		_block_dev_complete_data(master_ctx.data, error);
+	else
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(error));
 }
 
 static void block_dev_complete_discard(struct ocf_io *io, int error)
