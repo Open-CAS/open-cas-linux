@@ -39,7 +39,6 @@ def test_ioclass_lba():
     ioclass_id = 1
     min_cached_lba = 56
     max_cached_lba = 200
-    iterations = 100
     dd_size = Size(1, Unit.Blocks512)
     dd_count = 1
 
@@ -70,37 +69,40 @@ def test_ioclass_lba():
                     .count(dd_count)
                     .block_size(dd_size)
                     .seek(lba)
+                    .oflag("direct")
             )
             dd.run()
-            sync()
             dirty_count += 1
 
             dirty = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.dirty
             if dirty.get_value(Unit.Blocks4096) != dirty_count:
                 TestRun.LOGGER.error(f"LBA {lba} not cached")
 
-    with TestRun.step("Flush cache."):
-        cache.flush_cache()
-
     with TestRun.step("Run IO and check if lba outside of defined range are not cached."):
-        TestRun.LOGGER.info(f"Writing to random sectors outside of cached range.")
-        for i in range(iterations):
-            rand_lba = random.randrange(2000)
-            if min_cached_lba <= rand_lba <= max_cached_lba:
-                continue
+        TestRun.LOGGER.info(f"Writing to sectors outside of cached range.")
+        test_lba = [max_cached_lba + 1] + random.sample(
+            [
+                *range(0, min_cached_lba),
+                *range(max_cached_lba + 1, int(core.size.get_value(Unit.Blocks512)))
+            ],
+            k=100)
+
+        for lba in test_lba:
+            prev_dirty = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.dirty
+
             dd = (
                 Dd().input("/dev/zero")
                     .output(f"{core.path}")
                     .count(dd_count)
                     .block_size(dd_size)
-                    .seek(rand_lba)
+                    .seek(lba)
+                    .oflag("direct")
             )
             dd.run()
-            sync()
 
             dirty = cache.get_io_class_statistics(io_class_id=ioclass_id).usage_stats.dirty
-            if dirty.get_value(Unit.Blocks4096) != 0:
-                TestRun.LOGGER.error(f"Inappropriately cached lba: {rand_lba}")
+            if prev_dirty != dirty:
+                TestRun.LOGGER.error(f"Inappropriately cached lba: {lba}")
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
