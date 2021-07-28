@@ -4,12 +4,13 @@
 #
 
 from time import sleep
+
 import pytest
 
 from api.cas import casadm, casadm_parser, cli
 from api.cas.cache_config import CacheMode, CleaningPolicy, CacheModeTrait, SeqCutOffPolicy
-from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
 from test_utils.output import CmdException
 from test_utils.size import Size, Unit
@@ -20,7 +21,7 @@ caches_number = 3
 
 @pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd, DiskType.hdd4k]))
 def test_concurrent_cores_flush(cache_mode):
     """
         title: Fail to flush two cores simultaneously.
