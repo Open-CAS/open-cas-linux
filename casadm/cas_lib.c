@@ -1070,8 +1070,7 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 			return FAILURE;
 		} else {
 			cas_printf(LOG_ERR, "Error inserting cache %d\n", cache_id);
-			if (OCF_ERR_NOT_OPEN_EXC == cmd.ext_err_code &&
-				FAILURE == check_cache_already_added(cache_device)) {
+			if (FAILURE == check_cache_already_added(cache_device)) {
 				cas_printf(LOG_ERR, "Cache device '%s' is already used as cache.\n",
 				cache_device);
 			} else {
