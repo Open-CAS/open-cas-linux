@@ -3,9 +3,10 @@
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
 
+from datetime import timedelta
+
 import pytest
 
-from datetime import timedelta
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
 from core.test_run import TestRun
@@ -17,13 +18,15 @@ from test_utils.os_utils import get_dut_cpu_physical_cores
 from test_utils.size import Size, Unit
 
 mount_point = "/mnt/test"
+runtime = timedelta(minutes=15)
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.parametrizex("filesystem", Filesystem)
-@pytest.mark.parametrizex("io_engine", IoEngine)
+@pytest.mark.parametrizex("io_engine", [IoEngine.sync, IoEngine.libaio, IoEngine.psync,
+                          IoEngine.vsync, IoEngine.pvsync, IoEngine.posixaio, IoEngine.mmap])
 def test_io_engines(cache_mode, filesystem, io_engine):
     """
         title: FIO with data integrity check on CAS.
@@ -59,7 +62,7 @@ def test_io_engines(cache_mode, filesystem, io_engine):
                .create_command()
                .direct()
                .io_engine(io_engine)
-               .run_time(timedelta(minutes=15))
+               .run_time(runtime)
                .time_based()
                .target(f"{mount_point}/fio_file")
                .read_write(ReadWrite.randrw)
