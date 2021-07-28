@@ -5,18 +5,18 @@
 
 
 import time
+from datetime import timedelta
+
 import pytest
 
-from datetime import timedelta
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
-from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
-from test_utils.size import Size, Unit
-from test_utils.os_utils import Udev, sync
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
-
+from test_utils.os_utils import Udev, sync
+from test_utils.size import Size, Unit
 
 io_size = Size(10000, Unit.Blocks4096)
 
@@ -87,11 +87,6 @@ def test_cache_stop_and_load(cache_mode):
                 failed_params += (
                     f"Cleaning policy is: {check_cache_config.cleaning_policy}, "
                     f"should be: {cache.get_cleaning_policy()}\n"
-                )
-            if check_cache_config.eviction_policy != cache.get_eviction_policy():
-                failed_params += (
-                    f"Eviction policy is: {check_cache_config.eviction_policy}, "
-                    f"should be: {cache.get_eviction_policy()}\n"
                 )
             if check_cache_config.cache_line_size != cache.get_cache_line_size():
                 failed_params += (

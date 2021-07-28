@@ -40,11 +40,6 @@ class Cache:
         cp = stats.config_stats.cleaning_policy
         return CleaningPolicy[cp]
 
-    def get_eviction_policy(self):
-        stats = self.get_statistics()
-        ep = stats.config_stats.eviction_policy
-        return EvictionPolicy[ep]
-
     def get_metadata_mode(self):
         if self.__metadata_mode is None:
             stats = self.get_statistics()
@@ -183,5 +178,4 @@ class Cache:
         return CacheConfig(self.get_cache_line_size(),
                            self.get_cache_mode(),
                            self.get_cleaning_policy(),
-                           self.get_eviction_policy(),
                            self.get_metadata_mode())
