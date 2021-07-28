@@ -7,7 +7,6 @@ import re
 from core.test_run import TestRun
 from test_utils.output import Output
 
-
 load_inactive_core_missing = [
     r"WARNING: Can not resolve path to core \d+ from cache \d+\. By-id path will be shown for that "
     r"core\.",
@@ -18,8 +17,7 @@ start_cache_with_existing_metadata = [
     r"Error inserting cache \d+",
     r"Old metadata found on device\.",
     r"Please load cache metadata using --load option or use --force to",
-    r" discard on-disk metadata and start fresh cache instance\.",
-    r"Error occurred, please see syslog \(/var/log/messages\) for details\."
+    r" discard on-disk metadata and start fresh cache instance\."
 ]
 
 error_inserting_cache = [
@@ -42,6 +40,12 @@ stop_cache_incomplete = [
     r"Cache is in incomplete state - at least one core is inactive"
 ]
 
+stop_cache_errors = [
+    r"Error while removing cache \d+",
+    r"Error while writing to cache device",
+    r"Error occurred, please see syslog \(/var/log/messages\) for details"
+]
+
 get_stats_ioclass_id_not_configured = [
     r"IO class \d+ is not configured\."
 ]
@@ -58,6 +62,11 @@ remove_multilevel_core = [
 add_cached_core = [
     r"Error while adding core device to cache instance \d+",
     r"Core device \'/dev/\S+\' is already cached\."
+]
+
+already_cached_core = [
+    r"Error while adding core device to cache instance \d+",
+    r"Device already added as a core"
 ]
 
 remove_mounted_core = [
