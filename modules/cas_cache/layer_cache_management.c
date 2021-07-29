@@ -1344,11 +1344,11 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	if (result)
 		goto error_affter_lock;
 
-	result = block_dev_create_exported_object(core);
+	result = kcas_core_create_exported_object(core);
 	if (result)
 		goto error_after_add_core;
 
-	result = block_dev_activate_exported_object(core);
+	result = kcas_core_activate_exported_object(core);
 	if (result)
 		goto error_after_create_exported_object;
 
@@ -1366,7 +1366,7 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	return 0;
 
 error_after_create_exported_object:
-	block_dev_destroy_exported_object(core);
+	kcas_core_destroy_exported_object(core);
 
 error_after_add_core:
 	init_completion(&remove_context.cmpl);
@@ -1386,11 +1386,11 @@ static int _cache_mngt_create_exported_object(ocf_core_t core, void *cntx)
 {
 	int result;
 
-	result = block_dev_create_exported_object(core);
+	result = kcas_core_create_exported_object(core);
 	if (result)
 		return result;
 
-	result = block_dev_activate_exported_object(core);
+	result = kcas_core_activate_exported_object(core);
 
 	return result;
 }
@@ -1485,7 +1485,7 @@ static int _cache_mngt_remove_core_prepare(ocf_cache_t cache, ocf_core_t core,
 	if (!core_active)
 		return -OCF_ERR_CORE_IN_INACTIVE_STATE;
 
-	result = block_dev_destroy_exported_object(core);
+	result = kcas_core_destroy_exported_object(core);
 	if (result)
 		return result;
 
@@ -1589,7 +1589,7 @@ int cache_mngt_remove_inactive_core(struct kcas_remove_inactive *cmd)
 	 * exported object, instead of trying rolling this back we rather
 	 * inform user about error.
 	 */
-	result = block_dev_destroy_exported_object(core);
+	result = kcas_core_destroy_exported_object(core);
 	if (result)
 		goto unlock;
 
@@ -1728,7 +1728,7 @@ out_get:
 
 static int _cache_mngt_destroy_exported_object(ocf_core_t core, void *cntx)
 {
-	if (block_dev_destroy_exported_object(core)) {
+	if (kcas_core_destroy_exported_object(core)) {
 		ocf_cache_t cache = ocf_core_get_cache(core);
 
 		printk(KERN_ERR "Cannot to destroy exported object, %s.%s\n",
@@ -2491,7 +2491,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	}
 
 	/* Destroy cache devices */
-	status = block_dev_destroy_all_exported_objects(cache);
+	status = kcas_cache_destroy_all_core_exported_objects(cache);
 	if (status != 0) {
 		printk(KERN_WARNING
 			"Failed to remove all cached devices\n");
