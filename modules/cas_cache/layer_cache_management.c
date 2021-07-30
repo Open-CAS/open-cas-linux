@@ -869,21 +869,36 @@ int cache_mngt_flush_device(const char *cache_name, size_t name_len)
 	return result;
 }
 
+struct cache_mngt_set_cleaning_policy_context {
+	struct completion cmpl;
+	int *result;
+};
+
+static void cache_mngt_set_cleaning_policy_cmpl(void *priv, int error)
+{
+	struct cache_mngt_set_cleaning_policy_context *context = priv;
+
+	*context->result = error;
+
+	complete(&context->cmpl);
+}
+
 int cache_mngt_set_cleaning_policy(ocf_cache_t cache, uint32_t type)
 {
+	struct cache_mngt_set_cleaning_policy_context context;
 	int result;
 
 	result = _cache_mngt_lock_sync(cache);
 	if (result)
 		return result;
 
-	result = ocf_mngt_cache_cleaning_set_policy(cache, type);
-	if (result)
-		goto out;
+	init_completion(&context.cmpl);
+	context.result = &result;
 
-	result = _cache_mngt_save_sync(cache);
+	ocf_mngt_cache_cleaning_set_policy(cache, type,
+			cache_mngt_set_cleaning_policy_cmpl, &context);
+	wait_for_completion(&context.cmpl);
 
-out:
 	ocf_mngt_cache_unlock(cache);
 	return result;
 }
