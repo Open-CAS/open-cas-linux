@@ -572,7 +572,7 @@ static void _blockdev_set_discard_properties(ocf_cache_t cache,
 	} else {
 		blk_queue_max_discard_sectors(exp_q,
 				min((uint64_t)core_sectors, (uint64_t)UINT_MAX));
-		exp_q->limits.discard_granularity = queue_logical_block_size(exp_q);
+		exp_q->limits.discard_granularity = ocf_cache_get_line_size(cache);
 		exp_q->limits.discard_alignment = 0;
 	}
 }
