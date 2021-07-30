@@ -3,6 +3,8 @@
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
+#include <linux/blkdev.h>
+
 #include "cas_cache.h"
 
 #define CAS_DEBUG_IO 0
@@ -398,6 +400,7 @@ static void block_dev_submit_io(struct ocf_io *io)
 	uint64_t addr = io->addr;
 	uint32_t bytes = io->bytes;
 	int dir = io->dir;
+	struct blk_plug plug;
 
 	if (CAS_IS_SET_FLUSH(io->flags)) {
 		CAS_DEBUG_MSG("Flush request");
@@ -420,6 +423,8 @@ static void block_dev_submit_io(struct ocf_io *io)
 		cas_bd_io_end(io, -EINVAL);
 		return;
 	}
+
+	blk_start_plug(&plug);
 
 	while (cas_io_iter_is_next(iter) && bytes) {
 		/* Still IO vectors to be sent */
@@ -487,6 +492,8 @@ static void block_dev_submit_io(struct ocf_io *io)
 			break;
 		}
 	}
+
+	blk_finish_plug(&plug);
 
 	if (bytes && bdio->error == 0) {
 		/* Not all bytes sent, mark error */
