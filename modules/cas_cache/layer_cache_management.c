@@ -14,6 +14,84 @@ extern u32 unaligned_io;
 extern u32 seq_cut_off_mb;
 extern u32 use_io_scheduler;
 
+struct cas_lazy_thread {
+	char name[64];
+	struct task_struct *thread;
+	int (*threadfn)(void *data);
+	void *data;
+	wait_queue_head_t wq;
+	atomic_t run;
+	atomic_t stop;
+};
+
+static int cas_lazy_thread_fn(void *data)
+{
+	struct cas_lazy_thread *clt = data;
+	int (*threadfn)(void *data) = clt->threadfn;
+	void *threaddata = clt->data;
+
+	while (wait_event_interruptible(clt->wq,
+			atomic_read(&clt->stop) || atomic_read(&clt->run)));
+
+	if (atomic_read(&clt->stop)) {
+		kfree(clt);
+		return 0;
+	}
+
+	kfree(clt);
+	return threadfn(threaddata);
+}
+
+static struct cas_lazy_thread *cas_lazy_thread_create(
+		int (*threadfn)(void *data), void *data, const char *fmt, ...)
+{
+	struct cas_lazy_thread *clt;
+	va_list args;
+	int error;
+
+	clt = kmalloc(sizeof(*clt), GFP_KERNEL);
+	if (!clt)
+		return ERR_PTR(-ENOMEM);
+
+	va_start(args, fmt);
+	vsnprintf(clt->name, sizeof(clt->name), fmt, args);
+	va_end(args);
+
+	clt->thread = kthread_create(cas_lazy_thread_fn, clt, "%s", clt->name);
+	if (IS_ERR(clt->thread)) {
+		error = PTR_ERR(clt->thread);
+		kfree(clt);
+		return ERR_PTR(error);
+	}
+
+	clt->threadfn = threadfn;
+	clt->data = data;
+	init_waitqueue_head(&clt->wq);
+	atomic_set(&clt->run, 0);
+	atomic_set(&clt->stop, 0);
+	wake_up_process(clt->thread);
+
+	return clt;
+}
+
+/*
+ * The caller must ensure that cas_lazy_thread wasn't released.
+ */
+static void cas_lazy_thread_stop(struct cas_lazy_thread *clt)
+{
+	atomic_set(&clt->stop, 1);
+	wake_up(&clt->wq);
+}
+
+/*
+ * The caller must ensure that cas_lazy_thread wasn't released.
+ */
+static void cas_lazy_thread_wake_up(struct cas_lazy_thread *clt)
+{
+	atomic_set(&clt->run, 1);
+	wake_up(&clt->wq);
+}
+
 struct _cache_mngt_sync_context {
 	struct completion cmpl;
 	int *result;
@@ -468,7 +546,7 @@ struct _cache_mngt_stop_context {
 	int error;
 	int flush_status;
 	ocf_cache_t cache;
-	struct task_struct *finish_thread;
+	struct cas_lazy_thread *finish_thread;
 };
 
 static void _cache_mngt_cache_priv_deinit(ocf_cache_t cache)
@@ -486,9 +564,6 @@ static int exit_instance_finish(void *data)
 	struct _cache_mngt_stop_context *ctx = data;
 	ocf_queue_t mngt_queue;
 	int result = 0;
-
-	if (kthread_should_stop())
-		return 0;
 
 	cache_priv = ocf_cache_get_priv(ctx->cache);
 	mngt_queue = cache_priv->mngt_queue;
@@ -523,7 +598,7 @@ struct _cache_mngt_attach_context {
 	struct ocf_mngt_cache_device_config *device_cfg;
 	ocf_cache_t cache;
 	int ocf_start_error;
-	struct task_struct *rollback_thread;
+	struct cas_lazy_thread *rollback_thread;
 
 	struct {
 		bool priv_inited:1;
@@ -539,9 +614,6 @@ static int cache_start_rollback(void *data)
 	struct _cache_mngt_attach_context *ctx = data;
 	ocf_cache_t cache = ctx->cache;
 	int result;
-
-	if (kthread_should_stop())
-		return 0;
 
 	if (ctx->cls_inited)
 		cas_cls_deinit(cache);
@@ -578,15 +650,16 @@ static void _cache_mngt_cache_stop_rollback_complete(ocf_cache_t cache,
 	else
 		BUG_ON(error);
 
-	BUG_ON(!wake_up_process(ctx->rollback_thread));
+	cas_lazy_thread_wake_up(ctx->rollback_thread);
 }
 
 static void _cache_mngt_cache_stop_complete(ocf_cache_t cache, void *priv,
 		int error)
 {
 	struct _cache_mngt_stop_context *context = priv;
+
 	context->error = error;
-	BUG_ON(!wake_up_process(context->finish_thread));
+	cas_lazy_thread_wake_up(context->finish_thread);
 }
 
 static int _cache_mngt_cache_stop_sync(ocf_cache_t cache)
@@ -2049,8 +2122,8 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		return -ENOMEM;
 	}
 
-	context->rollback_thread = kthread_create(cache_start_rollback, context,
-			"cas_cache_rollback_complete");
+	context->rollback_thread = cas_lazy_thread_create(cache_start_rollback,
+			context, "cas_cache_rollback_complete");
 	if (IS_ERR(context->rollback_thread)) {
 		result = PTR_ERR(context->rollback_thread);
 		kfree(context);
@@ -2067,7 +2140,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	 */
 	result = ocf_mngt_cache_start(cas_ctx, &cache, cfg);
 	if (result) {
-		kthread_stop(context->rollback_thread);
+		cas_lazy_thread_stop(context->rollback_thread);
 		kfree(context);
 		module_put(THIS_MODULE);
 		return result;
@@ -2106,7 +2179,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	if (result)
 		goto err;
 
-	kthread_stop(context->rollback_thread);
+	cas_lazy_thread_stop(context->rollback_thread);
 
 	kfree(context);
 	cache_priv->attach_context = NULL;
@@ -2435,7 +2508,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	if (status)
 		goto put;
 
-	context->finish_thread = kthread_create(exit_instance_finish,
+	context->finish_thread = cas_lazy_thread_create(exit_instance_finish,
 			context, "cas_%s_stop", cache_name);
 	if (IS_ERR(context->finish_thread)) {
 		status = PTR_ERR(context->finish_thread);
@@ -2483,7 +2556,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	return status;
 
 stop_thread:
-	kthread_stop(context->finish_thread);
+	cas_lazy_thread_stop(context->finish_thread);
 unlock:
 	ocf_mngt_cache_unlock(cache);
 put:
