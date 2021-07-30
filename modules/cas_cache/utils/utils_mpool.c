@@ -88,7 +88,7 @@ static env_allocator *env_mpool_get_allocator(
 	unsigned int idx;
 
 	if (unlikely(count == 0))
-		return env_mpool_1;
+		return mallocator->allocator[env_mpool_1];
 
 	idx = 31 - __builtin_clz(count);
 
