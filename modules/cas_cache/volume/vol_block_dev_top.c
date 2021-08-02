@@ -723,6 +723,9 @@ static int _blockdev_make_request_fast(struct casdsk_disk *dsk,
 		return CASDSK_BIO_HANDLED;
 	}
 
+	if (unlikely(CAS_BIO_BISIZE(bio) > 32*MiB))
+		return CASDSK_BIO_NOT_HANDLED;
+
 	if (unlikely(CAS_BIO_BISIZE(bio) == 0)) {
 		CAS_PRINT_RL(KERN_ERR
 			"Not able to handle empty BIO, flags = "
