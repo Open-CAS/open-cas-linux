@@ -86,15 +86,21 @@ fi
 %post modules_%{kver_filename}
 depmod
 . /etc/os-release
+# Determine the exact location of installed modules to add them to weak-modules
+for file in $(rpm -ql $(rpm -qa | grep <CAS_NAME>-modules)); do
+if [[ "$file" =~ cas_.*\.ko$ ]]; then
+    # realpath to resolve any possible symlinks (needed for weak-modules)
+    modules+=( $(realpath "$file") )
+fi
+done
+
 if [[ ! "$ID_LIKE" =~ suse|sles ]]; then
-    # Determine the exact location of installed modules to add them to weak-modules
-    for file in $(rpm -ql $(rpm -qa | grep <CAS_NAME>-modules)); do
-        if [[ "$file" =~ cas_.*\.ko$ ]]; then
-            # realpath to resolve any possible symlinks (needed for weak-modules)
-            modules+=( $(realpath "$file") )
-        fi
-    done
     printf "%s\n" "${modules[@]}" | weak-modules --no-initramfs --add-modules
+else
+    for version in $(echo "${modules[@]}" | tr " " "\n" | cut -d"/" -f4 | sort | uniq); do
+	# run depmod for all kernel versions for which the modules installed
+        depmod $version
+    done
 fi
 
 %preun modules_%{kver_filename}
