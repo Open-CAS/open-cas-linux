@@ -4,12 +4,15 @@
 #
 
 import os
+
 import pytest
-from api.cas import casadm
+
+from api.cas import casadm, cli_messages
 from api.cas.cache_config import CacheMode, CacheModeTrait, CacheLineSize
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.disk_utils import Filesystem
+from test_utils.output import CmdException
 from test_utils.size import Size, Unit
 from tests.lazy_writes.recovery.recovery_tests_methods import create_test_files, copy_file, \
     compare_files
@@ -148,7 +151,11 @@ def test_recovery_unplug_cache_raw(cache_mode, cls):
                             f"{cache.get_dirty_blocks().get_value(Unit.Blocks4096)}")
 
     with TestRun.step("Stop cache."):
-        cache.stop()
+        try:
+            cache.stop(no_data_flush=True)
+            TestRun.LOGGER.warning("Expected stopping cache with errors.")
+        except CmdException as e:
+            cli_messages.check_stderr_msg(e.output, cli_messages.stop_cache_errors)
 
     with TestRun.step("Plug missing cache device."):
         cache_disk.plug()
