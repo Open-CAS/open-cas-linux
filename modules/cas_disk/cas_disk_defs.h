@@ -12,11 +12,6 @@
 #include <linux/kobject.h>
 #include <linux/blkdev.h>
 
-struct casdsk_stored_config {
-	size_t n_blobs;
-	struct casdsk_props_conf *blobs;
-};
-
 struct casdsk_module {
 	struct mutex lock;
 
@@ -31,8 +26,6 @@ struct casdsk_module {
 	struct kmem_cache *pending_rqs_cache;
 
 	struct kobject kobj;
-
-	struct casdsk_stored_config config;
 };
 
 extern struct casdsk_module *casdsk_module;

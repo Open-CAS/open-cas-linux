@@ -56,7 +56,6 @@ OBJS += statistics_view.o
 OBJS += statistics_view_raw_csv.o
 OBJS += csvparse.o
 OBJS += extended_err_msg.o
-OBJS += upgrade.o
 OBJS += safeclib/memmove_s.o
 OBJS += safeclib/memcpy_s.o
 OBJS += safeclib/memset_s.o

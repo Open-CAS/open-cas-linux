@@ -12,7 +12,6 @@
 #include <cas_ioctl_codes.h>
 
 #include "linux_kernel_version.h"
-#include "layer_upgrade.h"
 #include "control.h"
 #include "layer_cache_management.h"
 #include "service_ui_ioctl.h"
@@ -21,6 +20,7 @@
 #include "classifier.h"
 #include "context.h"
 #include <linux/kallsyms.h>
+#include "../cas_disk/cas_disk.h"
 
 #define CAS_KERN_EMERG KERN_EMERG OCF_PREFIX_SHORT
 #define CAS_KERN_ALERT KERN_ALERT OCF_PREFIX_SHORT
@@ -76,7 +76,6 @@ struct casdsk_functions_mapper {
 		struct module *owner, struct casdsk_exp_obj_ops *ops);
 	void(*casdsk_exp_obj_free)(struct casdsk_disk *dsk);
 	struct request_queue *(*casdsk_disk_get_queue)(struct casdsk_disk *dsk);
-	void (*casdsk_store_config)(size_t n_blobs, struct casdsk_props_conf *blobs);
 	struct block_device *(*casdsk_disk_get_blkdev)(struct casdsk_disk *dsk);
 	struct request_queue *(*casdsk_exp_obj_get_queue)(struct casdsk_disk *dsk);
 	uint32_t (*casdsk_get_version)(void);
@@ -84,7 +83,6 @@ struct casdsk_functions_mapper {
 	struct casdsk_disk *(*casdsk_disk_claim)(const char *path, void *private);
 	int (*casdsk_exp_obj_unlock)(struct casdsk_disk *dsk);
 	int (*casdsk_disk_set_pt)(struct casdsk_disk *dsk);
-	size_t (*casdsk_get_stored_config)(struct casdsk_props_conf **blobs);
 	struct gendisk *(*casdsk_disk_get_gendisk)(struct casdsk_disk *dsk);
 	int (*casdsk_disk_attach) (struct casdsk_disk *dsk, struct module *owner,
 		struct casdsk_exp_obj_ops *ops);
@@ -92,7 +90,6 @@ struct casdsk_functions_mapper {
 	int (*casdsk_exp_obj_activate)(struct casdsk_disk *dsk);
 	bool (*casdsk_exp_obj_activated)(struct casdsk_disk *ds);
 	int (*casdsk_exp_obj_lock)(struct casdsk_disk *dsk);
-	void (*casdsk_free_stored_config)(void);
 	struct casdsk_disk *(*casdsk_disk_open)(const char *path, void *private);
 	int (*casdsk_disk_clear_pt)(struct casdsk_disk *dsk);
 	struct gendisk *(*casdsk_exp_obj_get_gendisk)(struct casdsk_disk *dsk);

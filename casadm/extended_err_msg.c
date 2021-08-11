@@ -198,19 +198,12 @@ struct {
 		"directory exists"
 	},
 	{
-		KCAS_ERR_IN_UPGRADE,
-		"Operation not allowed. CAS is in upgrade state"
-	},
-	{
 		KCAS_ERR_UNALIGNED,
 		"Cache device logical sector size is greater than core device "
 		"logical sector size.\nConsider changing logical sector size "
 		"on current cache device \nor try other device with the same "
 		"logical sector size as core device."
 	},
-	{
-		KCAS_ERR_NO_STORED_CONF,
-		"Internal kernel module error"	},
 	{
 		KCAS_ERR_ROLLBACK,
 		"Cannot restore previous configuration"

@@ -17,9 +17,6 @@ class CasVersion:
         self.type = release_type
         self.base = f"{self.main}.{self.major}.{self.minor}"
 
-    def can_be_upgraded(self):
-        return self.main >= 20
-
     def __str__(self):
         return f"{self.main}.{self.major}.{self.minor}.{self.pr}" \
                f"{'.' + self.type if self.type is not None else ''}"
@@ -46,7 +43,3 @@ def get_available_cas_versions():
     versions = [CasVersion.from_git_tag(tag) for tag in release_tags]
 
     return versions
-
-
-def get_upgradable_cas_versions():
-    return [v for v in get_available_cas_versions() if v.can_be_upgraded()]
