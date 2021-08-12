@@ -8,8 +8,6 @@
 #define CAS_BLK_DEV_REQ_TYPE_BIO 1
 #define CAS_BLK_DEV_REQ_TYPE_REQ 3
 
-struct atomic_dev_params;
-
 int cache_mngt_set_cleaning_policy(ocf_cache_t cache, uint32_t type);
 
 int cache_mngt_get_cleaning_policy(ocf_cache_t cache, uint32_t *type);
@@ -49,7 +47,6 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len,
 
 int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
-		struct atomic_dev_params *atomic_params,
 		struct kcas_start_cache *cmd);
 
 int cache_mngt_core_pool_get_paths(struct kcas_core_pool_path *cmd_info);

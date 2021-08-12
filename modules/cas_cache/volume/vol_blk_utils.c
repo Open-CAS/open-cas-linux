@@ -227,183 +227,12 @@ ctx_data_t *cas_blk_io_get_data(struct ocf_io *io)
 	return blkio->data;
 }
 
-#if defined(CAS_NVME_PARTIAL)
-
-#include "utils/utils_nvme.h"
-
-int cas_blk_identify_type_by_bdev(struct block_device *bdev,
-		uint8_t *type, struct atomic_dev_params *atomic_params)
+int cas_blk_open_volume_by_bdev(ocf_volume_t *vol, struct block_device *bdev)
 {
-	struct nvme_id_ns *ns;
-	unsigned int nsid, selected, ms, ds, pi, elba, sbsupp;
-	long long int ret = 0;
-	struct atomic_dev_params atomic_params_int = {0};
-
-	ns = kmalloc(sizeof(*ns), GFP_KERNEL);
-	if (!ns)
-		return -OCF_ERR_NO_MEM;
-
-	ret = cas_nvme_get_nsid(bdev, &nsid);
-	if (ret < 0) {
-		/*
-		 * We cannot obtain NSID which means we are not dealing with
-		 * NVMe device
-		 */
-		goto out1;
-	}
-
-	ret = cas_nvme_identify_ns(bdev, nsid, ns);
-	if (ret < 0) {
-		/*
-		 * We cannot obtain ns structure which means we ARE dealing with
-		 * NVMe device but can not recognize format so let's treat that
-		 * device as block device
-		 */
-		goto out1;
-	}
-
-	selected = ns->flbas & 0xf;
-	ms = ns->lbaf[selected].ms;
-	ds = ns->lbaf[selected].ds;
-	pi = ns->dps & 0x7;
-	elba = !!(ns->flbas & (1<<4));
-	sbsupp = !!(ns->mc & (1<<1));
-
-	atomic_params_int.is_atomic_capable = 1;
-	atomic_params_int.nsid = nsid;
-	atomic_params_int.size = (ns->nsze << (ds - 9)) * SECTOR_SIZE;
-
-	if (pi != 0) {
-		/* We don't support formats which have
-		 * enable Protection Information feature.
-		 */
-		ret = -KCAS_ERR_NVME_BAD_FORMAT;
-		goto out2;
-	}
-
-	switch (ms) {
-	case 0:
-		/* NVMe metadata features disabled, so we handle it as
-		 * regular block device
-		 */
-
-		if (ds != 9 && ds != 12) {
-			ret = -KCAS_ERR_NVME_BAD_FORMAT;
-			goto out2;
-		}
-
-		*type = BLOCK_DEVICE_VOLUME;
-		atomic_params_int.metadata_mode = ATOMIC_METADATA_MODE_NONE;
-
-#if !defined(CAS_NVME_FULL)
-		/*
-		 * Only partial support user can't using
-		 * device in atomic mode, so mode is optimal
-		 */
-		atomic_params_int.is_mode_optimal = 1;
-		break;
-#else
-		if (bdev == cas_bdev_whole(bdev)) {
-			/*
-			 * Entire device - format isn't optimal
-			 */
-			atomic_params_int.is_mode_optimal = 0;
-		} else {
-			/*
-			 * Partition - format is optimal, user can't using
-			 * partitions in atomic mode
-			 */
-			atomic_params_int.is_mode_optimal = 1;
-		}
-		break;
-
-	case 8:
-		/* For atomic writes we support only metadata size 8B and
-		 * data size 512B
-		 */
-
-		if (ds != 9) {
-			ret = -KCAS_ERR_NVME_BAD_FORMAT;
-			goto out2;
-		}
-
-		*type = ATOMIC_DEVICE_VOLUME;
-		atomic_params_int.metadata_mode = elba ?
-				ATOMIC_METADATA_MODE_ELBA :
-				ATOMIC_METADATA_MODE_SEPBUF;
-		atomic_params_int.is_mode_optimal = sbsupp ? !elba : 1;
-		break;
-#endif
-
-	default:
-		ret = -KCAS_ERR_NVME_BAD_FORMAT;
-	}
-
-	if (atomic_params)
-		*atomic_params = atomic_params_int;
-
-	goto out2;
-out1:
-	*type = BLOCK_DEVICE_VOLUME;
-	ret = 0;
-out2:
-	kfree(ns);
-	return ret;
-}
-
-static inline int _cas_detect_blk_type(const char *path, uint8_t *type,
-		struct atomic_dev_params *atomic_params)
-{
-	int ret;
-	struct block_device *bdev;
-	char holder[] = "CAS DETECT\n";
-
-	bdev = blkdev_get_by_path(path, (FMODE_EXCL|FMODE_READ), holder);
-	if (IS_ERR(bdev))
-		return -OCF_ERR_NOT_OPEN_EXC;
-
-	ret = cas_blk_identify_type_by_bdev(bdev, type, atomic_params);
-	blkdev_put(bdev, (FMODE_EXCL|FMODE_READ));
-	return ret;
-}
-
-#else
-
-static inline int _cas_detect_blk_type(const char *path, uint8_t *type,
-		struct atomic_dev_params *atomic_params)
-{
-	/*
-	 * NVMe is not supported with given kernel version, so we
-	 * have no way to figure out what the current NVMe format
-	 * is. In this situation we make a naive assumption that
-	 * it's formatted to LBA size 512B, and try to treat it
-	 * as regular block device.
-	 */
-	*type = BLOCK_DEVICE_VOLUME;
-	return 0;
-}
-
-int cas_blk_identify_type_by_bdev(struct block_device *bdev,
-		uint8_t *type, struct atomic_dev_params *atomic_params)
-{
-	*type = BLOCK_DEVICE_VOLUME;
-	return 0;
-}
-#endif
-
-int cas_blk_open_volume_by_bdev(ocf_volume_t *vol,
-		struct block_device *bdev)
-{
-	struct atomic_dev_params atomic_params = {0};
 	struct bd_object *bdobj;
-	uint8_t type;
 	int ret;
 
-	ret = cas_blk_identify_type_by_bdev(bdev, &type, &atomic_params);
-	if (ret)
-		goto err;
-
-	ret = ocf_ctx_volume_create(cas_ctx, vol, NULL, type);
+	ret = ocf_ctx_volume_create(cas_ctx, vol, NULL, BLOCK_DEVICE_VOLUME);
 	if (ret)
 		goto err;
 
@@ -412,7 +241,7 @@ int cas_blk_open_volume_by_bdev(ocf_volume_t *vol,
 	bdobj->btm_bd = bdev;
 	bdobj->opened_by_bdev = true;
 
-	return ocf_volume_open(*vol, &atomic_params);
+	return ocf_volume_open(*vol, NULL);
 
 err:
 	return ret;
@@ -425,8 +254,7 @@ void cas_blk_close_volume(ocf_volume_t vol)
 	env_free(vol);
 }
 
-int _cas_blk_identify_type(const char *path, uint8_t *type,
-		struct atomic_dev_params *atomic_params)
+int _cas_blk_identify_type(const char *path, uint8_t *type)
 {
 	struct file *file;
 	int result = 0;
@@ -437,8 +265,6 @@ int _cas_blk_identify_type(const char *path, uint8_t *type,
 
 	if (S_ISBLK(CAS_FILE_INODE(file)->i_mode))
 		*type = BLOCK_DEVICE_VOLUME;
-	else if (S_ISCHR(CAS_FILE_INODE(file)->i_mode))
-		*type = NVME_CONTROLLER;
 	else
 		result = -OCF_ERR_INVAL_VOLUME_TYPE;
 
@@ -446,23 +272,10 @@ int _cas_blk_identify_type(const char *path, uint8_t *type,
 	if (result)
 		return result;
 
-	if (*type == BLOCK_DEVICE_VOLUME) {
-		result = _cas_detect_blk_type(path, type, atomic_params);
-		if (result < 0)
-			return result;
-	}
-
 	return 0;
 }
 
 int cas_blk_identify_type(const char *path, uint8_t *type)
 {
-	return _cas_blk_identify_type(path, type, NULL);
+	return _cas_blk_identify_type(path, type);
 }
-
-int cas_blk_identify_type_atomic(const char *path, uint8_t *type,
-		struct atomic_dev_params *atomic_params)
-{
-	return _cas_blk_identify_type(path, type, atomic_params);
-}
-

@@ -68,13 +68,6 @@ enum output_format_t {
 	OUTPUT_FORMAT_DEFAULT = OUTPUT_FORMAT_TABLE
 };
 
-enum metadata_mode_t {
-	METADATA_MODE_INVALID = 0,
-	METADATA_MODE_NORMAL,
-	METADATA_MODE_ATOMIC,
-	METADATA_MODE_DEFAULT = METADATA_MODE_NORMAL,
-};
-
 #define STATS_FILTER_INVALID 0
 #define STATS_FILTER_CONF (1 << 0)
 #define STATS_FILTER_USAGE  (1 << 1)
@@ -96,8 +89,6 @@ const char *promotion_policy_to_name(uint8_t policy);
 const char *cache_mode_to_name(uint8_t cache_mode);
 const char *get_cache_state_name(int cache_state);
 const char *get_core_state_name(int core_state);
-const char *metadata_variant_to_name(uint8_t variant);
-const char *metadata_mode_to_name(uint8_t metadata_mode);
 const char *seq_cutoff_policy_to_name(uint8_t seq_cutoff_policy);
 
 __attribute__((format(printf, 2, 3)))
@@ -264,10 +255,8 @@ int validate_path(const char *path, int exist);
 int validate_str_cache_mode(const char *s);
 int validate_str_cln_policy(const char *s);
 int validate_str_promotion_policy(const char *s);
-int validate_str_meta_variant(const char *s);
 int validate_str_stats_filters(const char* s);
 int validate_str_output_format(const char* s);
-int validate_str_metadata_mode(const char* s);
 
 /**
  * @brief clear metadata

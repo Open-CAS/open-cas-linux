@@ -15,7 +15,6 @@
 #include "control.h"
 #include "layer_cache_management.h"
 #include "service_ui_ioctl.h"
-#include "utils/cas_cache_utils.h"
 #include "volume/vol_blk_utils.h"
 #include "classifier.h"
 #include "context.h"
@@ -45,11 +44,8 @@
  * cache/core object types */
 enum {
 	BLOCK_DEVICE_VOLUME = 1,	/**< block device volume */
-	ATOMIC_DEVICE_VOLUME,		/**< block device volume with atomic
-					     metadata support */
 /** \cond SKIP_IN_DOC */
 	OBJECT_TYPE_MAX,
-	NVME_CONTROLLER
 /** \endcond */
 };
 

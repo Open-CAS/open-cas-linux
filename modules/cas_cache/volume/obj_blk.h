@@ -6,7 +6,6 @@
 #ifndef __OBJ_BLK_H__
 #define __OBJ_BLK_H__
 
-#include "vol_atomic_dev_bottom.h"
 #include "vol_block_dev_bottom.h"
 #include "vol_block_dev_top.h"
 
@@ -25,8 +24,6 @@ struct bd_object {
 
 	uint32_t opened_by_bdev : 1;
 		/*!< Opened by supplying bdev manually */
-
-	struct atomic_dev_params atomic_params;
 
 	atomic64_t pending_rqs;
 		/*!< This fields describes in flight IO requests */

@@ -581,9 +581,6 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 
 	print_kv_pair_time(outfile, "Dirty for", cache_info->info.dirty_for);
 
-	print_kv_pair(outfile, "Metadata Mode", "%s",
-		      metadata_mode_to_name(cache_info->metadata_mode));
-
 	if (flush_progress) {
 		print_kv_pair(outfile, "Status", "%s (%3.1f %%)",
 			      "Flushing", flush_progress);
