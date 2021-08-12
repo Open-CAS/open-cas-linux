@@ -33,13 +33,7 @@ int block_dev_open_object(ocf_volume_t vol, void *volume_params)
 		return 0;
 	}
 
-	if (unlikely(true == cas_upgrade_is_in_upgrade())) {
-		dsk = casdisk_functions.casdsk_disk_claim(uuid->data, NULL);
-		casdisk_functions.casdsk_disk_set_attached(dsk);
-	} else {
-		dsk = casdisk_functions.casdsk_disk_open(uuid->data, NULL);
-	}
-
+	dsk = casdisk_functions.casdsk_disk_open(uuid->data, NULL);
 	if (IS_ERR_OR_NULL(dsk)) {
 		int error = PTR_ERR(dsk) ?: -EINVAL;
 
@@ -62,12 +56,7 @@ void block_dev_close_object(ocf_volume_t vol)
 	if (bdobj->opened_by_bdev)
 		return;
 
-	if (likely(!cas_upgrade_is_in_upgrade())) {
-		casdisk_functions.casdsk_disk_close(bdobj->dsk);
-	} else {
-		casdisk_functions.casdsk_disk_set_pt(bdobj->dsk);
-		casdisk_functions.casdsk_disk_detach(bdobj->dsk);
-	}
+	casdisk_functions.casdsk_disk_close(bdobj->dsk);
 }
 
 unsigned int block_dev_get_max_io_size(ocf_volume_t vol)

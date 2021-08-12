@@ -1191,11 +1191,6 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 	cfg->uuid.size = strnlen(cmd_info->core_path_name, MAX_STR_LEN) + 1;
 	cfg->try_add = cmd_info->try_add;
 
-	if (cas_upgrade_is_in_upgrade()) {
-		cfg->volume_type = BLOCK_DEVICE_VOLUME;
-		return 0;
-	}
-
 	if (!cas_bdev_exist(cfg->uuid.data))
 		return -OCF_ERR_INVAL_VOLUME_TYPE;
 
@@ -2512,20 +2507,12 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 		goto unlock;
 	}
 
-	if (!cas_upgrade_is_in_upgrade()) {
-		/* If we are not in upgrade - destroy cache devices */
-		status = block_dev_destroy_all_exported_objects(cache);
-		if (status != 0) {
-			printk(KERN_WARNING
-				"Failed to remove all cached devices\n");
-			goto stop_thread;
-		}
-	} else {
-		/*
-		 * We are being switched to upgrade in flight mode -
-		 * wait for finishing pending core requests
-		 */
-		cache_mngt_wait_for_rq_finish(cache);
+	/* Destroy cache devices */
+	status = block_dev_destroy_all_exported_objects(cache);
+	if (status != 0) {
+		printk(KERN_WARNING
+			"Failed to remove all cached devices\n");
+		goto stop_thread;
 	}
 
 	/* Flush cache again. This time we don't allow interruption. */

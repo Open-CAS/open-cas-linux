@@ -46,15 +46,6 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		return -EPERM;
 	}
 
-	if (cas_upgrade_is_in_upgrade() &&
-		cmd != KCAS_IOCTL_CACHE_INFO &&
-		cmd != KCAS_IOCTL_LIST_CACHE &&
-		cmd != KCAS_IOCTL_GET_CACHE_COUNT &&
-		cmd != KCAS_IOCTL_CORE_INFO &&
-		cmd != KCAS_IOCTL_PARTITION_INFO) {
-		return -EFAULT;
-	}
-
 	switch (cmd) {
 	case KCAS_IOCTL_START_CACHE: {
 		struct kcas_start_cache *cmd_info;
@@ -313,16 +304,6 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		retval = cache_mngt_list_caches(cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval > 0 ? 0 : retval);
-	}
-
-	case KCAS_IOCTL_UPGRADE: {
-		struct kcas_upgrade *cmd_info;
-
-		GET_CMD_INFO(cmd_info, arg);
-
-		retval = cas_upgrade();
-
-		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
 
 	case KCAS_IOCTL_GET_CORE_POOL_COUNT: {

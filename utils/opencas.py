@@ -153,11 +153,6 @@ class casadm:
                '--file', ioclass_file]
         return cls.run_cmd(cmd)
 
-    @classmethod
-    def start_upgrade(cls):
-        cmd = [cls.casadm_path, '--script', '--upgrade-in-flight']
-
-        return cls.run_cmd(cmd)
 
 # Configuration file parser
 

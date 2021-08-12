@@ -20,9 +20,6 @@ MODULE_VERSION(CAS_VERSION);
 static int iface_version = CASDSK_IFACE_VERSION;
 module_param(iface_version, int, (S_IRUSR | S_IRGRP));
 
-static int upgrade_in_progress = 0;
-module_param(upgrade_in_progress, int, (S_IRUSR | S_IRGRP));
-
 struct casdsk_module *casdsk_module;
 
 uint32_t casdsk_get_version(void)
@@ -30,46 +27,6 @@ uint32_t casdsk_get_version(void)
 	return CASDSK_IFACE_VERSION;
 }
 EXPORT_SYMBOL(casdsk_get_version);
-
-static void _casdsk_module_free_config(struct casdsk_module *mod)
-{
-	int i;
-
-	if (mod->config.blobs) {
-		for (i = 0; i < mod->config.n_blobs; i++)
-			vfree(mod->config.blobs[i].buffer);
-		kfree(mod->config.blobs);
-
-		mod->config.blobs = NULL;
-		mod->config.n_blobs = 0;
-	}
-}
-
-void casdsk_store_config(size_t n_blobs, struct casdsk_props_conf *blobs)
-{
-	upgrade_in_progress = 1;
-	_casdsk_module_free_config(casdsk_module);
-	casdsk_module->config.blobs = blobs;
-	casdsk_module->config.n_blobs = n_blobs;
-}
-EXPORT_SYMBOL(casdsk_store_config);
-
-size_t casdsk_get_stored_config(struct casdsk_props_conf **blobs)
-{
-	BUG_ON(!blobs);
-
-	*blobs = casdsk_module->config.blobs;
-	return casdsk_module->config.n_blobs;
-}
-EXPORT_SYMBOL(casdsk_get_stored_config);
-
-void casdsk_free_stored_config(void)
-{
-	CASDSK_DEBUG_TRACE();
-	_casdsk_module_free_config(casdsk_module);
-	upgrade_in_progress = 0;
-}
-EXPORT_SYMBOL(casdsk_free_stored_config);
 
 static void _casdsk_module_release(struct kobject *kobj)
 {
@@ -81,8 +38,6 @@ static void _casdsk_module_release(struct kobject *kobj)
 
 	mod = container_of(kobj, struct casdsk_module, kobj);
 	BUG_ON(!mod);
-
-	_casdsk_module_free_config(mod);
 
 	kfree(mod);
 }

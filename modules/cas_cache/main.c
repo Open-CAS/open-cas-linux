@@ -21,10 +21,6 @@ MODULE_PARM_DESC(writeback_queue_unblock_size,
 		"Cache writeback queue size (60000) at which queue "
 		"is unblocked when blocked");
 
-u32 dry_run;
-module_param(dry_run, uint, (S_IRUSR | S_IRGRP));
-MODULE_PARM_DESC(dry_run, "Perform dry run on module load");
-
 u32 use_io_scheduler = 1;
 module_param(use_io_scheduler, uint, (S_IRUSR | S_IRGRP));
 MODULE_PARM_DESC(use_io_scheduler,
@@ -47,7 +43,6 @@ MODULE_PARM_DESC(seq_cut_off_mb,
 		"Sequential cut off threshold in MiB. 0 - disable");
 
 /* globals */
-bool in_upgrade;
 ocf_ctx_t cas_ctx;
 struct casdsk_functions_mapper casdisk_functions;
 
@@ -94,7 +89,6 @@ int static cas_casdisk_lookup_funtions(void)
 	cas_lookup_symbol(casdsk_exp_obj_create);
 	cas_lookup_symbol(casdsk_exp_obj_free);
 	cas_lookup_symbol(casdsk_disk_get_queue);
-	cas_lookup_symbol(casdsk_store_config);
 	cas_lookup_symbol(casdsk_disk_get_blkdev);
 	cas_lookup_symbol(casdsk_exp_obj_get_queue);
 	cas_lookup_symbol(casdsk_get_version);
@@ -102,14 +96,12 @@ int static cas_casdisk_lookup_funtions(void)
 	cas_lookup_symbol(casdsk_disk_claim);
 	cas_lookup_symbol(casdsk_exp_obj_unlock);
 	cas_lookup_symbol(casdsk_disk_set_pt);
-	cas_lookup_symbol(casdsk_get_stored_config);
 	cas_lookup_symbol(casdsk_disk_get_gendisk);
 	cas_lookup_symbol(casdsk_disk_attach);
 	cas_lookup_symbol(casdsk_disk_set_attached);
 	cas_lookup_symbol(casdsk_exp_obj_activate);
 	cas_lookup_symbol(casdsk_exp_obj_activated);
 	cas_lookup_symbol(casdsk_exp_obj_lock);
-	cas_lookup_symbol(casdsk_free_stored_config);
 	cas_lookup_symbol(casdsk_disk_open);
 	cas_lookup_symbol(casdsk_disk_clear_pt);
 	cas_lookup_symbol(casdsk_exp_obj_get_gendisk);
@@ -169,31 +161,6 @@ static int __init cas_init_module(void)
 		printk(KERN_ERR OCF_PREFIX_SHORT
 				"Cannot initialize cache library\n");
 		return result;
-	}
-
-	result = cas_upgrade_get_configuration();
-	if (-KCAS_ERR_NO_STORED_CONF == result) {
-		printk(KERN_INFO OCF_PREFIX_SHORT
-				"Not found configuration for upgrade. "
-				"Standard module initialization.\n");
-	} else {
-		if (!dry_run) {
-			result = cas_upgrade_finish();
-			if (result) {
-				printk(KERN_ERR OCF_PREFIX_SHORT
-						"Error during finish upgrade, "
-						"result: %d\n", result);
-				goto error_cas_ctx_init;
-			}
-		} else {
-			result = cas_upgrade_verify();
-			if (result) {
-				printk(KERN_ERR OCF_PREFIX_SHORT
-						"Error during upgrade "
-						"verification\n");
-				goto error_cas_ctx_init;
-			}
-		}
 	}
 
 	result = cas_ctrl_device_init();

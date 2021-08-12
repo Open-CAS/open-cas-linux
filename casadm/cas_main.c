@@ -21,7 +21,6 @@
 #include "cas_lib_utils.h"
 #include "safeclib/safe_str_lib.h"
 #include <cas_ioctl_codes.h>
-#include "upgrade.h"
 #include "statistics_view.h"
 
 #define HELP_HEADER OCF_PREFIX_LONG
@@ -1447,8 +1446,7 @@ enum {
 
 	script_cmd_min_id = 0,
 
-	script_cmd_upgrade = script_cmd_min_id,
-	script_cmd_check_cache_device,
+	script_cmd_check_cache_device = script_cmd_min_id,
 
 	script_cmd_add_core,
 	script_cmd_remove_core,
@@ -1478,14 +1476,6 @@ enum {
  * script_opt_* .priv fields contains id of commands, where they can be used
  */
 static cli_option script_params_options[] = {
-	[script_cmd_upgrade] = {
-		.short_name = 0,
-		.long_name = "upgrade-in-flight",
-		.args_count = 0,
-		.arg = NULL,
-		.priv = 0,
-		.flags = CLI_COMMAND_HIDDEN,
-	},
 	[script_cmd_check_cache_device] = {
 		.short_name = 0,
 		.long_name = "check-cache-device",
@@ -1696,8 +1686,6 @@ int script_handle() {
 	switch (command_args_values.script_subcmd) {
 	case script_cmd_check_cache_device:
 		return check_cache_device(command_args_values.cache_device);
-	case script_cmd_upgrade:
-		return upgrade_start();
 	case script_cmd_add_core:
 		return add_core(
 			command_args_values.cache_id,

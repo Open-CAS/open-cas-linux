@@ -290,10 +290,6 @@ struct kcas_capabilites {
 	int ext_err_code;
 };
 
-struct kcas_upgrade {
-	int ext_err_code;
-};
-
 /**
  * Format NVMe namespace.
  */
@@ -404,7 +400,7 @@ struct kcas_get_cache_param {
  *    16    *    KCAS_IOCTL_GET_CACHE_COUNT                 *    OK            *
  *    17    *    KCAS_IOCTL_LIST_CACHE                      *    OK            *
  *    18    *    KCAS_IOCTL_GET_CAPABILITIES                *    DEPRECATED    *
- *    19    *    KCAS_IOCTL_UPGRADE                         *    OK            *
+ *    19    *    KCAS_IOCTL_UPGRADE                         *    DEPRACATED    *
  *    20    *    KCAS_IOCTL_NVME_FORMAT                     *    DEPRECATED    *
  *    21    *    KCAS_IOCTL_START_CACHE                     *    OK            *
  *    22    *    KCAS_IOCTL_INSERT_CORE                     *    OK            *
@@ -464,9 +460,6 @@ struct kcas_get_cache_param {
 
 /** Provides capabilites of installed open cas module */
 #define KCAS_IOCTL_GET_CAPABILITIES _IOWR(KCAS_IOCTL_MAGIC, 18, struct kcas_capabilites)
-
-/** Start upgrade in flight procedure */
-#define KCAS_IOCTL_UPGRADE _IOR(KCAS_IOCTL_MAGIC, 19, struct kcas_upgrade)
 
 /** Format NVMe namespace to support selected metadata mode */
 #define KCAS_IOCTL_NVME_FORMAT _IOWR(KCAS_IOCTL_MAGIC, 20, struct kcas_nvme_format)
@@ -551,15 +544,9 @@ enum kcas_error {
 	 */
 	KCAS_ERR_FILE_EXISTS,
 
-	/** CAS is under upgrade */
-	KCAS_ERR_IN_UPGRADE,
-
 	/** Cache device sector size is greater than core device %s sector size
 	 */
 	KCAS_ERR_UNALIGNED,
-
-	/** No caches configuration for upgrade in flight */
-	KCAS_ERR_NO_STORED_CONF,
 
 	/** Cannot roll-back previous configuration */
 	KCAS_ERR_ROLLBACK,

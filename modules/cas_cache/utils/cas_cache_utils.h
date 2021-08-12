@@ -8,6 +8,5 @@
 #define __CAS_UTILS_H__
 
 #include "utils_nvme.h"
-#include "utils_properties.h"
 
 #endif /* __CAS_UTILS_H__ */

@@ -32,38 +32,10 @@ struct casdsk_exp_obj_ops {
 };
 
 /**
- * Stored configuration buffer description
- */
-struct casdsk_props_conf {
-	void *buffer;
-	size_t size;
-	uint16_t crc;
-};
-
-/**
  * @brief Get version of cas_disk interface
  * @return cas_disk interface version
  */
 uint32_t casdsk_get_version(void);
-
-/**
- * @brief Store configuration buffers in cas_disk
- * @param n_blobs Number of configuration buffers
- * @param blobs Array of configuration buffers structures
- */
-void casdsk_store_config(size_t n_blobs, struct casdsk_props_conf *blobs);
-
-/**
- * @brief Get previously stored configuration buffers
- * @param blobs Where to store pointer to configuration buffers array
- * @return Number of stored configuration buffers
- */
-size_t casdsk_get_stored_config(struct casdsk_props_conf **blobs);
-
-/**
- * @brief Free resources related to stored configuration buffers
- */
-void casdsk_free_stored_config(void);
 
 /**
  * @brief Open block device
