@@ -1984,7 +1984,7 @@ static int _cache_mngt_cache_priv_init(ocf_cache_t cache)
 	cache_priv->stop_context =
 		env_malloc(sizeof(*cache_priv->stop_context), GFP_KERNEL);
 	if (!cache_priv->stop_context) {
-		kfree(cache_priv);
+		vfree(cache_priv);
 		return -ENOMEM;
 	}
 
