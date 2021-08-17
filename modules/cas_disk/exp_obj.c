@@ -478,7 +478,7 @@ static int _casdsk_init_tag_set(struct casdsk_disk *dsk, struct blk_mq_tag_set *
 	set->queue_depth = BLKDEV_MAX_RQ;
 
 	set->cmd_size = 0;
-	set->flags = BLK_MQ_F_SHOULD_MERGE | CAS_BLK_MQ_F_STACKING | BLK_MQ_F_BLOCKING;
+	set->flags = BLK_MQ_F_SHOULD_MERGE | CAS_BLK_MQ_F_STACKING | CAS_BLK_MQ_F_BLOCKING;
 
 	set->driver_data = dsk;
 
