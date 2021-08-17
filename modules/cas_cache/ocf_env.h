@@ -220,66 +220,47 @@ static inline void env_rmutex_destroy(env_rmutex *rmutex)
 
 /* *** RW SEMAPHORE *** */
 
-typedef struct
-{
-	struct rw_semaphore sem;
-	wait_queue_head_t wq;
-} env_rwsem;
+typedef struct rw_semaphore env_rwsem;
 
 static inline int env_rwsem_init(env_rwsem *s)
 {
-	init_rwsem(&s->sem);
-	init_waitqueue_head(&s->wq);
+	init_rwsem(s);
 	return 0;
 }
 
 static inline void env_rwsem_up_read(env_rwsem *s)
 {
-	up_read(&s->sem);
-	wake_up_all(&s->wq);
+	up_read(s);
 }
 
 static inline void env_rwsem_down_read(env_rwsem *s)
 {
-	down_read(&s->sem);
-}
-
-static inline int env_rwsem_down_read_interruptible(env_rwsem *s)
-{
-	return wait_event_interruptible(s->wq,
-			down_read_trylock(&s->sem)) ? -OCF_ERR_INTR : 0;
+	down_read(s);
 }
 
 static inline int env_rwsem_down_read_trylock(env_rwsem *s)
 {
-	return down_read_trylock(&s->sem) ? 0 : -OCF_ERR_NO_LOCK;
+	return down_read_trylock(s) ? 0 : -OCF_ERR_NO_LOCK;
 }
 
 static inline void env_rwsem_up_write(env_rwsem *s)
 {
-	up_write(&s->sem);
-	wake_up_all(&s->wq);
+	up_write(s);
 }
 
 static inline void env_rwsem_down_write(env_rwsem *s)
 {
-	down_write(&s->sem);
-}
-
-static inline int env_rwsem_down_write_interruptible(env_rwsem *s)
-{
-	return wait_event_interruptible(s->wq,
-			down_write_trylock(&s->sem)) ? -OCF_ERR_INTR : 0;
+	down_write(s);
 }
 
 static inline int env_rwsem_down_write_trylock(env_rwsem *s)
 {
-	return down_write_trylock(&s->sem) ? 0 : -OCF_ERR_NO_LOCK;
+	return down_write_trylock(s) ? 0 : -OCF_ERR_NO_LOCK;
 }
 
 static inline int env_rwsem_is_locked(env_rwsem *s)
 {
-	return rwsem_is_locked(&s->sem);
+	return rwsem_is_locked(s);
 }
 
 static inline int env_rwsem_destroy(env_rwsem *s)
