@@ -135,14 +135,14 @@ static inline void env_mutex_destroy(env_mutex *mutex)
 
 typedef struct {
 	struct mutex mutex;
-	atomic_t count;
+	uint32_t count;
 	struct task_struct *holder;
 } env_rmutex;
 
 static inline int env_rmutex_init(env_rmutex *rmutex)
 {
 	mutex_init(&rmutex->mutex);
-	atomic_set(&rmutex->count, 0);
+	rmutex->count = 0;
 	rmutex->holder = NULL;
 	return 0;
 }
@@ -150,20 +150,20 @@ static inline int env_rmutex_init(env_rmutex *rmutex)
 static inline void env_rmutex_lock(env_rmutex *rmutex)
 {
 	if (current == rmutex->holder) {
-		atomic_inc(&rmutex->count);
+		rmutex->count++;
 		return;
 	}
 
 	mutex_lock(&rmutex->mutex);
 	rmutex->holder = current;
-	atomic_inc(&rmutex->count);
+	rmutex->count++;
 }
 
 static inline int env_rmutex_lock_interruptible(env_rmutex *rmutex)
 {
 	int result = 0;
 	if (current == rmutex->holder) {
-		atomic_inc(&rmutex->count);
+		rmutex->count++;
 		return 0;
 	}
 
@@ -174,7 +174,7 @@ static inline int env_rmutex_lock_interruptible(env_rmutex *rmutex)
 	}
 
 	rmutex->holder = current;
-	atomic_inc(&rmutex->count);
+	rmutex->count++;
 
 	return 0;
 }
@@ -182,7 +182,7 @@ static inline int env_rmutex_lock_interruptible(env_rmutex *rmutex)
 static inline int env_rmutex_trylock(env_rmutex *rmutex)
 {
 	if (current == rmutex->holder) {
-		atomic_inc(&rmutex->count);
+		rmutex->count++;
 		return 0;
 	}
 
@@ -192,7 +192,7 @@ static inline int env_rmutex_trylock(env_rmutex *rmutex)
 	}
 
 	rmutex->holder = current;
-	atomic_inc(&rmutex->count);
+	rmutex->count++;
 
 	return 0;
 }
@@ -201,7 +201,7 @@ static inline void env_rmutex_unlock(env_rmutex *rmutex)
 {
 	BUG_ON(current != rmutex->holder);
 
-	if (atomic_dec_return(&rmutex->count)) {
+	if (--rmutex->count) {
 		return;
 	}
 
