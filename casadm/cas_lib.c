@@ -281,12 +281,6 @@ static struct name_to_val_mapping promotion_policy_names[] = {
 	{ NULL}
 };
 
-static struct name_to_val_mapping metadata_mode_names[] = {
-	{ .short_name = "normal", .value = CAS_METADATA_MODE_NORMAL },
-	{ .short_name = "atomic", .value = CAS_METADATA_MODE_ATOMIC },
-	{ NULL }
-};
-
 static struct name_to_val_mapping seq_cutoff_policy_names[] = {
 	{ .short_name = "always", .value = ocf_seq_cutoff_policy_always },
 	{ .short_name = "full", .value = ocf_seq_cutoff_policy_full },
@@ -307,12 +301,6 @@ static struct name_to_val_mapping stats_filters_names[] = {
 static struct name_to_val_mapping output_formats_names[] = {
 	{ .short_name = "table", .value = OUTPUT_FORMAT_TABLE },
 	{ .short_name = "csv", .value = OUTPUT_FORMAT_CSV },
-	{ NULL }
-};
-
-static struct name_to_val_mapping metadata_modes_names[] = {
-	{ .short_name = "normal", .value = METADATA_MODE_NORMAL },
-	{ .short_name = "atomic", .value = METADATA_MODE_ATOMIC },
 	{ NULL }
 };
 
@@ -447,11 +435,6 @@ inline const char *promotion_policy_to_name(uint8_t policy)
 	return val_to_short_name(policy, promotion_policy_names, "Unknown");
 }
 
-const char *metadata_mode_to_name(uint8_t metadata_mode)
-{
-	return val_to_short_name(metadata_mode, metadata_mode_names, "Invalid");
-}
-
 const char *seq_cutoff_policy_to_name(uint8_t seq_cutoff_policy)
 {
 	return val_to_short_name(seq_cutoff_policy,
@@ -495,15 +478,6 @@ int validate_str_output_format(const char* s)
 					OUTPUT_FORMAT_INVALID);
 }
 
-/* Returns one of METADATA_MODE values
- * or METADATA_MODE_INVALID in case of error.
- */
-int validate_str_metadata_mode(const char* s)
-{
-	return validate_str_val_mapping(s, metadata_modes_names,
-					METADATA_MODE_INVALID);
-}
-
 void print_err(int error_code)
 {
 	const char *msg = cas_strerr(error_code);
@@ -533,21 +507,6 @@ const char *get_core_state_name(int core_state)
 	return core_states_name[core_state];
 }
 
-
-/* check if device is atomic and print information about potential slow start */
-void print_slow_atomic_cache_start_info(const char *device_path)
-{
-	struct kcas_cache_check_device cmd_info;
-	int ret;
-
-	ret = _check_cache_device(device_path, &cmd_info);
-
-	if (!ret && cmd_info.format_atomic) {
-		cas_printf(LOG_INFO,
-			"Starting new cache instance on a device with atomic metadata format may take \n"
-			"several minutes depending on device model and size.\n");
-	}
-}
 
 /**
   * Save to dest an absolute device file path of src.
@@ -1015,9 +974,6 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	}
 	close(fd);
 
-	if (cache_init == CACHE_INIT_NEW)
-		print_slow_atomic_cache_start_info(cache_device);
-
 	fd = open_ctrl_device();
 	if (fd == -1)
 		return FAILURE;
@@ -1079,11 +1035,6 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 			return FAILURE;
 		}
 	}
-
-	if (!cmd.metadata_mode_optimal)
-		cas_printf(LOG_NOTICE, "Selected metadata mode is not optimal for device %s.\n"
-			"You can improve cache performance by formatting your device\n",
-			cache_device);
 
 	check_cache_scheduler(cache_device,
 			      cmd.cache_elevator);

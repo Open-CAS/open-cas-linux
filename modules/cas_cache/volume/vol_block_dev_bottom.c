@@ -127,22 +127,6 @@ const char *block_dev_get_elevator_name(struct request_queue *q)
 /*
  *
  */
-int block_dev_is_metadata_mode_optimal(struct atomic_dev_params *atomic_params,
-		uint8_t type)
-{
-	if (type == BLOCK_DEVICE_VOLUME) {
-		if (atomic_params->is_atomic_capable)
-			return atomic_params->is_mode_optimal;
-	} else if (type == ATOMIC_DEVICE_VOLUME) {
-		return atomic_params->is_mode_optimal;
-	}
-
-	return 1;
-}
-
-/*
- *
- */
 static inline struct bio *cas_bd_io_alloc_bio(struct blkio *bdio)
 {
 	struct bio *bio

@@ -74,8 +74,6 @@ struct kcas_start_cache {
 
 	uint64_t min_free_ram; /**< Minimum free RAM memory for cache metadata */
 
-	uint8_t metadata_mode_optimal; /**< Current metadata mode is optimal */
-
 	char cache_elevator[MAX_ELEVATOR_NAME];
 
 	int ext_err_code;
@@ -188,8 +186,6 @@ struct kcas_cache_info {
 
 	struct ocf_cache_info info;
 
-	uint8_t metadata_mode; /**< metadata mode (normal/atomic) */
-
 	int ext_err_code;
 };
 
@@ -280,31 +276,6 @@ struct kcas_cache_list {
 	int ext_err_code;
 };
 
-/**
- * CAS capabilities.
- */
-struct kcas_capabilites {
-	uint8_t nvme_format : 1;
-		/**< NVMe format support */
-
-	int ext_err_code;
-};
-
-/**
- * Format NVMe namespace.
- */
-#define CAS_METADATA_MODE_NORMAL	0
-#define CAS_METADATA_MODE_ATOMIC	1
-#define CAS_METADATA_MODE_INVALID	255
-
-struct kcas_nvme_format {
-	char device_path_name[MAX_STR_LEN]; /**< path to NVMe device*/
-	int metadata_mode; /**< selected metadata mode */
-	int force;
-
-	int ext_err_code;
-};
-
 struct kcas_core_pool_remove {
 	char core_path_name[MAX_STR_LEN]; /**< path to a core object */
 
@@ -321,7 +292,6 @@ struct kcas_cache_check_device {
 	/* following bool flags are defined iff is_metadata_compatible == 1 */
 	bool clean_shutdown;
 	bool cache_dirty;
-	bool format_atomic;
 
 	int ext_err_code;
 };
@@ -457,12 +427,6 @@ struct kcas_get_cache_param {
 
 /** List valid cache ids within Open CAS module */
 #define KCAS_IOCTL_LIST_CACHE _IOWR(KCAS_IOCTL_MAGIC, 17, struct kcas_cache_list)
-
-/** Provides capabilites of installed open cas module */
-#define KCAS_IOCTL_GET_CAPABILITIES _IOWR(KCAS_IOCTL_MAGIC, 18, struct kcas_capabilites)
-
-/** Format NVMe namespace to support selected metadata mode */
-#define KCAS_IOCTL_NVME_FORMAT _IOWR(KCAS_IOCTL_MAGIC, 20, struct kcas_nvme_format)
 
 /** Start new cache instance, load cache or recover cache */
 #define KCAS_IOCTL_START_CACHE _IOWR(KCAS_IOCTL_MAGIC, 21, struct kcas_start_cache)

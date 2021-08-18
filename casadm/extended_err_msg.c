@@ -205,14 +205,6 @@ struct {
 		"logical sector size as core device."
 	},
 	{
-		KCAS_ERR_ROLLBACK,
-		"Cannot restore previous configuration"
-	},
-	{
-		KCAS_ERR_NVME_BAD_FORMAT,
-		"NVMe is formatted to unsupported format"
-	},
-	{
 		KCAS_ERR_CONTAINS_PART,
 		"Device contains partitions.\nIf you want to continue, "
 		"please use --force option.\nWarning: all data will be lost!"

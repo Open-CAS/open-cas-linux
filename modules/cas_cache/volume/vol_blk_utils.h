@@ -30,17 +30,11 @@ int cas_blk_io_set_data(struct ocf_io *io, ctx_data_t *data,
 		uint32_t offset);
 ctx_data_t *cas_blk_io_get_data(struct ocf_io *io);
 
-int cas_blk_identify_type_by_bdev(struct block_device *bdev,
-		uint8_t *type, struct atomic_dev_params *atomic_params);
-
 int cas_blk_open_volume_by_bdev(ocf_volume_t *vol,
 		struct block_device *bdev);
 void cas_blk_close_volume(ocf_volume_t vol);
 
 int cas_blk_identify_type(const char *path, uint8_t *type);
-
-int cas_blk_identify_type_atomic(const char *path, uint8_t *type,
-		struct atomic_dev_params *atomic_params);
 
 static inline void cas_io_iter_init(struct bio_vec_iter *iter,
 		struct bio_vec *vec, uint32_t vec_size)

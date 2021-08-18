@@ -1136,9 +1136,6 @@ int cache_mngt_cache_check_device(struct kcas_cache_check_device *cmd_info)
 	if (result)
 		goto out_bdev;
 
-	cmd_info->format_atomic = (ocf_ctx_get_volume_type_id(cas_ctx,
-			ocf_volume_get_type(volume)) == ATOMIC_DEVICE_VOLUME);
-
 	init_completion(&context.cmpl);
 	context.cmd_info = cmd_info;
 	context.result = &result;
@@ -1198,8 +1195,6 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 		return 0;
 
 	result = cas_blk_identify_type(cfg->uuid.data, &cfg->volume_type);
-	if (!result && cfg->volume_type == ATOMIC_DEVICE_VOLUME)
-		result = -KCAS_ERR_NVME_BAD_FORMAT;
 	if (OCF_ERR_NOT_OPEN_EXC == abs(result)) {
 		printk(KERN_WARNING OCF_PREFIX_SHORT
 			"Cannot open device %s exclusively. "
@@ -1761,7 +1756,6 @@ static int cache_mngt_initialize_core_objects(ocf_cache_t cache)
 
 int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
-		struct atomic_dev_params *atomic_params,
 		struct kcas_start_cache *cmd)
 {
 	int init_cache, result;
@@ -1790,7 +1784,6 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 
 	memset(cfg, 0, sizeof(*cfg));
 	memset(device_cfg, 0, sizeof(*device_cfg));
-	memset(atomic_params, 0, sizeof(*atomic_params));
 
 	strncpy(cfg->name, cache_name, OCF_CACHE_NAME_SIZE - 1);
 	cfg->cache_mode = cmd->caching_mode;
@@ -1811,6 +1804,7 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	device_cfg->cache_line_size = cmd->line_size;
 	device_cfg->force = cmd->force;
 	device_cfg->discard_on_start = true;
+	device_cfg->perform_test = false;
 
 	init_cache = cmd->init_cache;
 
@@ -1838,21 +1832,10 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	if (!is_part && part_count > 1 && !device_cfg->force)
 		return -KCAS_ERR_CONTAINS_PART;
 
-	result = cas_blk_identify_type_atomic(device_cfg->uuid.data,
-			&device_cfg->volume_type, atomic_params);
+	result = cas_blk_identify_type(device_cfg->uuid.data,
+			&device_cfg->volume_type);
 	if (result)
 		return result;
-
-	if (device_cfg->volume_type == ATOMIC_DEVICE_VOLUME) {
-		device_cfg->volume_params = atomic_params;
-		device_cfg->perform_test = true;
-	} else {
-		device_cfg->perform_test = false;
-	}
-
-	cmd->metadata_mode_optimal =
-			block_dev_is_metadata_mode_optimal(atomic_params,
-					device_cfg->volume_type);
 
 	return 0;
 }
@@ -2684,18 +2667,6 @@ int cache_mngt_get_info(struct kcas_cache_info *info)
 		BUG_ON(!uuid);
 		strlcpy(info->cache_path_name, uuid->data,
 				min(sizeof(info->cache_path_name), uuid->size));
-
-		switch (info->info.volume_type) {
-		case BLOCK_DEVICE_VOLUME:
-			info->metadata_mode = CAS_METADATA_MODE_NORMAL;
-			break;
-		case ATOMIC_DEVICE_VOLUME:
-			info->metadata_mode = CAS_METADATA_MODE_ATOMIC;
-			break;
-		default:
-			info->metadata_mode = CAS_METADATA_MODE_INVALID;
-			break;
-		}
 	}
 
 	/* Collect cores IDs */

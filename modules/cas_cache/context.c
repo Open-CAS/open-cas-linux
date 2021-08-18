@@ -440,12 +440,6 @@ int cas_initialize_context(void)
 
 	}
 
-	ret = atomic_dev_init();
-	if (ret) {
-		printk(KERN_ERR "Cannot initialize atomic device layer\n");
-		goto err_rpool;
-	}
-
 	return 0;
 
 err_rpool:
