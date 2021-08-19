@@ -33,6 +33,7 @@ class Opencas(metaclass=Singleton):
         self.repo_dir = repo_dir
         self.working_dir = working_dir
         self.already_updated = False
+        self.logs_to_dump = {"cas": "/var/log/opencas.log"}
 
 
 def pytest_runtest_setup(item):
