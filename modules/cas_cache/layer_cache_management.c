@@ -576,7 +576,8 @@ static int exit_instance_finish(void *data)
 	else
 		result = ctx->error;
 
-	cas_cls_deinit(ctx->cache);
+	if (!ocf_cache_is_passive(ctx->cache))
+		cas_cls_deinit(ctx->cache);
 
 	vfree(cache_priv);
 
@@ -1382,19 +1383,6 @@ error_affter_lock:
 	return result;
 }
 
-static int _cache_mngt_create_exported_object(ocf_core_t core, void *cntx)
-{
-	int result;
-
-	result = kcas_core_create_exported_object(core);
-	if (result)
-		return result;
-
-	result = kcas_core_activate_exported_object(core);
-
-	return result;
-}
-
 static int _cache_mngt_remove_core_flush(ocf_cache_t cache,
 		struct kcas_remove_core *cmd)
 {
@@ -1726,7 +1714,20 @@ out_get:
 	return result;
 }
 
-static int _cache_mngt_destroy_exported_object(ocf_core_t core, void *cntx)
+static int _cache_mngt_create_core_exp_obj(ocf_core_t core, void *cntx)
+{
+	int result;
+
+	result = kcas_core_create_exported_object(core);
+	if (result)
+		return result;
+
+	result = kcas_core_activate_exported_object(core);
+
+	return result;
+}
+
+static int _cache_mngt_destroy_core_exp_obj(ocf_core_t core, void *cntx)
 {
 	if (kcas_core_destroy_exported_object(core)) {
 		ocf_cache_t cache = ocf_core_get_cache(core);
@@ -1739,19 +1740,44 @@ static int _cache_mngt_destroy_exported_object(ocf_core_t core, void *cntx)
 	return 0;
 }
 
-static int cache_mngt_initialize_core_objects(ocf_cache_t cache)
+static int cache_mngt_initialize_core_exported_objects(ocf_cache_t cache)
 {
 	int result;
 
-	result = ocf_core_visit(cache, _cache_mngt_create_exported_object, NULL,
+	result = ocf_core_visit(cache, _cache_mngt_create_core_exp_obj, NULL,
 			true);
 	if (result) {
 		/* Need to cleanup */
-		ocf_core_visit(cache, _cache_mngt_destroy_exported_object, NULL,
+		ocf_core_visit(cache, _cache_mngt_destroy_core_exp_obj, NULL,
 				true);
 	}
 
 	return result;
+}
+
+static void cache_mngt_destroy_cache_exp_obj(ocf_cache_t cache)
+{
+	if (kcas_cache_destroy_exported_object(cache)) {
+		printk(KERN_ERR "Cannot destroy %s exported object\n",
+				ocf_cache_get_name(cache));
+	}
+}
+
+static int cache_mngt_initialize_cache_exported_object(ocf_cache_t cache)
+{
+	int result;
+
+	result = kcas_cache_create_exported_object(cache);
+	if (result)
+		return result;
+
+	result = kcas_cache_activate_exported_object(cache);
+	if (result) {
+		cache_mngt_destroy_cache_exp_obj(cache);
+		return result;
+	}
+
+	return 0;
 }
 
 int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
@@ -1812,6 +1838,7 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	case CACHE_INIT_LOAD:
 		device_cfg->open_cores = true;
 	case CACHE_INIT_NEW:
+	case CACHE_INIT_BIND:
 		break;
 	default:
 		return -OCF_ERR_INVAL;
@@ -2042,7 +2069,8 @@ out_bdev:
 	return result;
 }
 
-static int _cache_start_finalize(ocf_cache_t cache)
+static int _cache_start_finalize(ocf_cache_t cache,
+		struct kcas_start_cache *cmd)
 {
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	struct _cache_mngt_attach_context *ctx = cache_priv->attach_context;
@@ -2050,21 +2078,37 @@ static int _cache_start_finalize(ocf_cache_t cache)
 
 	_cache_mngt_log_cache_device_path(cache, ctx->device_cfg);
 
-	result = cas_cls_init(cache);
-	if (result) {
-		ctx->ocf_start_error = result;
-		return result;
-	}
-	ctx->cls_inited = true;
-
-	result = cache_mngt_initialize_core_objects(cache);
-	if (result) {
-		ctx->ocf_start_error = result;
-		return result;
+	if (cmd->init_cache != CACHE_INIT_BIND) {
+		result = cas_cls_init(cache);
+		if (result) {
+			ctx->ocf_start_error = result;
+			return result;
+		}
+		ctx->cls_inited = true;
 	}
 
-	ocf_core_visit(cache, _cache_mngt_core_device_loaded_visitor,
-			NULL, false);
+	switch(cmd->init_cache) {
+	case CACHE_INIT_LOAD:
+		result = cache_mngt_initialize_core_exported_objects(cache);
+		if (result) {
+			ctx->ocf_start_error = result;
+			return result;
+		}
+		ocf_core_visit(cache, _cache_mngt_core_device_loaded_visitor,
+				NULL, false);
+		break;
+	case CACHE_INIT_BIND:
+		result = cache_mngt_initialize_cache_exported_object(cache);
+		if (result) {
+			ctx->ocf_start_error = result;
+			return result;
+		}
+		break;
+	case CACHE_INIT_NEW:
+		break;
+	default:
+		BUG();
+	}
 
 	init_instance_complete(ctx, cache);
 
@@ -2079,12 +2123,11 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	ocf_cache_t cache;
 	struct cache_priv *cache_priv;
 	int result = 0, rollback_result = 0;
-	bool load = (cmd && cmd->init_cache == CACHE_INIT_LOAD);
 
 	if (!try_module_get(THIS_MODULE))
 		return -KCAS_ERR_SYSTEM;
 
-	if (load)
+	if (cmd->init_cache == CACHE_INIT_LOAD)
 		result = _cache_mngt_check_metadata(cfg, cmd->cache_path_name);
 	if (result) {
 		module_put(THIS_MODULE);
@@ -2134,12 +2177,22 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	cache_priv = ocf_cache_get_priv(cache);
 	cache_priv->attach_context = context;
 
-	if (load) {
-		ocf_mngt_cache_load(cache, device_cfg,
-				_cache_mngt_start_complete, context);
-	} else {
+	switch (cmd->init_cache) {
+	case CACHE_INIT_NEW:
 		ocf_mngt_cache_attach(cache, device_cfg,
 				_cache_mngt_start_complete, context);
+		break;
+	case CACHE_INIT_LOAD:
+		ocf_mngt_cache_load(cache, device_cfg,
+				_cache_mngt_start_complete, context);
+		break;
+	case CACHE_INIT_BIND:
+		ocf_mngt_cache_bind(cache, device_cfg,
+				_cache_mngt_start_complete, context);
+		break;
+	default:
+		result = -OCF_ERR_INVAL;
+		goto err;
 	}
 	result = wait_for_completion_interruptible(&context->async.cmpl);
 
@@ -2150,7 +2203,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	if (result)
 		goto err;
 
-	result = _cache_start_finalize(cache);
+	result = _cache_start_finalize(cache, cmd);
 	if (result)
 		goto err;
 
@@ -2474,7 +2527,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	 * this time, so we need to flush cache again after disabling
 	 * exported object. The second flush should be much faster.
 	*/
-	if (flush)
+	if (flush && ocf_cache_is_running(cache))
 		status = _cache_flush_with_lock(cache);
 	if (status)
 		goto put;
@@ -2494,15 +2547,20 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	status = kcas_cache_destroy_all_core_exported_objects(cache);
 	if (status != 0) {
 		printk(KERN_WARNING
-			"Failed to remove all cached devices\n");
+				"Failed to remove all cached devices\n");
+		goto stop_thread;
+	}
+	status = kcas_cache_destroy_exported_object(cache);
+	if (status != 0) {
+		printk(KERN_WARNING
+				"Failed to remove cache exported object\n");
 		goto stop_thread;
 	}
 
 	/* Flush cache again. This time we don't allow interruption. */
-	if (flush)
+	if (flush && ocf_cache_is_running(cache))
 		flush_status = _cache_mngt_cache_flush_uninterruptible(cache);
 	context->flush_status = flush_status;
-
 
 	if (flush && !flush_status)
 		BUG_ON(ocf_mngt_cache_is_dirty(cache));
