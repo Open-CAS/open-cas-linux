@@ -33,7 +33,6 @@ class Opencas(metaclass=Singleton):
         self.repo_dir = repo_dir
         self.working_dir = working_dir
         self.already_updated = False
-        self.logs_to_dump = {"cas": "/var/log/opencas.log"}
 
 
 def pytest_runtest_setup(item):
@@ -54,6 +53,7 @@ def pytest_runtest_setup(item):
 
     dut_config['plugins_dir'] = os.path.join(os.path.dirname(__file__), "../lib")
     dut_config['opt_plugins'] = {"test_wrapper": {}, "serial_log": {}, "power_control": {}}
+    dut_config['extra_logs'] = {"cas": "/var/log/opencas.log"}
 
     try:
         TestRun.prepare(item, dut_config)
