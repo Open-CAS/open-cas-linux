@@ -5,7 +5,9 @@
 import os
 import random
 from time import sleep
+
 import pytest
+
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, SeqCutOffPolicy, CacheModeTrait
 from core.test_run_utils import TestRun
@@ -159,7 +161,7 @@ def test_multistream_seq_cutoff_stress_raw(streams_seq_rand):
         core.reset_counters()
 
     with TestRun.step("Run I/O"):
-        stream_size = core_disk.size / 256
+        stream_size = min(core_disk.size / 256, Size(256, Unit.MebiByte))
         sequential_streams = streams_seq_rand[0]
         random_streams = streams_seq_rand[1]
         fio = (Fio().create_command()
