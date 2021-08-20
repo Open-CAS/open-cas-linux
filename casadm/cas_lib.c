@@ -2933,7 +2933,7 @@ int zero_md(const char *cache_device, bool force)
 		if (!force) {
 			cas_printf(LOG_ERR, "Cache instance did not shut down cleanly. It might contain dirty data. \n"
 					"Clearing metadata might result in loss of dirty data. Please recover cache instance\n"
-					"by loading it and flush dirty data in order to preserve then on the core device.\n"
+					"by loading it and flush dirty data in order to preserve them on the core device.\n"
 					"Alternatively, if you wish to clear metadata anyway, please use '--force' option. \n");
 			return FAILURE;
 		} else {
