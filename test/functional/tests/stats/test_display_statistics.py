@@ -4,8 +4,10 @@
 #
 
 
-import pytest
 import time
+from datetime import timedelta
+
+import pytest
 
 from api.cas import casadm
 from api.cas.cache_config import (
@@ -14,7 +16,6 @@ from api.cas.cache_config import (
     CacheModeTrait,
     CacheStatus,
     CleaningPolicy,
-    EvictionPolicy,
     MetadataMode,
     PromotionPolicy,
 )
@@ -24,12 +25,10 @@ from api.cas.statistics import (
     usage_stats, request_stats, block_stats_core, block_stats_cache, error_stats
 )
 from core.test_run import TestRun
-from datetime import timedelta
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_utils.size import Size, Unit
-
 
 # One cache instance per every cache mode:
 caches_count = len(CacheMode)
@@ -275,11 +274,6 @@ def validate_cache_config_statistics(caches, after_io: bool = False):
             failed_stats += (
                 f"For cache number {caches[i].cache_id} number of inactive core devices is "
                 f"{caches_stats[i].config_stats.inactive_core_dev}, should be 0\n")
-        if caches_stats[i].config_stats.eviction_policy.upper() != EvictionPolicy.DEFAULT.value:
-            failed_stats += (
-                f"For cache number {caches[i].cache_id} eviction policy is "
-                f"{caches_stats[i].config_stats.eviction_policy.upper()}, "
-                f"should be {EvictionPolicy.DEFAULT}\n")
         if caches_stats[i].config_stats.cleaning_policy.upper() != CleaningPolicy.DEFAULT.value:
             failed_stats += (
                 f"For cache number {caches[i].cache_id} cleaning policy is "
