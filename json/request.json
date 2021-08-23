@@ -1,12 +1,8 @@
 {
-  "Requested list cache(s) and core(s)": false,
-  "Requested get statistics": true,
-  "Get statistics": {
-    "cache id": 1,
-    "Core id": 1,
-    "IO class": 0,
-    "Requested cache info": true,
-    "Requested core info": true,
-    "Requested io classinfo": true
+  "command": "opencas.cache.info.get",
+  "params": {
+    "cache id": 1
   }
 }
+
+

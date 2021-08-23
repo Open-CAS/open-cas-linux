@@ -1,21 +1,16 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
-* SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+* SPDX-License-Identifier: BSD-3-Clause
+ */
 
 package ioctl
 
-/*
-#include <cas_ioctl_codes.h>
-*/
-import "C"
-
-/** IOCTL_KCAS_GET_STATS structs **/
+/** IOCTL_KCAS_GET_STATS structs */
 
 type Kcas_get_stats struct {
 	Cache_id     uint16             `json:"Cache id"`
 	Core_id      uint16             `json:"Core id"`
-	IO_class_id  uint16             `json:"Part id"`
+	IO_class     uint16             `json:"IO class"`
 	Usage        Ocf_stats_usage    `json:"Usage"`
 	Req          Ocf_stats_requests `json:"Requests"`
 	Blocks       Ocf_stats_blocks   `json:"Blocks"`
@@ -33,7 +28,7 @@ type Ocf_stats_usage struct {
 type Ocf_stats_requests struct {
 	Rd_hits           Ocf_stat `json:"Read hits"`
 	Rd_partial_misses Ocf_stat `json:"Read partial misses"`
-	Rd_full_misses    Ocf_stat `json:"Read  full misses"`
+	Rd_full_misses    Ocf_stat `json:"Read full misses"`
 	Rd_total          Ocf_stat `json:"Read total"`
 	Wr_hits           Ocf_stat `json:"Write hits"`
 	Wr_partial_misses Ocf_stat `json:"Write partial misses"`
@@ -48,13 +43,13 @@ type Ocf_stats_requests struct {
 type Ocf_stats_blocks struct {
 	Core_volume_rd     Ocf_stat `json:"Reads from core(s)"`
 	Core_volume_wr     Ocf_stat `json:"Writes from core(s)"`
-	Core_volume_total  Ocf_stat `json:"Total to/from core(s)"`
+	Core_volume_total  Ocf_stat `json:"Total from/to core(s)"`
 	Cache_volume_rd    Ocf_stat `json:"Reads from cache(s)"`
 	Cache_volume_wr    Ocf_stat `json:"Writes from cache(s)"`
-	Cache_volume_total Ocf_stat `json:"Total to/from cache(s)"`
+	Cache_volume_total Ocf_stat `json:"Total from/to cache(s)"`
 	Volume_rd          Ocf_stat `json:"Reads from exported object(s)"`
 	Volume_wr          Ocf_stat `json:"Writes from exported object(s)"`
-	Volume_total       Ocf_stat `json:"Total to/from exported object(s)"`
+	Volume_total       Ocf_stat `json:"Total from/to exported object(s)"`
 }
 
 type Ocf_stats_errors struct {
@@ -68,8 +63,8 @@ type Ocf_stats_errors struct {
 }
 
 type Ocf_stat struct {
-	Value    uint64 `json:"page"`
-	Fraction uint64 `json:"fraction"`
+	Value    uint64 `json:"Page"`
+	Fraction uint64 `json:"Fraction"`
 }
 
 /** IOCTL_CACHE_INFO structs **/
@@ -77,15 +72,14 @@ type Ocf_stat struct {
 type Kcas_cache_info struct {
 	Cache_id        uint16         `json:"Cache id"`
 	Cache_path_name string         `json:"Cache device"`
-	Core_id         []uint16       `json:"Core(s) id(s)"`
+	Attached_cores  []uint16       `json:"Core(s) id(s)"`
 	Info            Ocf_cache_info `json:"Cache details"`
-	Metadata_mode   string         `json:"Metadata mode"`
 	ext_err_code    int
 }
 
 type Ocf_cache_info struct {
 	Attached            bool              `json:"Attached"`
-	Volume_type         uint8             `json:"Volume type"` // mby enum -> convert to str?
+	volume_type         uint8             `json:"Volume type"` // mby enum -> convert to str?
 	State               string            `json:"Status"`
 	Size                uint32            `json:"Size [cache lines]"`
 	Inactive_cores      Core_stats        `json:"Inactive cores"`
@@ -96,7 +90,7 @@ type Ocf_cache_info struct {
 	Cache_mode          string            `json:"Cache mode"`
 	Fallback_pt         Fallback_pt_stats `json:"Pass-Trough fallback statistics"`
 	Cleaning_policy     string            `json:"Cleaning policy"`
-	Promotion_policy  	string            `json:"Promotion policy"`
+	Promotion_policy    string            `json:"Promotion policy"`
 	Cache_line_size     uint64            `json:"Cache line size [KiB]"`
 	Flushed             uint32            `json:"Flushed blocks"`
 	Core_count          uint32            `json:"Core count"`
@@ -118,9 +112,9 @@ type Fallback_pt_stats struct {
 /** IOCTL_CORE_INFO structs **/
 
 type Kcas_core_info struct {
-	Core_path_name string        `json:"Core path"`
-	Cache_id       uint16        `json:"Cache id"`
+	cache_id       uint16        `json:"Cache id"`
 	Core_id        uint16        `json:"Core id"`
+	Core_path_name string        `json:"Core path"`
 	Info           Ocf_core_info `json:"Core details"`
 	State          string        `json:"State"`
 	ext_err_code   int
@@ -139,9 +133,9 @@ type Ocf_core_info struct {
 /** IOCTL_KCAS_IO_CLASS structs **/
 
 type Kcas_io_class struct {
-	Cache_id     uint16            `json:"Cache id"`
+	cache_id     uint16            `json:"Cache id"`
 	Class_id     uint32            `json:"Class id"`
-	Info         Ocf_io_class_info "IO class details"
+	Info         Ocf_io_class_info `json:"IO class details"`
 	ext_err_code int
 }
 
@@ -150,7 +144,7 @@ type Ocf_io_class_info struct {
 	Cache_mode      string `json:"Cache mode"`
 	Priority        int16  `json:"Priority"`
 	Curr_size       uint32 `json:"Current size [cache line]"`
-	Min_size        int32  `json:"Min size [cache line]"`
-	Max_size        int32  `json:"Max size [cache line]"`
+	Min_size        int32  `json:"Min size [%]"`
+	Max_size        int32  `json:"Max size [%]"`
 	Cleaning_policy string `json:"Cleaning policy"`
 }
