@@ -53,6 +53,7 @@ def pytest_runtest_setup(item):
 
     dut_config['plugins_dir'] = os.path.join(os.path.dirname(__file__), "../lib")
     dut_config['opt_plugins'] = {"test_wrapper": {}, "serial_log": {}, "power_control": {}}
+    dut_config['extra_logs'] = {"cas": "/var/log/opencas.log"}
 
     try:
         TestRun.prepare(item, dut_config)
