@@ -200,6 +200,8 @@ int start_cache_command_handle_option(char *opt, const char **arg)
 		command_args_values.state = CACHE_INIT_LOAD;
 	} else if (!strcmp(opt, "bind")) {
 		command_args_values.state = CACHE_INIT_BIND;
+	} else if (!strcmp(opt, "activate")) {
+		command_args_values.state = CACHE_INIT_ACTIVATE;
 	} else if (!strcmp(opt, "cache-device")) {
 		if(validate_device_name(arg[0]) == FAILURE)
 			return FAILURE;
@@ -246,6 +248,7 @@ static cli_option start_options[] = {
 	{'i', "cache-id", CACHE_ID_DESC_LONG, 1, "ID", 0},
 	{'l', "load", "Load cache metadata from caching device (DANGEROUS - see manual or Admin Guide for details)"},
 	{'b', "bind", "Bind caching device (DANGEROUS - see manual or Admin Guide for details)"},
+	{'a', "activate", "Activate caching device after bind"},
 	{'f', "force", "Force the creation of cache instance"},
 	{'c', "cache-mode", "Set cache mode from available: {"CAS_CLI_HELP_START_CACHE_MODES"} "CAS_CLI_HELP_START_CACHE_MODES_FULL"; without this parameter Write-Through will be set by default", 1, "NAME"},
 	{'x', "cache-line-size", "Set cache line size in kibibytes: {4,8,16,32,64}[KiB] (default: %d)", 1, "NUMBER",  CLI_OPTION_DEFAULT_INT, 0, 0, ocf_cache_line_size_default / KiB},

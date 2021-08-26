@@ -37,6 +37,7 @@
 #define CACHE_INIT_NEW	0 /**< initialize new metadata from fresh start */
 #define CACHE_INIT_LOAD	1 /**< load existing metadata */
 #define CACHE_INIT_BIND	2 /**< bind existing metadata */
+#define CACHE_INIT_ACTIVATE 3 /**< activate cache after bind */
 
 struct kcas_start_cache {
 	/**

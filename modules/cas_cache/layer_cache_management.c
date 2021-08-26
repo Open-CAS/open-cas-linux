@@ -1785,12 +1785,8 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 		struct kcas_start_cache *cmd)
 {
 	int init_cache, result;
-	struct block_device *bdev;
-	int part_count;
-	char holder[] = "CAS START\n";
 	char cache_name[OCF_CACHE_NAME_SIZE];
 	uint16_t cache_id;
-	bool is_part;
 
 	if (!cmd)
 		return -OCF_ERR_INVAL;
@@ -1836,6 +1832,7 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 
 	switch (init_cache) {
 	case CACHE_INIT_LOAD:
+	case CACHE_INIT_ACTIVATE:
 		device_cfg->open_cores = true;
 	case CACHE_INIT_NEW:
 	case CACHE_INIT_BIND:
@@ -1843,21 +1840,6 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	default:
 		return -OCF_ERR_INVAL;
 	}
-
-	bdev = blkdev_get_by_path(device_cfg->uuid.data, (FMODE_EXCL|FMODE_READ),
-			holder);
-	if (IS_ERR(bdev)) {
-		return (PTR_ERR(bdev) == -EBUSY) ?
-				-OCF_ERR_NOT_OPEN_EXC :
-				-OCF_ERR_INVAL_VOLUME_TYPE;
-	}
-
-	is_part = (cas_bdev_whole(bdev) != bdev);
-	part_count = cas_blk_get_part_count(bdev);
-	blkdev_put(bdev, (FMODE_EXCL|FMODE_READ));
-
-	if (!is_part && part_count > 1 && !device_cfg->force)
-		return -KCAS_ERR_CONTAINS_PART;
 
 	result = cas_blk_identify_type(device_cfg->uuid.data,
 			&device_cfg->volume_type);
@@ -2088,6 +2070,9 @@ static int _cache_start_finalize(ocf_cache_t cache,
 	}
 
 	switch(cmd->init_cache) {
+	case CACHE_INIT_ACTIVATE:
+		cache_mngt_destroy_cache_exp_obj(cache);
+		/* fall through */
 	case CACHE_INIT_LOAD:
 		result = cache_mngt_initialize_core_exported_objects(cache);
 		if (result) {
@@ -2115,6 +2100,119 @@ static int _cache_start_finalize(ocf_cache_t cache,
 	return 0;
 }
 
+int cache_mngt_check_bdev(struct ocf_mngt_cache_device_config *device_cfg)
+{
+	char holder[] = "CAS START\n";
+	struct block_device *bdev;
+	int part_count;
+	bool is_part;
+
+	bdev = blkdev_get_by_path(device_cfg->uuid.data,
+			(FMODE_EXCL|FMODE_READ), holder);
+	if (IS_ERR(bdev)) {
+		return (PTR_ERR(bdev) == -EBUSY) ?
+				-OCF_ERR_NOT_OPEN_EXC :
+				-OCF_ERR_INVAL_VOLUME_TYPE;
+	}
+
+	is_part = (cas_bdev_whole(bdev) != bdev);
+	part_count = cas_blk_get_part_count(bdev);
+	blkdev_put(bdev, (FMODE_EXCL|FMODE_READ));
+
+	if (!is_part && part_count > 1 && !device_cfg->force)
+		return -KCAS_ERR_CONTAINS_PART;
+
+	return 0;
+}
+
+int cache_mngt_init_instance_activate(struct ocf_mngt_cache_config *cfg,
+		struct ocf_mngt_cache_device_config *device_cfg,
+		struct kcas_start_cache *cmd)
+{
+	struct _cache_mngt_attach_context *context;
+	ocf_cache_t cache;
+	struct cache_priv *cache_priv;
+	ocf_volume_t cache_volume;
+	const struct ocf_volume_uuid *cache_uuid;
+	char cache_name[OCF_CACHE_NAME_SIZE];
+	int result = 0;
+
+	if (!try_module_get(THIS_MODULE))
+		return -KCAS_ERR_SYSTEM;
+
+	cache_name_from_id(cache_name, cmd->cache_id);
+
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+			OCF_CACHE_NAME_SIZE, &cache);
+	if (result)
+		goto out_module_put;
+
+	if (!ocf_cache_is_passive(cache)) {
+		result = -OCF_ERR_CACHE_EXIST;
+		goto out_cache_put;
+	}
+
+	result = _cache_mngt_lock_sync(cache);
+	if (result)
+		goto out_cache_put;
+
+	cache_volume = ocf_cache_get_volume(cache);
+	cache_uuid = ocf_volume_get_uuid(cache_volume);
+	if (strcmp(device_cfg->uuid.data, cache_uuid->data) != 0) {
+		result = cache_mngt_check_bdev(device_cfg);
+		if (result)
+			goto out_cache_unlock;
+	}
+
+	context = kzalloc(sizeof(*context), GFP_KERNEL);
+	if (!context) {
+		result = -ENOMEM;
+		goto out_cache_unlock;
+	}
+
+	context->device_cfg = device_cfg;
+	context->cmd = cmd;
+	context->cache = cache;
+
+	cache_priv = ocf_cache_get_priv(cache);
+	cache_priv->attach_context = context;
+
+	context->rollback_thread = cas_lazy_thread_create(cache_start_rollback,
+			context, "cas_cache_rollback_complete");
+	if (IS_ERR(context->rollback_thread)) {
+		result = PTR_ERR(context->rollback_thread);
+		goto err_free_context;
+	}
+	_cache_mngt_async_context_init(&context->async);
+
+	ocf_mngt_cache_activate(cache, device_cfg,
+			_cache_mngt_start_complete, context);
+	result = wait_for_completion_interruptible(&context->async.cmpl);
+
+	result = _cache_mngt_async_caller_set_result(&context->async, result);
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
+		goto out_cache_put;
+
+	cas_lazy_thread_stop(context->rollback_thread);
+
+	if (result)
+		goto err_free_context;
+
+	result = _cache_start_finalize(cache, cmd);
+
+err_free_context:
+	kfree(context);
+	cache_priv->attach_context = NULL;
+
+out_cache_unlock:
+	ocf_mngt_cache_unlock(cache);
+out_cache_put:
+	ocf_mngt_cache_put(cache);
+out_module_put:
+	module_put(THIS_MODULE);
+	return result;
+}
+
 int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_device_config *device_cfg,
 		struct kcas_start_cache *cmd)
@@ -2124,8 +2222,17 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	struct cache_priv *cache_priv;
 	int result = 0, rollback_result = 0;
 
+	if (cmd->init_cache == CACHE_INIT_ACTIVATE)
+		return cache_mngt_init_instance_activate(cfg, device_cfg, cmd);
+
 	if (!try_module_get(THIS_MODULE))
 		return -KCAS_ERR_SYSTEM;
+
+	result = cache_mngt_check_bdev(device_cfg);
+	if (result) {
+		module_put(THIS_MODULE);
+		return result;
+	}
 
 	if (cmd->init_cache == CACHE_INIT_LOAD)
 		result = _cache_mngt_check_metadata(cfg, cmd->cache_path_name);
