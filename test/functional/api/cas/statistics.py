@@ -7,7 +7,7 @@
 config_stats_cache = [
     "cache id", "cache size", "cache device", "core devices", "inactive core devices",
     "write policy", "cleaning policy", "promotion policy", "cache line size",
-    "metadata memory footprint", "dirty for", "metadata mode", "status"
+    "metadata memory footprint", "dirty for", "status"
 ]
 config_stats_core = [
     "core id", "core device", "exported object", "core size", "dirty for", "status",
@@ -235,7 +235,6 @@ class CacheConfigStats:
         cache_line_size,
         metadata_memory_footprint,
         dirty_for,
-        metadata_mode,
         status,
     ):
         self.cache_id = cache_id
@@ -249,7 +248,6 @@ class CacheConfigStats:
         self.cache_line_size = cache_line_size
         self.metadata_memory_footprint = metadata_memory_footprint
         self.dirty_for = dirty_for
-        self.metadata_mode = metadata_mode
         self.status = status
 
     def __str__(self):
@@ -266,7 +264,6 @@ class CacheConfigStats:
             f"Cache line size: {self.cache_line_size}\n"
             f"Metadata memory footprint: {self.metadata_memory_footprint}\n"
             f"Dirty for: {self.dirty_for}\n"
-            f"Metadata mode: {self.metadata_mode}\n"
             f"Status: {self.status}\n"
         )
 
@@ -285,7 +282,6 @@ class CacheConfigStats:
             and self.cache_line_size == other.cache_line_size
             and self.metadata_memory_footprint == other.metadata_memory_footprint
             and self.dirty_for == other.dirty_for
-            and self.metadata_mode == other.metadata_mode
             and self.status == other.status
         )
 
