@@ -143,6 +143,21 @@ class FlushParametersAlru:
             and self.wake_up_time == other.wake_up_time
         )
 
+    def __str__(self):
+        ret = ["activity threshold: "
+               + (f"{self.activity_threshold}" if self.activity_threshold is not None
+                  else "default"),
+               "flush max buffers: "
+               + (f"{self.flush_max_buffers}" if self.flush_max_buffers is not None
+                  else "default"),
+               "staleness time: "
+               + (f"{self.staleness_time}" if self.staleness_time is not None
+                  else "default"),
+               "wake up time: "
+               + (f"{self.wake_up_time}" if self.wake_up_time is not None
+                  else "default")]
+        return " | ".join(ret)
+
     @staticmethod
     def alru_params_range():
         alru_params = FlushParametersAlru()
@@ -151,12 +166,6 @@ class FlushParametersAlru:
         alru_params.staleness_time = (1, 3600)
         alru_params.wake_up_time = (0, 3600)
         return alru_params
-
-    def __eq__(self, other):
-        return self.activity_threshold == other.activity_threshold and \
-            self.flush_max_buffers == other.flush_max_buffers and \
-            self.staleness_time == other.staleness_time and \
-            self.wake_up_time == other.wake_up_time
 
     @staticmethod
     def default_alru_params():
@@ -180,12 +189,13 @@ class FlushParametersAcp:
         )
 
     def __str__(self):
-        ret = ""
-        if self.flush_max_buffers is not None:
-            ret += f"acp flush max buffers value: {self.flush_max_buffers} "
-        if self.wake_up_time is not None:
-            ret += f"acp wake up time value: {self.wake_up_time.total_milliseconds()}"
-        return ret
+        ret = ["flush max buffers: "
+               + (f"{self.flush_max_buffers}" if self.flush_max_buffers is not None
+                  else "default"),
+               "wake up time: "
+               + (f"{self.wake_up_time}" if self.wake_up_time is not None
+                  else "default")]
+        return " | ".join(ret)
 
     @staticmethod
     def acp_params_range():
@@ -193,10 +203,6 @@ class FlushParametersAcp:
         acp_params.flush_max_buffers = (1, 10000)
         acp_params.wake_up_time = (0, 10000)
         return acp_params
-
-    def __eq__(self, other):
-        return self.flush_max_buffers == other.flush_max_buffers and \
-            self.wake_up_time == other.wake_up_time
 
     @staticmethod
     def default_acp_params():
