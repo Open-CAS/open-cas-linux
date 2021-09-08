@@ -19,7 +19,6 @@ CAS_LICENSE_NAME="BSD-3-Clause-Clear"
 SUPPORTED_FROM_VERSION="20.03"
 THIS=$(basename "$0")
 ARCH="$(uname -i)"
-SYS_INFO="/etc/os-release"
 SCRIPT_BASE_DIR=$(dirname $(realpath "$0"))
 RPM_SPEC_FILE="$SCRIPT_BASE_DIR/$THIS.d/rpm/CAS_NAME.spec"
 DEB_CONTROL_FILES_DIR="$SCRIPT_BASE_DIR/$THIS.d/deb/debian"
@@ -112,6 +111,12 @@ clean_all() {
         # so we may throw an error here and exit.
         error "cleanup failed"
     fi
+}
+
+check_os() {
+    source "/etc/os-release"
+
+    echo "$ID_LIKE"
 }
 
 check_options() {
@@ -298,6 +303,9 @@ rpm_spec_prepare() {
     if [ "$DEBUG" ]; then
         echo "---   Debug RPMs will be built as well"
         sed -i "s/%define debug_package %{nil}//g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        if [[ $(check_os) =~ suse|sles ]]; then
+            sed -i "s/%prep/%debug_package\n\n\n%prep/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        fi
     fi
 
     if [ ! -f "$RPM_SPECS_DIR/$CAS_NAME.spec" ]; then
@@ -349,8 +357,7 @@ generate_rpm() {
     rpm_obtain_sources
     rpm_spec_prepare
 
-    . $SYS_INFO
-    if [[ "$ID_LIKE" =~ suse|sles ]] && [ -d /usr/src/packages ]; then
+    if [[ $(check_os) =~ suse|sles ]] && [ -d /usr/src/packages ]; then
         info "INFO: It appears that you are using SUSE Linux."\
              "In case of encountering error during building of RPM package,"\
              "about missing files or directories in /usr/src/packages/,"\
