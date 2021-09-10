@@ -2,14 +2,21 @@
 # Copyright(c) 2019-2021 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause-Clear
 #
+from datetime import timedelta
+from typing import List
 
+from aenum import Enum
 
-from api.cas.casadm_parser import *
-from api.cas.cli import *
+from api.cas import casadm
+from api.cas.cache_config import SeqCutOffParameters, SeqCutOffPolicy
+from api.cas.casadm_params import OutputFormat, StatsFilter
+from api.cas.casadm_parser import get_statistics, get_seq_cut_off_parameters
 from api.cas.statistics import CoreStats, CoreIoClassStats
+from core.test_run_utils import TestRun
+from storage_devices.device import Device
 from test_tools import fs_utils, disk_utils
-from test_utils.os_utils import *
-from test_utils.os_utils import wait
+from test_utils.os_utils import wait, sync
+from test_utils.size import Unit, Size
 
 
 class CoreStatus(Enum):
@@ -28,6 +35,7 @@ class Core(Device):
         self.core_device = Device(core_device)
         self.path = None
         core_info = self.__get_core_info()
+        # "-" is special case for cores in core pool
         if core_info["core_id"] != "-":
             self.core_id = int(core_info["core_id"])
         if core_info["exp_obj"] != "-":
@@ -37,20 +45,15 @@ class Core(Device):
         self.block_size = None
 
     def __get_core_info(self):
-        output = TestRun.executor.run(
-            list_cmd(OutputFormat.csv.name, by_id_path=False))
-        if output.exit_code != 0:
-            raise Exception("Failed to execute list caches command.")
-        output_lines = output.stdout.splitlines()
-        for line in output_lines:
-            split_line = line.split(',')
-            if split_line[0] == "core" and (
-                    split_line[2] == os.path.join("/dev", self.core_device.get_device_id())
-                    or split_line[5] == self.path):
-                return {"core_id": split_line[1],
-                        "core_device": split_line[2],
-                        "status": split_line[3],
-                        "exp_obj": split_line[5]}
+        output = casadm.list_caches(OutputFormat.csv, by_id_path=True)
+        split_line = next(
+            line.split(',') for line in output.stdout.splitlines()
+            if line.startswith("core") and self.core_device.path in line
+        )
+        return {"core_id": split_line[1],
+                "core_device": split_line[2],
+                "status": split_line[3],
+                "exp_obj": split_line[5]}
 
     def create_filesystem(self, fs_type: disk_utils.Filesystem, force=True, blocksize=None):
         super().create_filesystem(fs_type, force, blocksize)
@@ -103,6 +106,9 @@ class Core(Device):
 
     def remove_core(self, force: bool = False):
         return casadm.remove_core(self.cache_id, self.core_id, force)
+
+    def remove_inactive(self, force: bool = False):
+        return casadm.remove_inactive(self.cache_id, self.core_id, force)
 
     def reset_counters(self):
         return casadm.reset_counters(self.cache_id, self.core_id)

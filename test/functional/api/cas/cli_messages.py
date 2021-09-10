@@ -30,9 +30,13 @@ reinitialize_with_force_or_recovery = [
     r" discard on-disk metadata and start fresh cache instance\."
 ]
 
-remove_inactive_core = [
-    r"Error while removing core device \d+ from cache instance \d+",
-    r"Core device is in inactive state"
+remove_inactive_core_with_remove_command = [
+    r"Core is inactive\. To manage the inactive core use '--remove-inactive' command\."
+]
+
+remove_inactive_dirty_core = [
+    r"The cache contains dirty data assigned to the core\. If you want to ",
+    r"continue, please use --force option\.\nWarning: the data will be lost"
 ]
 
 stop_cache_incomplete = [
