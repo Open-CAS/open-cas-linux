@@ -180,10 +180,11 @@ def stop_all_caches():
     if "No caches running" in list_caches().stdout:
         return
     TestRun.LOGGER.info("Stop all caches")
-    casctl_stop()
-    output = list_caches()
-    if "No caches running" not in output.stdout:
-        raise CmdException("Error while stopping caches.", output)
+    stop_output = casctl_stop()
+    caches_output = list_caches()
+    if "No caches running" not in caches_output.stdout:
+        raise CmdException(f"Error while stopping caches. "
+                           f"Listing caches: {caches_output}", stop_output)
 
 
 def remove_all_detached_cores():
