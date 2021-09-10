@@ -5,17 +5,18 @@
 
 import time
 from datetime import timedelta
+
 import pytest
 
-from core.test_run import TestRun
-from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CleaningPolicy, FlushParametersAlru, SeqCutOffPolicy
-from test_utils.os_utils import Udev, kill_all_io
-from test_utils.time import Time
-from test_utils.size import Size, Unit
+from core.test_run import TestRun
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
+from test_utils.os_utils import Udev, kill_all_io
+from test_utils.size import Size, Unit
+from test_utils.time import Time
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -28,7 +29,7 @@ def test_alru_no_idle():
           activity threshold is set to 0. Constant load is performed by using fio instance running
           in background.
         pass_criteria:
-          - Dirty cache lines are cleaned successfuly.
+          - Dirty cache lines are cleaned successfully.
     """
 
     with TestRun.step("Prepare configuration"):
@@ -80,7 +81,7 @@ def test_alru_no_idle():
         if dirty_before > dirty_now:
             TestRun.fail(
                 f"Cleaning has run, while it shouldn't"
-                " (dirty down from {dirty_before} to {dirty_now}"
+                f" (dirty down from {dirty_before} to {dirty_now}"
             )
 
     with TestRun.step("Set 0 idle time and wake up time for ALRU"):
