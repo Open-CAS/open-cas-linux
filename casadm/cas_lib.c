@@ -68,6 +68,7 @@ static const char *cache_states_name[ocf_cache_state_max + 1] = {
 		[ocf_cache_state_stopping] = "Stopping",
 		[ocf_cache_state_initializing] = "Initializing",
 		[ocf_cache_state_incomplete] = "Incomplete",
+		[ocf_cache_state_passive] = "Passive",
 		[ocf_cache_state_max] = "Unknown",
 };
 
@@ -2775,8 +2776,12 @@ int list_caches(unsigned int list_format, bool by_id_path)
 					cache_mode_to_name(curr_cache->mode));
 		} else {
 			tmp_status = get_cache_state_name(curr_cache->state);
-			snprintf(mode_string, sizeof(mode_string), "%s",
-					cache_mode_to_name(curr_cache->mode));
+			if (curr_cache->state & (1 << ocf_cache_state_passive)) {
+				strncpy(mode_string, "-", sizeof(mode_string));
+			} else {
+				snprintf(mode_string, sizeof(mode_string), "%s",
+						cache_mode_to_name(curr_cache->mode));
+			}
 		}
 
 		fprintf(intermediate_file[1], TAG(TREE_BRANCH)
