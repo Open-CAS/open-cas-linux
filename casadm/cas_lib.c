@@ -1138,8 +1138,12 @@ int get_cache_mode(int ctrl_fd, unsigned int cache_id, int *mode)
 	cmd_info.cache_id = cache_id;
 
 	if (ioctl(ctrl_fd, KCAS_IOCTL_CACHE_INFO, &cmd_info) < 0)
-		return FAILURE;
+	{
+		if (cmd_info.ext_err_code == OCF_ERR_CACHE_STANDBY)
+			cas_printf(LOG_ERR, "Cannot get cache mode while cache %d is in standby mode.", cmd_info.cache_id);
 
+		return FAILURE;
+	}
 	*mode = cmd_info.info.cache_mode;
 	return SUCCESS;
 }
@@ -1202,6 +1206,10 @@ int set_cache_mode(unsigned int cache_mode, unsigned int cache_id, int flush)
 				"of cache mode. If you want to switch cache mode immediately, use\n"
 				"'--flush-cache no' parameter.\n");
 			return INTERRUPTED;
+		} else if (OCF_ERR_CACHE_STANDBY == cmd.ext_err_code) {
+			cas_printf(LOG_ERR, "Cannot change cache mode while cache %d is in standby mode\n",
+				cache_id);
+			return FAILURE;
 		} else {
 			cas_printf(LOG_ERR, "Error while setting cache state for cache %d\n",
 				cache_id);
@@ -1261,6 +1269,9 @@ int core_params_set(unsigned int cache_id, unsigned int core_id,
 
 		if (run_ioctl(fd, KCAS_IOCTL_SET_CORE_PARAM, &cmd) < 0) {
 			close(fd);
+			if (cmd.ext_err_code == OCF_ERR_CACHE_STANDBY) {
+				cas_printf(LOG_ERR, "Cannot set parameters for cache %d while in standby mode.\n", cmd.cache_id);
+			}
 			return FAILURE;
 		}
 	}
@@ -1359,47 +1370,15 @@ int cache_params_set(unsigned int cache_id, struct cas_param *params)
 		cmd.param_value = params[i].value;
 
 		if (run_ioctl(fd, KCAS_IOCTL_SET_CACHE_PARAM, &cmd) < 0) {
+			if (cmd.ext_err_code == OCF_ERR_CACHE_STANDBY)
+				cas_printf(LOG_ERR, "Cannot set cache parameters while cache %d is in standby mode\n", cmd.cache_id);
+
 			close(fd);
 			return FAILURE;
 		}
 	}
 
 	close(fd);
-	return SUCCESS;
-}
-
-int cache_get_param(unsigned int cache_id, unsigned int param_id,
-		struct cas_param *param)
-{
-	struct kcas_get_cache_param cmd = { 0 };
-	int fd = 0;
-
-	if (param_id >= cache_param_id_max)
-		return FAILURE;
-
-	fd = open_ctrl_device();
-	if (fd == -1)
-		return FAILURE;
-
-	cmd.param_id = param_id;
-	cmd.cache_id = cache_id;
-
-	if (run_ioctl(fd, KCAS_IOCTL_GET_CACHE_PARAM, &cmd) < 0) {
-		if (cmd.ext_err_code == OCF_ERR_CACHE_NOT_EXIST)
-			cas_printf(LOG_ERR, "Cache id %d not running\n", cache_id);
-		else
-			cas_printf(LOG_ERR, "Can't get parameters\n");
-		close(fd);
-		return FAILURE;
-	}
-
-	if (param->transform_value)
-		param->value = param->transform_value(cmd.param_value);
-	else
-		param->value = cmd.param_value;
-
-	close(fd);
-
 	return SUCCESS;
 }
 
@@ -1434,6 +1413,8 @@ int cache_params_get(unsigned int cache_id, struct cas_param *params,
 		if (run_ioctl(fd, KCAS_IOCTL_GET_CACHE_PARAM, &cmd) < 0) {
 			if (cmd.ext_err_code == OCF_ERR_CACHE_NOT_EXIST)
 				cas_printf(LOG_ERR, "Cache id %d not running\n", cache_id);
+			else if (cmd.ext_err_code == OCF_ERR_CACHE_STANDBY)
+				cas_printf(LOG_ERR, "Cannot get cache parameters while cache %d is in standby mode\n", cmd.cache_id);
 			else
 				cas_printf(LOG_ERR, "Can't get parameters\n");
 			fclose(intermediate_file[0]);
@@ -1763,6 +1744,8 @@ int add_core(unsigned int cache_id, unsigned int core_id, const char *core_devic
 				  "accessing it or unmount the device.\n",
 				  user_core_path);
 			}
+		} else if (OCF_ERR_CACHE_STANDBY == cmd.ext_err_code) {
+			cas_printf(LOG_ERR, "Cannot add core to cache %d in standby mode\n", cache_id);
 		} else {
 			print_err(cmd.ext_err_code);
 		}
@@ -1986,6 +1969,9 @@ int flush_cache(unsigned int cache_id)
 		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
 			cas_printf(LOG_ERR, DIRTY_FLUSHING_WARNING);
 			return INTERRUPTED;
+		} else if (OCF_ERR_CACHE_STANDBY == cmd.ext_err_code) {
+			cas_printf(LOG_ERR, "Cannot flush cache %d in standby mode\n", cmd.cache_id);
+			return FAILURE;
 		} else {
 			print_err(cmd.ext_err_code);
 			return FAILURE;
@@ -2012,9 +1998,15 @@ int purge_core(unsigned int cache_id, unsigned int core_id)
 	/* synchronous flag */
 	if (run_ioctl_interruptible(fd, KCAS_IOCTL_PURGE_CORE, &cmd, "Purging core", cache_id, core_id) < 0) {
 		close(fd);
-		print_err(cmd.ext_err_code);
+
+		if (OCF_ERR_CACHE_STANDBY == cmd.ext_err_code)
+			cas_printf(LOG_ERR, "Cannot purge core while cache %d is in standby mode\n", cmd.cache_id);
+		else
+			print_err(cmd.ext_err_code);
+
 		return FAILURE;
 	}
+
 	close(fd);
 	return SUCCESS;
 }
@@ -2430,6 +2422,9 @@ int partition_set_config(struct kcas_io_classes *cnfg)
 	if (result) {
 		if (OCF_ERR_IO_CLASS_NOT_EXIST == cnfg->ext_err_code) {
 			result = SUCCESS;
+		} else if (OCF_ERR_CACHE_STANDBY == cnfg->ext_err_code) {
+			cas_printf(LOG_ERR, "Cannot set IO class config for cache %d while in standby mode.\n", cnfg->cache_id);
+			result = FAILURE;
 		} else {
 			print_err(cnfg->ext_err_code);
 			result = FAILURE;
@@ -2504,9 +2499,13 @@ int reset_counters(unsigned int cache_id, unsigned int core_id)
 	cmd.core_id = core_id;
 
 	if (ioctl(fd, KCAS_IOCTL_RESET_STATS, &cmd) < 0) {
+		if (OCF_ERR_CACHE_STANDBY == cmd.ext_err_code) {
+			cas_printf(LOG_ERR, "Cannot reset statistics for cache %d while in standby mode.\n", cmd.cache_id);
+		} else {
+			cas_printf(LOG_ERR, "Error encountered while resetting counters\n");
+			print_err(cmd.ext_err_code);
+		}
 		close(fd);
-		cas_printf(LOG_ERR, "Error encountered while reseting counters\n");
-		print_err(cmd.ext_err_code);
 		return FAILURE;
 	}
 

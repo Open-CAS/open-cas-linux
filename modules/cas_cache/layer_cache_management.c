@@ -778,6 +778,11 @@ int cache_mngt_purge_object(const char *cache_name, size_t cache_name_len,
 	if (result)
 		return result;
 
+	if (ocf_cache_is_standby(cache)) {
+		ocf_mngt_cache_put(cache);
+		return -OCF_ERR_CACHE_STANDBY;
+	}
+
 	result = _cache_mngt_read_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
@@ -989,7 +994,7 @@ int cache_mngt_get_promotion_policy(ocf_cache_t cache, uint32_t *type)
 		return result;
 	}
 
-	*type = ocf_mngt_cache_promotion_get_policy(cache);
+	result = ocf_mngt_cache_promotion_get_policy(cache, type);
 
 	ocf_mngt_cache_read_unlock(cache);
 	return result;
@@ -1156,29 +1161,34 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 		struct kcas_insert_core *cmd_info)
 {
 	char core_name[OCF_CORE_NAME_SIZE] = {};
-	ocf_cache_t cache;
+	ocf_cache_t cache = NULL;
 	uint16_t core_id;
 	int result;
 
 	if (strnlen(cmd_info->core_path_name, MAX_STR_LEN) >= MAX_STR_LEN)
 		return -OCF_ERR_INVAL;
 
+	result = mngt_get_cache_by_id(cas_ctx, cmd_info->cache_id, &cache);
+	if (result && result != -OCF_ERR_CACHE_NOT_EXIST) {
+		return result;
+	} else if (!result && ocf_cache_is_standby(cache)) {
+		ocf_mngt_cache_put(cache);
+		return -OCF_ERR_CACHE_STANDBY;
+	}
+
 	if (cmd_info->core_id == OCF_CORE_MAX) {
-		result = mngt_get_cache_by_id(cas_ctx, cmd_info->cache_id,
-				&cache);
-		if (result && result != -OCF_ERR_CACHE_NOT_EXIST) {
-			return result;
-		} else if (!result) {
-			struct cache_priv *cache_priv;
-			cache_priv = ocf_cache_get_priv(cache);
-			ocf_mngt_cache_put(cache);
+		struct cache_priv *cache_priv;
+		cache_priv = ocf_cache_get_priv(cache);
+		core_id = find_free_core_id(cache_priv->core_id_bitmap);
+		if (core_id == OCF_CORE_MAX)
+			return -OCF_ERR_INVAL;
 
-			core_id = find_free_core_id(cache_priv->core_id_bitmap);
-			if (core_id == OCF_CORE_MAX)
-				return -OCF_ERR_INVAL;
+		cmd_info->core_id = core_id;
+	}
 
-			cmd_info->core_id = core_id;
-		}
+	if (cache) {
+		ocf_mngt_cache_put(cache);
+		cache = NULL;
 	}
 
 	snprintf(core_name, sizeof(core_name), "core%d", cmd_info->core_id);
@@ -1627,7 +1637,7 @@ int cache_mngt_reset_stats(const char *cache_name, size_t cache_name_len,
 
 		ocf_core_stats_initialize(core);
 	} else {
-		ocf_core_stats_initialize_all(cache);
+		result = ocf_core_stats_initialize_all(cache);
 	}
 
 out:
@@ -3194,7 +3204,6 @@ int cache_mngt_get_cache_params(struct kcas_get_cache_param *info)
 		result = cache_mngt_get_cleaning_policy(cache,
 				&info->param_value);
 		break;
-
 	case cache_param_cleaning_alru_wake_up_time:
 		result = cache_mngt_get_cleaning_param(cache,
 				ocf_cleaning_alru, ocf_alru_wake_up_time,

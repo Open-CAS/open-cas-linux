@@ -628,6 +628,10 @@ static int cache_stats(int ctrl_fd, const struct kcas_cache_info *cache_info,
 	if (stats_filters & STATS_FILTER_CONF)
 		cache_stats_conf(ctrl_fd, cache_info, cache_id, outfile, by_id_path);
 
+	/* Don't print stats for a cache in standby state */
+	if (cache_info->info.state & (1 << ocf_cache_state_standby))
+		return SUCCESS;
+
 	if (stats_filters & STATS_FILTER_USAGE)
 		print_usage_stats(&cache_stats.usage, outfile);
 
