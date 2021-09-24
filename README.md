@@ -26,9 +26,9 @@ Open CAS uses Safe string library (safeclib) that is MIT licensed.
 To download latest Open CAS Linux release run following commands:
 
 ```
-wget https://github.com/Open-CAS/open-cas-linux/releases/download/v21.6/open-cas-linux-21.06.0.0541.release.tar.gz
-tar -xf open-cas-linux-21.06.0.0541.release.tar.gz
-cd open-cas-linux-21.06.0.0541.release/
+wget https://github.com/Open-CAS/open-cas-linux/releases/download/v21.6.1/open-cas-linux-21.06.1.0547.release.tar.gz
+tar -xf open-cas-linux-21.06.1.0547.release.tar.gz
+cd open-cas-linux-21.06.1.0547.release/
 ```
 
 Alternatively, if you want recent development (unstable) version, you can clone GitHub repository:
