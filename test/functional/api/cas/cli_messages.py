@@ -45,9 +45,8 @@ stop_cache_incomplete = [
 ]
 
 stop_cache_errors = [
-    r"Error while removing cache \d+",
-    r"Error while writing to cache device",
-    r"Error occurred, please see syslog \(/var/log/messages\) for details"
+    r"Removed cache \d+ with errors",
+    r"Error while writing to cache device"
 ]
 
 get_stats_ioclass_id_not_configured = [
