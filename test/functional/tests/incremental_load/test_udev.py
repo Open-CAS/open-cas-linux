@@ -5,13 +5,15 @@
 
 import random
 import time
+
 import pytest
 
 from api.cas import casadm, casadm_parser
-from api.cas.core import CoreStatus, CacheMode, CacheStatus
+from api.cas.cache_config import CacheMode, CacheStatus
+from api.cas.core import CoreStatus
 from api.cas.init_config import InitConfig
 from core.test_run import TestRun
-from storage_devices.disk import DiskTypeSet, DiskTypeLowerThan, DiskType
+from storage_devices.disk import DiskTypeSet, DiskType
 from storage_devices.raid import RaidConfiguration, Raid, Level, MetadataVariant
 from test_utils.size import Size, Unit
 
