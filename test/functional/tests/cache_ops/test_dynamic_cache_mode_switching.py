@@ -93,11 +93,6 @@ def test_cache_stop_and_load(cache_mode):
                     f"Cache line size is: {check_cache_config.cache_line_size}, "
                     f"should be: {cache.get_cache_line_size()}\n"
                 )
-            if check_cache_config.metadata_mode != cache.get_metadata_mode():
-                failed_params += (
-                    f"Metadata mode is: {check_cache_config.metadata_mode}, "
-                    f"should be: {cache.get_metadata_mode()}\n"
-                )
             TestRun.fail(f"Parameters do not match after reload:\n{failed_params}")
 
     with TestRun.step(

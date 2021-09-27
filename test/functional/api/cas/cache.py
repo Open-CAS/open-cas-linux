@@ -14,7 +14,6 @@ class Cache:
         self.cache_device = device
         self.cache_id = int(self.__get_cache_id())
         self.__cache_line_size = None
-        self.__metadata_mode = None
         self.__metadata_size = None
 
     def __get_cache_id(self):
@@ -39,13 +38,6 @@ class Cache:
         stats = self.get_statistics()
         cp = stats.config_stats.cleaning_policy
         return CleaningPolicy[cp]
-
-    def get_metadata_mode(self):
-        if self.__metadata_mode is None:
-            stats = self.get_statistics()
-            mm = stats.config_stats.metadata_mode
-            self.__metadata_mode = MetadataMode[mm]
-        return self.__metadata_mode
 
     def get_metadata_size(self):
         if self.__metadata_size is None:
@@ -180,5 +172,4 @@ class Cache:
     def get_cache_config(self):
         return CacheConfig(self.get_cache_line_size(),
                            self.get_cache_mode(),
-                           self.get_cleaning_policy(),
-                           self.get_metadata_mode())
+                           self.get_cleaning_policy())
