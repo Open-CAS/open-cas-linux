@@ -16,7 +16,6 @@ from api.cas.cache_config import (
     CacheModeTrait,
     CacheStatus,
     CleaningPolicy,
-    MetadataMode,
     PromotionPolicy,
 )
 from api.cas.casadm import StatsFilter
@@ -289,11 +288,6 @@ def validate_cache_config_statistics(caches, after_io: bool = False):
                 f"For cache number {caches[i].cache_id} cache line size is "
                 f"{caches_stats[i].config_stats.cache_line_size}, "
                 f"should be {CacheLineSize.DEFAULT.value}\n")
-        if caches_stats[i].config_stats.metadata_mode != MetadataMode.DEFAULT.value:
-            failed_stats += (
-                f"For cache number {caches[i].cache_id} metadata mode is "
-                f"{caches_stats[i].config_stats.metadata_mode}, "
-                f"should be {MetadataMode.DEFAULT}\n")
         if (
             CacheStatus[caches_stats[i].config_stats.status.replace(' ', '_').lower()]
             != CacheStatus.running

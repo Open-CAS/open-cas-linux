@@ -370,13 +370,11 @@ class CacheConfig:
         cache_line_size=CacheLineSize.DEFAULT,
         cache_mode=CacheMode.DEFAULT,
         cleaning_policy=CleaningPolicy.DEFAULT,
-        metadata_mode=MetadataMode.normal,
         kernel_parameters=None
     ):
         self.cache_line_size = cache_line_size
         self.cache_mode = cache_mode
         self.cleaning_policy = cleaning_policy
-        self.metadata_mode = metadata_mode
         self.kernel_parameters = kernel_parameters
 
     def __eq__(self, other):
@@ -384,7 +382,6 @@ class CacheConfig:
             self.cache_line_size == other.cache_line_size
             and self.cache_mode == other.cache_mode
             and self.cleaning_policy == other.cleaning_policy
-            and self.metadata_mode == other.metadata_mode
             and equal_or_default(
                 self.kernel_parameters, other.kernel_parameters, KernelParameters.DEFAULT
             )
