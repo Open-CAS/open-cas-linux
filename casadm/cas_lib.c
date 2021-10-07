@@ -68,7 +68,7 @@ static const char *cache_states_name[ocf_cache_state_max + 1] = {
 		[ocf_cache_state_stopping] = "Stopping",
 		[ocf_cache_state_initializing] = "Initializing",
 		[ocf_cache_state_incomplete] = "Incomplete",
-		[ocf_cache_state_passive] = "Passive",
+		[ocf_cache_state_standby] = "Standby",
 		[ocf_cache_state_max] = "Unknown",
 };
 
@@ -781,6 +781,9 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 	cache->expected_core_count = info->info.core_count;
 	cache->id = cache_id;
 	cache->state = info->info.state;
+
+	if (info->info.failover_detached)
+		return NULL;
 
 	if (strncpy_s(cache->device, sizeof(cache->device),
 			info->cache_path_name,
@@ -2776,7 +2779,7 @@ int list_caches(unsigned int list_format, bool by_id_path)
 					cache_mode_to_name(curr_cache->mode));
 		} else {
 			tmp_status = get_cache_state_name(curr_cache->state);
-			if (curr_cache->state & (1 << ocf_cache_state_passive)) {
+			if (curr_cache->state & (1 << ocf_cache_state_standby)) {
 				strncpy(mode_string, "-", sizeof(mode_string));
 			} else {
 				snprintf(mode_string, sizeof(mode_string), "%s",
@@ -2972,4 +2975,40 @@ int zero_md(const char *cache_device, bool force)
 	close(fd);
 	cas_printf(LOG_INFO, "OpenCAS's metadata wiped succesfully from device '%s'.\n", cache_device);
 	return SUCCESS;
+}
+
+int cas_ioctl(int id, void *data)
+{
+	int fd, result;
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	result = run_ioctl(fd, id, data);
+	close(fd);
+
+	return result < 0 ? FAILURE : SUCCESS;
+}
+
+
+int failover_detach(int cache_id)
+{
+	struct kcas_failover_detach  data = {.cache_id = cache_id};
+
+	return cas_ioctl(KCAS_IOCTL_FAILOVER_DETACH, &data);
+}
+
+int failover_activate(int cache_id, const char *cache_device)
+{
+	struct kcas_failover_activate data = {.cache_id = cache_id};
+
+	if (cache_device) {
+		if (set_device_path(data.cache_path, sizeof(data.cache_path),
+				    cache_device, MAX_STR_LEN) != SUCCESS) {
+			return FAILURE;
+		}
+	}
+
+	return cas_ioctl(KCAS_IOCTL_FAILOVER_ACTIVATE, &data);
 }

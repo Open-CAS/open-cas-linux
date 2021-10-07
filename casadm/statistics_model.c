@@ -538,10 +538,13 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 	char dev_path[MAX_STR_LEN];
 	int inactive_cores;
 
-	if (!by_id_path && get_dev_path(cache_info->cache_path_name, dev_path, sizeof(dev_path)) == SUCCESS)
+	if (strnlen(cache_info->cache_path_name, sizeof(cache_info->cache_path_name)) == 0) {
+		cache_path = "-";
+	} else if (!by_id_path && get_dev_path(cache_info->cache_path_name, dev_path, sizeof(dev_path)) == SUCCESS) {
 		cache_path = dev_path;
-	else
+	} else {
 		cache_path = cache_info->cache_path_name;
+	}
 
 	flush_progress = calculate_flush_progress(cache_info->info.dirty,
 			cache_info->info.flushed);

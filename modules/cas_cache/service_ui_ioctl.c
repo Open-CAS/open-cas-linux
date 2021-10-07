@@ -50,15 +50,15 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 	case KCAS_IOCTL_START_CACHE: {
 		struct kcas_start_cache *cmd_info;
 		struct ocf_mngt_cache_config cfg;
-		struct ocf_mngt_cache_device_config device_cfg;
+		struct ocf_mngt_cache_attach_config attach_cfg;
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mngt_prepare_cache_cfg(&cfg, &device_cfg, cmd_info);
+		retval = cache_mngt_prepare_cache_cfg(&cfg, &attach_cfg, cmd_info);
 		if (retval)
 			RETURN_CMD_RESULT(cmd_info, arg, retval);
 
-		retval = cache_mngt_init_instance(&cfg, &device_cfg, cmd_info);
+		retval = cache_mngt_init_instance(&cfg, &attach_cfg, cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -378,7 +378,30 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
+	case KCAS_IOCTL_FAILOVER_DETACH: {
+		struct kcas_failover_detach *cmd_info;
 
+		GET_CMD_INFO(cmd_info, arg);
+
+		retval = cache_mngt_failover_detach(cmd_info);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+	case KCAS_IOCTL_FAILOVER_ACTIVATE: {
+		struct kcas_failover_activate *cmd_info;
+		struct ocf_mngt_cache_device_config cfg;
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		retval = cache_mngt_prepare_cache_device_cfg(&cfg,
+				cmd_info->cache_path);
+		if (retval)
+			RETURN_CMD_RESULT(cmd_info, arg, retval);
+
+		retval = cache_mngt_activate(&cfg, cmd_info);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
 	default:
 		return -EINVAL;
 	}
