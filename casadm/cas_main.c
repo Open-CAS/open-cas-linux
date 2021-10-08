@@ -198,10 +198,8 @@ int start_cache_command_handle_option(char *opt, const char **arg)
 		command_args_values.cache_id = atoi(arg[0]);
 	} else if (!strcmp(opt, "load")) {
 		command_args_values.state = CACHE_INIT_LOAD;
-	} else if (!strcmp(opt, "bind")) {
-		command_args_values.state = CACHE_INIT_BIND;
-	} else if (!strcmp(opt, "activate")) {
-		command_args_values.state = CACHE_INIT_ACTIVATE;
+	} else if (!strcmp(opt, "failover-standby")) {
+		command_args_values.state = CACHE_INIT_STANDBY;
 	} else if (!strcmp(opt, "cache-device")) {
 		if(validate_device_name(arg[0]) == FAILURE)
 			return FAILURE;
@@ -247,8 +245,7 @@ static cli_option start_options[] = {
 	{'d', "cache-device", CACHE_DEVICE_DESC, 1, "DEVICE", CLI_OPTION_REQUIRED},
 	{'i', "cache-id", CACHE_ID_DESC_LONG, 1, "ID", 0},
 	{'l', "load", "Load cache metadata from caching device (DANGEROUS - see manual or Admin Guide for details)"},
-	{'b', "bind", "Bind caching device (DANGEROUS - see manual or Admin Guide for details)"},
-	{'a', "activate", "Activate caching device after bind"},
+	{'s', "failover-standby", "Start cache in standby mode for failover purpose (DANGEROUS - see manual or Admin Guide for details)"},
 	{'f', "force", "Force the creation of cache instance"},
 	{'c', "cache-mode", "Set cache mode from available: {"CAS_CLI_HELP_START_CACHE_MODES"} "CAS_CLI_HELP_START_CACHE_MODES_FULL"; without this parameter Write-Through will be set by default", 1, "NAME"},
 	{'x', "cache-line-size", "Set cache line size in kibibytes: {4,8,16,32,64}[KiB] (default: %d)", 1, "NUMBER",  CLI_OPTION_DEFAULT_INT, 0, 0, ocf_cache_line_size_default / KiB},
@@ -288,45 +285,34 @@ static int check_fs(const char* device)
 	return SUCCESS;
 }
 
-int handle_start()
+int validate_cache_path(const char* path)
 {
-	int cache_device = 0;
-	int status;
+	int cache_device;
 	struct stat device_info;
 
-	if (command_args_values.state == CACHE_INIT_LOAD && command_args_values.force) {
-		cas_printf(LOG_ERR, "Use of 'load' and 'force' simultaneously is forbidden.\n");
-		return FAILURE;
-	}
 
-	if (command_args_values.state == CACHE_INIT_BIND && command_args_values.force) {
-		cas_printf(LOG_ERR, "Use of 'bind' and 'force' simultaneously is forbidden.\n");
-		return FAILURE;
-	}
-
-	cache_device = open(command_args_values.cache_device, O_RDONLY);
+	cache_device = open(path, O_RDONLY);
 
 	if (cache_device < 0) {
-		cas_printf(LOG_ERR, "Couldn't open cache device %s.\n",
-			command_args_values.cache_device);
+		cas_printf(LOG_ERR, "Couldn't open cache device %s.\n", path);
 		return FAILURE;
 	}
 
 	if (fstat(cache_device, &device_info)) {
 		close(cache_device);
 		cas_printf(LOG_ERR, "Could not stat target device:%s!\n",
-			command_args_values.cache_device);
+				path);
 		return FAILURE;
 	}
 
 	if (!S_ISBLK(device_info.st_mode)) {
 		close(cache_device);
 		cas_printf(LOG_ERR, WRONG_DEVICE_ERROR NOT_BLOCK_ERROR,
-			command_args_values.cache_device);
+				path);
 		return FAILURE;
 	}
 
-	if (check_fs(command_args_values.cache_device)) {
+	if (check_fs(path)) {
 		close(cache_device);
 		return FAILURE;
 	}
@@ -335,6 +321,26 @@ int handle_start()
 		cas_printf(LOG_ERR, "Couldn't close the cache device.\n");
 		return FAILURE;
 	}
+
+	return SUCCESS;
+}
+
+int handle_start()
+{
+	int status;
+
+	if (command_args_values.state == CACHE_INIT_LOAD && command_args_values.force) {
+		cas_printf(LOG_ERR, "Use of 'load' and 'force' simultaneously is forbidden.\n");
+		return FAILURE;
+	}
+
+	if (command_args_values.state == CACHE_INIT_STANDBY && command_args_values.force) {
+		cas_printf(LOG_ERR, "Use of 'failover-standby' and 'force' simultaneously is forbidden.\n");
+		return FAILURE;
+	}
+
+	if (validate_cache_path(command_args_values.cache_device) == FAILURE)
+		return FAILURE;
 
 	status = start_cache(command_args_values.cache_id,
 			command_args_values.state,
@@ -1449,6 +1455,18 @@ int io_class_handle() {
 	return FAILURE;
 }
 
+
+static cli_option failover_detach_options[] = {
+	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
+	{}
+};
+
+static cli_option  failover_activate_options[] = {
+	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
+	{'d', "cache-device", CACHE_DEVICE_DESC, 1, "DEVICE"},
+	{}
+};
+
 /*******************************************************************************
  * Script Commands
  ******************************************************************************/
@@ -1682,6 +1700,17 @@ int script_command_is_valid() {
 	}
 
 	return result;
+}
+
+int handle_failover_detach()
+{
+	return failover_detach(command_args_values.cache_id);
+}
+
+int handle_failover_activate()
+{
+	return failover_activate(command_args_values.cache_id,
+				command_args_values.cache_device);
 }
 
 int script_handle() {
@@ -2093,6 +2122,30 @@ static cli_command cas_commands[] = {
 			.handle = handle_zero,
 			.flags = CLI_SU_REQUIRED,
 			.help = NULL
+		},
+		{
+			.name = "failover-detach",
+			.desc = "Detach cache device from standby cache instance",
+			.long_desc = "Detach cache device from standby cache instance. "
+				"Cache continues to run in failover standby mode, "
+				"awaiting activation on a new drive.",
+			.options = failover_detach_options,
+			.command_handle_opts = command_handle_option,
+			.handle = handle_failover_detach,
+			.flags = CLI_SU_REQUIRED,
+			.help = NULL,
+
+		},
+		{
+			.name = "failover-activate",
+			.desc = "Activate standby cache instance",
+			.long_desc = NULL,
+			.options = failover_activate_options,
+			.command_handle_opts = command_handle_option,
+			.handle = handle_failover_activate,
+			.flags = CLI_SU_REQUIRED,
+			.help = NULL,
+
 		},
 		{
 			.name = "script",

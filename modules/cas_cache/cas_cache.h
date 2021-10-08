@@ -58,6 +58,7 @@ struct cache_priv {
 	atomic_t flush_interrupt_enabled;
 	ocf_queue_t mngt_queue;
 	void *attach_context;
+	bool cache_exp_obj_initialized;
 	ocf_queue_t io_queues[];
 };
 
