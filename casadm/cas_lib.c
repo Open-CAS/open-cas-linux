@@ -573,7 +573,9 @@ static bool is_dev_link_whitelisted(const char* path)
 			"/dev/cas[0-9]\\+-[0-9]\\+p[0-9]\\+$",
 			"/dev/ram[0-9]\\+$",
 			"/dev/ram[0-9]\\+p[0-9]\\+$",
-			"/dev/nullb[0-9]\\+$"
+			"/dev/nullb[0-9]\\+$",
+			"/dev/drbd[0-9]\\+$",
+			"/dev/drbd[0-9]\\+p[0-9]\\+$",
 		};
 	static const unsigned count = ARRAY_SIZE(whitelist);
 	size_t i;
