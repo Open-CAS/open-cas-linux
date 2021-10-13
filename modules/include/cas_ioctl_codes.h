@@ -71,6 +71,8 @@ struct kcas_start_cache {
 	 */
 	ocf_cache_line_size_t line_size;
 
+	ocf_cleaning_t cleaning_policy_type;
+
 	uint8_t force; /**< should force option be used? */
 
 	uint64_t min_free_ram; /**< Minimum free RAM memory for cache metadata */

@@ -1861,6 +1861,7 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	cfg->cache_mode = cmd->caching_mode;
 	cfg->cache_line_size = cmd->line_size;
 	cfg->promotion_policy = ocf_promotion_default;
+	cfg->cleaning_policy = cmd->cleaning_policy_type;
 	cfg->cache_line_size = cmd->line_size;
 	cfg->pt_unaligned_io = !unaligned_io;
 	cfg->use_submit_io_fast = !use_io_scheduler;

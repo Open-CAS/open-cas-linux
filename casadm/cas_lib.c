@@ -963,7 +963,7 @@ static void check_cache_scheduler(const char *cache_device, const char *elv_name
 
 int start_cache(uint16_t cache_id, unsigned int cache_init,
 		const char *cache_device, ocf_cache_mode_t cache_mode,
-		ocf_cache_line_size_t line_size, int force)
+		ocf_cache_line_size_t line_size, int force, ocf_cleaning_t clean_pol)
 {
 	int fd = 0;
 	struct kcas_start_cache cmd;
@@ -1012,6 +1012,7 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	}
 	cmd.caching_mode = cache_mode;
 	cmd.line_size = line_size;
+	cmd.cleaning_policy_type = clean_pol;
 	cmd.force = (uint8_t)force;
 
 	if (run_ioctl_interruptible_retry(fd, KCAS_IOCTL_START_CACHE, &cmd,

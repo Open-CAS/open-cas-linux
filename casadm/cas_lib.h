@@ -112,7 +112,7 @@ void metadata_memory_footprint(uint64_t size, float *footprint, const char **uni
 
 int start_cache(uint16_t cache_id, unsigned int cache_init,
 		const char *cache_device, ocf_cache_mode_t cache_mode,
-		ocf_cache_line_size_t line_size, int force);
+		ocf_cache_line_size_t line_size, int force, ocf_cleaning_t clean_pol);
 int stop_cache(uint16_t cache_id, int flush);
 
 #ifdef WI_AVAILABLE

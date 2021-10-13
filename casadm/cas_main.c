@@ -73,7 +73,7 @@ static struct command_args command_args_values = {
 		.line_size = ocf_cache_line_size_default,
 		.cache_state_flush = UNDEFINED, /* three state logic: YES NO UNDEFINED */
 		.flush_data = 1,
-		.cleaning_policy_type = 0,
+		.cleaning_policy_type = ocf_cleaning_alru,
 		.promotion_policy_type = 0,
 		.script_subcmd = -1,
 		.try_add = false,
@@ -217,6 +217,9 @@ int start_cache_command_handle_option(char *opt, const char **arg)
 			return FAILURE;
 
 		command_args_values.line_size = atoi((const char*)arg[0]) * KiB;
+	} else if (!strcmp(opt, "cleaning-policy")) {
+		command_args_values.cleaning_policy_type =
+			validate_str_cln_policy((const char*)arg[0]);
 	}
 
 	return 0;
@@ -227,6 +230,8 @@ int start_cache_command_handle_option(char *opt, const char **arg)
 
 #define CACHE_ID_DESC "Identifier of cache instance <"xstr(OCF_CACHE_ID_MIN)"-"xstr(OCF_CACHE_ID_MAX)">"
 #define CACHE_ID_DESC_LONG CACHE_ID_DESC " (if not provided, the first available number will be used)"
+#define CLEANING_POLICY_TYPE_DESC "Cleaning policy type. " \
+	"Available policy types: {nop|alru|acp}"
 
 /* OCF_CORE_ID_MAX is defined by arithmetic operations on OCF_CORE_MAX. As a result there is no easy way
  * to stringify OCF_CORE_ID_MAX. To work around this, additional definition for max core id is introduced here.
@@ -240,7 +245,6 @@ int start_cache_command_handle_option(char *opt, const char **arg)
 #define CACHE_DEVICE_DESC "Caching device to be used"
 #define CORE_DEVICE_DESC "Path to core device"
 
-
 static cli_option start_options[] = {
 	{'d', "cache-device", CACHE_DEVICE_DESC, 1, "DEVICE", CLI_OPTION_REQUIRED},
 	{'i', "cache-id", CACHE_ID_DESC_LONG, 1, "ID", 0},
@@ -249,6 +253,17 @@ static cli_option start_options[] = {
 	{'f', "force", "Force the creation of cache instance"},
 	{'c', "cache-mode", "Set cache mode from available: {"CAS_CLI_HELP_START_CACHE_MODES"} "CAS_CLI_HELP_START_CACHE_MODES_FULL"; without this parameter Write-Through will be set by default", 1, "NAME"},
 	{'x', "cache-line-size", "Set cache line size in kibibytes: {4,8,16,32,64}[KiB] (default: %d)", 1, "NUMBER",  CLI_OPTION_DEFAULT_INT, 0, 0, ocf_cache_line_size_default / KiB},
+	{
+		'p',
+		"cleaning-policy",
+		CLEANING_POLICY_TYPE_DESC,
+		1,
+		"NAME",
+		CLI_OPTION_DEFAULT_INT,
+		.min_value = 0, /* ignored */
+		.max_value = 0, /* ignored */
+		.default_value = ocf_cleaning_alru,
+	},
 	{0}
 };
 
@@ -347,7 +362,8 @@ int handle_start()
 			command_args_values.cache_device,
 			command_args_values.cache_mode,
 			command_args_values.line_size,
-			command_args_values.force);
+			command_args_values.force,
+			command_args_values.cleaning_policy_type);
 
 	return status;
 }
@@ -645,9 +661,6 @@ static struct cas_param cas_cache_params[] = {
 #define SEQ_CUT_OFF_POLICY_DESC "Sequential cutoff policy. " \
 	"Available policies: {always|full|never}"
 #define SEQ_CUT_OFF_PROMO_COUNT_DESC "Sequential cutoff stream promotion request count threshold"
-
-#define CLEANING_POLICY_TYPE_DESC "Cleaning policy type. " \
-	"Available policy types: {nop|alru|acp}"
 
 #define CLEANING_ALRU_WAKE_UP_DESC "Period of time between awakenings of flushing thread <%d-%d>[s] (default: %d s)"
 #define CLEANING_ALRU_STALENESS_TIME_DESC "Time that has to pass from the last write operation before a dirty cache" \
