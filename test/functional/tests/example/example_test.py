@@ -119,3 +119,31 @@ def test_create_example_files():
             TestRun.LOGGER.info(f"Item {str(item)} - {type(item).__name__}")
     with TestRun.step("Remove file"):
         fs_utils.remove(file1.full_path, True)
+
+
+@pytest.mark.require_disk("cache1", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("cache2", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.multidut(2)
+def test_example_multidut():
+    with TestRun.group("Run on all duts"):
+        for dut in TestRun.duts:
+            with TestRun.step("From TestRun.executor"):
+                with TestRun.use_dut(dut):
+                    TestRun.dut.hostname = TestRun.executor.run_expect_success('uname -n').stdout
+                    TestRun.LOGGER.info(TestRun.dut.hostname)
+            with TestRun.step("From returned executor"):
+                with TestRun.use_dut(dut) as executor:
+                    i = executor.run_expect_success("uname -i").stdout
+                    TestRun.LOGGER.info(i)
+    with TestRun.group("Run on single dut"):
+        dut1, dut2 = TestRun.duts
+        with TestRun.step(f"Run from TestRun.executor on dut {dut2.ip}"):
+            with TestRun.use_dut(dut2):
+                TestRun.LOGGER.info(TestRun.executor.run_expect_success("which casadm").stdout)
+                for name, disk in TestRun.disks.items():
+                    TestRun.LOGGER.info(f"{name}: {disk.path}")
+        with TestRun.step(f"Run from returned executor on dut {dut1.ip}"):
+            with TestRun.use_dut(dut1) as dut1_ex:
+                TestRun.LOGGER.info(dut1_ex.run_expect_success("which casctl").stdout)
+                for name, disk in TestRun.disks.items():
+                    TestRun.LOGGER.info(f"{name}: {disk.path}")
