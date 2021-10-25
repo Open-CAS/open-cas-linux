@@ -108,6 +108,36 @@ def start_cmd(cache_dev: str, cache_mode: str = None, cache_line_size: str = Non
     return casadm_bin + command
 
 
+def standby_init_cmd(cache_dev: str, cache_id: str, cache_line_size: str,
+                     force: bool = False, shortcut: bool = False):
+    command = " --standby --init"
+    command += (" -d " if shortcut else " --cache-device ") + cache_dev
+    command += (" -i " if shortcut else " --cache-id ") + cache_id
+    command += (" -x " if shortcut else " --cache-line-size ") + cache_line_size
+    if force:
+        command += " -f" if shortcut else " --force"
+    return casadm_bin + command
+
+
+def standby_load_cmd(cache_dev: str, shortcut: bool = False):
+    command = " --standby --load"
+    command += (" -d " if shortcut else " --cache-device ") + cache_dev
+    return casadm_bin + command
+
+
+def standby_detach_cmd(cache_id: str, shortcut: bool = False):
+    command = " --standby --detach"
+    command += (" -i " if shortcut else " --cache-id ") + cache_id
+    return casadm_bin + command
+
+
+def standby_activate_cmd(cache_dev: str, cache_id: str, shortcut: bool = False):
+    command = " --standby --activate"
+    command += (" -d " if shortcut else " --cache-device ") + cache_dev
+    command += (" -i " if shortcut else " --cache-id ") + cache_id
+    return casadm_bin + command
+
+
 def print_statistics_cmd(cache_id: str, core_id: str = None, per_io_class: bool = False,
                          io_class_id: str = None, filter: str = None,
                          output_format: str = None, by_id_path: bool = True,
