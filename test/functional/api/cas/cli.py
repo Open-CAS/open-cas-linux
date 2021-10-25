@@ -92,19 +92,35 @@ def flush_core_cmd(cache_id: str, core_id: str, shortcut: bool = False):
 
 def start_cmd(cache_dev: str, cache_mode: str = None, cache_line_size: str = None,
               cache_id: str = None, force: bool = False,
-              load: bool = False, shortcut: bool = False):
+              load: bool = False, shortcut: bool = False, standby: bool = False):
     command = " -S" if shortcut else " --start-cache"
     command += (" -d " if shortcut else " --cache-device ") + cache_dev
-    if cache_mode is not None:
-        command += (" -c " if shortcut else " --cache-mode ") + cache_mode
     if cache_line_size is not None:
         command += (" -x " if shortcut else " --cache-line-size ") + cache_line_size
     if cache_id is not None:
         command += (" -i " if shortcut else " --cache-id ") + cache_id
-    if force:
-        command += " -f" if shortcut else " --force"
-    if load:
-        command += " -l" if shortcut else " --load"
+    if standby:
+        command += " --failover-standby "
+    else:
+        if cache_mode is not None:
+            command += (" -c " if shortcut else " --cache-mode ") + cache_mode
+        if force:
+            command += " -f" if shortcut else " --force"
+        if load:
+            command += " -l" if shortcut else " --load"
+    return casadm_bin + command
+
+
+def failover_detach_cmd(cache_id: str, shortcut: bool = False):
+    command = " --failover-detach "
+    command += (" -i " if shortcut else " --cache-id ") + cache_id
+    return casadm_bin + command
+
+
+def failover_activate_cmd(cache_dev: str, cache_id: str, shortcut: bool = False):
+    command = " --failover-activate "
+    command += (" -d " if shortcut else " --cache-device ") + cache_dev
+    command += (" -i " if shortcut else " --cache-id ") + cache_id
     return casadm_bin + command
 
 
