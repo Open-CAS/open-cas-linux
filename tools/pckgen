@@ -344,6 +344,17 @@ deb_control_files_prepare() {
         sed -i "s/<CAS_GIT>/${CAS_GIT//\//\\/}/g" "$file"
         sed -i "s/<PACKAGE_MAINTAINER>/$PACKAGE_MAINTAINER/g" "$file"
         sed -i "s/<PACKAGE_DATE>/$PACKAGE_DATE/g" "$file"
+        case "$ARCH" in
+            x86_64)
+                sed -i "s/<ARCH>/amd64/g" "$file"
+                ;;
+            aarch64)
+                sed -i "s/<ARCH>/arm64/g" "$file"
+                ;;
+            *)
+                error "unsupported architecture: $ARCH"
+                ;;
+        esac
     done
 }
 
