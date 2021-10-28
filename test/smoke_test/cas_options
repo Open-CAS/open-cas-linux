@@ -2,7 +2,7 @@
 
 #
 # Copyright(c) 2012-2021 Intel Corporation
-# SPDX-License-Identifier: BSD-3-Clause-Clear
+# SPDX-License-Identifier: BSD-3-Clause
 #
 # Whenever adding new options (required or optional), add them to the variable below.
 # Every option might be mentioned more than once - it doesn't really matter at this point
