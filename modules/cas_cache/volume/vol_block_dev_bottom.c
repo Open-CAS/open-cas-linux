@@ -165,9 +165,6 @@ static void cas_bd_io_end(struct ocf_io *io, int error)
 
 	/* Send completion to caller */
 	io->end(io, bdio->error);
-
-	/* Free allocated structures */
-	ocf_io_put(io);
 }
 
 /*
@@ -212,9 +209,6 @@ static void block_dev_submit_flush(struct ocf_io *io)
 
 	/* Prevent races of completing IO */
 	atomic_set(&blkio->rq_remaning, 1);
-
-	/* Increase IO reference counter for FLUSH IO */
-	ocf_io_get(io);
 
 	if (q == NULL) {
 		/* No queue, error */
@@ -261,9 +255,6 @@ void block_dev_submit_discard(struct ocf_io *io)
 
 	/* Prevent races of completing IO */
 	atomic_set(&blkio->rq_remaning, 1);
-
-	/* Increase IO reference counter for FLUSH IO */
-	ocf_io_get(io);
 
 	if (!q) {
 		/* No queue, error */
@@ -384,9 +375,6 @@ static void block_dev_submit_io(struct ocf_io *io)
 
 	CAS_DEBUG_PARAM("Address = %llu, bytes = %u\n", bdio->addr,
 			bdio->bytes);
-
-	/* Increase IO reference */
-	ocf_io_get(io);
 
 	/* Prevent races of completing IO */
 	atomic_set(&bdio->rq_remaning, 1);
