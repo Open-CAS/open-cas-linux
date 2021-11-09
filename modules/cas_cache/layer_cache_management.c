@@ -1346,6 +1346,15 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	cfg->seq_cutoff_threshold = seq_cut_off_mb * MiB;
 	cfg->seq_cutoff_promotion_count = 8;
 
+	/* Due to linux thread scheduling nature, we prefer to promote streams
+	 * as early as we reasonably can. One way to achieve that is to set
+	 * promotion count really low, which unfortunately significantly increases
+	 * number of accesses to shared structures. The other way is to promote
+	 * streams which reach cutoff threshold, as we can reasonably assume that
+	 * they are likely be continued after thread is rescheduled to another CPU.
+	 */
+	cfg->seq_cutoff_promote_on_threshold = true;
+
 	init_completion(&add_context.cmpl);
 	add_context.core = &core;
 	add_context.result = &result;
