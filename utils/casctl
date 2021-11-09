@@ -4,9 +4,20 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+from packaging import version
+import platform
+import sys
+
+min_ver = version.parse("3.6")
+ver = version.parse(platform.python_version())
+if ver < min_ver:
+    print((f"Minimum required python version is {min_ver}\n"
+            f"Detected python version is {ver}"),
+            file = sys.stderr)
+    exit(1)
+
 import argparse
 import re
-import sys
 
 import opencas
 
