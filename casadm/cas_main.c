@@ -66,11 +66,11 @@ static struct command_args command_args_values = {
 		.cache_id = OCF_CACHE_ID_INVALID,
 		.core_id = OCF_CORE_ID_INVALID,
 		.state = CACHE_INIT_NEW,
-		.cache_mode = ocf_cache_mode_default,
+		.cache_mode = ocf_cache_mode_none,
 		.stats_filters = STATS_FILTER_DEFAULT,
 		.output_format = OUTPUT_FORMAT_DEFAULT,
 		.io_class_id = OCF_IO_CLASS_INVALID,
-		.line_size = ocf_cache_line_size_default,
+		.line_size = ocf_cache_line_size_none,
 		.cache_state_flush = UNDEFINED, /* three state logic: YES NO UNDEFINED */
 		.flush_data = 1,
 		.cleaning_policy_type = 0,
@@ -197,8 +197,18 @@ int start_cache_command_handle_option(char *opt, const char **arg)
 
 		command_args_values.cache_id = atoi(arg[0]);
 	} else if (!strcmp(opt, "load")) {
+		if (command_args_values.state == CACHE_INIT_STANDBY) {
+			cas_printf(LOG_ERR, "Use of 'failover-standby' and 'load' simultaneously is forbidden.\n");
+			return FAILURE;
+		}
+
 		command_args_values.state = CACHE_INIT_LOAD;
 	} else if (!strcmp(opt, "failover-standby")) {
+		if (command_args_values.state == CACHE_INIT_LOAD) {
+			cas_printf(LOG_ERR, "Use of 'failover-standby' and 'load' simultaneously is forbidden.\n");
+			return FAILURE;
+		}
+
 		command_args_values.state = CACHE_INIT_STANDBY;
 	} else if (!strcmp(opt, "cache-device")) {
 		if(validate_device_name(arg[0]) == FAILURE)
@@ -334,9 +344,33 @@ int handle_start()
 		return FAILURE;
 	}
 
-	if (command_args_values.state == CACHE_INIT_STANDBY && command_args_values.force) {
-		cas_printf(LOG_ERR, "Use of 'failover-standby' and 'force' simultaneously is forbidden.\n");
-		return FAILURE;
+	if (command_args_values.state == CACHE_INIT_STANDBY) {
+		if (command_args_values.force) {
+			cas_printf(LOG_ERR, "Use of 'failover-standby' and 'force' simultaneously is forbidden.\n");
+			return FAILURE;
+		}
+		if (command_args_values.cache_id == OCF_CACHE_ID_INVALID) {
+			cas_printf(LOG_ERR, "Using 'failover-standby' requires specifying 'cache-id'.\n");
+			return FAILURE;
+		}
+	}
+
+	if (command_args_values.line_size == ocf_cache_line_size_none) {
+		if (command_args_values.state == CACHE_INIT_STANDBY) {
+			cas_printf(LOG_ERR, "Using 'failover-standby' requires specifying 'cache-line-size'.\n");
+			return FAILURE;
+		}
+
+		command_args_values.line_size = ocf_cache_line_size_default;
+	}
+
+	if (command_args_values.cache_mode != ocf_cache_mode_none) {
+		if (command_args_values.state == CACHE_INIT_STANDBY) {
+			cas_printf(LOG_ERR, "It is not possible to use 'cache-mode' when using 'failover-standby'.\n");
+			return FAILURE;
+		}
+	} else {
+		command_args_values.cache_mode = ocf_cache_mode_default;
 	}
 
 	if (validate_cache_path(command_args_values.cache_device) == FAILURE)
