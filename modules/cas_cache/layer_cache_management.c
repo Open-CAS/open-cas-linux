@@ -1199,6 +1199,7 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 	cfg->uuid.data = cmd_info->core_path_name;
 	cfg->uuid.size = strnlen(cmd_info->core_path_name, MAX_STR_LEN) + 1;
 	cfg->try_add = cmd_info->try_add;
+	cfg->seq_cutoff_promote_on_threshold = true;
 
 	if (!cas_bdev_exist(cfg->uuid.data))
 		return -OCF_ERR_INVAL_VOLUME_TYPE;
