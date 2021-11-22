@@ -41,6 +41,12 @@ git submodule update --init
 
 ### Source compile and install
 
+To install all required python packages run the following command:
+
+```
+python3 -m pip install -r requirements.txt
+```
+
 To configure, build and install Open CAS Linux run following commands:
 
 ```
