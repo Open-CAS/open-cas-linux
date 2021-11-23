@@ -195,6 +195,8 @@ static void blkdev_defer_bio(struct bd_object *bvol, struct bio *bio,
 
 static void blkdev_complete_data_master(struct blk_data *master, int error)
 {
+	int result;
+
 	master->error = master->error ?: error;
 
 	if (atomic_dec_return(&master->master_remaining))
@@ -202,7 +204,8 @@ static void blkdev_complete_data_master(struct blk_data *master, int error)
 
 	cas_generic_end_io_acct(master->bio, master->start_time);
 
-	CAS_BIO_ENDIO(master->bio, master->master_size, CAS_ERRNO_TO_BLK_STS(error));
+	result = master->error ? -EIO : 0;
+	CAS_BIO_ENDIO(master->bio, master->master_size, CAS_ERRNO_TO_BLK_STS(result));
 	cas_free_blk_data(master);
 }
 
@@ -337,8 +340,9 @@ err:
 static void blkdev_complete_discard(struct ocf_io *io, int error)
 {
 	struct bio *bio = io->priv1;
+	int result = error ? -EIO : 0;
 
-	CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(error));
+	CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(result));
 	ocf_io_put(io);
 }
 
@@ -378,12 +382,13 @@ static void blkdev_complete_flush(struct ocf_io *io, int error)
 {
 	struct bio *bio = io->priv1;
 	struct bd_object *bvol = io->priv2;
+	int result = error ? -EIO : 0;
 
 	ocf_io_put(io);
 
 	if (CAS_BIO_BISIZE(bio) == 0 || error) {
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio),
-				CAS_ERRNO_TO_BLK_STS(error));
+				CAS_ERRNO_TO_BLK_STS(result));
 		return;
 	}
 
