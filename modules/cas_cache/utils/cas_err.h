@@ -51,10 +51,6 @@ static struct cas_error_map_entry cas_ocf_error_map[] = {
 	{ OCF_ERR_CACHE_NAME_MISMATCH,		EINVAL	},
 	{ OCF_ERR_INVAL_CACHE_DEV,		EINVAL	},
 	{ OCF_ERR_CORE_UUID_EXISTS,		EINVAL	},
-	{ OCF_ERR_METADATA_LAYOUT_MISMATCH,	EINVAL	},
-	{ OCF_ERR_CACHE_LINE_SIZE_MISMATCH,	EINVAL	},
-	{ OCF_ERR_CACHE_STANDBY,		EBUSY	},
-};
 
 static struct cas_error_map_entry cas_error_map[] = {
 	/* CAS kernel error mappings*/
