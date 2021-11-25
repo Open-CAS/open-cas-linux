@@ -507,8 +507,10 @@ struct kcas_failover_activate
  * Extended kernel CAS error codes
  */
 enum kcas_error {
+	KCAS_ERR_MIN = 2000000,
+
 	/** Must be root */
-	KCAS_ERR_ROOT = 2000000,
+	KCAS_ERR_ROOT = KCAS_ERR_MIN,
 
 	/** System Error */
 	KCAS_ERR_SYSTEM,
@@ -571,7 +573,9 @@ enum kcas_error {
 	KCAS_ERR_CORE_IN_ACTIVE_STATE,
 
 	/** Inactive core has dirty data assigned */
-	KCAS_ERR_INACTIVE_CORE_IS_DIRTY
+	KCAS_ERR_INACTIVE_CORE_IS_DIRTY,
+
+	KCAS_ERR_MAX = KCAS_ERR_INACTIVE_CORE_IS_DIRTY,
 };
 
 #endif
