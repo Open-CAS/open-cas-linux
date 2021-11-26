@@ -6,10 +6,12 @@
 #include "cas_cache.h"
 
 
-struct {
-	int cas_error;
-	int std_error;
-} static cas_error_code_map[] = {
+struct cas_error_map_entry {
+	int cas_err;
+	int errno;
+};
+
+static struct cas_error_map_entry cas_ocf_error_map[] = {
 	/* OCF error mappings*/
 	{ OCF_ERR_INVAL,			EINVAL	},
 	{ OCF_ERR_AGAIN,			EAGAIN  },
@@ -46,8 +48,12 @@ struct {
 	{ OCF_ERR_CORE_IN_INACTIVE_STATE,	ENODEV	},
 	{ OCF_ERR_INVALID_CACHE_MODE,		EINVAL	},
 	{ OCF_ERR_INVALID_CACHE_LINE_SIZE,	EINVAL	},
+	{ OCF_ERR_CACHE_NAME_MISMATCH,		EINVAL	},
 	{ OCF_ERR_INVAL_CACHE_DEV,		EINVAL	},
+	{ OCF_ERR_CORE_UUID_EXISTS,		EINVAL	},
+};
 
+static struct cas_error_map_entry cas_error_map[] = {
 	/* CAS kernel error mappings*/
 	{ KCAS_ERR_ROOT,			EPERM	},
 	{ KCAS_ERR_SYSTEM,			EINVAL	},
@@ -63,28 +69,45 @@ struct {
 	{ KCAS_ERR_NVME_BAD_FORMAT,		EINVAL	},
 	{ KCAS_ERR_CONTAINS_PART,		EINVAL	},
 	{ KCAS_ERR_A_PART,			EINVAL	},
-	{ KCAS_ERR_DETACHED,		EIO	},
+	{ KCAS_ERR_DETACHED,			EIO	},
 	{ KCAS_ERR_STOPPED_DIRTY,		EIO	},
+	{ KCAS_ERR_CORE_POOL_NOT_EMPTY,		EEXIST	},
+	{ KCAS_ERR_NO_CACHE_ATTACHED,		ENODEV	},
+	{ KCAS_ERR_CLS_RULE_INVALID_SYNTAX,	EINVAL	},
+	{ KCAS_ERR_CLS_RULE_UNKNOWN_CONDITION,	EINVAL	},
+	{ KCAS_ERR_WAITING_INTERRUPTED,		EINTR	},
 	{ KCAS_ERR_CORE_IN_ACTIVE_STATE,	ENODEV	},
+	{ KCAS_ERR_INACTIVE_CORE_IS_DIRTY,	ENODEV	},
 };
 
 /*******************************************/
 /* Helper which change cas-specific error  */
 /* codes to kernel generic error codes     */
 /*******************************************/
-static inline int map_cas_err_to_generic(int cas_error_code)
+static inline int map_cas_err_to_generic(int error_code)
 {
 	int i;
 
-	if (cas_error_code == 0)
+	if (error_code == 0)
 		return 0; /* No Error */
 
-	cas_error_code = abs(cas_error_code);
+	error_code = abs(error_code);
 
-	for (i = 0; i < ARRAY_SIZE(cas_error_code_map); i++) {
-		if (cas_error_code_map[i].cas_error == cas_error_code)
-			return -cas_error_code_map[i].std_error;
+	if (error_code >= OCF_ERR_MIN && error_code <= OCF_ERR_MAX) {
+		for (i = 0; i < ARRAY_SIZE(cas_ocf_error_map); i++) {
+			if (cas_ocf_error_map[i].cas_err == error_code)
+				return -cas_ocf_error_map[i].errno;
+		}
+		return -EINVAL;
 	}
 
-	return -cas_error_code;
+	if (error_code >= KCAS_ERR_MIN && error_code <= KCAS_ERR_MAX) {
+		for (i = 0; i < ARRAY_SIZE(cas_error_map); i++) {
+			if (cas_error_map[i].cas_err == error_code)
+				return -cas_error_map[i].errno;
+		}
+		return -EINVAL;
+	}
+
+	return -error_code;
 }
