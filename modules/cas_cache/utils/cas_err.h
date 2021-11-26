@@ -98,16 +98,16 @@ static inline int map_cas_err_to_generic(int error_code)
 		for (i = 0; i < ARRAY_SIZE(cas_ocf_error_map); i++) {
 			if (cas_ocf_error_map[i].cas_err == error_code)
 				return -cas_ocf_error_map[i].errno;
-			return -EINVAL;
 		}
+		return -EINVAL;
 	}
 
 	if (error_code >= KCAS_ERR_MIN && error_code <= KCAS_ERR_MAX) {
 		for (i = 0; i < ARRAY_SIZE(cas_error_map); i++) {
 			if (cas_error_map[i].cas_err == error_code)
 				return -cas_error_map[i].errno;
-			return -EINVAL;
 		}
+		return -EINVAL;
 	}
 
 	return -error_code;
