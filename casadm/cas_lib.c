@@ -3004,12 +3004,15 @@ int failover_activate(int cache_id, const char *cache_device)
 {
 	struct kcas_failover_activate data = {.cache_id = cache_id};
 
-	if (cache_device) {
-		if (set_device_path(data.cache_path, sizeof(data.cache_path),
-				    cache_device, MAX_STR_LEN) != SUCCESS) {
-			return FAILURE;
-		}
+	if (set_device_path(data.cache_path, sizeof(data.cache_path),
+			    cache_device, MAX_STR_LEN) != SUCCESS) {
+		return FAILURE;
 	}
 
-	return cas_ioctl(KCAS_IOCTL_FAILOVER_ACTIVATE, &data);
+	if (cas_ioctl(KCAS_IOCTL_FAILOVER_ACTIVATE, &data) != SUCCESS) {
+		print_err(data.ext_err_code ? : KCAS_ERR_SYSTEM);
+		return FAILURE;
+	}
+
+	return SUCCESS;
 }

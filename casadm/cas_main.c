@@ -1497,7 +1497,7 @@ static cli_option failover_detach_options[] = {
 
 static cli_option  failover_activate_options[] = {
 	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
-	{'d', "cache-device", CACHE_DEVICE_DESC, 1, "DEVICE"},
+	{'d', "cache-device", CACHE_DEVICE_DESC, 1, "DEVICE", CLI_OPTION_REQUIRED},
 	{}
 };
 
