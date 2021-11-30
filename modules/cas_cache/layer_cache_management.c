@@ -1819,8 +1819,6 @@ static int cache_mngt_initialize_cache_exported_object(ocf_cache_t cache)
 int cache_mngt_prepare_cache_device_cfg(struct ocf_mngt_cache_device_config *cfg,
 		char *cache_path)
 {
-	int result = 0;
-
 	memset(cfg, 0, sizeof(*cfg));
 
 	if (strnlen(cache_path, MAX_STR_LEN) == MAX_STR_LEN)
@@ -1830,18 +1828,11 @@ int cache_mngt_prepare_cache_device_cfg(struct ocf_mngt_cache_device_config *cfg
 	cfg->uuid.size = strnlen(cfg->uuid.data, MAX_STR_LEN) + 1;
 	cfg->perform_test = false;
 
-	if (cfg->uuid.size == 1) {
-		// empty string means empty uuid
-		cfg->uuid.size = 0;
-		return 0;
-	}
+	if (cfg->uuid.size <= 1)
+		return -OCF_ERR_INVAL;
 
-	if (cfg->uuid.size > 1) {
-		result = cas_blk_identify_type(cfg->uuid.data,
-			&cfg->volume_type);
-	}
-
-	return result;
+	return cas_blk_identify_type(cfg->uuid.data,
+		&cfg->volume_type);
 }
 
 
@@ -2250,8 +2241,6 @@ int cache_mngt_activate(struct ocf_mngt_cache_device_config *cfg,
 	struct _cache_mngt_attach_context *context;
 	ocf_cache_t cache;
 	struct cache_priv *cache_priv;
-	ocf_volume_t cache_volume;
-	const struct ocf_volume_uuid *cache_uuid;
 	char cache_name[OCF_CACHE_NAME_SIZE];
 	int result = 0;
 
@@ -2274,17 +2263,9 @@ int cache_mngt_activate(struct ocf_mngt_cache_device_config *cfg,
 	if (result)
 		goto out_cache_put;
 
-	if (strnlen(cmd->cache_path, MAX_STR_LEN) > 0) {
-		cache_volume = ocf_cache_get_volume(cache);
-		cache_uuid = ocf_volume_get_uuid(cache_volume);
-		if (cache_uuid->size > 0 &&
-				strcmp(cfg->uuid.data, cache_uuid->data)
-				!= 0) {
-			result = cache_mngt_check_bdev(cfg, false);
-			if (result)
-				goto out_cache_unlock;
-		}
-	}
+	result = cache_mngt_check_bdev(cfg, false);
+	if (result)
+		goto out_cache_unlock;
 
 	context = kzalloc(sizeof(*context), GFP_KERNEL);
 	if (!context) {
