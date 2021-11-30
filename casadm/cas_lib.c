@@ -774,6 +774,9 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 	cache_size = sizeof(*cache);
 	cache_size += info->info.core_count * sizeof(cache->cores[0]);
 
+	if (info->info.failover_detached)
+		return NULL;
+
 	cache = (struct cache_device *) malloc(cache_size);
 	if (NULL == cache) {
 		return NULL;
@@ -783,9 +786,6 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 	cache->expected_core_count = info->info.core_count;
 	cache->id = cache_id;
 	cache->state = info->info.state;
-
-	if (info->info.failover_detached)
-		return NULL;
 
 	if (strncpy_s(cache->device, sizeof(cache->device),
 			info->cache_path_name,
