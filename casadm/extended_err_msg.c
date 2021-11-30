@@ -166,6 +166,18 @@ struct {
 		OCF_ERR_NO_LOCK,
 		"Failed to lock cache for management operation."
 	},
+	{
+		OCF_ERR_METADATA_LAYOUT_MISMATCH,
+		"Metadata layout mismatch"
+	},
+	{
+		OCF_ERR_CACHE_LINE_SIZE_MISMATCH,
+		"Cache line size mismatch"
+	},
+	{
+		OCF_ERR_CACHE_STANDBY,
+		"Operation not permitted in failover standby mode"
+	},
 
 	/* CAS kernel error mappings*/
 	{
