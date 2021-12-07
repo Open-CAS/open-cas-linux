@@ -124,6 +124,18 @@ class casadm:
         return cls.run_cmd(cmd)
 
     @classmethod
+    def set_core_param(cls, namespace, cache_id, core_id, **kwargs):
+        cmd = [cls.casadm_path,
+               '--set-param', '--name', namespace,
+               '--cache-id', str(cache_id),
+               '--core-id', str(core_id)]
+
+        for param, value in kwargs.items():
+            cmd += ['--'+param.replace('_', '-'), str(value)]
+
+        return cls.run_cmd(cmd)
+
+    @classmethod
     def get_params(cls, namespace, cache_id, **kwargs):
         cmd = [cls.casadm_path,
                '--get-param', '--name', namespace,
@@ -485,6 +497,10 @@ class cas_config(object):
                     raise ValueError(
                         f"{param_value} is invalid value for '{param_name}' core param"
                     )
+            elif param_name == "seq_cutoff_policy":
+                self.check_seq_cutoff_policy_valid(param_value)
+            elif param_name == "seq_cutoff_threshold":
+                self.check_seq_cutoff_threshold_valid(int(param_value))
             else:
                 raise ValueError(f"'{param_name}' is invalid core param name")
 
@@ -501,6 +517,18 @@ class cas_config(object):
 
             if int(device_cache_id) == self.cache_id:
                 raise ValueError('Recursive configuration detected')
+
+        def check_seq_cutoff_policy_valid(self, seq_cutoff_policy):
+            if seq_cutoff_policy not in ['always', 'full', 'never']:
+                raise ValueError(
+                    f'{seq_cutoff_policy} is invalid seq-cutoff policy name'
+                )
+
+        def check_seq_cutoff_threshold_valid(self, number):
+            if not 1 <= number <= 4194181:
+                raise ValueError(
+                    f'{number} is invalid threshold number for seq-cutoff'
+                )
 
         def to_line(self):
             ret = f"{self.cache_id}\t{self.core_id}\t{self.device}"
@@ -730,13 +758,25 @@ def configure_cache(cache):
             cache_id=cache.cache_id, ioclass_file=cache.params["ioclass_file"]
         )
 
-
 def add_core(core, attach):
     casadm.add_core(
             device=core.device,
             cache_id=core.cache_id,
             core_id=core.core_id,
             try_add=attach)
+
+def configure_core(core):
+    params = dict()
+    if "seq_cutoff_policy" in core.params:
+        params['policy'] = core.params["seq_cutoff_policy"]
+
+    if "seq_cutoff_threshold" in core.params:
+        params['threshold'] = core.params["seq_cutoff_threshold"]
+
+    if params:
+        casadm.set_core_param(
+            "seq-cutoff", cache_id=core.cache_id, core_id=core.core_id, **params
+        )
 
 # Another helper functions
 
