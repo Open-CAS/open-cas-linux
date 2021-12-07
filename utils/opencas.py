@@ -244,8 +244,24 @@ class cas_config(object):
                     raise ValueError('Invalid path to io_class file')
             elif param_name == 'cleaning_policy':
                 self.check_cleaning_policy_valid(param_value)
+            elif param_name == 'cleaning_acp_wake_up':
+                self.check_cleaning_acp_wake_up_valid(int(param_value))
+            elif param_name == 'cleaning_acp_flush_max_buffers':
+                self.check_cleaning_acp_flush_max_buffers_valid(int(param_value))
+            elif param_name == 'cleaning_alru_wake_up':
+                self.check_cleaning_alru_wake_up_valid(int(param_value))
+            elif param_name == 'cleaning_alru_flush_max_buffers':
+                self.check_cleaning_alru_flush_max_buffers_valid(int(param_value))
+            elif param_name == 'cleaning_alru_staleness_time':
+                self.check_cleaning_alru_staleness_time_valid(int(param_value))
+            elif param_name == 'cleaning_alru_activity_threshold':
+                self.check_cleaning_alru_activity_threshold_valid(int(param_value))
             elif param_name == 'promotion_policy':
                 self.check_promotion_policy_valid(param_value)
+            elif param_name == 'promotion_nhit_threshold':
+                self.check_promotion_nhit_threshold_valid(int(param_value))
+            elif param_name == 'promotion_nhit_trigger':
+                self.check_promotion_nhit_trigger_valid(int(param_value))
             elif param_name == 'cache_line_size':
                 self.check_cache_line_size_valid(param_value)
             elif param_name == "lazy_startup":
@@ -280,6 +296,78 @@ class cas_config(object):
             if cleaning_policy.lower() not in ['acp', 'alru', 'nop']:
                 raise ValueError(f'{cleaning_policy} is invalid cleaning policy name')
 
+        def check_cleaning_acp_wake_up_valid(self, number):
+            cleaning_policy = self.params.get('cleaning_policy')
+            if cleaning_policy != 'acp':
+                raise ValueError(
+                    f'cleaning_acp_wake_up is invalid param for cleaning_policy {cleaning_policy}'
+                )
+
+            if not 0 <= number <= 10000:
+                raise ValueError(
+                    f'{number} is invalid wake-up number for cleaning-acp'
+                )
+
+        def check_cleaning_acp_flush_max_buffers_valid(self, number):
+            cleaning_policy = self.params.get('cleaning_policy')
+            if cleaning_policy != 'acp':
+                raise ValueError(
+                    f'cleaning_acp_flush_max_buffers is invalid param for cleaning_policy {cleaning_policy}'
+                )
+
+            if not 1 <= number <= 10000:
+                raise ValueError(
+                    f'{number} is invalid flush-max-buffers number for cleaning-acp'
+                )
+
+        def check_cleaning_alru_wake_up_valid(self, number):
+            cleaning_policy = self.params.get('cleaning_policy')
+            if cleaning_policy != 'alru':
+                raise ValueError(
+                    f'cleaning_alru_wake_up is invalid param for cleaning_policy {cleaning_policy}'
+                )
+
+            if not 0 <= number <= 3600:
+                raise ValueError(
+                    f'{number} is invalid wake-up number for cleaning-alru'
+                )
+
+        def check_cleaning_alru_flush_max_buffers_valid(self, number):
+            cleaning_policy = self.params.get('cleaning_policy')
+            if cleaning_policy != 'alru':
+                raise ValueError(
+                    f'cleaning_alru_flush_max_buffers is invalid param for cleaning_policy {cleaning_policy}'
+                )
+
+            if not 1 <= number <= 10000:
+                raise ValueError(
+                    f'{number} is invalid flush-max-buffers number for cleaning-alru'
+                )
+
+        def check_cleaning_alru_staleness_time_valid(self, number):
+            cleaning_policy = self.params.get('cleaning_policy')
+            if cleaning_policy != 'alru':
+                raise ValueError(
+                    f'cleaning_alru_staleness_time is invalid param for cleaning_policy {cleaning_policy}'
+                )
+
+            if not 1 <= number <= 3600:
+                raise ValueError(
+                    f'{number} is invalid staleness-time number for cleaning-alru'
+                )
+
+        def check_cleaning_alru_activity_threshold_valid(self, number):
+            cleaning_policy = self.params.get('cleaning_policy')
+            if cleaning_policy != 'alru':
+                raise ValueError(
+                    f'cleaning_alru_activity_threshold is invalid param for cleaning_policy {cleaning_policy}'
+                )
+
+            if not 0 <= number <= 1000000:
+                raise ValueError(
+                    f'{number} is invalid activity-threshold number for cleaning-alru'
+                )
+
         def check_lazy_startup_valid(self, lazy_startup):
             if lazy_startup.lower() not in ["true", "false"]:
                 raise ValueError('{0} is invalid lazy_startup value'.format(lazy_startup))
@@ -287,6 +375,30 @@ class cas_config(object):
         def check_promotion_policy_valid(self, promotion_policy):
             if promotion_policy.lower() not in ['always', 'nhit']:
                 raise ValueError(f'{promotion_policy} is invalid promotion policy name')
+
+        def check_promotion_nhit_threshold_valid(self, number):
+            promotion_policy = self.params.get('promotion_policy')
+            if promotion_policy != 'nhit':
+                raise ValueError(
+                    f'promotion_nhit_threshold is invalid param for promotion_policy {promotion_policy}'
+                )
+
+            if not 2 <= number <= 1000:
+                raise ValueError(
+                    f'{number} is invalid threshold number for promotion-nhit'
+                )
+
+        def check_promotion_nhit_trigger_valid(self, number):
+            promotion_policy = self.params.get('promotion_policy')
+            if promotion_policy != 'nhit':
+                raise ValueError(
+                    f'promotion_nhit_trigger is invalid param for promotion_policy {promotion_policy}'
+                )
+
+            if not 0 <= number <= 100:
+                raise ValueError(
+                    f'{number} is invalid trigger number for promotion-nhit'
+                )
 
         def check_cache_line_size_valid(self, cache_line_size):
             if cache_line_size not in ['4', '8', '16', '32', '64']:
@@ -559,10 +671,60 @@ def configure_cache(cache):
         casadm.set_param(
             "cleaning", cache_id=cache.cache_id, policy=cache.params["cleaning_policy"]
         )
+
+        if "cleaning_acp_wake_up" in cache.params:
+            casadm.set_param(
+                "cleaning-acp", cache_id=cache.cache_id,
+                wake_up=cache.params["cleaning_acp_wake_up"]
+            )
+
+        if "cleaning_acp_flush_max_buffers" in cache.params:
+            casadm.set_param(
+                "cleaning-acp", cache_id=cache.cache_id,
+                flush_max_buffers=cache.params["cleaning_acp_flush_max_buffers"]
+            )
+
+        if "cleaning_alru_wake_up" in cache.params:
+            casadm.set_param(
+                "cleaning-alru", cache_id=cache.cache_id,
+                wake_up=cache.params["cleaning_alru_wake_up"]
+            )
+
+        if "cleaning_alru_flush_max_buffers" in cache.params:
+            casadm.set_param(
+                "cleaning-alru", cache_id=cache.cache_id,
+                flush_max_buffers=cache.params["cleaning_alru_flush_max_buffers"]
+            )
+
+        if "cleaning_alru_staleness_time" in cache.params:
+            casadm.set_param(
+                "cleaning-alru", cache_id=cache.cache_id,
+                staleness_time=cache.params["cleaning_alru_staleness_time"]
+            )
+
+        if "cleaning_alru_activity_threshold" in cache.params:
+            casadm.set_param(
+                "cleaning-alru", cache_id=cache.cache_id,
+                activity_threshold=cache.params["cleaning_alru_activity_threshold"]
+            )
     if "promotion_policy" in cache.params:
         casadm.set_param(
             "promotion", cache_id=cache.cache_id, policy=cache.params["promotion_policy"]
         )
+
+        if "promotion_nhit_threshold" in cache.params:
+            casadm.set_param(
+                "promotion-nhit",
+                cache_id=cache.cache_id,
+                threshold=cache.params["promotion_nhit_threshold"]
+            )
+
+        if "promotion_nhit_trigger" in cache.params:
+            casadm.set_param(
+                "promotion-nhit",
+                cache_id=cache.cache_id,
+                trigger=cache.params["promotion_nhit_trigger"]
+            )
     if "ioclass_file" in cache.params:
         casadm.io_class_load_config(
             cache_id=cache.cache_id, ioclass_file=cache.params["ioclass_file"]
