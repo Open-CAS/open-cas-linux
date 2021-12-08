@@ -93,8 +93,8 @@ static int _cas_cleaner_thread(void *data)
 
 		atomic_set(&info->kicked, 0);
 		init_completion(&info->sync_compl);
-		ocf_cleaner_run(c, cache_priv->io_queues[smp_processor_id()]);
-		wait_for_completion(&info->sync_compl);
+		if (ocf_cleaner_run(c, cache_priv->io_queues[smp_processor_id()]))
+			wait_for_completion(&info->sync_compl);
 
 		/*
 		 * In case of nop cleaning policy we don't want to perform cleaning
