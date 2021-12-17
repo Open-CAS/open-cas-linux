@@ -774,7 +774,7 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 	cache_size = sizeof(*cache);
 	cache_size += info->info.core_count * sizeof(cache->cores[0]);
 
-	if (info->info.failover_detached)
+	if (info->info.standby_detached)
 		return NULL;
 
 	cache = (struct cache_device *) malloc(cache_size);
@@ -2993,24 +2993,50 @@ int cas_ioctl(int id, void *data)
 }
 
 
-int failover_detach(int cache_id)
+int standby_init(int cache_id, ocf_cache_line_size_t line_size,
+		const char *cache_device, int force)
 {
-	struct kcas_failover_detach  data = {.cache_id = cache_id};
-
-	return cas_ioctl(KCAS_IOCTL_FAILOVER_DETACH, &data);
+	return start_cache(cache_id,
+			CACHE_INIT_STANDBY_NEW,
+			cache_device,
+			ocf_cache_mode_default,
+			line_size,
+			force);
 }
 
-int failover_activate(int cache_id, const char *cache_device)
+int standby_load(int cache_id, ocf_cache_line_size_t line_size,
+		const char *cache_device)
 {
-	struct kcas_failover_activate data = {.cache_id = cache_id};
+	return start_cache(cache_id,
+			CACHE_INIT_STANDBY_LOAD,
+			cache_device,
+			ocf_cache_mode_default,
+			line_size,
+			0);
+}
 
-	if (set_device_path(data.cache_path, sizeof(data.cache_path),
+int standby_detach(int cache_id)
+{
+	struct kcas_standby_detach cmd = {
+		.cache_id = cache_id
+	};
+
+	return cas_ioctl(KCAS_IOCTL_STANDBY_DETACH, &cmd);
+}
+
+int standby_activate(int cache_id, const char *cache_device)
+{
+	struct kcas_standby_activate cmd = {
+		.cache_id = cache_id
+	};
+
+	if (set_device_path(cmd.cache_path, sizeof(cmd.cache_path),
 			    cache_device, MAX_STR_LEN) != SUCCESS) {
 		return FAILURE;
 	}
 
-	if (cas_ioctl(KCAS_IOCTL_FAILOVER_ACTIVATE, &data) != SUCCESS) {
-		print_err(data.ext_err_code ? : KCAS_ERR_SYSTEM);
+	if (cas_ioctl(KCAS_IOCTL_STANDBY_ACTIVATE, &cmd) != SUCCESS) {
+		print_err(cmd.ext_err_code ? : KCAS_ERR_SYSTEM);
 		return FAILURE;
 	}
 

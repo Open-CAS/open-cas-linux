@@ -36,7 +36,8 @@
 
 #define CACHE_INIT_NEW	0 /**< initialize new metadata from fresh start */
 #define CACHE_INIT_LOAD	1 /**< load existing metadata */
-#define CACHE_INIT_STANDBY 2 /**< initialize failover standby cache */
+#define CACHE_INIT_STANDBY_NEW 2 /**< initialize failover standby cache */
+#define CACHE_INIT_STANDBY_LOAD 3 /**< load failover standby cache */
 
 struct kcas_start_cache {
 	/**
@@ -352,14 +353,14 @@ struct kcas_get_cache_param {
 	int ext_err_code;
 };
 
-struct kcas_failover_detach
+struct kcas_standby_detach
 {
 	uint16_t cache_id;
 
 	int ext_err_code;
 };
 
-struct kcas_failover_activate
+struct kcas_standby_activate
 {
 	uint16_t cache_id;
 	char cache_path[MAX_STR_LEN]; /**< path to an ssd*/
@@ -498,10 +499,10 @@ struct kcas_failover_activate
 #define KCAS_IOCTL_REMOVE_INACTIVE _IOWR(KCAS_IOCTL_MAGIC, 37, struct kcas_remove_inactive)
 
 /** Detach caching drive from failover standby cache instance */
-#define KCAS_IOCTL_FAILOVER_DETACH _IOWR(KCAS_IOCTL_MAGIC, 38, struct kcas_failover_detach)
+#define KCAS_IOCTL_STANDBY_DETACH _IOWR(KCAS_IOCTL_MAGIC, 38, struct kcas_standby_detach)
 
-/** Activate standby failover cache instance */
-#define KCAS_IOCTL_FAILOVER_ACTIVATE _IOWR(KCAS_IOCTL_MAGIC, 39, struct kcas_failover_activate)
+/** Activate failover standby cache instance */
+#define KCAS_IOCTL_STANDBY_ACTIVATE _IOWR(KCAS_IOCTL_MAGIC, 39, struct kcas_standby_activate)
 
 /**
  * Extended kernel CAS error codes
