@@ -21,6 +21,12 @@ start_test $*
 
 test_log_start
 
+align(){
+	VALUE=$1
+	ALIGNMENT=$2
+	echo $((($VALUE + $ALIGNMENT - 1) / $ALIGNMENT * $ALIGNMENT))
+}
+
 # Use CACHE_DEVICE and CORE_DEVICE provided by configuration file and remove partitions from those devices
 TARGET_DEVICE_OPTION="$CACHE_DEVICE" remove_partitions
 TARGET_DEVICE_OPTION="$CORE_DEVICE" remove_partitions
@@ -30,13 +36,20 @@ TARGET_DEVICE_OPTION="$CACHE_DEVICE" PARTITION_SIZE_OPTION="2000M" PARTITION_IDS
 # Create 1 primary partition on CORE_DEVICE, 4000M
 TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="4000M" PARTITION_IDS_OPTION="1" make_primary_partitions
 
-METADATA_SECTIONS_NAMES=("Super block config" "Super block runtime" "Reserved" "Cleaning" "Eviction" "Collision" "List info" "Hash" "Core config" "Core runtime" "Core UUID")
+METADATA_SECTIONS_NAMES=("Super block config" "Super block runtime" "Reserved" "Part config" "Part runtime" "Core config" "Core runtime" "Core UUID" "Cleaning" "Eviction" "Collision" "List info" "Hash")
 
 for SECTION in "${METADATA_SECTIONS_NAMES[@]}"
 do
 	if [ "$SECTION" == "Reserved" ]
 	then
 		continue
+	fi
+
+	if [ "$SECTION" == "Core config" ] || [ "$SECTION" == "Core UUID" ] || [ "$SECTION" == "Part config" ]
+	then
+		flapping=1
+	else
+		flapping=0
 	fi
 
 	# Start cache on CACHE_DEVICE to repair it and also to make log.
@@ -47,6 +60,7 @@ do
 
 	# Resolve offset of metadata section.
 	METADATA_SECTION_OFFSET=`dmesg | grep "${SECTION} offset" | tac | sed '1!d' | sed -e 's/.*[^0-9]\([0-9]\+\)[^0-9]*$/\1/' `
+	METADATA_SECTION_SIZE=`dmesg | grep "${SECTION} size" | tac | sed '1!d' | sed -e 's/.*[^0-9]\([0-9]\+\)[^0-9]*$/\1/' `
 
 	if [ -z ${METADATA_SECTION_OFFSET} ]
 	then
@@ -54,12 +68,27 @@ do
 		end_test 1
 	fi
 
+	if [ "$SECTION" == "Super block config" ] || [ "$SECTION" == "Super block runtime" ]
+	then
+		METADATA_SECTION_SIZE_B=$METADATA_SECTION_SIZE
+	else
+		METADATA_SECTION_SIZE_B=$(( $METADATA_SECTION_SIZE * 1024 ))
+	fi
+	METADATA_SECTION_START_B=$(( ${METADATA_SECTION_OFFSET} * 1024 ))
+	CORRUPT_ADDRESS=$METADATA_SECTION_START_B
+
 	# Corrupt metadata. (here you can add your data corruption method)
 	# Random corrupt - corrupt 64K bytes at start of each section
 	test_log_trace "Corrupting 64K bytes in ${SECTION}"
 
 	# Corrupt cache metadata
-	run_cmd "dd if=/dev/urandom of=${CACHE_DEVICE}-part1 bs=1 count=64K conv=notrunc seek=${METADATA_SECTION_OFFSET}K "
+	run_cmd "dd if=/dev/urandom of=${CACHE_DEVICE}-part1 bs=1 count=64K conv=notrunc seek=${CORRUPT_ADDRESS}"
+	if [ "$flapping" -eq "1" ]; then
+		ALIGNMENT=$(( 128 * 1024 ))
+		METADATA_SECTION_SIZE_ALIGNED_B=$(align $METADATA_SECTION_SIZE_B $ALIGNMENT)
+		CORRUPT_ADDRESS=$(( $METADATA_SECTION_START_B + $METADATA_SECTION_SIZE_ALIGNED_B ))
+		run_cmd "dd if=/dev/urandom of=${CACHE_DEVICE}-part1 bs=1 count=64K conv=notrunc seek=${CORRUPT_ADDRESS}"
+	fi
 
 	# Start again with load option, this should fail, metadata is corrupted.
 	NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="1" CACHE_LOAD_METADATA_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" start_cache

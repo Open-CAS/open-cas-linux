@@ -37,7 +37,6 @@ DEPENDENCIES_DSC=("${DEPENDENCIES_DEB[@]}")
 # List of relative submodule directories:
 SUBMODULES=(
     "ocf"
-    "test/functional/test-framework"
 )
 
 # Unset all variables that may be checked for existence:
