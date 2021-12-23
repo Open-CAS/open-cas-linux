@@ -68,6 +68,7 @@ print_help() {
     echo "  dsc                             generate DSC (source DEB) package"
     echo
     echo "Options:"
+    echo "  -a, --arch <ARCH>               target platform architecture for packages"
     echo "  -o, --output-dir <DIR>          put all created files in the given directory;"
     echo "                                  default: 'SOURCES_PATH/packages/'"
     echo "  -d, --debug                     create all debug files and packages as well"
@@ -366,7 +367,7 @@ generate_rpm() {
 
     if [ ! "$GENERATE_SRPM" ] && [ "$GENERATE_RPM" ]; then
         echo "--- Building binary RPM packages"
-        (HOME="$TEMP_DIR"; rpmbuild -bb "$RPM_SPECS_DIR/$CAS_NAME.spec")
+        (HOME="$TEMP_DIR"; rpmbuild -bb --target "$ARCH" "$RPM_SPECS_DIR/$CAS_NAME.spec")
         if [ $? -ne 0 ]; then
             error "couldn't create RPM packages"
         fi
@@ -382,7 +383,7 @@ generate_rpm() {
     fi
     if [ "$GENERATE_SRPM" ] && [ "$GENERATE_RPM" ]; then
         echo "--- Building source and binary RPM packages"
-        (HOME="$TEMP_DIR"; rpmbuild -ba "$RPM_SPECS_DIR/$CAS_NAME.spec")
+        (HOME="$TEMP_DIR"; rpmbuild -ba --target "$ARCH" "$RPM_SPECS_DIR/$CAS_NAME.spec")
         if [ $? -ne 0 ]; then
             error "couldn't create RPM packages"
         fi
@@ -407,7 +408,7 @@ generate_deb() {
 
     if [ ! "$GENERATE_DSC" ] && [ "$GENERATE_DEB" ]; then
         echo "--- Building binary DEB packages"
-        (cd "$DEB_SOURCES_DIR" && debuild -us -uc -b)
+        (cd "$DEB_SOURCES_DIR" && debuild -us -uc -b --host-type "$ARCH-linux-gnu")
         if [ $? -ne 0 ]; then
             error "couldn't create DEB packages"
         fi
@@ -425,7 +426,7 @@ generate_deb() {
     fi
     if [ "$GENERATE_DSC" ] && [ "$GENERATE_DEB" ]; then
         echo "--- Building DEB and DSC (source DEB) packages"
-        (cd "$DEB_SOURCES_DIR" && debuild -us -uc -F)
+        (cd "$DEB_SOURCES_DIR" && debuild -us -uc -F --host-type "$ARCH-linux-gnu")
         if [ $? -ne 0 ]; then
             error "couldn't create DEB and DSC packages"
         fi
@@ -466,6 +467,10 @@ while (( $# )); do
             ;;
         dsc)
             GENERATE_DSC="generate_dsc"
+            ;;
+        --arch|-a)
+            ARCH="$2"
+            shift
             ;;
         --output-dir|-o)
             OUTPUT_DIR="$2"
