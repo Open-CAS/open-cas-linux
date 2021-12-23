@@ -1,11 +1,13 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# SPDX-License-Identifier: BSD-3-Clause-Clear
+# SPDX-License-Identifier: BSD-3-Clause
 #
 
 import random
-import pytest
 from datetime import datetime
+
+import pytest
+
 from api.cas import ioclass_config, casadm
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
@@ -420,7 +422,11 @@ def read_files_with_reclassification_check(cache, target_ioclass_id: int, source
                 files_to_reclassify.append(file)
                 if with_delay and time_from_start <= ioclass_config.MAX_CLASSIFICATION_DELAY:
                     continue
-                TestRun.LOGGER.error("Target IO class occupancy not changed properly!")
+                TestRun.LOGGER.error(
+                    "Target IO class occupancy not changed properly!\n"
+                    f"Expected: {file.size + target_occupancy_before}\n"
+                    f"Actual: {target_occupancy_after}"
+                )
         elif target_occupancy_after > target_occupancy_before and with_delay:
             files_to_reclassify.append(file)
 
@@ -429,7 +435,11 @@ def read_files_with_reclassification_check(cache, target_ioclass_id: int, source
                 files_to_reclassify.append(file)
             if with_delay and time_from_start <= ioclass_config.MAX_CLASSIFICATION_DELAY:
                 continue
-            TestRun.LOGGER.error("Source IO class occupancy not changed properly!")
+            TestRun.LOGGER.error(
+                "Source IO class occupancy not changed properly!\n"
+                f"Before: {source_occupancy_before}\n"
+                f"After: {source_occupancy_after}"
+            )
 
     if len(files_to_reclassify):
         TestRun.LOGGER.info("Rereading unclassified test files...")

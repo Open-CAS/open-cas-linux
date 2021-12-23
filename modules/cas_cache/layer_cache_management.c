@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
-* SPDX-License-Identifier: BSD-3-Clause-Clear
+* SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include "cas_cache.h"
@@ -576,7 +576,8 @@ static int exit_instance_finish(void *data)
 	else
 		result = ctx->error;
 
-	cas_cls_deinit(ctx->cache);
+	if (!ocf_cache_is_standby(ctx->cache))
+		cas_cls_deinit(ctx->cache);
 
 	vfree(cache_priv);
 
@@ -594,7 +595,8 @@ static int exit_instance_finish(void *data)
 
 struct _cache_mngt_attach_context {
 	struct _cache_mngt_async_context async;
-	struct kcas_start_cache *cmd;
+	char cache_elevator[MAX_ELEVATOR_NAME];
+	uint64_t min_free_ram;
 	struct ocf_mngt_cache_device_config *device_cfg;
 	ocf_cache_t cache;
 	int ocf_start_error;
@@ -775,6 +777,11 @@ int cache_mngt_purge_object(const char *cache_name, size_t cache_name_len,
 					cache_name_len, &cache);
 	if (result)
 		return result;
+
+	if (ocf_cache_is_standby(cache)) {
+		ocf_mngt_cache_put(cache);
+		return -OCF_ERR_CACHE_STANDBY;
+	}
 
 	result = _cache_mngt_read_lock_sync(cache);
 	if (result) {
@@ -987,7 +994,7 @@ int cache_mngt_get_promotion_policy(ocf_cache_t cache, uint32_t *type)
 		return result;
 	}
 
-	*type = ocf_mngt_cache_promotion_get_policy(cache);
+	result = ocf_mngt_cache_promotion_get_policy(cache, type);
 
 	ocf_mngt_cache_read_unlock(cache);
 	return result;
@@ -1154,29 +1161,34 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 		struct kcas_insert_core *cmd_info)
 {
 	char core_name[OCF_CORE_NAME_SIZE] = {};
-	ocf_cache_t cache;
+	ocf_cache_t cache = NULL;
 	uint16_t core_id;
 	int result;
 
 	if (strnlen(cmd_info->core_path_name, MAX_STR_LEN) >= MAX_STR_LEN)
 		return -OCF_ERR_INVAL;
 
+	result = mngt_get_cache_by_id(cas_ctx, cmd_info->cache_id, &cache);
+	if (result && result != -OCF_ERR_CACHE_NOT_EXIST) {
+		return result;
+	} else if (!result && ocf_cache_is_standby(cache)) {
+		ocf_mngt_cache_put(cache);
+		return -OCF_ERR_CACHE_STANDBY;
+	}
+
 	if (cmd_info->core_id == OCF_CORE_MAX) {
-		result = mngt_get_cache_by_id(cas_ctx, cmd_info->cache_id,
-				&cache);
-		if (result && result != -OCF_ERR_CACHE_NOT_EXIST) {
-			return result;
-		} else if (!result) {
-			struct cache_priv *cache_priv;
-			cache_priv = ocf_cache_get_priv(cache);
-			ocf_mngt_cache_put(cache);
+		struct cache_priv *cache_priv;
+		cache_priv = ocf_cache_get_priv(cache);
+		core_id = find_free_core_id(cache_priv->core_id_bitmap);
+		if (core_id == OCF_CORE_MAX)
+			return -OCF_ERR_INVAL;
 
-			core_id = find_free_core_id(cache_priv->core_id_bitmap);
-			if (core_id == OCF_CORE_MAX)
-				return -OCF_ERR_INVAL;
+		cmd_info->core_id = core_id;
+	}
 
-			cmd_info->core_id = core_id;
-		}
+	if (cache) {
+		ocf_mngt_cache_put(cache);
+		cache = NULL;
 	}
 
 	snprintf(core_name, sizeof(core_name), "core%d", cmd_info->core_id);
@@ -1187,6 +1199,7 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 	cfg->uuid.data = cmd_info->core_path_name;
 	cfg->uuid.size = strnlen(cmd_info->core_path_name, MAX_STR_LEN) + 1;
 	cfg->try_add = cmd_info->try_add;
+	cfg->seq_cutoff_promote_on_threshold = true;
 
 	if (!cas_bdev_exist(cfg->uuid.data))
 		return -OCF_ERR_INVAL_VOLUME_TYPE;
@@ -1283,7 +1296,7 @@ static void _cache_mngt_add_core_complete(ocf_cache_t cache,
 	complete(&context->cmpl);
 }
 
-static void _cache_mngt_remove_core_complete(void *priv, int error);
+static void _cache_mngt_generic_complete(void *priv, int error);
 
 int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 		struct ocf_mngt_core_config *cfg,
@@ -1334,6 +1347,15 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	cfg->seq_cutoff_threshold = seq_cut_off_mb * MiB;
 	cfg->seq_cutoff_promotion_count = 8;
 
+	/* Due to linux thread scheduling nature, we prefer to promote streams
+	 * as early as we reasonably can. One way to achieve that is to set
+	 * promotion count really low, which unfortunately significantly increases
+	 * number of accesses to shared structures. The other way is to promote
+	 * streams which reach cutoff threshold, as we can reasonably assume that
+	 * they are likely be continued after thread is rescheduled to another CPU.
+	 */
+	cfg->seq_cutoff_promote_on_threshold = true;
+
 	init_completion(&add_context.cmpl);
 	add_context.core = &core;
 	add_context.result = &result;
@@ -1344,11 +1366,11 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	if (result)
 		goto error_affter_lock;
 
-	result = block_dev_create_exported_object(core);
+	result = kcas_core_create_exported_object(core);
 	if (result)
 		goto error_after_add_core;
 
-	result = block_dev_activate_exported_object(core);
+	result = kcas_core_activate_exported_object(core);
 	if (result)
 		goto error_after_create_exported_object;
 
@@ -1366,31 +1388,18 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	return 0;
 
 error_after_create_exported_object:
-	block_dev_destroy_exported_object(core);
+	kcas_core_destroy_exported_object(core);
 
 error_after_add_core:
 	init_completion(&remove_context.cmpl);
 	remove_context.result = &remove_core_result;
-	ocf_mngt_cache_remove_core(core, _cache_mngt_remove_core_complete,
+	ocf_mngt_cache_remove_core(core, _cache_mngt_generic_complete,
 			&remove_context);
 	wait_for_completion(&remove_context.cmpl);
 
 error_affter_lock:
 	ocf_mngt_cache_unlock(cache);
 	ocf_mngt_cache_put(cache);
-
-	return result;
-}
-
-static int _cache_mngt_create_exported_object(ocf_core_t core, void *cntx)
-{
-	int result;
-
-	result = block_dev_create_exported_object(core);
-	if (result)
-		return result;
-
-	result = block_dev_activate_exported_object(core);
 
 	return result;
 }
@@ -1441,7 +1450,7 @@ put:
 	return result;
 }
 
-static void _cache_mngt_remove_core_complete(void *priv, int error)
+static void _cache_mngt_generic_complete(void *priv, int error)
 {
 	struct _cache_mngt_sync_context *context = priv;
 
@@ -1462,7 +1471,7 @@ static void _cache_mngt_remove_core_fallback(ocf_cache_t cache, ocf_core_t core)
 	context.result = &result;
 
 	ocf_mngt_cache_detach_core(core,
-			_cache_mngt_remove_core_complete, &context);
+			_cache_mngt_generic_complete, &context);
 
 	wait_for_completion(&context.cmpl);
 
@@ -1485,7 +1494,7 @@ static int _cache_mngt_remove_core_prepare(ocf_cache_t cache, ocf_core_t core,
 	if (!core_active)
 		return -OCF_ERR_CORE_IN_INACTIVE_STATE;
 
-	result = block_dev_destroy_exported_object(core);
+	result = kcas_core_destroy_exported_object(core);
 	if (result)
 		return result;
 
@@ -1535,10 +1544,10 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 
 	if (cmd->detach) {
 		ocf_mngt_cache_detach_core(core,
-				_cache_mngt_remove_core_complete, &context);
+				_cache_mngt_generic_complete, &context);
 	} else {
 		ocf_mngt_cache_remove_core(core,
-				_cache_mngt_remove_core_complete, &context);
+				_cache_mngt_generic_complete, &context);
 	}
 
 	wait_for_completion(&context.cmpl);
@@ -1589,14 +1598,14 @@ int cache_mngt_remove_inactive_core(struct kcas_remove_inactive *cmd)
 	 * exported object, instead of trying rolling this back we rather
 	 * inform user about error.
 	 */
-	result = block_dev_destroy_exported_object(core);
+	result = kcas_core_destroy_exported_object(core);
 	if (result)
 		goto unlock;
 
 	init_completion(&context.cmpl);
 	context.result = &result;
 
-	ocf_mngt_cache_remove_core(core, _cache_mngt_remove_core_complete,
+	ocf_mngt_cache_remove_core(core, _cache_mngt_generic_complete,
 			&context);
 
 	wait_for_completion(&context.cmpl);
@@ -1638,7 +1647,7 @@ int cache_mngt_reset_stats(const char *cache_name, size_t cache_name_len,
 
 		ocf_core_stats_initialize(core);
 	} else {
-		ocf_core_stats_initialize_all(cache);
+		result = ocf_core_stats_initialize_all(cache);
 	}
 
 out:
@@ -1726,9 +1735,22 @@ out_get:
 	return result;
 }
 
-static int _cache_mngt_destroy_exported_object(ocf_core_t core, void *cntx)
+static int _cache_mngt_create_core_exp_obj(ocf_core_t core, void *cntx)
 {
-	if (block_dev_destroy_exported_object(core)) {
+	int result;
+
+	result = kcas_core_create_exported_object(core);
+	if (result)
+		return result;
+
+	result = kcas_core_activate_exported_object(core);
+
+	return result;
+}
+
+static int _cache_mngt_destroy_core_exp_obj(ocf_core_t core, void *cntx)
+{
+	if (kcas_core_destroy_exported_object(core)) {
 		ocf_cache_t cache = ocf_core_get_cache(core);
 
 		printk(KERN_ERR "Cannot to destroy exported object, %s.%s\n",
@@ -1739,37 +1761,90 @@ static int _cache_mngt_destroy_exported_object(ocf_core_t core, void *cntx)
 	return 0;
 }
 
-static int cache_mngt_initialize_core_objects(ocf_cache_t cache)
+static int cache_mngt_initialize_core_exported_objects(ocf_cache_t cache)
 {
 	int result;
 
-	result = ocf_core_visit(cache, _cache_mngt_create_exported_object, NULL,
+	result = ocf_core_visit(cache, _cache_mngt_create_core_exp_obj, NULL,
 			true);
 	if (result) {
 		/* Need to cleanup */
-		ocf_core_visit(cache, _cache_mngt_destroy_exported_object, NULL,
+		ocf_core_visit(cache, _cache_mngt_destroy_core_exp_obj, NULL,
 				true);
 	}
 
 	return result;
 }
 
+static int cache_mngt_destroy_cache_exp_obj(ocf_cache_t cache)
+{
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+	int ret;
+
+	if (!cache_priv->cache_exp_obj_initialized)
+		return 0;
+
+	ret = kcas_cache_destroy_exported_object(cache);
+
+	if (ret) {
+		printk(KERN_ERR "Cannot destroy %s exported object\n",
+				ocf_cache_get_name(cache));
+	} else {
+		cache_priv->cache_exp_obj_initialized = false;
+	}
+
+	return ret;
+}
+
+static int cache_mngt_initialize_cache_exported_object(ocf_cache_t cache)
+{
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+	int result;
+
+	result = kcas_cache_create_exported_object(cache);
+	if (result)
+		return result;
+
+	result = kcas_cache_activate_exported_object(cache);
+	if (result) {
+		cache_mngt_destroy_cache_exp_obj(cache);
+		return result;
+	}
+
+	cache_priv->cache_exp_obj_initialized = true;
+
+	return 0;
+}
+
+int cache_mngt_prepare_cache_device_cfg(struct ocf_mngt_cache_device_config *cfg,
+		char *cache_path)
+{
+	memset(cfg, 0, sizeof(*cfg));
+
+	if (strnlen(cache_path, MAX_STR_LEN) == MAX_STR_LEN)
+		return -OCF_ERR_INVAL;
+
+	cfg->uuid.data = cache_path;
+	cfg->uuid.size = strnlen(cfg->uuid.data, MAX_STR_LEN) + 1;
+	cfg->perform_test = false;
+
+	if (cfg->uuid.size <= 1)
+		return -OCF_ERR_INVAL;
+
+	return cas_blk_identify_type(cfg->uuid.data,
+		&cfg->volume_type);
+}
+
+
 int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
-		struct ocf_mngt_cache_device_config *device_cfg,
+		struct ocf_mngt_cache_attach_config *attach_cfg,
 		struct kcas_start_cache *cmd)
 {
 	int init_cache, result;
-	struct block_device *bdev;
-	int part_count;
-	char holder[] = "CAS START\n";
 	char cache_name[OCF_CACHE_NAME_SIZE];
 	uint16_t cache_id;
-	bool is_part;
 
 	if (!cmd)
-		return -OCF_ERR_INVAL;
-
-	if (strnlen(cmd->cache_path_name, MAX_STR_LEN) >= MAX_STR_LEN)
 		return -OCF_ERR_INVAL;
 
 	if (cmd->cache_id == OCF_CACHE_ID_INVALID) {
@@ -1783,7 +1858,15 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	cache_name_from_id(cache_name, cmd->cache_id);
 
 	memset(cfg, 0, sizeof(*cfg));
-	memset(device_cfg, 0, sizeof(*device_cfg));
+	memset(attach_cfg, 0, sizeof(*attach_cfg));
+
+	result = cache_mngt_prepare_cache_device_cfg(&attach_cfg->device,
+			cmd->cache_path_name);
+	if (result)
+		return result;
+
+	if (attach_cfg->device.uuid.size <= 1)
+		return -OCF_ERR_INVAL;
 
 	strncpy(cfg->name, cache_name, OCF_CACHE_NAME_SIZE - 1);
 	cfg->cache_mode = cmd->caching_mode;
@@ -1798,44 +1881,22 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 
 	cfg->backfill.max_queue_size = max_writeback_queue_size;
 	cfg->backfill.queue_unblock_size = writeback_queue_unblock_size;
-
-	device_cfg->uuid.data = cmd->cache_path_name;
-	device_cfg->uuid.size = strnlen(device_cfg->uuid.data, MAX_STR_LEN) + 1;
-	device_cfg->cache_line_size = cmd->line_size;
-	device_cfg->force = cmd->force;
-	device_cfg->discard_on_start = true;
-	device_cfg->perform_test = false;
+	attach_cfg->cache_line_size = cmd->line_size;
+	attach_cfg->force = cmd->force;
+	attach_cfg->discard_on_start = true;
 
 	init_cache = cmd->init_cache;
 
 	switch (init_cache) {
 	case CACHE_INIT_LOAD:
-		device_cfg->open_cores = true;
+		attach_cfg->open_cores = true;
 	case CACHE_INIT_NEW:
+	case CACHE_INIT_STANDBY:
 		break;
 	default:
 		return -OCF_ERR_INVAL;
 	}
 
-	bdev = blkdev_get_by_path(device_cfg->uuid.data, (FMODE_EXCL|FMODE_READ),
-			holder);
-	if (IS_ERR(bdev)) {
-		return (PTR_ERR(bdev) == -EBUSY) ?
-				-OCF_ERR_NOT_OPEN_EXC :
-				-OCF_ERR_INVAL_VOLUME_TYPE;
-	}
-
-	is_part = (cas_bdev_whole(bdev) != bdev);
-	part_count = cas_blk_get_part_count(bdev);
-	blkdev_put(bdev, (FMODE_EXCL|FMODE_READ));
-
-	if (!is_part && part_count > 1 && !device_cfg->force)
-		return -KCAS_ERR_CONTAINS_PART;
-
-	result = cas_blk_identify_type(device_cfg->uuid.data,
-			&device_cfg->volume_type);
-	if (result)
-		return result;
 
 	return 0;
 }
@@ -1926,9 +1987,8 @@ static void init_instance_complete(struct _cache_mngt_attach_context *ctx,
 	/* Set other back information */
 	name = block_dev_get_elevator_name(
 			casdsk_disk_get_queue(bd_cache_obj->dsk));
-	if (name && ctx->cmd)
-		strlcpy(ctx->cmd->cache_elevator,
-				name, MAX_ELEVATOR_NAME);
+	if (name)
+		strlcpy(ctx->cache_elevator, name, MAX_ELEVATOR_NAME);
 }
 
 static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv, int error)
@@ -1936,9 +1996,9 @@ static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv, int error)
 	struct _cache_mngt_attach_context *ctx = priv;
 	int caller_status;
 
-	if (error == -OCF_ERR_NO_FREE_RAM && ctx->cmd) {
+	if (error == -OCF_ERR_NO_FREE_RAM) {
 		ocf_mngt_get_ram_needed(cache, ctx->device_cfg,
-				&ctx->cmd->min_free_ram);
+				&ctx->min_free_ram);
 	}
 
 	caller_status =_cache_mngt_async_callee_set_result(&ctx->async, error);
@@ -2042,7 +2102,8 @@ out_bdev:
 	return result;
 }
 
-static int _cache_start_finalize(ocf_cache_t cache)
+static int _cache_start_finalize(ocf_cache_t cache, int init_mode,
+		bool activate)
 {
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	struct _cache_mngt_attach_context *ctx = cache_priv->attach_context;
@@ -2050,41 +2111,232 @@ static int _cache_start_finalize(ocf_cache_t cache)
 
 	_cache_mngt_log_cache_device_path(cache, ctx->device_cfg);
 
-	result = cas_cls_init(cache);
-	if (result) {
-		ctx->ocf_start_error = result;
-		return result;
-	}
-	ctx->cls_inited = true;
-
-	result = cache_mngt_initialize_core_objects(cache);
-	if (result) {
-		ctx->ocf_start_error = result;
-		return result;
+	if (activate || init_mode != CACHE_INIT_STANDBY) {
+		result = cas_cls_init(cache);
+		if (result) {
+			ctx->ocf_start_error = result;
+			return result;
+		}
+		ctx->cls_inited = true;
 	}
 
-	ocf_core_visit(cache, _cache_mngt_core_device_loaded_visitor,
-			NULL, false);
+	if (activate)
+		cache_mngt_destroy_cache_exp_obj(cache);
+
+	/* after destroying exported object activate should follow
+	 * load path */
+	init_mode = activate ? CACHE_INIT_LOAD : init_mode;
+
+	switch(init_mode) {
+	case CACHE_INIT_LOAD:
+		result = cache_mngt_initialize_core_exported_objects(cache);
+		if (result) {
+			ctx->ocf_start_error = result;
+			return result;
+		}
+		ocf_core_visit(cache, _cache_mngt_core_device_loaded_visitor,
+				NULL, false);
+		break;
+	case CACHE_INIT_STANDBY:
+		result = cache_mngt_initialize_cache_exported_object(cache);
+		if (result) {
+			ctx->ocf_start_error = result;
+			return result;
+		}
+		break;
+	case CACHE_INIT_NEW:
+		break;
+	default:
+		BUG();
+	}
 
 	init_instance_complete(ctx, cache);
 
 	return 0;
 }
 
+int cache_mngt_check_bdev(struct ocf_mngt_cache_device_config *device_cfg,
+		bool force)
+{
+	char holder[] = "CAS START\n";
+	struct block_device *bdev;
+	int part_count;
+	bool is_part;
+
+	bdev = blkdev_get_by_path(device_cfg->uuid.data,
+			(FMODE_EXCL|FMODE_READ), holder);
+	if (IS_ERR(bdev)) {
+		return (PTR_ERR(bdev) == -EBUSY) ?
+				-OCF_ERR_NOT_OPEN_EXC :
+				-OCF_ERR_INVAL_VOLUME_TYPE;
+	}
+
+	is_part = (cas_bdev_whole(bdev) != bdev);
+	part_count = cas_blk_get_part_count(bdev);
+	blkdev_put(bdev, (FMODE_EXCL|FMODE_READ));
+
+	if (!is_part && part_count > 1 && !force)
+		return -KCAS_ERR_CONTAINS_PART;
+
+	return 0;
+}
+
+int cache_mngt_failover_detach(struct kcas_failover_detach *cmd)
+{
+	ocf_cache_t cache;
+	struct cache_priv *cache_priv;
+	char cache_name[OCF_CACHE_NAME_SIZE];
+	int result = 0;
+	struct _cache_mngt_sync_context context = {
+		.result = &result
+	};
+
+	init_completion(&context.cmpl);
+
+	if (!try_module_get(THIS_MODULE))
+		return -KCAS_ERR_SYSTEM;
+
+	cache_name_from_id(cache_name, cmd->cache_id);
+
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+			OCF_CACHE_NAME_SIZE, &cache);
+	if (result)
+		goto out_module_put;
+
+	if (!ocf_cache_is_standby(cache)) {
+		result = -OCF_ERR_CACHE_EXIST;
+		goto out_cache_put;
+	}
+
+	cache_priv = ocf_cache_get_priv(cache);
+	if (!cache_priv->cache_exp_obj_initialized) {
+		result = -KCAS_ERR_DETACHED;
+		goto out_cache_put;
+	}
+
+	result = cache_mngt_destroy_cache_exp_obj(cache);
+	if (result)
+		goto out_cache_put;
+
+	result = _cache_mngt_lock_sync(cache);
+	if (result)
+		goto out_cache_put;
+
+	ocf_mngt_cache_failover_detach(cache, _cache_mngt_generic_complete,
+			&context);
+
+	wait_for_completion(&context.cmpl);
+	ocf_mngt_cache_unlock(cache);
+
+out_cache_put:
+	ocf_mngt_cache_put(cache);
+out_module_put:
+	module_put(THIS_MODULE);
+	return result;
+}
+
+int cache_mngt_activate(struct ocf_mngt_cache_device_config *cfg,
+		struct kcas_failover_activate *cmd)
+{
+	struct _cache_mngt_attach_context *context;
+	ocf_cache_t cache;
+	struct cache_priv *cache_priv;
+	char cache_name[OCF_CACHE_NAME_SIZE];
+	int result = 0;
+
+	if (!try_module_get(THIS_MODULE))
+		return -KCAS_ERR_SYSTEM;
+
+	cache_name_from_id(cache_name, cmd->cache_id);
+
+	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+			OCF_CACHE_NAME_SIZE, &cache);
+	if (result)
+		goto out_module_put;
+
+	if (!ocf_cache_is_standby(cache)) {
+		result = -OCF_ERR_CACHE_EXIST;
+		goto out_cache_put;
+	}
+
+	result = _cache_mngt_lock_sync(cache);
+	if (result)
+		goto out_cache_put;
+
+	result = cache_mngt_check_bdev(cfg, false);
+	if (result)
+		goto out_cache_unlock;
+
+	context = kzalloc(sizeof(*context), GFP_KERNEL);
+	if (!context) {
+		result = -ENOMEM;
+		goto out_cache_unlock;
+	}
+
+	/* TODO: doesn't this need to be copied to avoid use-after-free
+	 * in case where calle is interrupted and returns???
+	 */
+	context->device_cfg = cfg;
+	context->cache = cache;
+
+	cache_priv = ocf_cache_get_priv(cache);
+	cache_priv->attach_context = context;
+
+	context->rollback_thread = cas_lazy_thread_create(cache_start_rollback,
+			context, "cas_cache_rollback_complete");
+	if (IS_ERR(context->rollback_thread)) {
+		result = PTR_ERR(context->rollback_thread);
+		goto err_free_context;
+	}
+	_cache_mngt_async_context_init(&context->async);
+
+	ocf_mngt_cache_activate(cache, cfg, _cache_mngt_start_complete,
+			context);
+	result = wait_for_completion_interruptible(&context->async.cmpl);
+
+	result = _cache_mngt_async_caller_set_result(&context->async, result);
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
+		goto out_cache_put;
+
+	cas_lazy_thread_stop(context->rollback_thread);
+
+	if (result)
+		goto err_free_context;
+
+	result = _cache_start_finalize(cache, -1, true);
+
+err_free_context:
+	kfree(context);
+	cache_priv->attach_context = NULL;
+
+out_cache_unlock:
+	ocf_mngt_cache_unlock(cache);
+out_cache_put:
+	ocf_mngt_cache_put(cache);
+out_module_put:
+	module_put(THIS_MODULE);
+	return result;
+}
+
 int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
-		struct ocf_mngt_cache_device_config *device_cfg,
+		struct ocf_mngt_cache_attach_config *attach_cfg,
 		struct kcas_start_cache *cmd)
 {
 	struct _cache_mngt_attach_context *context;
 	ocf_cache_t cache;
 	struct cache_priv *cache_priv;
 	int result = 0, rollback_result = 0;
-	bool load = (cmd && cmd->init_cache == CACHE_INIT_LOAD);
 
 	if (!try_module_get(THIS_MODULE))
 		return -KCAS_ERR_SYSTEM;
 
-	if (load)
+	result = cache_mngt_check_bdev(&attach_cfg->device, attach_cfg->force);
+	if (result) {
+		module_put(THIS_MODULE);
+		return result;
+	}
+
+	if (cmd->init_cache == CACHE_INIT_LOAD)
 		result = _cache_mngt_check_metadata(cfg, cmd->cache_path_name);
 	if (result) {
 		module_put(THIS_MODULE);
@@ -2106,8 +2358,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		return result;
 	}
 
-	context->device_cfg = device_cfg;
-	context->cmd = cmd;
+	context->device_cfg = &attach_cfg->device;
 	_cache_mngt_async_context_init(&context->async);
 
 	/* Start cache. Returned cache instance will be locked as it was set
@@ -2134,12 +2385,22 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	cache_priv = ocf_cache_get_priv(cache);
 	cache_priv->attach_context = context;
 
-	if (load) {
-		ocf_mngt_cache_load(cache, device_cfg,
+	switch (cmd->init_cache) {
+	case CACHE_INIT_NEW:
+		ocf_mngt_cache_attach(cache, attach_cfg,
 				_cache_mngt_start_complete, context);
-	} else {
-		ocf_mngt_cache_attach(cache, device_cfg,
+		break;
+	case CACHE_INIT_LOAD:
+		ocf_mngt_cache_load(cache, attach_cfg,
 				_cache_mngt_start_complete, context);
+		break;
+	case CACHE_INIT_STANDBY:
+		ocf_mngt_cache_standby(cache, attach_cfg,
+				_cache_mngt_start_complete, context);
+		break;
+	default:
+		result = -OCF_ERR_INVAL;
+		goto err;
 	}
 	result = wait_for_completion_interruptible(&context->async.cmpl);
 
@@ -2150,7 +2411,11 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	if (result)
 		goto err;
 
-	result = _cache_start_finalize(cache);
+	strlcpy(cmd->cache_elevator, context->cache_elevator,
+			MAX_ELEVATOR_NAME);
+	cmd->min_free_ram = context->min_free_ram;
+
+	result = _cache_start_finalize(cache, cmd->init_cache, false);
 	if (result)
 		goto err;
 
@@ -2474,7 +2739,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	 * this time, so we need to flush cache again after disabling
 	 * exported object. The second flush should be much faster.
 	*/
-	if (flush)
+	if (flush && ocf_cache_is_running(cache))
 		status = _cache_flush_with_lock(cache);
 	if (status)
 		goto put;
@@ -2491,18 +2756,23 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	}
 
 	/* Destroy cache devices */
-	status = block_dev_destroy_all_exported_objects(cache);
+	status = kcas_cache_destroy_all_core_exported_objects(cache);
 	if (status != 0) {
 		printk(KERN_WARNING
-			"Failed to remove all cached devices\n");
+				"Failed to remove all cached devices\n");
+		goto stop_thread;
+	}
+	status = kcas_cache_destroy_exported_object(cache);
+	if (status != 0) {
+		printk(KERN_WARNING
+				"Failed to remove cache exported object\n");
 		goto stop_thread;
 	}
 
 	/* Flush cache again. This time we don't allow interruption. */
-	if (flush)
+	if (flush && ocf_cache_is_running(cache))
 		flush_status = _cache_mngt_cache_flush_uninterruptible(cache);
 	context->flush_status = flush_status;
-
 
 	if (flush && !flush_status)
 		BUG_ON(ocf_mngt_cache_is_dirty(cache));
@@ -2662,11 +2932,13 @@ int cache_mngt_get_info(struct kcas_cache_info *info)
 	if (result)
 		goto unlock;
 
-	if (info->info.attached) {
+	if (info->info.attached && !info->info.failover_detached) {
 		uuid = ocf_cache_get_uuid(cache);
 		BUG_ON(!uuid);
 		strlcpy(info->cache_path_name, uuid->data,
 				min(sizeof(info->cache_path_name), uuid->size));
+	} else {
+		memset(info->cache_path_name, 0, sizeof(info->cache_path_name));
 	}
 
 	/* Collect cores IDs */
@@ -2923,7 +3195,6 @@ int cache_mngt_get_cache_params(struct kcas_get_cache_param *info)
 		result = cache_mngt_get_cleaning_policy(cache,
 				&info->param_value);
 		break;
-
 	case cache_param_cleaning_alru_wake_up_time:
 		result = cache_mngt_get_cleaning_param(cache,
 				ocf_cleaning_alru, ocf_alru_wake_up_time,

@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2019-2021 Intel Corporation
-* SPDX-License-Identifier: BSD-3-Clause-Clear
+* SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include "cas_cache.h"
@@ -1215,7 +1215,8 @@ ocf_part_id_t cas_cls_classify(ocf_cache_t cache, struct bio *bio)
 	cas_cls_eval_t ret;
 
 	cls = cas_get_classifier(cache);
-	ENV_BUG_ON(!cls);
+	if (!cls)
+		return 0;
 
 	_cas_cls_get_bio_context(bio, &io);
 

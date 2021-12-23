@@ -8,8 +8,8 @@ Homepage: <CAS_HOMEPAGE>
 Vcs-Git: <CAS_GIT>
 
 Package: <CAS_NAME>
-Architecture: amd64
-Depends: ${shlibs:Depends}, ${misc:Depends}, python3,
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python3, python3-packaging, python3-yaml,
  <CAS_NAME>-modules (= <CAS_VERSION>-1)
 Description: Open Cache Acceleration Software
  Open Cache Acceleration Software (Open CAS) is an open source project
@@ -20,7 +20,7 @@ Description: Open Cache Acceleration Software
  running cache instances (no kernel modules).
 
 Package: <CAS_NAME>-modules
-Architecture: amd64
+Architecture: any
 Depends: ${misc:Depends}, debhelper (>= 9), dkms
 Description: Open Cache Acceleration Software kernel modules (${kver})
  Open Cache Acceleration Software (Open CAS) is an open source project

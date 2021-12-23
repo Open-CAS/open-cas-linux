@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# SPDX-License-Identifier: BSD-3-Clause-Clear
+# SPDX-License-Identifier: BSD-3-Clause
 #
 
 import logging
@@ -50,6 +50,14 @@ def script_remove_core_cmd(cache_id: str, core_id: str, no_flush: bool = False):
 def remove_core_cmd(cache_id: str, core_id: str, force: bool = False, shortcut: bool = False):
     command = f" -R -i {cache_id} -j {core_id}" if shortcut \
         else f" --remove-core --cache-id {cache_id} --core-id {core_id}"
+    if force:
+        command += " -f" if shortcut else " --force"
+    return casadm_bin + command
+
+
+def remove_inactive_cmd(cache_id: str, core_id: str, force: bool = False, shortcut: bool = False):
+    command = f" --remove-inactive {'-i' if shortcut else '--cache-id'} {cache_id} " \
+              f"{'-j' if shortcut else '--core-id'} {core_id}"
     if force:
         command += " -f" if shortcut else " --force"
     return casadm_bin + command

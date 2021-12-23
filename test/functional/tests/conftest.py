@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# SPDX-License-Identifier: BSD-3-Clause-Clear
+# SPDX-License-Identifier: BSD-3-Clause
 #
 
 import os
@@ -53,6 +53,7 @@ def pytest_runtest_setup(item):
 
     dut_config['plugins_dir'] = os.path.join(os.path.dirname(__file__), "../lib")
     dut_config['opt_plugins'] = {"test_wrapper": {}, "serial_log": {}, "power_control": {}}
+    dut_config['extra_logs'] = {"cas": "/var/log/opencas.log"}
 
     try:
         TestRun.prepare(item, dut_config)
@@ -115,7 +116,7 @@ def pytest_runtest_teardown():
                     InitConfig.create_default_init_config()
                 DeviceMapper.remove_all()
         except Exception as ex:
-            TestRun.LOGGER.warning(f"Exception occured during platform cleanup.\n"
+            TestRun.LOGGER.warning(f"Exception occurred during platform cleanup.\n"
                                    f"{str(ex)}\n{traceback.format_exc()}")
 
     TestRun.LOGGER.end()

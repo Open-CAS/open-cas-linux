@@ -1,18 +1,22 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
-# SPDX-License-Identifier: BSD-3-Clause-Clear
+# SPDX-License-Identifier: BSD-3-Clause
 #
-from time import sleep
+
+from datetime import timedelta, datetime
 
 import pytest
 
 from api.cas import casadm, casadm_parser, cli
+from api.cas.cache import Cache
 from api.cas.cache_config import CacheMode, CleaningPolicy, CacheModeTrait
-from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
+from api.cas.core import Core
 from core.test_run import TestRun
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.disk_utils import Filesystem
 from test_utils import os_utils
 from test_utils.os_utils import Udev, DropCachesMode
+from test_utils.output import CmdException
 from test_utils.size import Size, Unit
 
 mount_point = "/mnt/cas"
@@ -34,7 +38,7 @@ def test_interrupt_core_flush(cache_mode, filesystem):
           - No system crash.
           - Flushing would be stopped after interruption.
           - Md5sum are correct during all test steps.
-          - Dirty blocks quantity after interruption is equal or lower.
+          - Dirty blocks quantity after interruption is equal or lower but non-zero.
     """
     with TestRun.step("Prepare cache and core."):
         cache_part, core_part = prepare()
@@ -67,9 +71,9 @@ def test_interrupt_core_flush(cache_mode, filesystem):
         with TestRun.step("Start flushing core device."):
             flush_pid = TestRun.executor.run_in_background(
                 cli.flush_core_cmd(str(cache.cache_id), str(core.core_id)))
-            sleep(2)
 
         with TestRun.step("Interrupt core flushing."):
+            wait_for_flushing(cache, core)
             percentage = casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
             while percentage < 50:
                 percentage = casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
@@ -113,7 +117,7 @@ def test_interrupt_cache_flush(cache_mode, filesystem):
           - No system crash.
           - Flushing would be stopped after interruption.
           - Md5sum are correct during all test steps.
-          - Dirty blocks quantity after interruption is equal or lower.
+          - Dirty blocks quantity after interruption is equal or lower but non-zero.
     """
     with TestRun.step("Prepare cache and core."):
         cache_part, core_part = prepare()
@@ -146,9 +150,9 @@ def test_interrupt_cache_flush(cache_mode, filesystem):
         with TestRun.step("Start flushing cache."):
             flush_pid = TestRun.executor.run_in_background(
                 cli.flush_cache_cmd(str(cache.cache_id)))
-            sleep(2)
 
         with TestRun.step("Interrupt cache flushing"):
+            wait_for_flushing(cache, core)
             percentage = casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
             while percentage < 50:
                 percentage = casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
@@ -193,7 +197,7 @@ def test_interrupt_core_remove(cache_mode, filesystem):
           - Core would not be removed from cache after interruption.
           - Flushing would be stopped after interruption.
           - Md5sum are correct during all test steps.
-          - Dirty blocks quantity after interruption is equal or lower.
+          - Dirty blocks quantity after interruption is lower but non-zero.
     """
     with TestRun.step("Prepare cache and core."):
         cache_dev = TestRun.disks['cache']
@@ -235,9 +239,9 @@ def test_interrupt_core_remove(cache_mode, filesystem):
         with TestRun.step("Start removing core device."):
             flush_pid = TestRun.executor.run_in_background(
                 cli.remove_core_cmd(str(cache.cache_id), str(core.core_id)))
-            sleep(2)
 
         with TestRun.step("Interrupt core removing"):
+            wait_for_flushing(cache, core)
             percentage = casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
             while percentage < 50:
                 percentage = casadm_parser.get_flushing_progress(cache.cache_i, core.core_id)
@@ -286,7 +290,7 @@ def test_interrupt_cache_mode_switch_immediately(cache_mode, filesystem):
           - Cache mode will not be switched after interruption.
           - Flushing would be stopped after interruption.
           - Md5sum are correct during all test steps.
-          - Dirty blocks quantity after interruption is equal or lower.
+          - Dirty blocks quantity after interruption is lower but non-zero.
     """
     with TestRun.step("Prepare cache and core."):
         cache_part, core_part = prepare()
@@ -326,11 +330,11 @@ def test_interrupt_cache_mode_switch_immediately(cache_mode, filesystem):
         with TestRun.step("Check number of dirty data on exported object after interruption."):
             cache_dirty_blocks_after = cache.get_dirty_blocks()
             if cache_dirty_blocks_after >= cache_dirty_blocks_before:
-                TestRun.LOGGER.error("Quantity of dirty lines after cache flush interruption "
-                                     "should be lower.")
+                TestRun.LOGGER.error("Quantity of dirty lines after cache mode switching "
+                                     "interruption should be lower.")
             if int(cache_dirty_blocks_after) == 0:
-                TestRun.LOGGER.error("Quantity of dirty lines after cache flush interruption "
-                                     "should not be zero.")
+                TestRun.LOGGER.error("Quantity of dirty lines after cache mode switching "
+                                     "interruption should not be zero.")
 
         with TestRun.step("Check cache mode."):
             if cache.get_cache_mode() != cache_mode:
@@ -346,7 +350,7 @@ def test_interrupt_cache_mode_switch_immediately(cache_mode, filesystem):
         with TestRun.step("Check md5 sum of test file again."):
             if test_file_md5sum_before != test_file.md5sum():
                 TestRun.LOGGER.error(
-                    "Md5 sums before and after interrupting core removal are different.")
+                    "Md5 sums before and after interrupting mode switching are different.")
 
         with TestRun.step("Unmount core device."):
             core_part.unmount()
@@ -364,9 +368,10 @@ def test_interrupt_cache_mode_switch_delayed(cache_mode, filesystem):
            interruption with delay.
         pass_criteria:
           - No system crash.
-          - Cache mode cannot be interrupted with delay.
+          - Cache mode will not be switched after interruption.
+          - Flushing would be stopped after interruption.
           - Md5sum are correct during all test steps.
-          - Dirty blocks quantity after cache mode switching is zero.
+          - Dirty blocks quantity after interruption is lower but non-zero.
     """
     with TestRun.step("Prepare cache and core."):
         cache_part, core_part = prepare()
@@ -391,12 +396,18 @@ def test_interrupt_cache_mode_switch_delayed(cache_mode, filesystem):
         with TestRun.step("Check md5 sum of test file."):
             test_file_md5sum_before = test_file.md5sum()
 
+        with TestRun.step("Get number of dirty data on exported object before "
+                          "switching cache mode interruption."):
+            os_utils.sync()
+            os_utils.drop_caches(DropCachesMode.ALL)
+            cache_dirty_blocks_before = cache.get_dirty_blocks()
+
         with TestRun.step("Start switching cache mode."):
             flush_pid = TestRun.executor.run_in_background(cli.set_cache_mode_cmd(
                 str(CacheMode.DEFAULT.name.lower()), str(cache.cache_id), "yes"))
-            sleep(2)
 
         with TestRun.step("Send interruption signal."):
+            wait_for_flushing(cache, core)
             percentage = casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
             while percentage < 50:
                 percentage = casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
@@ -405,12 +416,17 @@ def test_interrupt_cache_mode_switch_delayed(cache_mode, filesystem):
         with TestRun.step(
                 "Get quantity of dirty data on exported object after sending interruption "
                 "signal to cas to stop mode switching."):
-            if int(cache.get_dirty_blocks()) != 0:
-                TestRun.LOGGER.error("Quantity of dirty lines should be zero now.")
+            cache_dirty_blocks_after = cache.get_dirty_blocks()
+            if cache_dirty_blocks_after >= cache_dirty_blocks_before:
+                TestRun.LOGGER.error("Quantity of dirty lines after cache mode switching "
+                                     "interruption should be lower.")
+            if int(cache_dirty_blocks_after) == 0:
+                TestRun.LOGGER.error("Quantity of dirty lines after cache mode switching "
+                                     "interruption should not be zero.")
 
         with TestRun.step("Check cache mode."):
-            if cache.get_cache_mode() == cache_mode:
-                TestRun.LOGGER.error("Cache mode should have changed.")
+            if cache.get_cache_mode() != cache_mode:
+                TestRun.LOGGER.error("Cache mode should remain the same.")
 
         with TestRun.step("Unmount core and stop cache."):
             core.unmount()
@@ -422,7 +438,7 @@ def test_interrupt_cache_mode_switch_delayed(cache_mode, filesystem):
         with TestRun.step("Check md5 sum of test file again."):
             if test_file_md5sum_before != test_file.md5sum():
                 TestRun.LOGGER.error(
-                    "Md5 sums before and after interrupting core removal are different.")
+                    "Md5 sums before and after interrupting mode switching are different.")
 
         with TestRun.step("Unmount core device."):
             core_part.unmount()
@@ -476,9 +492,9 @@ def test_interrupt_cache_stop(cache_mode, filesystem):
 
         with TestRun.step("Start stopping cache."):
             flush_pid = TestRun.executor.run_in_background(cli.stop_cmd(str(cache.cache_id)))
-            sleep(2)
 
         with TestRun.step("Interrupt cache stopping."):
+            wait_for_flushing(cache, core)
             percentage = casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
             while percentage < 50:
                 percentage = casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
@@ -532,3 +548,14 @@ def create_test_file():
     dd.run()
     test_file.refresh_item()
     return test_file
+
+
+def wait_for_flushing(cache: Cache, core: Core, timeout: timedelta = timedelta(seconds=30)):
+    start_time = datetime.now()
+    while datetime.now() - start_time < timeout:
+        try:
+            casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
+            return
+        except CmdException:
+            continue
+    raise Exception("Management flush not started!")

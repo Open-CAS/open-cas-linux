@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
-* SPDX-License-Identifier: BSD-3-Clause-Clear
+* SPDX-License-Identifier: BSD-3-Clause
 */
 #ifndef __LAYER_CACHE_MANAGEMENT_H__
 #define __LAYER_CACHE_MANAGEMENT_H__
@@ -45,8 +45,11 @@ int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 int cache_mngt_exit_instance(const char *cache_name, size_t name_len,
 			int flush);
 
+int cache_mngt_prepare_cache_device_cfg(struct ocf_mngt_cache_device_config *cfg,
+		char *cache_path);
+
 int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
-		struct ocf_mngt_cache_device_config *device_cfg,
+		struct ocf_mngt_cache_attach_config *attach_cfg,
 		struct kcas_start_cache *cmd);
 
 int cache_mngt_core_pool_get_paths(struct kcas_core_pool_path *cmd_info);
@@ -59,8 +62,11 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 		struct kcas_insert_core *cmd_info);
 
 int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
-		struct ocf_mngt_cache_device_config *device_cfg,
+		struct ocf_mngt_cache_attach_config *attach_cfg,
 		struct kcas_start_cache *cmd);
+
+int cache_mngt_activate(struct ocf_mngt_cache_device_config *cfg,
+		struct kcas_failover_activate *cmd);
 
 int cache_mngt_set_seq_cutoff_threshold(ocf_cache_t cache, ocf_core_t core,
 		uint32_t thresh);
@@ -107,5 +113,10 @@ int cache_mngt_get_core_params(struct kcas_get_core_param *info);
 int cache_mngt_set_cache_params(struct kcas_set_cache_param *info);
 
 int cache_mngt_get_cache_params(struct kcas_get_cache_param *info);
+
+int cache_mngt_failover_detach(struct kcas_failover_detach *cmd);
+
+int cache_mngt_activate(struct ocf_mngt_cache_device_config *cfg,
+		struct kcas_failover_activate *cmd);
 
 #endif

@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
-* SPDX-License-Identifier: BSD-3-Clause-Clear
+* SPDX-License-Identifier: BSD-3-Clause
 */
 
 #ifndef __CAS_IOCTL_CODES_H__
@@ -36,6 +36,7 @@
 
 #define CACHE_INIT_NEW	0 /**< initialize new metadata from fresh start */
 #define CACHE_INIT_LOAD	1 /**< load existing metadata */
+#define CACHE_INIT_STANDBY 2 /**< initialize failover standby cache */
 
 struct kcas_start_cache {
 	/**
@@ -351,6 +352,21 @@ struct kcas_get_cache_param {
 	int ext_err_code;
 };
 
+struct kcas_failover_detach
+{
+	uint16_t cache_id;
+
+	int ext_err_code;
+};
+
+struct kcas_failover_activate
+{
+	uint16_t cache_id;
+	char cache_path[MAX_STR_LEN]; /**< path to an ssd*/
+
+	int ext_err_code;
+};
+
 /*******************************************************************************
  *   CODE   *              NAME             *               STATUS             *
  *******************************************************************************
@@ -481,12 +497,20 @@ struct kcas_get_cache_param {
 /** Remove inactive core object from an running cache instance */
 #define KCAS_IOCTL_REMOVE_INACTIVE _IOWR(KCAS_IOCTL_MAGIC, 37, struct kcas_remove_inactive)
 
+/** Detach caching drive from failover standby cache instance */
+#define KCAS_IOCTL_FAILOVER_DETACH _IOWR(KCAS_IOCTL_MAGIC, 38, struct kcas_failover_detach)
+
+/** Activate standby failover cache instance */
+#define KCAS_IOCTL_FAILOVER_ACTIVATE _IOWR(KCAS_IOCTL_MAGIC, 39, struct kcas_failover_activate)
+
 /**
  * Extended kernel CAS error codes
  */
 enum kcas_error {
+	KCAS_ERR_MIN = 2000000,
+
 	/** Must be root */
-	KCAS_ERR_ROOT = 2000000,
+	KCAS_ERR_ROOT = KCAS_ERR_MIN,
 
 	/** System Error */
 	KCAS_ERR_SYSTEM,
@@ -549,7 +573,9 @@ enum kcas_error {
 	KCAS_ERR_CORE_IN_ACTIVE_STATE,
 
 	/** Inactive core has dirty data assigned */
-	KCAS_ERR_INACTIVE_CORE_IS_DIRTY
+	KCAS_ERR_INACTIVE_CORE_IS_DIRTY,
+
+	KCAS_ERR_MAX = KCAS_ERR_INACTIVE_CORE_IS_DIRTY,
 };
 
 #endif

@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
-* SPDX-License-Identifier: BSD-3-Clause-Clear
+* SPDX-License-Identifier: BSD-3-Clause
 */
 
 #ifndef __OBJ_BLK_H__
@@ -33,6 +33,9 @@ struct bd_object {
 
 	struct workqueue_struct *expobj_wq;
 		/*< Workqueue for I/O handled by top vol */
+
+	ocf_volume_t front_volume;
+		/*< Cache/core front volume */
 };
 
 static inline struct bd_object *bd_object(ocf_volume_t vol)

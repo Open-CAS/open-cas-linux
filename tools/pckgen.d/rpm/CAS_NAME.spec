@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
-# SPDX-License-Identifier: BSD-3-Clause-Clear
+# SPDX-License-Identifier: BSD-3-Clause
 #
 
 #
@@ -27,7 +27,7 @@ URL:        <CAS_HOMEPAGE>
 Source0:    https://github.com/Open-CAS/open-cas-linux/releases/download/v%{version}/%{name}-%{version}.tar.gz
 Packager:   <PACKAGE_MAINTAINER>
 BuildRequires:  coreutils, gawk, gcc, kernel-devel, kernel-headers, make
-Requires:   <CAS_NAME>-modules-%{version}, python3, sed
+Requires:   <CAS_NAME>-modules-%{version}, python3, sed, python3-packaging, python3-PyYAML
 %description
 Open Cache Acceleration Software (Open CAS) is an open source project
 encompassing block caching software libraries, adapters, tools and more.
@@ -161,6 +161,8 @@ fi
 
 
 %changelog
+* Mon Nov 22 2021 Michal Mielewczyk <michal.mielewczyk@intel.com> - 21.06-1
+- Update dependencies
 * Mon Feb 8 2021 Rafal Stefanowski <rafal.stefanowski@intel.com> - 21.03-1
 - Improve python files handling
 * Tue Jan 5 2021 Rafal Stefanowski <rafal.stefanowski@intel.com> - 20.12-1

@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# SPDX-License-Identifier: BSD-3-Clause-Clear
+# SPDX-License-Identifier: BSD-3-Clause
 #
 
 import csv
@@ -15,8 +15,8 @@ from api.cas.casadm_params import *
 from api.cas.ioclass_config import IoClass
 from api.cas.version import CasVersion
 from storage_devices.device import Device
-from test_utils.size import parse_unit
 from test_utils.output import CmdException
+from test_utils.size import parse_unit
 
 
 class Stats(dict):
@@ -210,8 +210,9 @@ def get_cas_devices_dict():
 
 
 def get_flushing_progress(cache_id: int, core_id: int = None):
-    casadm_output = casadm.list_caches(OutputFormat.csv).stdout.splitlines()
-    for line in casadm_output:
+    casadm_output = casadm.list_caches(OutputFormat.csv)
+    lines = casadm_output.stdout.splitlines()
+    for line in lines:
         line_elements = line.split(',')
         if core_id is not None and line_elements[0] == "core" \
                 and int(line_elements[1]) == core_id \

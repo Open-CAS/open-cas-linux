@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
-* SPDX-License-Identifier: BSD-3-Clause-Clear
+* SPDX-License-Identifier: BSD-3-Clause
 */
 
 #ifndef __CAS_LIB_H__
@@ -203,6 +203,25 @@ int get_core_info(int fd, int cache_id, int core_id, struct kcas_core_info *info
 
 int remove_core(unsigned int cache_id, unsigned int core_id,
 		bool detach, bool force_no_flush);
+
+/**
+ * @brief detach caching device from failover standby cache instance
+ *
+ * @param cache_id cache instance identifier
+ *
+ * @return 0 upon successful detach, 1 upon failure
+ */
+int failover_detach(int cache_id);
+
+/**
+ * @brief activate failover standby cache instance
+ *
+ * @param cache_id cache instance identifier
+ * @param cache_device cache device path
+ *
+ * @return 0 upon successful detach, 1 upon failure
+ */
+int failover_activate(int cache_id, const char *cache_device);
 
 /**
  * @brief remove inactive core device from a cache

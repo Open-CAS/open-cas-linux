@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# SPDX-License-Identifier: BSD-3-Clause-Clear
+# SPDX-License-Identifier: BSD-3-Clause
 #
 
 from typing import List
@@ -67,6 +67,14 @@ def remove_core(cache_id: int, core_id: int, force: bool = False, shortcut: bool
                         force=force, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to remove core.", output)
+
+
+def remove_inactive(cache_id: int, core_id: int, force: bool = False, shortcut: bool = False):
+    output = TestRun.executor.run(
+        remove_inactive_cmd(
+            cache_id=str(cache_id), core_id=str(core_id), force=force, shortcut=shortcut))
+    if output.exit_code != 0:
+        raise CmdException("Failed to remove inactive core.", output)
 
 
 def remove_detached(core_device: Device, shortcut: bool = False):
@@ -172,10 +180,11 @@ def stop_all_caches():
     if "No caches running" in list_caches().stdout:
         return
     TestRun.LOGGER.info("Stop all caches")
-    casctl_stop()
-    output = list_caches()
-    if "No caches running" not in output.stdout:
-        raise CmdException("Error while stopping caches.", output)
+    stop_output = casctl_stop()
+    caches_output = list_caches()
+    if "No caches running" not in caches_output.stdout:
+        raise CmdException(f"Error while stopping caches. "
+                           f"Listing caches: {caches_output}", stop_output)
 
 
 def remove_all_detached_cores():

@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# SPDX-License-Identifier: BSD-3-Clause-Clear
+# SPDX-License-Identifier: BSD-3-Clause
 #
 import re
 
@@ -30,9 +30,13 @@ reinitialize_with_force_or_recovery = [
     r" discard on-disk metadata and start fresh cache instance\."
 ]
 
-remove_inactive_core = [
-    r"Error while removing core device \d+ from cache instance \d+",
-    r"Core device is in inactive state"
+remove_inactive_core_with_remove_command = [
+    r"Core is inactive\. To manage the inactive core use '--remove-inactive' command\."
+]
+
+remove_inactive_dirty_core = [
+    r"The cache contains dirty data assigned to the core\. If you want to ",
+    r"continue, please use --force option\.\nWarning: the data will be lost"
 ]
 
 stop_cache_incomplete = [
@@ -41,9 +45,8 @@ stop_cache_incomplete = [
 ]
 
 stop_cache_errors = [
-    r"Error while removing cache \d+",
-    r"Error while writing to cache device",
-    r"Error occurred, please see syslog \(/var/log/messages\) for details"
+    r"Removed cache \d+ with errors",
+    r"Error while writing to cache device"
 ]
 
 get_stats_ioclass_id_not_configured = [
@@ -90,6 +93,33 @@ try_add_core_sector_size_mismatch = [
 
 no_caches_running = [
     r"No caches running"
+]
+
+unavailable_device = [
+    r"Error while opening \'\S+\'exclusively\. This can be due to\n"
+    r"cache instance running on this device\. In such case please stop the cache and try again\."
+]
+
+error_handling = [
+    r"Error during options handling"
+]
+
+no_cas_metadata = [
+    r"Device \'\S+\' does not contain OpenCAS's metadata\."
+]
+
+cache_dirty_data = [
+    r"Cache instance contains dirty data\. Clearing metadata will result in loss of dirty data\.\n"
+    r"Please load cache instance and flush dirty data in order to preserve them on the core "
+    r"device\.\n"
+    r"Alternatively, if you wish to clear metadata anyway, please use \'--force\' option\."
+]
+
+cache_dirty_shutdown = [
+    r"Cache instance did not shut down cleanly\. It might contain dirty data\. \n"
+    r"Clearing metadata might result in loss of dirty data\. Please recover cache instance\n"
+    r"by loading it and flush dirty data in order to preserve them on the core device\.\n"
+    r"Alternatively, if you wish to clear metadata anyway, please use \'--force\' option\."
 ]
 
 

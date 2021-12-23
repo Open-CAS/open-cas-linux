@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2012-2021 Intel Corporation
-# SPDX-License-Identifier: BSD-3-Clause-Clear
+# SPDX-License-Identifier: BSD-3-Clause
 #
 # If $(M) is defined, we've been invoked from the
 # kernel build system and can use its language.

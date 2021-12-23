@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
-* SPDX-License-Identifier: BSD-3-Clause-Clear
+* SPDX-License-Identifier: BSD-3-Clause
 */
 
 #ifndef __CAS_CACHE_H__
@@ -58,6 +58,7 @@ struct cache_priv {
 	atomic_t flush_interrupt_enabled;
 	ocf_queue_t mngt_queue;
 	void *attach_context;
+	bool cache_exp_obj_initialized;
 	ocf_queue_t io_queues[];
 };
 

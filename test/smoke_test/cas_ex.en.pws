@@ -33,6 +33,7 @@ conf
 config
 csv
 dev
+failover
 io
 kibibytes
 lru

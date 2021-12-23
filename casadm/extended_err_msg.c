@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
-* SPDX-License-Identifier: BSD-3-Clause-Clear
+* SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include <stdint.h>
@@ -165,6 +165,22 @@ struct {
 	{
 		OCF_ERR_NO_LOCK,
 		"Failed to lock cache for management operation."
+	},
+	{
+		OCF_ERR_METADATA_LAYOUT_MISMATCH,
+		"Metadata layout mismatch"
+	},
+	{
+		OCF_ERR_CACHE_LINE_SIZE_MISMATCH,
+		"Cache line size mismatch"
+	},
+	{
+		OCF_ERR_CACHE_STANDBY,
+		"Operation not permitted in failover standby mode"
+	},
+	{
+		OCF_ERR_FAILOVER_ATTACHED,
+		"Cache device is attached, please detach it first with --failover-detach"
 	},
 
 	/* CAS kernel error mappings*/

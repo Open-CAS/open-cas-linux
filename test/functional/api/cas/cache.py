@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# SPDX-License-Identifier: BSD-3-Clause-Clear
+# SPDX-License-Identifier: BSD-3-Clause
 #
 
 from api.cas.casadm_parser import *
@@ -14,7 +14,6 @@ class Cache:
         self.cache_device = device
         self.cache_id = int(self.__get_cache_id())
         self.__cache_line_size = None
-        self.__metadata_mode = None
         self.__metadata_size = None
 
     def __get_cache_id(self):
@@ -39,13 +38,6 @@ class Cache:
         stats = self.get_statistics()
         cp = stats.config_stats.cleaning_policy
         return CleaningPolicy[cp]
-
-    def get_metadata_mode(self):
-        if self.__metadata_mode is None:
-            stats = self.get_statistics()
-            mm = stats.config_stats.metadata_mode
-            self.__metadata_mode = MetadataMode[mm]
-        return self.__metadata_mode
 
     def get_metadata_size(self):
         if self.__metadata_size is None:
@@ -121,8 +113,11 @@ class Cache:
     def add_core(self, core_dev, core_id: int = None):
         return casadm.add_core(self, core_dev, core_id)
 
-    def remove_core(self, core_id, force: bool = False):
+    def remove_core(self, core_id: int, force: bool = False):
         return casadm.remove_core(self.cache_id, core_id, force)
+
+    def remove_inactive_core(self, core_id: int, force: bool = False):
+        return casadm.remove_inactive(self.cache_id, core_id, force)
 
     def reset_counters(self):
         return casadm.reset_counters(self.cache_id)
@@ -177,5 +172,4 @@ class Cache:
     def get_cache_config(self):
         return CacheConfig(self.get_cache_line_size(),
                            self.get_cache_mode(),
-                           self.get_cleaning_policy(),
-                           self.get_metadata_mode())
+                           self.get_cleaning_policy())

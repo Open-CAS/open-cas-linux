@@ -6,6 +6,12 @@
 
 open-cas-linux (20.03.3.0303-1) trusty; urgency=medium
 
+  * Update dependencies
+
+ -- Michal Mielewczyk <michal.mielewczyk@intel.com>  Mon, 22 Nov 2021 13:02:30 +0100
+
+open-cas-linux (20.03.3.0303-1) trusty; urgency=medium
+
   * Add DKMS support
 
  -- Robert Baldyga <robert.baldyga@intel.com>  Mon, 02 Nov 2020 18:47:04 +0200
