@@ -131,7 +131,7 @@ class casadm:
                '--core-id', str(core_id)]
 
         for param, value in kwargs.items():
-            cmd += ['--'+param.replace('_', '-'), str(value)]
+            cmd += ['--' + param.replace('_', '-'), str(value)]
 
         return cls.run_cmd(cmd)
 
@@ -324,7 +324,8 @@ class cas_config(object):
             cleaning_policy = self.params.get('cleaning_policy')
             if cleaning_policy != 'acp':
                 raise ValueError(
-                    f'cleaning_acp_flush_max_buffers is invalid param for cleaning_policy {cleaning_policy}'
+                    f'cleaning_acp_flush_max_buffers is invalid param for'
+                    ' cleaning_policy {cleaning_policy}'
                 )
 
             if not 1 <= number <= 10000:
@@ -348,7 +349,8 @@ class cas_config(object):
             cleaning_policy = self.params.get('cleaning_policy')
             if cleaning_policy != 'alru':
                 raise ValueError(
-                    f'cleaning_alru_flush_max_buffers is invalid param for cleaning_policy {cleaning_policy}'
+                    f'cleaning_alru_flush_max_buffers is invalid param for'
+                    ' cleaning_policy {cleaning_policy}'
                 )
 
             if not 1 <= number <= 10000:
@@ -360,7 +362,8 @@ class cas_config(object):
             cleaning_policy = self.params.get('cleaning_policy')
             if cleaning_policy != 'alru':
                 raise ValueError(
-                    f'cleaning_alru_staleness_time is invalid param for cleaning_policy {cleaning_policy}'
+                    f'cleaning_alru_staleness_time is invalid param for'
+                    ' cleaning_policy {cleaning_policy}'
                 )
 
             if not 1 <= number <= 3600:
@@ -372,7 +375,8 @@ class cas_config(object):
             cleaning_policy = self.params.get('cleaning_policy')
             if cleaning_policy != 'alru':
                 raise ValueError(
-                    f'cleaning_alru_activity_threshold is invalid param for cleaning_policy {cleaning_policy}'
+                    f'cleaning_alru_activity_threshold is invalid param for'
+                    ' cleaning_policy {cleaning_policy}'
                 )
 
             if not 0 <= number <= 1000000:
@@ -392,7 +396,8 @@ class cas_config(object):
             promotion_policy = self.params.get('promotion_policy')
             if promotion_policy != 'nhit':
                 raise ValueError(
-                    f'promotion_nhit_threshold is invalid param for promotion_policy {promotion_policy}'
+                    f'promotion_nhit_threshold is invalid param for'
+                    ' promotion_policy {promotion_policy}'
                 )
 
             if not 2 <= number <= 1000:
@@ -404,7 +409,8 @@ class cas_config(object):
             promotion_policy = self.params.get('promotion_policy')
             if promotion_policy != 'nhit':
                 raise ValueError(
-                    f'promotion_nhit_trigger is invalid param for promotion_policy {promotion_policy}'
+                    f'promotion_nhit_trigger is invalid param for'
+                    ' promotion_policy {promotion_policy}'
                 )
 
             if not 0 <= number <= 100:
@@ -758,12 +764,14 @@ def configure_cache(cache):
             cache_id=cache.cache_id, ioclass_file=cache.params["ioclass_file"]
         )
 
+
 def add_core(core, attach):
     casadm.add_core(
             device=core.device,
             cache_id=core.cache_id,
             core_id=core.core_id,
             try_add=attach)
+
 
 def configure_core(core):
     params = dict()
@@ -777,6 +785,7 @@ def configure_core(core):
         casadm.set_core_param(
             "seq-cutoff", cache_id=core.cache_id, core_id=core.core_id, **params
         )
+
 
 # Another helper functions
 
