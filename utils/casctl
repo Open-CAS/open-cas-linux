@@ -4,15 +4,16 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-from packaging import version
 import platform
 import sys
 
-min_ver = version.parse("3.6")
-ver = version.parse(platform.python_version())
+min_ver = "3.6"
+ver = platform.python_version()
 if ver < min_ver:
-    print((f"Minimum required python version is {min_ver}\n"
-            f"Detected python version is {ver}"),
+    print("Minimum required python version is {}. Detected python version is {}".format(
+                min_ver,
+                ver,
+            ),
             file = sys.stderr)
     exit(1)
 
