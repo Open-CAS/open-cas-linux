@@ -10,11 +10,13 @@ import sys
 min_ver = "3.6"
 ver = platform.python_version()
 if ver < min_ver:
-    print("Minimum required python version is {}. Detected python version is {}".format(
-                min_ver,
-                ver,
-            ),
-            file = sys.stderr)
+    print(
+        "Minimum required python version is {}. Detected python version is {}".format(
+            min_ver,
+            ver,
+        ),
+        file=sys.stderr,
+    )
     exit(1)
 
 import argparse
@@ -22,85 +24,114 @@ import re
 
 import opencas
 
+
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
+
 # Start - load all the caches and add cores
+
 
 def start():
     try:
-       config = opencas.cas_config.from_file('/etc/opencas/opencas.conf',
-                                           allow_incomplete=True)
+        config = opencas.cas_config.from_file(
+            "/etc/opencas/opencas.conf", allow_incomplete=True
+        )
     except Exception as e:
         eprint(e)
-        eprint('Unable to parse config file.')
+        eprint("Unable to parse config file.")
         exit(1)
 
     for cache in config.caches.values():
         try:
             opencas.start_cache(cache, True)
         except opencas.casadm.CasadmError as e:
-            eprint('Unable to load cache {0} ({1}). Reason:\n{2}'
-                    .format(cache.cache_id, cache.device, e.result.stderr))
+            eprint(
+                "Unable to load cache {0} ({1}). Reason:\n{2}".format(
+                    cache.cache_id, cache.device, e.result.stderr
+                )
+            )
+
 
 # Initial cache start
+
 
 def add_core_recursive(core, config):
     with_error = False
     if core.added:
         return with_error
     if core.marked:
-        eprint('Unable to add core {0} to cache {1}. Reason:\nRecursive core configuration!'
-            .format(core.device, core.cache_id))
+        eprint(
+            "Unable to add core {0} to cache {1}. Reason:\nRecursive core configuration!".format(
+                core.device, core.cache_id
+            )
+        )
         exit(3)
     core.marked = True
-    match = re.match(r'/dev/cas(\d{1,5})-(\d{1,4})', core.device)
+    match = re.match(r"/dev/cas(\d{1,5})-(\d{1,4})", core.device)
     if match:
-        cache_id,core_id = match.groups()
-        with_error = add_core_recursive(config.caches[int(cache_id)].cores[int(core_id)], config)
+        cache_id, core_id = match.groups()
+        with_error = add_core_recursive(
+            config.caches[int(cache_id)].cores[int(core_id)], config
+        )
     try:
         opencas.add_core(core, False)
         core.added = True
     except opencas.casadm.CasadmError as e:
-        eprint('Unable to add core {0} to cache {1}. Reason:\n{2}'
-            .format(core.device, core.cache_id, e.result.stderr))
+        eprint(
+            "Unable to add core {0} to cache {1}. Reason:\n{2}".format(
+                core.device, core.cache_id, e.result.stderr
+            )
+        )
         with_error = True
     return with_error
+
 
 def init(force):
     exit_code = 0
     try:
-        config = opencas.cas_config.from_file('/etc/opencas/opencas.conf')
+        config = opencas.cas_config.from_file("/etc/opencas/opencas.conf")
     except Exception as e:
         eprint(e)
-        eprint('Unable to parse config file.')
+        eprint("Unable to parse config file.")
         exit(1)
 
     if not force:
         for cache in config.caches.values():
             try:
                 status = opencas.check_cache_device(cache.device)
-                if status['Is cache'] == 'yes' and status['Cache dirty'] == 'yes':
-                    eprint('Unable to perform initial configuration.\n' \
-                           'One of cache devices contains dirty data.')
+                if status["Is cache"] == "yes" and status["Cache dirty"] == "yes":
+                    eprint(
+                        "Unable to perform initial configuration.\n"
+                        "One of cache devices contains dirty data."
+                    )
                     exit(1)
             except opencas.casadm.CasadmError as e:
-                eprint('Unable to check status of device {0}. Reason:\n{1}'
-                        .format(cache.device, e.result.stderr))
+                eprint(
+                    "Unable to check status of device {0}. Reason:\n{1}".format(
+                        cache.device, e.result.stderr
+                    )
+                )
                 exit(e.result.exit_code)
 
     for cache in config.caches.values():
         try:
             opencas.start_cache(cache, False, force)
         except opencas.casadm.CasadmError as e:
-            eprint('Unable to start cache {0} ({1}). Reason:\n{2}'
-                    .format(cache.cache_id, cache.device, e.result.stderr))
+            eprint(
+                "Unable to start cache {0} ({1}). Reason:\n{2}".format(
+                    cache.cache_id, cache.device, e.result.stderr
+                )
+            )
             exit_code = 2
         try:
             opencas.configure_cache(cache)
         except opencas.casadm.CasadmError as e:
-            eprint('Unable to configure cache {0} ({1}). Reason:\n{2}'
-                    .format(cache.cache_id, cache.device, e.result.stderr))
+            eprint(
+                "Unable to configure cache {0} ({1}). Reason:\n{2}".format(
+                    cache.cache_id, cache.device, e.result.stderr
+                )
+            )
             exit_code = 2
 
     for core in config.cores:
@@ -205,6 +236,7 @@ class cas:
     def command_stop(self, args):
         stop(args.flush)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     opencas.wait_for_cas_ctrl()
     cas()
