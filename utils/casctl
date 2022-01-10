@@ -84,6 +84,12 @@ def add_core_recursive(core, config):
             )
         )
         with_error = True
+    try:
+        opencas.configure_core(core)
+    except opencas.casadm.CasadmError as e:
+        eprint('Unable to configure core {0} ({1}). Reason:\n{2}'
+                .format(core.device, core.cache_id, e.result.stderr))
+        with_error = True
     return with_error
 
 

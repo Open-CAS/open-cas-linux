@@ -24,7 +24,7 @@ Cache device <DEVICE>
 .br
 Cache mode {wt|wb|wa|pt|wo}
 .br
-Extra fields (optional) ioclass_file=<file>,cleaning_policy=<alru,nop>,promotion_policy=<always,nhit>
+Extra fields (optional) ioclass_file=<file>,cleaning_policy=<acp,alru,nop>,cleaning_acp_wake_up=<0-10000>,cleaning_acp_flush_max_buffers=<1-10000>,cleaning_alru_wake_up=<0-3600>,cleaning_alru_flush_max_buffers=<1-10000>,cleaning_alru_staleness_time=<1-3600>,cleaning_alru_activity_threshold=<0-1000000>,promotion_policy=<always,nhit>,promotion_nhit_threshold=<2-1000>,promotion_trigger=<0-100>
 .RE
 .TP
 \fB[cores]\fR   Cores configuration. Following columns are required:
@@ -36,7 +36,7 @@ Core ID <0-4095>
 .br
 Core device <DEVICE>
 .br
-Extra fields (optional) lazy_startup=<true,false>
+Extra fields (optional) lazy_startup=<true,false>,seq_cutoff_policy=<always,full,never>,seq_cutoff_threshold=<1-4194181>
 .RE
 .TP
 \fBNOTES\fR
