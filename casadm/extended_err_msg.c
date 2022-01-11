@@ -179,8 +179,8 @@ struct {
 		"Operation not permitted in failover standby mode"
 	},
 	{
-		OCF_ERR_FAILOVER_ATTACHED,
-		"Cache device is attached, please detach it first with --failover-detach"
+		OCF_ERR_STANDBY_ATTACHED,
+		"Cache device is attached, please detach it first with --standby --detach"
 	},
 
 	/* CAS kernel error mappings*/

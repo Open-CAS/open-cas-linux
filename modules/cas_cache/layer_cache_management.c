@@ -1891,7 +1891,8 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	case CACHE_INIT_LOAD:
 		attach_cfg->open_cores = true;
 	case CACHE_INIT_NEW:
-	case CACHE_INIT_STANDBY:
+	case CACHE_INIT_STANDBY_NEW:
+	case CACHE_INIT_STANDBY_LOAD:
 		break;
 	default:
 		return -OCF_ERR_INVAL;
@@ -2111,7 +2112,8 @@ static int _cache_start_finalize(ocf_cache_t cache, int init_mode,
 
 	_cache_mngt_log_cache_device_path(cache, ctx->device_cfg);
 
-	if (activate || init_mode != CACHE_INIT_STANDBY) {
+	if (activate || (init_mode != CACHE_INIT_STANDBY_NEW &&
+			init_mode != CACHE_INIT_STANDBY_LOAD)) {
 		result = cas_cls_init(cache);
 		if (result) {
 			ctx->ocf_start_error = result;
@@ -2137,7 +2139,8 @@ static int _cache_start_finalize(ocf_cache_t cache, int init_mode,
 		ocf_core_visit(cache, _cache_mngt_core_device_loaded_visitor,
 				NULL, false);
 		break;
-	case CACHE_INIT_STANDBY:
+	case CACHE_INIT_STANDBY_NEW:
+	case CACHE_INIT_STANDBY_LOAD:
 		result = cache_mngt_initialize_cache_exported_object(cache);
 		if (result) {
 			ctx->ocf_start_error = result;
@@ -2181,7 +2184,7 @@ int cache_mngt_check_bdev(struct ocf_mngt_cache_device_config *device_cfg,
 	return 0;
 }
 
-int cache_mngt_failover_detach(struct kcas_failover_detach *cmd)
+int cache_mngt_standby_detach(struct kcas_standby_detach *cmd)
 {
 	ocf_cache_t cache;
 	struct cache_priv *cache_priv;
@@ -2222,7 +2225,7 @@ int cache_mngt_failover_detach(struct kcas_failover_detach *cmd)
 	if (result)
 		goto out_cache_put;
 
-	ocf_mngt_cache_failover_detach(cache, _cache_mngt_generic_complete,
+	ocf_mngt_cache_standby_detach(cache, _cache_mngt_generic_complete,
 			&context);
 
 	wait_for_completion(&context.cmpl);
@@ -2235,8 +2238,29 @@ out_module_put:
 	return result;
 }
 
-int cache_mngt_activate(struct ocf_mngt_cache_device_config *cfg,
-		struct kcas_failover_activate *cmd)
+int cache_mngt_prepare_cache_standby_activate_cfg(
+		struct ocf_mngt_cache_standby_activate_config *cfg,
+		struct kcas_standby_activate *cmd)
+{
+	int result;
+
+	if (cmd->cache_id == OCF_CACHE_ID_INVALID)
+		return -OCF_ERR_INVAL;
+
+	memset(cfg, 0, sizeof(*cfg));
+
+	result = cache_mngt_prepare_cache_device_cfg(&cfg->device,
+			cmd->cache_path);
+	if (result)
+		return result;
+
+	cfg->open_cores = true;
+
+	return 0;
+}
+
+int cache_mngt_activate(struct ocf_mngt_cache_standby_activate_config *cfg,
+		struct kcas_standby_activate *cmd)
 {
 	struct _cache_mngt_attach_context *context;
 	ocf_cache_t cache;
@@ -2263,7 +2287,7 @@ int cache_mngt_activate(struct ocf_mngt_cache_device_config *cfg,
 	if (result)
 		goto out_cache_put;
 
-	result = cache_mngt_check_bdev(cfg, false);
+	result = cache_mngt_check_bdev(&cfg->device, false);
 	if (result)
 		goto out_cache_unlock;
 
@@ -2276,7 +2300,7 @@ int cache_mngt_activate(struct ocf_mngt_cache_device_config *cfg,
 	/* TODO: doesn't this need to be copied to avoid use-after-free
 	 * in case where calle is interrupted and returns???
 	 */
-	context->device_cfg = cfg;
+	context->device_cfg = &cfg->device;
 	context->cache = cache;
 
 	cache_priv = ocf_cache_get_priv(cache);
@@ -2290,7 +2314,7 @@ int cache_mngt_activate(struct ocf_mngt_cache_device_config *cfg,
 	}
 	_cache_mngt_async_context_init(&context->async);
 
-	ocf_mngt_cache_activate(cache, cfg, _cache_mngt_start_complete,
+	ocf_mngt_cache_standby_activate(cache, cfg, _cache_mngt_start_complete,
 			context);
 	result = wait_for_completion_interruptible(&context->async.cmpl);
 
@@ -2336,11 +2360,16 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		return result;
 	}
 
-	if (cmd->init_cache == CACHE_INIT_LOAD)
+	switch (cmd->init_cache) {
+	case CACHE_INIT_LOAD:
+	case CACHE_INIT_STANDBY_LOAD:
 		result = _cache_mngt_check_metadata(cfg, cmd->cache_path_name);
-	if (result) {
-		module_put(THIS_MODULE);
-		return result;
+		if (result) {
+			module_put(THIS_MODULE);
+			return result;
+		}
+	default:
+		break;
 	}
 
 	context = kzalloc(sizeof(*context), GFP_KERNEL);
@@ -2394,8 +2423,12 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		ocf_mngt_cache_load(cache, attach_cfg,
 				_cache_mngt_start_complete, context);
 		break;
-	case CACHE_INIT_STANDBY:
-		ocf_mngt_cache_standby(cache, attach_cfg,
+	case CACHE_INIT_STANDBY_NEW:
+		ocf_mngt_cache_standby_attach(cache, attach_cfg,
+				_cache_mngt_start_complete, context);
+		break;
+	case CACHE_INIT_STANDBY_LOAD:
+		ocf_mngt_cache_standby_load(cache, attach_cfg,
 				_cache_mngt_start_complete, context);
 		break;
 	default:
@@ -2932,7 +2965,7 @@ int cache_mngt_get_info(struct kcas_cache_info *info)
 	if (result)
 		goto unlock;
 
-	if (info->info.attached && !info->info.failover_detached) {
+	if (info->info.attached && !info->info.standby_detached) {
 		uuid = ocf_cache_get_uuid(cache);
 		BUG_ON(!uuid);
 		strlcpy(info->cache_path_name, uuid->data,

@@ -154,6 +154,84 @@ int command_handle_option(char *opt, const char **arg)
 	return SUCCESS;
 }
 
+/* Filler to print sub-commands */
+int cmd_subcmd_print_subcmd(cli_option* option, int flag)
+{
+	return !!(option->flags & CLI_OPTION_SUBCMD);
+}
+
+/* Filler to print parameters of given sub-command */
+int cmd_subcmd_print_param(cli_option* option, int flag)
+{
+	return (flag == (option->priv & flag));
+}
+
+static inline void cmd_subcmd_print_invalid_subcmd(cli_option* options)
+{
+	cas_printf(LOG_ERR, "Invalid or missing first sub-command parameter. ");
+	cas_printf(LOG_ERR, "Expected one of the: {");
+	print_options_usage(options, "|", cmd_subcmd_print_subcmd, 0);
+	cas_printf(LOG_ERR, "}\n");
+}
+
+/* Print help for command with subcommands */
+void cmd_subcmd_help(app *app_values, cli_command *cmd, int flag_required)
+{
+	int i, flag = 0, all_ops, printed_ops;
+	char option_name[MAX_STR_LEN];
+	cli_option* iter = &(cmd->options[0]);
+
+	/* Print usage */
+	cas_printf(LOG_INFO, "Usage: %s --%s {", app_values->name, cmd->name);
+	print_options_usage(cmd->options, "|", cmd_subcmd_print_subcmd, 0);
+	cas_printf(LOG_INFO, "}\n\n");
+
+	print_command_header(app_values, cmd);
+
+	for (;iter->long_name; iter++, flag++) {
+		if (!(iter->flags & CLI_OPTION_SUBCMD)) {
+			continue;
+		}
+
+		cas_printf(LOG_INFO, "\n");
+
+		cas_printf(LOG_INFO, "%s:\n", iter->desc);
+
+		cas_printf(LOG_INFO, "Usage: %s --%s --%s ", app_values->name,
+				cmd->name, iter->long_name);
+
+		all_ops = printed_ops = 0;
+		for (i = 0; cmd->options[i].long_name != NULL; i++) {
+			if (0 == cmd->options[i].priv) {
+				continue;
+			}
+
+			if (1 == cmd_subcmd_print_param(&cmd->options[i], (1 << flag))) {
+				all_ops++;
+			} else {
+				continue;
+			}
+
+			if (1 == cmd_subcmd_print_param(&cmd->options[i], (1 << flag_required))) {
+				printed_ops++;
+			}
+		}
+
+		print_options_usage(cmd->options, " ", cmd_subcmd_print_param,
+				(1 << flag) | (1 << flag_required));
+
+		if (all_ops != printed_ops) {
+			cas_printf(LOG_INFO, " [option...]");
+		}
+		command_name_in_brackets(option_name, MAX_STR_LEN, iter->short_name, iter->long_name);
+		cas_printf(LOG_INFO, "\nOptions that are valid with %s are:\n", option_name);
+
+		print_list_options(cmd->options, (1 << flag), cmd_subcmd_print_param);
+
+		cas_printf(LOG_INFO, "\n");
+	}
+}
+
 int remove_core_command_handle_option(char *opt, const char **arg)
 {
 	if (!strcmp(opt, "cache-id")){
@@ -197,19 +275,8 @@ int start_cache_command_handle_option(char *opt, const char **arg)
 
 		command_args_values.cache_id = atoi(arg[0]);
 	} else if (!strcmp(opt, "load")) {
-		if (command_args_values.state == CACHE_INIT_STANDBY) {
-			cas_printf(LOG_ERR, "Use of 'failover-standby' and 'load' simultaneously is forbidden.\n");
-			return FAILURE;
-		}
 
 		command_args_values.state = CACHE_INIT_LOAD;
-	} else if (!strcmp(opt, "failover-standby")) {
-		if (command_args_values.state == CACHE_INIT_LOAD) {
-			cas_printf(LOG_ERR, "Use of 'failover-standby' and 'load' simultaneously is forbidden.\n");
-			return FAILURE;
-		}
-
-		command_args_values.state = CACHE_INIT_STANDBY;
 	} else if (!strcmp(opt, "cache-device")) {
 		if(validate_device_name(arg[0]) == FAILURE)
 			return FAILURE;
@@ -249,16 +316,16 @@ int start_cache_command_handle_option(char *opt, const char **arg)
 
 #define CACHE_DEVICE_DESC "Caching device to be used"
 #define CORE_DEVICE_DESC "Path to core device"
+#define CACHE_LINE_SIZE_DESC "Set cache line size in kibibytes: {4,8,16,32,64}[KiB] (default: %d)"
 
 
 static cli_option start_options[] = {
 	{'d', "cache-device", CACHE_DEVICE_DESC, 1, "DEVICE", CLI_OPTION_REQUIRED},
 	{'i', "cache-id", CACHE_ID_DESC_LONG, 1, "ID", 0},
 	{'l', "load", "Load cache metadata from caching device (DANGEROUS - see manual or Admin Guide for details)"},
-	{'s', "failover-standby", "Start cache in standby mode for failover purpose (DANGEROUS - see manual or Admin Guide for details)"},
 	{'f', "force", "Force the creation of cache instance"},
 	{'c', "cache-mode", "Set cache mode from available: {"CAS_CLI_HELP_START_CACHE_MODES"} "CAS_CLI_HELP_START_CACHE_MODES_FULL"; without this parameter Write-Through will be set by default", 1, "NAME"},
-	{'x', "cache-line-size", "Set cache line size in kibibytes: {4,8,16,32,64}[KiB] (default: %d)", 1, "NUMBER",  CLI_OPTION_DEFAULT_INT, 0, 0, ocf_cache_line_size_default / KiB},
+	{'x', "cache-line-size", CACHE_LINE_SIZE_DESC, 1, "NUMBER",  CLI_OPTION_DEFAULT_INT, 0, 0, ocf_cache_line_size_default / KiB},
 	{0}
 };
 
@@ -344,32 +411,11 @@ int handle_start()
 		return FAILURE;
 	}
 
-	if (command_args_values.state == CACHE_INIT_STANDBY) {
-		if (command_args_values.force) {
-			cas_printf(LOG_ERR, "Use of 'failover-standby' and 'force' simultaneously is forbidden.\n");
-			return FAILURE;
-		}
-		if (command_args_values.cache_id == OCF_CACHE_ID_INVALID) {
-			cas_printf(LOG_ERR, "Using 'failover-standby' requires specifying 'cache-id'.\n");
-			return FAILURE;
-		}
-	}
-
 	if (command_args_values.line_size == ocf_cache_line_size_none) {
-		if (command_args_values.state == CACHE_INIT_STANDBY) {
-			cas_printf(LOG_ERR, "Using 'failover-standby' requires specifying 'cache-line-size'.\n");
-			return FAILURE;
-		}
-
 		command_args_values.line_size = ocf_cache_line_size_default;
 	}
 
-	if (command_args_values.cache_mode != ocf_cache_mode_none) {
-		if (command_args_values.state == CACHE_INIT_STANDBY) {
-			cas_printf(LOG_ERR, "It is not possible to use 'cache-mode' when using 'failover-standby'.\n");
-			return FAILURE;
-		}
-	} else {
+	if (command_args_values.cache_mode == ocf_cache_mode_none) {
 		command_args_values.cache_mode = ocf_cache_mode_default;
 	}
 
@@ -1261,7 +1307,7 @@ static cli_option io_class_params_options[] = {
 		.args_count = 0,
 		.arg = NULL,
 		.priv = 0,
-		.flags = CLI_OPTION_DEFAULT_INT
+		.flags = CLI_OPTION_SUBCMD,
 	},
 	[io_class_opt_subcmd_list] = {
 		.short_name = 'L',
@@ -1270,7 +1316,7 @@ static cli_option io_class_params_options[] = {
 		.args_count = 0,
 		.arg = NULL,
 		.priv = 0,
-		.flags = CLI_OPTION_DEFAULT_INT,
+		.flags = CLI_OPTION_SUBCMD,
 	},
 	[io_class_opt_cache_id] = {
 		.short_name = 'i',
@@ -1371,26 +1417,6 @@ struct {
 	.output_format = OUTPUT_FORMAT_DEFAULT
 };
 
-/* Filler to print sub-commands */
-int io_class_print_subcmd(cli_option* options, int flag)
-{
-	return (0 == (options->flags & CLI_OPTION_DEFAULT_INT)) ? 0 : 1;
-}
-
-/* Filler to print parameters of given sub-command */
-int io_class_print_param(cli_option* options, int flag)
-{
-	return (flag == (options->priv & flag)) ? 1 : 0;
-}
-
-static inline void io_class_print_invalid_subcmd(void)
-{
-	cas_printf(LOG_ERR, "Invalid or missing first sub-command parameter ");
-	cas_printf(LOG_ERR, "Expected one of the: {");
-	print_options_usage(io_class_params_options, "|", io_class_print_subcmd, 0);
-	cas_printf(LOG_INFO, "}\n");
-}
-
 /* Parser of option for IO class command */
 int io_class_handle_option(char *opt, const char **arg)
 {
@@ -1468,7 +1494,7 @@ int io_class_is_missing() {
 int io_class_handle() {
 	/* Check if sub-command was specified */
 	if (io_class_opt_subcmd_unknown == io_class_params.subcmd) {
-		io_class_print_invalid_subcmd();
+		cmd_subcmd_print_invalid_subcmd(io_class_params_options);
 		return FAILURE;
 	}
 
@@ -1489,17 +1515,10 @@ int io_class_handle() {
 	return FAILURE;
 }
 
-
-static cli_option failover_detach_options[] = {
-	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
-	{}
-};
-
-static cli_option  failover_activate_options[] = {
-	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
-	{'d', "cache-device", CACHE_DEVICE_DESC, 1, "DEVICE", CLI_OPTION_REQUIRED},
-	{}
-};
+void io_class_help(app *app_values, cli_command *cmd)
+{
+	cmd_subcmd_help(app_values, cmd, io_class_opt_flag_required);
+}
 
 /*******************************************************************************
  * Script Commands
@@ -1736,17 +1755,6 @@ int script_command_is_valid() {
 	return result;
 }
 
-int handle_failover_detach()
-{
-	return failover_detach(command_args_values.cache_id);
-}
-
-int handle_failover_activate()
-{
-	return failover_activate(command_args_values.cache_id,
-				command_args_values.cache_device);
-}
-
 int script_handle() {
 	if (script_cmd_unknown == command_args_values.script_subcmd) {
 		cas_printf(LOG_ERR, "Invalid or missing first sub-command parameter\n");
@@ -1852,65 +1860,257 @@ static int handle_version(void)
 	return SUCCESS;
 }
 
-/* Print help for IO class command */
-void io_class_help(app *app_values, cli_command *cmd)
+static int handle_help();
+
+/*******************************************************************************
+ * Standby commands
+ ******************************************************************************/
+
+enum {
+	standby_opt_subcmd_init = 0,
+	standby_opt_subcmd_load,
+	standby_opt_subcmd_detach,
+	standby_opt_subcmd_activate,
+
+	standby_opt_cache_id,
+	standby_opt_cache_line_size,
+	standby_opt_cache_device,
+
+	standby_opt_force,
+
+	standby_opt_flag_required,
+	standby_opt_flag_set,
+
+	standby_opt_subcmd_unknown,
+};
+
+/* Standby command options */
+static cli_option standby_params_options[] = {
+	[standby_opt_subcmd_init] = {
+		.long_name = "init",
+		.desc = "Initialize cache in standby mode",
+		.args_count = 0,
+		.arg = NULL,
+		.priv = 0,
+		.flags = CLI_OPTION_SUBCMD,
+	},
+	[standby_opt_subcmd_load] = {
+		.long_name = "load",
+		.desc = "Load cache in standby mode",
+		.args_count = 0,
+		.arg = NULL,
+		.priv = 0,
+		.flags = CLI_OPTION_SUBCMD,
+	},
+	[standby_opt_subcmd_detach] = {
+		.long_name = "detach",
+		.desc = "Detach cache device in standby mode",
+		.args_count = 0,
+		.arg = NULL,
+		.priv = 0,
+		.flags = CLI_OPTION_SUBCMD,
+	},
+	[standby_opt_subcmd_activate] = {
+		.long_name = "activate",
+		.desc = "Activate standby cache",
+		.args_count = 0,
+		.arg = NULL,
+		.priv = 0,
+		.flags = CLI_OPTION_SUBCMD,
+	},
+
+	[standby_opt_cache_id] = {
+		.short_name = 'i',
+		.long_name = "cache-id",
+		.desc = CACHE_ID_DESC,
+		.args_count = 1,
+		.arg = "ID",
+		.priv = (1 << standby_opt_subcmd_init)
+			| (1 << standby_opt_subcmd_load)
+			| (1 << standby_opt_subcmd_detach)
+			| (1 << standby_opt_subcmd_activate)
+			| (1 << standby_opt_flag_required),
+		.flags = CLI_OPTION_RANGE_INT,
+		.max_value = 0,
+		.min_value = OCF_CACHE_ID_MAX,
+	},
+	[standby_opt_cache_line_size] = {
+		.short_name = 'x',
+		.long_name = "cache-line-size",
+		.desc = CACHE_LINE_SIZE_DESC,
+		.args_count = 1,
+		.arg = "NUMBER",
+		.priv = (1 << standby_opt_subcmd_init)
+			| (1 << standby_opt_subcmd_load)
+			| (1 << standby_opt_flag_required),
+		.flags =  CLI_OPTION_DEFAULT_INT,
+		.default_value = ocf_cache_line_size_default / KiB,
+	},
+	[standby_opt_cache_device] = {
+		.short_name = 'd',
+		.long_name = "cache-device",
+		.desc = CACHE_DEVICE_DESC,
+		.args_count = 1,
+		.arg = "DEVICE",
+		.priv = (1 << standby_opt_subcmd_init)
+			| (1 << standby_opt_subcmd_load)
+			| (1 << standby_opt_subcmd_activate)
+			| (1 << standby_opt_flag_required),
+	},
+
+	[standby_opt_force] = {
+		.short_name = 'f',
+		.long_name = "force",
+		.desc = "Force the initialization of cache instance",
+		.priv = (1 << standby_opt_subcmd_init),
+	},
+
+	{0}
+};
+
+struct {
+	int subcmd;
+	int cache_id;
+	int line_size;
+	const char* cache_device;
+	int force;
+} static standby_params = {
+	.subcmd = standby_opt_subcmd_unknown,
+	.cache_id = OCF_CACHE_ID_INVALID,
+	.line_size = ocf_cache_line_size_none,
+	.cache_device = NULL,
+	.force = 0,
+};
+
+/* Parser of option for IO class command */
+int standby_handle_option(char *opt, const char **arg)
 {
-	int i, flag = 0, all_ops, printed_ops;
-	char option_name[MAX_STR_LEN];
-	cli_option* iter = &(cmd->options[0]);
+	if (io_class_opt_subcmd_unknown == io_class_params.subcmd) {
+		/* First parameters which defines sub-command */
+		if (!strcmp(opt, "init")) {
+			standby_params.subcmd = standby_opt_subcmd_init;
+			return 0;
+		} else if (!strcmp(opt, "load")) {
+			standby_params.subcmd = standby_opt_subcmd_load;
+			return 0;
+		} else if (!strcmp(opt, "detach")) {
+			standby_params.subcmd = standby_opt_subcmd_detach;
+			return 0;
+		} else if (!strcmp(opt, "activate")) {
+			standby_params.subcmd = standby_opt_subcmd_activate;
+			return 0;
+		}
+	}
 
-	/* Print usage */
-	cas_printf(LOG_INFO, "Usage: %s --%s {", app_values->name, cmd->name);
-	print_options_usage(cmd->options, "|", io_class_print_subcmd, 0);
-	cas_printf(LOG_INFO, "}\n\n");
+	if (!strcmp(opt, "cache-id")) {
+		if (validate_str_num(arg[0], "cache id", OCF_CACHE_ID_MIN,
+				OCF_CACHE_ID_MAX) == FAILURE)
+			return FAILURE;
 
-	print_command_header(app_values, cmd);
+		standby_params_options[standby_opt_cache_id].priv |=
+				(1 << standby_opt_flag_set);
+		standby_params.cache_id = atoi(arg[0]);
+	} else if (!strcmp(opt, "cache-line-size")) {
+		if (validate_str_num_sbd(arg[0], "cache line size",
+				ocf_cache_line_size_min / KiB,
+				ocf_cache_line_size_max / KiB) == FAILURE)
+			return FAILURE;
 
-	for (;iter->long_name; iter++, flag++) {
-		if (0 == (iter->flags & CLI_OPTION_DEFAULT_INT)) {
+		standby_params_options[standby_opt_cache_line_size].priv |=
+				(1 << standby_opt_flag_set);
+		standby_params.line_size = atoi((const char*)arg[0]) * KiB;
+	} else if (!strcmp(opt, "cache-device")) {
+		if (validate_device_name(arg[0]) == FAILURE)
+			return FAILURE;
+
+		standby_params_options[standby_opt_cache_device].priv |=
+				(1 << standby_opt_flag_set);
+		standby_params.cache_device = arg[0];
+	} else if (!strcmp(opt, "force")) {
+		standby_params_options[standby_opt_force].priv |=
+				(1 << standby_opt_flag_set);
+		standby_params.force = 1;
+	}
+
+	return 0;
+}
+
+/* Check if all required command were set depending on command type */
+int standby_is_missing() {
+	int result = 0;
+	int mask;
+	cli_option* iter = standby_params_options;
+
+	for (;iter->long_name; iter++) {
+		char option_name[MAX_STR_LEN];
+		if (!iter->priv) {
 			continue;
 		}
 
-		cas_printf(LOG_INFO, "\n");
-
-		cas_printf(LOG_INFO, "%s:\n", iter->desc);
-
-		cas_printf(LOG_INFO, "Usage: %s --%s --%s ", app_values->name,
-				cmd->name, iter->long_name);
-
-		all_ops = printed_ops = 0;
-		for (i = 0; cmd->options[i].long_name != NULL; i++) {
-			if (0 == cmd->options[i].priv) {
-				continue;
-			}
-
-			if (1 == io_class_print_param(&cmd->options[i], (1 << flag))) {
-				all_ops++;
-			} else {
-				continue;
-			}
-
-			if (1 == io_class_print_param(&cmd->options[i], (1 << io_class_opt_flag_required))) {
-				printed_ops++;
-			}
-		}
-
-		print_options_usage(cmd->options, " ", io_class_print_param,
-				(1 << flag) | (1 << io_class_opt_flag_required));
-
-		if (all_ops != printed_ops) {
-			cas_printf(LOG_INFO, " [option...]");
-		}
 		command_name_in_brackets(option_name, MAX_STR_LEN, iter->short_name, iter->long_name);
-		cas_printf(LOG_INFO, "\nOptions that are valid with %s are:\n", option_name);
 
-		print_list_options(cmd->options, (1 << flag), io_class_print_param);
+		if (iter->priv & (1 << standby_opt_flag_set)) {
+			/* Option is set, check if this option is allowed */
+			mask = (1 << standby_params.subcmd);
+			if (0 == (mask & iter->priv)) {
+				cas_printf(LOG_INFO, "Option '%s' is not allowed\n", option_name);
+				result = -1;
+			}
 
-		cas_printf(LOG_INFO, "\n");
+		} else {
+			/* Option is missing, check if it is required for this sub-command*/
+			mask = (1 << standby_params.subcmd) | (1 << standby_opt_flag_required);
+			if (mask == (iter->priv & mask)) {
+				cas_printf(LOG_INFO, "Option '%s' is missing\n", option_name);
+				result = -1;
+			}
+		}
 	}
+
+	return result;
 }
 
-static int handle_help();
+/* Command handler */
+int standby_handle() {
+	/* Check if sub-command was specified */
+	if (standby_opt_subcmd_unknown == standby_params.subcmd) {
+		cmd_subcmd_print_invalid_subcmd(standby_params_options);
+		return FAILURE;
+	}
+
+	/* Check if all required options are set */
+	if (standby_is_missing()) {
+		return FAILURE;
+	}
+
+	switch (standby_params.subcmd) {
+	case standby_opt_subcmd_init:
+		return standby_init(standby_params.cache_id,
+				standby_params.line_size,
+				standby_params.cache_device,
+				standby_params.force);
+	case standby_opt_subcmd_load:
+		return standby_load(standby_params.cache_id,
+				standby_params.line_size,
+				standby_params.cache_device);
+	case standby_opt_subcmd_detach:
+		return standby_detach(standby_params.cache_id);
+	case standby_opt_subcmd_activate:
+		return standby_activate(standby_params.cache_id,
+				standby_params.cache_device);
+	}
+
+	return FAILURE;
+}
+
+void standby_help(app *app_values, cli_command *cmd)
+{
+	cmd_subcmd_help(app_values, cmd, standby_opt_flag_required);
+}
+
+/*******************************************************************************
+ * Zero metadata command
+ ******************************************************************************/
 
 struct {
 	const char *device;
@@ -1960,6 +2160,10 @@ int handle_zero()
 
 	return zero_md(zero_params.device, zero_params.force);
 }
+
+/*******************************************************************************
+ * Command properties
+ ******************************************************************************/
 
 static cli_command cas_commands[] = {
 		{
@@ -2148,6 +2352,16 @@ static cli_command cas_commands[] = {
 			.help = NULL
 		},
 		{
+			.name = "standby",
+			.desc = "Manage failover standby",
+			.long_desc = NULL,
+			.options = standby_params_options,
+			.command_handle_opts = standby_handle_option,
+			.handle = standby_handle,
+			.flags = CLI_SU_REQUIRED,
+			.help = standby_help,
+		},
+		{
 			.name = "zero-metadata",
 			.desc = "Clear metadata from caching device",
 			.long_desc = NULL,
@@ -2156,30 +2370,6 @@ static cli_command cas_commands[] = {
 			.handle = handle_zero,
 			.flags = CLI_SU_REQUIRED,
 			.help = NULL
-		},
-		{
-			.name = "failover-detach",
-			.desc = "Detach cache device from standby cache instance",
-			.long_desc = "Detach cache device from standby cache instance. "
-				"Cache continues to run in failover standby mode, "
-				"awaiting activation on a new drive.",
-			.options = failover_detach_options,
-			.command_handle_opts = command_handle_option,
-			.handle = handle_failover_detach,
-			.flags = CLI_SU_REQUIRED,
-			.help = NULL,
-
-		},
-		{
-			.name = "failover-activate",
-			.desc = "Activate standby cache instance",
-			.long_desc = NULL,
-			.options = failover_activate_options,
-			.command_handle_opts = command_handle_option,
-			.handle = handle_failover_activate,
-			.flags = CLI_SU_REQUIRED,
-			.help = NULL,
-
 		},
 		{
 			.name = "script",

@@ -205,13 +205,38 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
 		bool detach, bool force_no_flush);
 
 /**
+ * @brief initialize failover standby cache instance
+ *
+ * @param cache_id cache instance identifier
+ * @param line_size cache line size
+ * @param cache_device path to caching device
+ * @param force discard pre-existing metadata
+ *
+ * @return 0 upon successful detach, 1 upon failure
+ */
+int standby_init(int cache_id, ocf_cache_line_size_t line_size,
+		const char *cache_device, int force);
+
+/**
+ * @brief load failover standby cache instance
+ *
+ * @param cache_id cache instance identifier
+ * @param line_size cache line size
+ * @param cache_device path to caching device
+ *
+ * @return 0 upon successful detach, 1 upon failure
+ */
+int standby_load(int cache_id, ocf_cache_line_size_t line_size,
+		const char *cache_device);
+
+/**
  * @brief detach caching device from failover standby cache instance
  *
  * @param cache_id cache instance identifier
  *
  * @return 0 upon successful detach, 1 upon failure
  */
-int failover_detach(int cache_id);
+int standby_detach(int cache_id);
 
 /**
  * @brief activate failover standby cache instance
@@ -221,7 +246,7 @@ int failover_detach(int cache_id);
  *
  * @return 0 upon successful detach, 1 upon failure
  */
-int failover_activate(int cache_id, const char *cache_device);
+int standby_activate(int cache_id, const char *cache_device);
 
 /**
  * @brief remove inactive core device from a cache

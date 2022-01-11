@@ -65,9 +65,6 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_attach_config *attach_cfg,
 		struct kcas_start_cache *cmd);
 
-int cache_mngt_activate(struct ocf_mngt_cache_device_config *cfg,
-		struct kcas_failover_activate *cmd);
-
 int cache_mngt_set_seq_cutoff_threshold(ocf_cache_t cache, ocf_core_t core,
 		uint32_t thresh);
 
@@ -114,9 +111,13 @@ int cache_mngt_set_cache_params(struct kcas_set_cache_param *info);
 
 int cache_mngt_get_cache_params(struct kcas_get_cache_param *info);
 
-int cache_mngt_failover_detach(struct kcas_failover_detach *cmd);
+int cache_mngt_standby_detach(struct kcas_standby_detach *cmd);
 
-int cache_mngt_activate(struct ocf_mngt_cache_device_config *cfg,
-		struct kcas_failover_activate *cmd);
+int cache_mngt_prepare_cache_standby_activate_cfg(
+		struct ocf_mngt_cache_standby_activate_config *cfg,
+		struct kcas_standby_activate *cmd);
+
+int cache_mngt_activate(struct ocf_mngt_cache_standby_activate_config *cfg,
+		struct kcas_standby_activate *cmd);
 
 #endif

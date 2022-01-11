@@ -16,7 +16,8 @@ enum CLI_OPTION_FLAGS {
 	CLI_OPTION_HIDDEN		= 1 << 1,
 	CLI_OPTION_RANGE_INT		= 1 << 2, /*! if option has a min/max value */
 	CLI_OPTION_DEFAULT_INT		= 1 << 3, /*! if option has a default value */
-	CLI_OPTION_OPTIONAL_ARG		= 1 << 4  /*! if option argument is optional */
+	CLI_OPTION_OPTIONAL_ARG		= 1 << 4,  /*! if option argument is optional */
+	CLI_OPTION_SUBCMD		= 1 << 5  /*! if option is a subcmd */
 };
 
 enum CLI_COMMAND_FLAGS {
