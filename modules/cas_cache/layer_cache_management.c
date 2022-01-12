@@ -1178,6 +1178,10 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 
 	if (cmd_info->core_id == OCF_CORE_MAX) {
 		struct cache_priv *cache_priv;
+
+		if (!cache)
+			return -OCF_ERR_CACHE_NOT_EXIST;
+
 		cache_priv = ocf_cache_get_priv(cache);
 		core_id = find_free_core_id(cache_priv->core_id_bitmap);
 		if (core_id == OCF_CORE_MAX)
