@@ -79,6 +79,8 @@ static const char *core_states_name[] = {
 
 #define NOT_RUNNING_STATE "Not running"
 
+#define STANDBY_DETACHED_STATE "Standby detached"
+
 #define CACHE_STATE_LENGHT 20
 
 #define CAS_LOG_FILE "/var/log/opencas.log"
@@ -487,9 +489,13 @@ void print_err(int error_code)
 		cas_printf(LOG_ERR, "%s\n", msg);
 }
 
-const char *get_cache_state_name(int cache_state)
+const char *get_cache_state_name(int cache_state, bool detached)
 {
 	int i;
+
+	if (detached == true)
+		return STANDBY_DETACHED_STATE;
+
 	/* iterate over states in reverse order, so that combined states "running&stopping"
 	 * would be described as "stopping" */
 	for (i = ocf_cache_state_max - 1; i >= 0; --i) {
@@ -774,9 +780,6 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 	cache_size = sizeof(*cache);
 	cache_size += info->info.core_count * sizeof(cache->cores[0]);
 
-	if (info->info.standby_detached)
-		return NULL;
-
 	cache = (struct cache_device *) malloc(cache_size);
 	if (NULL == cache) {
 		return NULL;
@@ -786,6 +789,7 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 	cache->expected_core_count = info->info.core_count;
 	cache->id = cache_id;
 	cache->state = info->info.state;
+	cache->standby_detached = info->info.standby_detached;
 
 	if (strncpy_s(cache->device, sizeof(cache->device),
 			info->cache_path_name,
@@ -2751,7 +2755,7 @@ int list_caches(unsigned int list_format, bool by_id_path)
 		float cache_flush_prog;
 		float core_flush_prog;
 
-		if (!by_id_path) {
+		if (!by_id_path && !curr_cache->standby_detached) {
 			if (get_dev_path(curr_cache->device, curr_cache->device,
 					sizeof(curr_cache->device))) {
 				cas_printf(LOG_WARNING, "WARNING: Cannot resolve path "
@@ -2767,7 +2771,8 @@ int list_caches(unsigned int list_format, bool by_id_path)
 			snprintf(mode_string, sizeof(mode_string), "wb->%s",
 					cache_mode_to_name(curr_cache->mode));
 		} else {
-			tmp_status = get_cache_state_name(curr_cache->state);
+			tmp_status = get_cache_state_name(curr_cache->state, curr_cache->standby_detached);
+
 			if (curr_cache->state & (1 << ocf_cache_state_standby)) {
 				strncpy(mode_string, "-", sizeof(mode_string));
 				snprintf(cache_ctrl_dev, sizeof(cache_ctrl_dev),
@@ -2783,7 +2788,7 @@ int list_caches(unsigned int list_format, bool by_id_path)
 			"%s,%u,%s,%s,%s,%s\n",
 			"cache", /* type */
 			curr_cache->id, /* id */
-			curr_cache->device, /* device path */
+			curr_cache->standby_detached ? "-" : curr_cache->device, /* device path */
 			tmp_status, /* cache status */
 			mode_string, /* write policy */
 			cache_ctrl_dev  /* device */);

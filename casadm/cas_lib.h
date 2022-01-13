@@ -49,6 +49,7 @@ struct cache_device {
 	int flushed;
 	unsigned size;
 	int core_count;
+	bool standby_detached;
 	struct core_device cores[];
 };
 
@@ -87,7 +88,7 @@ enum output_format_t {
 const char *cleaning_policy_to_name(uint8_t policy);
 const char *promotion_policy_to_name(uint8_t policy);
 const char *cache_mode_to_name(uint8_t cache_mode);
-const char *get_cache_state_name(int cache_state);
+const char *get_cache_state_name(int cache_state, bool detached);
 const char *get_core_state_name(int core_state);
 const char *seq_cutoff_policy_to_name(uint8_t seq_cutoff_policy);
 

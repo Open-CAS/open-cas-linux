@@ -589,7 +589,7 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 			      "Flushing", flush_progress);
 	} else {
 		print_kv_pair(outfile, "Status", "%s",
-				get_cache_state_name(cache_info->info.state));
+				get_cache_state_name(cache_info->info.state, cache_info->info.standby_detached));
 	}
 
 	return SUCCESS;
