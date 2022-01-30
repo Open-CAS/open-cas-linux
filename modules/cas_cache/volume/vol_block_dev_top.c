@@ -382,7 +382,7 @@ static void blkdev_handle_bio_noflush(struct bd_object *bvol, struct bio *bio)
 static void blkdev_complete_flush(struct ocf_io *io, int error)
 {
 	struct bio *bio = io->priv1;
-	struct bd_object *bvol = io->priv2;
+	ocf_core_t core = io->priv2;
 	int result = map_cas_err_to_generic(error);
 
 	ocf_io_put(io);
