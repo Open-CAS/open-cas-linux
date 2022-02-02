@@ -15,8 +15,8 @@ from api.cas.core import SEQ_CUTOFF_THRESHOLD_MAX
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
-from test_tools.fio.fio_param import ReadWrite, IoEngine
-from test_utils.os_utils import Udev, sync
+from test_tools.fio.fio_param import ReadWrite, IoEngine, CpusAllowedPolicy
+from test_utils.os_utils import Udev, sync, get_dut_cpu_physical_cores
 from test_utils.size import Size, Unit
 
 
@@ -74,10 +74,100 @@ def test_seq_cutoff_multi_core(thresholds_list, cache_mode, io_type, io_type_las
             core.set_seq_cutoff_threshold(thresholds[i])
 
     with TestRun.step("Creating FIO command (one job per core)"):
+        block_size = Size(4, Unit.KibiByte)
+        fio = (Fio().create_command()
+               .io_engine(IoEngine.libaio)
+               .block_size(block_size)
+               .direct())
+
+        # Run sequential IO against first three cores
+        for i, core in enumerate(cores[:-1]):
+            fio_job = fio.add_job(job_name=f"core_{core.core_id}")
+            fio_job.size(io_sizes[i])
+            fio_job.read_write(io_type)
+            fio_job.target(core.path)
+            writes_before.append(core.get_statistics().block_stats.cache.writes)
+
+        # Run random IO against the last core
+        fio_job = fio.add_job(job_name=f"core_{cores[-1].core_id}")
+        fio_job.size(io_sizes[-1])
+        fio_job.read_write(io_type_last)
+        fio_job.target(cores[-1].path)
+        writes_before.append(cores[-1].get_statistics().block_stats.cache.writes)
+
+    with TestRun.step("Running IO against all cores"):
+        fio.run()
+
+    with TestRun.step("Verifying writes to cache count after IO"):
+        margins = []
+        for i, core in enumerate(cores[:-1]):
+            promotion_count = core.get_seq_cut_off_parameters().promotion_count
+            cutoff_threshold = thresholds[i]
+            margins.append(min(block_size * (promotion_count - 1), cutoff_threshold))
+        margin = sum(margins)
+
+        for i, core in enumerate(cores[:-1]):
+            verify_writes_count(core, writes_before[i], thresholds[i], io_sizes[i],
+                                VerifyType.POSITIVE, io_margin=margin)
+
+        verify_writes_count(cores[-1], writes_before[-1], thresholds[-1], io_sizes[-1],
+                            VerifyType.EQUAL)
+
+
+@pytest.mark.parametrize("thresholds_list", [[
+    random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))),
+    random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))),
+    random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))),
+    random.randint(1, int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte))),
+]])
+@pytest.mark.parametrize("cache_mode, io_type, io_type_last", [
+    (CacheMode.WB, ReadWrite.write, ReadWrite.randwrite),
+    (CacheMode.WT, ReadWrite.write, ReadWrite.randwrite),
+    (CacheMode.WA, ReadWrite.read, ReadWrite.randread),
+    (CacheMode.WO, ReadWrite.write, ReadWrite.randwrite)])
+@pytest.mark.parametrizex("cls", CacheLineSize)
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_seq_cutoff_multi_core_io_pinned(thresholds_list, cache_mode, io_type, io_type_last, cls):
+    """
+    title: Sequential cut-off tests during sequential and random IO 'always' policy with 4 cores
+    description: |
+        Testing if amount of data written to cache after sequential writes for different
+        sequential cut-off thresholds on each core, while running sequential IO, pinned,
+        on 3 out of 4 cores and random IO against the last core, is correct.
+    pass_criteria:
+        - Amount of written blocks to cache is less or equal than amount set
+          with sequential cut-off threshold for three first cores.
+        - Amount of written blocks to cache is equal to io size run against last core.
+    """
+    with TestRun.step(f"Test prepare (start cache (cache line size: {cls}) and add cores)"):
+        cache, cores = prepare(cores_count=len(thresholds_list), cache_line_size=cls)
+        writes_before = []
+        io_sizes = []
+        thresholds = []
+        fio_additional_size = Size(10, Unit.Blocks4096)
+        for i in range(len(thresholds_list)):
+            thresholds.append(Size(thresholds_list[i], Unit.KibiByte))
+            io_sizes.append((thresholds[i] + fio_additional_size).align_down(0x1000))
+
+    with TestRun.step(f"Setting cache mode to {cache_mode}"):
+        cache.set_cache_mode(cache_mode)
+
+    for i, core in TestRun.iteration(enumerate(cores), "Set sequential cut-off parameters for "
+                                                       "all cores"):
+        with TestRun.step(f"Setting core sequential cut off policy to {SeqCutOffPolicy.always}"):
+            core.set_seq_cutoff_policy(SeqCutOffPolicy.always)
+
+        with TestRun.step(f"Setting core sequential cut off threshold to {thresholds[i]}"):
+            core.set_seq_cutoff_threshold(thresholds[i])
+
+    with TestRun.step("Creating FIO command (one job per core)"):
         fio = (Fio().create_command()
                .io_engine(IoEngine.libaio)
                .block_size(Size(1, Unit.Blocks4096))
-               .direct())
+               .direct()
+               .cpus_allowed(get_dut_cpu_physical_cores())
+               .cpus_allowed_policy(CpusAllowedPolicy.split))
 
         # Run sequential IO against first three cores
         for i, core in enumerate(cores[:-1]):
@@ -226,7 +316,8 @@ def test_seq_cutoff_thresh_fill(threshold_param, cls, io_dir):
         verify_writes_count(cores[0], writes_before, threshold, io_size, VerifyType.POSITIVE)
 
 
-def verify_writes_count(core, writes_before, threshold, io_size, ver_type=VerifyType.NEGATIVE):
+def verify_writes_count(core, writes_before, threshold, io_size, ver_type=VerifyType.NEGATIVE,
+                        io_margin=Size(8, Unit.KibiByte)):
     writes_after = core.get_statistics().block_stats.cache.writes
     writes_difference = writes_after - writes_before
 
@@ -235,7 +326,6 @@ def verify_writes_count(core, writes_before, threshold, io_size, ver_type=Verify
             TestRun.fail(f"Wrong writes count: {writes_difference} , expected at least "
                          f"{io_size}")
     elif ver_type is VerifyType.POSITIVE:
-        io_margin = Size(8, Unit.KibiByte)
         if writes_difference >= threshold + io_margin:
             TestRun.fail(f"Wrong writes count: {writes_difference} , expected at most "
                          f"{threshold + io_margin}")
