@@ -998,9 +998,12 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	cmd.line_size = line_size;
 	cmd.force = (uint8_t)force;
 
-	if (run_ioctl_interruptible_retry(fd, KCAS_IOCTL_START_CACHE, &cmd,
-			"Starting cache", cache_id, OCF_CORE_ID_INVALID) < 0) {
+	status = run_ioctl_interruptible_retry(fd, KCAS_IOCTL_START_CACHE, &cmd,
+			"Starting cache", cache_id, OCF_CORE_ID_INVALID);
+	cache_id = cmd.cache_id;
+	if (status < 0) {
 		close(fd);
+
 		if (cmd.ext_err_code == OCF_ERR_NO_FREE_RAM) {
 			min_free_ram_gb = cmd.min_free_ram;
 			min_free_ram_gb /= GiB;
@@ -2994,7 +2997,7 @@ int standby_load(int cache_id, ocf_cache_line_size_t line_size,
 	return start_cache(cache_id,
 			CACHE_INIT_STANDBY_LOAD,
 			cache_device,
-			ocf_cache_mode_default,
+			ocf_cache_mode_none,
 			line_size,
 			0);
 }
