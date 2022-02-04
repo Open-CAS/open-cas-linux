@@ -967,9 +967,8 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 {
 	int fd = 0;
 	struct kcas_start_cache cmd;
-	struct cache_device **caches;
 	struct cache_device *cache;
-	int i, status, caches_count;
+	int i, status;
 	double min_free_ram_gb;
 
 	/* check if cache device given exists */
@@ -983,21 +982,6 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	fd = open_ctrl_device();
 	if (fd == -1)
 		return FAILURE;
-
-	if (cache_id == 0) {
-		cache_id = 1;
-		caches = get_cache_devices(&caches_count, false);
-		if (caches != NULL) {
-			psort(caches, caches_count, sizeof(struct cache_device*), caches_compare);
-			for (i = 0; i < caches_count; ++i) {
-				if (caches[i]->id == cache_id) {
-					cache_id += 1;
-				}
-			}
-
-			free_cache_devices_list(caches, caches_count);
-		}
-	}
 
 	memset(&cmd, 0, sizeof(cmd));
 
