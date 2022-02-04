@@ -44,7 +44,7 @@ def start():
 
     for cache in config.caches.values():
         try:
-            opencas.start_cache(cache, True)
+            opencas.start_cache(cache, load=True)
         except opencas.casadm.CasadmError as e:
             eprint(
                 "Unable to load cache {0} ({1}). Reason:\n{2}".format(
@@ -116,7 +116,7 @@ def init(force):
 
     for cache in config.caches.values():
         try:
-            opencas.start_cache(cache, False, force)
+            opencas.start_cache(cache, load=False, force=force)
         except opencas.casadm.CasadmError as e:
             eprint(
                 "Unable to start cache {0} ({1}). Reason:\n{2}".format(

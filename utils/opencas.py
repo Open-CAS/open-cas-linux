@@ -197,7 +197,7 @@ class cas_config(object):
         def __init__(self, cache_id, device, cache_mode, **params):
             self.cache_id = int(cache_id)
             self.device = device
-            self.cache_mode = cache_mode
+            self.cache_mode = cache_mode.lower()
             self.params = params
             self.cores = dict()
 
@@ -215,7 +215,7 @@ class cas_config(object):
 
             params = dict()
             if len(values) > 3:
-                for param in values[3].split(','):
+                for param in values[3].lower().split(','):
                     param_name, param_value = param.split('=')
                     if param_name in params:
                         raise ValueError('Invalid cache configuration (repeated parameter')
@@ -273,19 +273,19 @@ class cas_config(object):
                 )
 
         def check_cache_mode_valid(self, cache_mode):
-            if cache_mode.lower() not in ['wt', 'pt', 'wa', 'wb', 'wo']:
+            if cache_mode not in ['wt', 'pt', 'wa', 'wb', 'wo']:
                 raise ValueError(f'Invalid cache mode {cache_mode}')
 
         def check_cleaning_policy_valid(self, cleaning_policy):
-            if cleaning_policy.lower() not in ['acp', 'alru', 'nop']:
+            if cleaning_policy not in ['acp', 'alru', 'nop']:
                 raise ValueError(f'{cleaning_policy} is invalid cleaning policy name')
 
         def check_lazy_startup_valid(self, lazy_startup):
-            if lazy_startup.lower() not in ["true", "false"]:
+            if lazy_startup not in ["true", "false"]:
                 raise ValueError('{0} is invalid lazy_startup value'.format(lazy_startup))
 
         def check_promotion_policy_valid(self, promotion_policy):
-            if promotion_policy.lower() not in ['always', 'nhit']:
+            if promotion_policy not in ['always', 'nhit']:
                 raise ValueError(f'{promotion_policy} is invalid promotion policy name')
 
         def check_cache_line_size_valid(self, cache_line_size):
@@ -319,7 +319,7 @@ class cas_config(object):
             return ret
 
         def is_lazy(self):
-            return self.params.get("lazy_startup", "false").lower() == "true"
+            return self.params.get("lazy_startup", "false") == "true"
 
     class core_config(object):
         def __init__(self, cache_id, core_id, path, **params):
@@ -369,7 +369,7 @@ class cas_config(object):
 
         def validate_parameter(self, param_name, param_value):
             if param_name == "lazy_startup":
-                if param_value.lower() not in ["true", "false"]:
+                if param_value not in ["true", "false"]:
                     raise ValueError(
                         f"{param_value} is invalid value for '{param_name}' core param"
                     )
@@ -401,7 +401,7 @@ class cas_config(object):
             return ret
 
         def is_lazy(self):
-            return self.params.get("lazy_startup", "false").lower() == "true"
+            return self.params.get("lazy_startup", "false") == "true"
 
     def __init__(self, caches=None, cores=None, version_tag=None):
         self.caches = caches if caches else dict()
@@ -820,9 +820,9 @@ def wait_for_startup(timeout=300, interval=5):
     def start_device(dev):
         if os.path.exists(dev.device):
             if type(dev) is cas_config.core_config:
-                add_core(dev, True)
+                add_core(dev, try_add=True)
             elif type(dev) is cas_config.cache_config:
-                start_cache(dev, True)
+                start_cache(dev, load=True)
 
     stop_time = time.time() + int(timeout)
 
