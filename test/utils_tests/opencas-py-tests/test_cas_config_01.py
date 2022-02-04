@@ -316,7 +316,7 @@ def test_cas_config_get_by_id_path_not_found(mock_listdir, mock_realpath):
                 "2  /dev/dummy0n2    pt ioclass_file=mango.csv",
                 "3  /dev/dummy0n3    WA cache_line_size=16",
                 ("4  /dev/dummyc    wb cache_line_size=16,"
-                    "ioclass_file=mango.csv,cleaning_policy=nop"),
+                    "ioclass_file=mango.csv,cleaning_policy=nop,target_failover_state=standby"),
             ],
             [],
         ),

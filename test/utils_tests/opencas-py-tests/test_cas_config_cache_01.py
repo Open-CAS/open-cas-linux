@@ -187,8 +187,10 @@ def test_cache_config_from_line_missing_ioclass_file(
         "ioclass_file=ioclass.csv,ioclass_file=ioclass.csv",
         "cleaning_policy=nop,cleaning_policy=acp",
         "cleaning_policy=",
+        "clining_polisi=nop",
         "cleaning_policy=INVALID",
         "ioclass_file=ioclass.csv, cleaning_policy=nop",
+        "ioclas_file=ioclass.csv",
         "cache_line_size=4,cache_line_size=8",
         "cache_line_size=",
         "cache_line_size=0",
@@ -198,14 +200,20 @@ def test_cache_config_from_line_missing_ioclass_file(
         "cache_line_size=-1",
         "cache_line_size=four",
         "cache_line_size=128",
+        "cach_lin_siz=4",
         "promotion_policy=111111",
         "promotion_policy=",
         "promotion_policy=dinosaurs",
         "promotion_policy=Robert'); DROP TABLE Students;--",
         "promotion_policy=awlays",
         "promotion_policy=nnhit",
+        "demolition_policy=nhit",
         "lazy_startup=yes",
         "lazy_startup=absolutely",
+        "hasty_startup=true",
+        "target_failover_state=no",
+        "target_failover_state=maybe",
+        "target_failrover_state=standby",
     ],
 )
 @mock.patch("os.path.exists")
@@ -242,10 +250,12 @@ def test_cache_config_from_line_parameter_validation_01(
         "ioclass_file=ioclass.csv,cache_line_size=4,cleaning_policy=nop",
         "promotion_policy=nhit",
         "promotion_policy=always",
+        "target_failover_state=standby",
+        "target_failover_state=active",
         "lazy_startup=true",
         "lazy_startup=false",
         ("ioclass_file=ioclass.csv,cache_line_size=4,cleaning_policy=nop,promotion_policy=always,"
-            "lazy_startup=true"),
+            "lazy_startup=true,target_failover_state=active"),
     ],
 )
 @mock.patch("os.path.exists")
@@ -416,6 +426,7 @@ def test_cache_config_from_line_cache_id_validation_02(
             "cache_mode": "wo",
             "promotion_policy": "always",
             "cache_line_size": "16",
+            "lazy_startup": "true"
         },
         {
             "cache_id": "1",
@@ -423,6 +434,7 @@ def test_cache_config_from_line_cache_id_validation_02(
             "cache_mode": "wo",
             "promotion_policy": "nhit",
             "cache_line_size": "16",
+            "target_failover_state": "active",
         },
     ],
 )
