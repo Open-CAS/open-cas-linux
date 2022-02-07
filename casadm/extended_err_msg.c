@@ -155,6 +155,10 @@ struct {
 		" start fresh cache instance.\n"
 	},
 	{
+		OCF_ERR_SUPERBLOCK_MISMATCH,
+		"Metadata on the device doesn't match with metadata in DRAM"
+	},
+	{
 		OCF_ERR_CACHE_NAME_MISMATCH,
 		"Cache id specified by user and loaded from metadata are different"
 	},
