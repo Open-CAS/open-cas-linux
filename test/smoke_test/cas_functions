@@ -30,8 +30,11 @@ restore_config() {
 start_cache() {
     check_options ${FUNCNAME[0]}
 
-    local COMMAND="$CAS --start-cache --cache-device $CACHE_DEVICE_OPTION --cache-id $CACHE_ID_OPTION"
+    local COMMAND="$CAS --start-cache --cache-device $CACHE_DEVICE_OPTION"
 
+    if [ -n "$CACHE_ID_OPTION" ] ; then
+        COMMAND="$COMMAND --cache-id $CACHE_ID_OPTION"
+    fi
     if [ -n "$CACHE_FORCE_OPTION" ] ; then
         COMMAND="$COMMAND --force"
     fi

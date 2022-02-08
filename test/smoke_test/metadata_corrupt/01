@@ -114,7 +114,7 @@ do
 	fi
 
 	# Start again with load option, this should fail, metadata is corrupted.
-	NEGATIVE_TEST_OPTION="1" CACHE_ID_OPTION="1" CACHE_LOAD_METADATA_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" start_cache
+	NEGATIVE_TEST_OPTION="1" CACHE_LOAD_METADATA_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" start_cache
 done
 
 
