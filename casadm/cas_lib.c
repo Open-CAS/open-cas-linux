@@ -967,9 +967,8 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 {
 	int fd = 0;
 	struct kcas_start_cache cmd;
-	struct cache_device **caches;
 	struct cache_device *cache;
-	int i, status, caches_count;
+	int i, status;
 	double min_free_ram_gb;
 
 	/* check if cache device given exists */
@@ -983,21 +982,6 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	fd = open_ctrl_device();
 	if (fd == -1)
 		return FAILURE;
-
-	if (cache_id == 0) {
-		cache_id = 1;
-		caches = get_cache_devices(&caches_count, false);
-		if (caches != NULL) {
-			psort(caches, caches_count, sizeof(struct cache_device*), caches_compare);
-			for (i = 0; i < caches_count; ++i) {
-				if (caches[i]->id == cache_id) {
-					cache_id += 1;
-				}
-			}
-
-			free_cache_devices_list(caches, caches_count);
-		}
-	}
 
 	memset(&cmd, 0, sizeof(cmd));
 
@@ -1014,9 +998,12 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	cmd.line_size = line_size;
 	cmd.force = (uint8_t)force;
 
-	if (run_ioctl_interruptible_retry(fd, KCAS_IOCTL_START_CACHE, &cmd,
-			"Starting cache", cache_id, OCF_CORE_ID_INVALID) < 0) {
+	status = run_ioctl_interruptible_retry(fd, KCAS_IOCTL_START_CACHE, &cmd,
+			"Starting cache", cache_id, OCF_CORE_ID_INVALID);
+	cache_id = cmd.cache_id;
+	if (status < 0) {
 		close(fd);
+
 		if (cmd.ext_err_code == OCF_ERR_NO_FREE_RAM) {
 			min_free_ram_gb = cmd.min_free_ram;
 			min_free_ram_gb /= GiB;
@@ -3014,7 +3001,7 @@ int standby_load(int cache_id, ocf_cache_line_size_t line_size,
 	return start_cache(cache_id,
 			CACHE_INIT_STANDBY_LOAD,
 			cache_device,
-			ocf_cache_mode_default,
+			ocf_cache_mode_none,
 			line_size,
 			0);
 }

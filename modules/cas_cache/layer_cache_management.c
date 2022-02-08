@@ -1839,7 +1839,6 @@ int cache_mngt_prepare_cache_device_cfg(struct ocf_mngt_cache_device_config *cfg
 		&cfg->volume_type);
 }
 
-
 int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_attach_config *attach_cfg,
 		struct kcas_start_cache *cmd)
@@ -2043,39 +2042,47 @@ static int _cache_mngt_cache_priv_init(ocf_cache_t cache)
 	return 0;
 }
 
-struct cache_mngt_check_metadata_context {
+struct cache_mngt_probe_metadata_context {
 	struct completion cmpl;
 	char *cache_name;
 	int *result;
+
+	char *cache_name_meta;
+	ocf_cache_mode_t *cache_mode_meta;
+	ocf_cache_line_size_t *cache_line_size_meta;
 };
 
-static void cache_mngt_check_metadata_end(void *priv, int error,
+static void cache_mngt_probe_metadata_end(void *priv, int error,
 		struct ocf_metadata_probe_status *status)
 {
-	struct cache_mngt_check_metadata_context *context = priv;
+	struct cache_mngt_probe_metadata_context *context = priv;
 
 	*context->result = error;
 
 	if (error == -OCF_ERR_NO_METADATA) {
 		printk(KERN_ERR "No cache metadata found!\n");
+		goto err;
 	} else if (error == -OCF_ERR_METADATA_VER) {
 		printk(KERN_ERR "Cache metadata version mismatch\n");
+		goto err;
 	} else if (error) {
 		printk(KERN_ERR "Failed to load cache metadata!\n");
-	} else if (strncmp(status->cache_name, context->cache_name,
-			OCF_CACHE_NAME_SIZE)) {
-		*context->result = -OCF_ERR_CACHE_NAME_MISMATCH;
-		printk(KERN_ERR "Loaded cache name is invalid: %s!\n",
-				status->cache_name);
+		goto err;
 	}
 
+	strlcpy(context->cache_name_meta, status->cache_name,
+			OCF_CACHE_NAME_SIZE);
+	*(context->cache_mode_meta) = status->cache_mode;
+	*(context->cache_line_size_meta) = status->cache_line_size;
+err:
 	complete(&context->cmpl);
 }
 
-static int _cache_mngt_check_metadata(struct ocf_mngt_cache_config *cfg,
-		char *cache_path_name)
+static int _cache_mngt_probe_metadata(char *cache_path_name,
+		char *cache_name_meta, ocf_cache_mode_t *cache_mode_meta,
+		ocf_cache_line_size_t *cache_line_size_meta)
 {
-	struct cache_mngt_check_metadata_context context;
+	struct cache_mngt_probe_metadata_context context;
 	struct block_device *bdev;
 	ocf_volume_t volume;
 	char holder[] = "CAS CHECK METADATA\n";
@@ -2094,10 +2101,12 @@ static int _cache_mngt_check_metadata(struct ocf_mngt_cache_config *cfg,
 		goto out_bdev;
 
 	init_completion(&context.cmpl);
-	context.cache_name = cfg->name;
 	context.result = &result;
+	context.cache_name_meta = cache_name_meta;
+	context.cache_mode_meta = cache_mode_meta;
+	context.cache_line_size_meta = cache_line_size_meta;
 
-	ocf_metadata_probe(cas_ctx, volume, cache_mngt_check_metadata_end,
+	ocf_metadata_probe(cas_ctx, volume, cache_mngt_probe_metadata_end,
 			&context);
 	wait_for_completion(&context.cmpl);
 
@@ -2351,9 +2360,12 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		struct kcas_start_cache *cmd)
 {
 	struct _cache_mngt_attach_context *context;
-	ocf_cache_t cache;
+	ocf_cache_t cache, tmp_cache = NULL;
+	char cache_name_meta[OCF_CACHE_NAME_SIZE];
 	struct cache_priv *cache_priv;
 	int result = 0, rollback_result = 0;
+	ocf_cache_mode_t cache_mode_meta;
+	ocf_cache_line_size_t cache_line_size_meta;
 
 	if (!try_module_get(THIS_MODULE))
 		return -KCAS_ERR_SYSTEM;
@@ -2367,11 +2379,40 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	switch (cmd->init_cache) {
 	case CACHE_INIT_LOAD:
 	case CACHE_INIT_STANDBY_LOAD:
-		result = _cache_mngt_check_metadata(cfg, cmd->cache_path_name);
+		result = _cache_mngt_probe_metadata(cmd->cache_path_name,
+				cache_name_meta, &cache_mode_meta,
+				&cache_line_size_meta);
 		if (result) {
 			module_put(THIS_MODULE);
 			return result;
 		}
+
+		/* Need to return name from metadata now for caller to properly
+		 * communicate the error to user */
+		if (cache_id_from_name(&cmd->cache_id, cache_name_meta)) {
+			printk(KERN_ERR "Improper cache name format on %s.\n",
+					cmd->cache_path_name);
+
+			module_put(THIS_MODULE);
+			return -OCF_ERR_START_CACHE_FAIL;
+		}
+
+		result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name_meta,
+				OCF_CACHE_NAME_SIZE, &tmp_cache);
+
+		if (result != -OCF_ERR_CACHE_NOT_EXIST) {
+			printk(KERN_ERR "Can't load %s. Cache using that name "
+					"already exists.\n", cache_name_meta);
+
+			ocf_mngt_cache_put(tmp_cache);
+			module_put(THIS_MODULE);
+			return -OCF_ERR_CACHE_EXIST;
+		}
+
+		result = 0;
+		strlcpy(cfg->name, cache_name_meta, OCF_CACHE_NAME_SIZE);
+		cfg->cache_mode = cache_mode_meta;
+		cfg->cache_line_size = cache_line_size_meta;
 	default:
 		break;
 	}
