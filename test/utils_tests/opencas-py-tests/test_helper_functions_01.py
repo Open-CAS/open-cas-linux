@@ -896,7 +896,7 @@ def test_last_resort_add_04(mock_start, mock_add, mock_exists, mock_run, mock_li
 @patch("os.path.exists")
 @patch("opencas.add_core")
 @patch("opencas.start_cache")
-def test_last_resort_add_04(mock_start, mock_add, mock_exists, mock_run, mock_list, mock_config):
+def test_last_resort_add_05(mock_start, mock_add, mock_exists, mock_run, mock_list, mock_config):
     """
     Check if adding cores/starting caches is attempted while waiting for startup for lazy_startup
     devices once before returning.
@@ -934,7 +934,7 @@ def test_last_resort_add_04(mock_start, mock_add, mock_exists, mock_run, mock_li
 @patch("os.path.exists")
 @patch("opencas.add_core")
 @patch("opencas.start_cache")
-def test_last_resort_add_05(mock_start, mock_add, mock_exists, mock_run, mock_list, mock_config):
+def test_last_resort_add_06(mock_start, mock_add, mock_exists, mock_run, mock_list, mock_config):
     """
     Check if adding cores/starting caches is not attempted while waiting for startup for lazy
     startup devices if paths show up after half of the startup timeout expires.
