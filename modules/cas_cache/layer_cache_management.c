@@ -1850,7 +1850,25 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	if (!cmd)
 		return -OCF_ERR_INVAL;
 
-	if (cmd->cache_id == OCF_CACHE_ID_INVALID) {
+	if (cmd->init_cache == CACHE_INIT_LOAD ||
+			cmd->init_cache == CACHE_INIT_STANDBY_LOAD) {
+		if (cmd->cache_id != OCF_CACHE_ID_INVALID) {
+			printk(KERN_WARNING "Specifying cache id while loading "
+					"cache is forbidden\n");
+			return -OCF_ERR_INVAL;
+		}
+
+		if (cmd->line_size != ocf_cache_line_size_none) {
+			printk(KERN_WARNING "Specifying cache line size while "
+					"loading cache is forbidden\n");
+			return -OCF_ERR_INVAL;
+		}
+		if (cmd->caching_mode != ocf_cache_mode_none) {
+			printk(KERN_WARNING "Specifying cache mode while "
+					"loading cache is forbidden\n");
+			return -OCF_ERR_INVAL;
+		}
+	} else if (cmd->cache_id == OCF_CACHE_ID_INVALID) {
 		cache_id = find_free_cache_id(cas_ctx);
 		if (cache_id == OCF_CACHE_ID_INVALID)
 			return -OCF_ERR_INVAL;
