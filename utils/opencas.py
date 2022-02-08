@@ -60,8 +60,9 @@ class casadm:
         return cls.run_cmd(cmd)
 
     @classmethod
-    def start_cache(cls, device, cache_id=None, cache_mode=None,
-                    cache_line_size=None, load=False, force=False):
+    def start_cache(
+        cls, device, cache_id=None, cache_mode=None, cache_line_size=None, load=False, force=False
+    ):
         cmd = [cls.casadm_path,
                '--start-cache',
                '--cache-device', device]
@@ -73,6 +74,22 @@ class casadm:
             cmd += ['--cache-line-size', str(cache_line_size)]
         if load:
             cmd += ['--load']
+        if force:
+            cmd += ['--force']
+        return cls.run_cmd(cmd)
+
+    @classmethod
+    def start_standby_cache(
+        cls, device, cache_id=None, cache_line_size=None, load=False, force=False
+    ):
+        cmd = [cls.casadm_path,
+               '--standby',
+               '--init' if not load else '--load',
+               '--cache-device', device]
+        if cache_id:
+            cmd += ['--cache-id', str(cache_id)]
+        if cache_line_size:
+            cmd += ['--cache-line-size', str(cache_line_size)]
         if force:
             cmd += ['--force']
         return cls.run_cmd(cmd)
@@ -250,6 +267,8 @@ class cas_config(object):
                 self.check_cache_line_size_valid(param_value)
             elif param_name == "lazy_startup":
                 self.check_lazy_startup_valid(param_value)
+            elif param_name == "target_failover_state":
+                self.check_failover_state_valid(param_value)
             else:
                 raise ValueError(f'{param_name} is invalid parameter name')
 
@@ -283,6 +302,10 @@ class cas_config(object):
         def check_lazy_startup_valid(self, lazy_startup):
             if lazy_startup not in ["true", "false"]:
                 raise ValueError('{0} is invalid lazy_startup value'.format(lazy_startup))
+
+        def check_failover_state_valid(self, failover_state):
+            if failover_state not in ["active", "standby"]:
+                raise ValueError(f"{failover_state} is invalid target_failover_state value")
 
         def check_promotion_policy_valid(self, promotion_policy):
             if promotion_policy not in ['always', 'nhit']:
@@ -545,13 +568,24 @@ class cas_config(object):
 
 
 def start_cache(cache, load, force=False):
-    casadm.start_cache(
+    target_state = cache.params.get("target_failover_state")
+    if target_state is not None and target_state == "standby":
+        casadm.start_standby_cache(
             device=cache.device,
-            cache_id=cache.cache_id,
-            cache_mode=cache.cache_mode,
-            cache_line_size=cache.params.get('cache_line_size'),
+            cache_id=cache.cache_id if not load else None,
+            cache_line_size=cache.params.get("cache_line_size") if not load else None,
             load=load,
-            force=force)
+            force=force
+        )
+    else:
+        casadm.start_cache(
+            device=cache.device,
+            cache_id=cache.cache_id if not load else None,
+            cache_mode=cache.cache_mode if not load else None,
+            cache_line_size=cache.params.get('cache_line_size') if not load else None,
+            load=load,
+            force=force
+        )
 
 
 def configure_cache(cache):
