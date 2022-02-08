@@ -1473,7 +1473,7 @@ int io_class_is_missing() {
 			/* Option is set, check if this option is allowed */
 			mask = (1 << io_class_params.subcmd);
 			if (0 == (mask & iter->priv)) {
-				cas_printf(LOG_INFO, "Option '%s' is not allowed\n", option_name);
+				cas_printf(LOG_ERR, "Option '%s' is not allowed\n", option_name);
 				result = -1;
 			}
 
@@ -1481,7 +1481,7 @@ int io_class_is_missing() {
 			/* Option is missing, check if it is required for this sub-command*/
 			mask = (1 << io_class_params.subcmd) | (1 << io_class_opt_flag_required);
 			if (mask == (iter->priv & mask)) {
-				cas_printf(LOG_INFO, "Option '%s' is missing\n", option_name);
+				cas_printf(LOG_ERR, "Option '%s' is missing\n", option_name);
 				result = -1;
 			}
 		}
@@ -1741,12 +1741,12 @@ int script_command_is_valid() {
 
 		if (option_is_set) {
 			if (!is_option_allowed(option_id)) {
-				cas_printf(LOG_INFO, "Option '%s' is not allowed\n", option_name);
+				cas_printf(LOG_ERR, "Option '%s' is not allowed\n", option_name);
 				result = FAILURE;
 			}
 		} else {
 			if (is_option_required(option_id)) {
-				cas_printf(LOG_INFO, "Option '%s' is missing\n", option_name);
+				cas_printf(LOG_ERR, "Option '%s' is missing\n", option_name);
 				result = FAILURE;
 			}
 		}
@@ -2053,7 +2053,7 @@ int standby_is_missing() {
 			/* Option is set, check if this option is allowed */
 			mask = (1 << standby_params.subcmd);
 			if (0 == (mask & iter->priv)) {
-				cas_printf(LOG_INFO, "Option '%s' is not allowed\n", option_name);
+				cas_printf(LOG_ERR, "Option '%s' is not allowed\n", option_name);
 				result = -1;
 			}
 
@@ -2061,7 +2061,7 @@ int standby_is_missing() {
 			/* Option is missing, check if it is required for this sub-command*/
 			mask = (1 << standby_params.subcmd) | (1 << standby_opt_flag_required);
 			if (mask == (iter->priv & mask)) {
-				cas_printf(LOG_INFO, "Option '%s' is missing\n", option_name);
+				cas_printf(LOG_ERR, "Option '%s' is missing\n", option_name);
 				result = -1;
 			}
 		}
