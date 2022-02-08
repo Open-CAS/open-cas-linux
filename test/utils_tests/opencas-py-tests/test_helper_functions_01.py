@@ -74,7 +74,7 @@ def test_cas_settle_cores_didnt_start_02(mock_add, mock_exists, mock_run, mock_l
             "type": "cache",
             "id": "1",
             "disk": "/dev/dummy_cache",
-            "status": "Active",
+            "status": "Standby",
             "write policy": "wt",
             "device": "-",
         }
@@ -303,7 +303,14 @@ def test_cas_settle_caches_didnt_start_01(
     mock_config.return_value = Mock(
         spec_set=opencas.cas_config(),
         cores=[],
-        caches={42: opencas.cas_config.cache_config(42, "/dev/dummy", "wt")},
+        caches={
+            42: opencas.cas_config.cache_config(
+                42,
+                "/dev/dummy",
+                "wt",
+                target_failover_state="standby"
+            )
+        },
     )
 
     result = opencas.wait_for_startup(timeout=0, interval=0)
@@ -802,10 +809,10 @@ def test_last_resort_add_02(mock_start, mock_add, mock_exists, mock_run, mock_li
 
     result = opencas.wait_for_startup(timeout=0, interval=0)
 
-    mock_start.assert_any_call(config.caches[1], True)
-    mock_start.assert_any_call(config.caches[2], True)
-    mock_add.assert_any_call(config.cores[0], True)
-    mock_add.assert_any_call(config.cores[1], True)
+    mock_start.assert_any_call(config.caches[1], load=True)
+    mock_start.assert_any_call(config.caches[2], load=True)
+    mock_add.assert_any_call(config.cores[0], try_add=True)
+    mock_add.assert_any_call(config.cores[1], try_add=True)
     mock_run.assert_called_with(["udevadm", "settle"])
 
 
@@ -883,10 +890,10 @@ def test_last_resort_add_04(mock_start, mock_add, mock_exists, mock_run, mock_li
 
     result = opencas.wait_for_startup(timeout=2, interval=0.1)
 
-    mock_start.assert_any_call(config.caches[1], True)
-    mock_start.assert_any_call(config.caches[2], True)
-    mock_add.assert_any_call(config.cores[0], True)
-    mock_add.assert_any_call(config.cores[1], True)
+    mock_start.assert_any_call(config.caches[1], load=True)
+    mock_start.assert_any_call(config.caches[2], load=True)
+    mock_add.assert_any_call(config.cores[0], try_add=True)
+    mock_add.assert_any_call(config.cores[1], try_add=True)
     mock_run.assert_called_with(["udevadm", "settle"])
 
 
@@ -919,11 +926,11 @@ def test_last_resort_add_05(mock_start, mock_add, mock_exists, mock_run, mock_li
 
     result = opencas.wait_for_startup(timeout=0.5, interval=0.1)
 
-    mock_start.assert_any_call(config.caches[1], True)
-    mock_start.assert_any_call(config.caches[2], True)
+    mock_start.assert_any_call(config.caches[1], load=True)
+    mock_start.assert_any_call(config.caches[2], load=True)
     assert mock_start.call_count == 2, "start cache was called more than once per device"
-    mock_add.assert_any_call(config.cores[0], True)
-    mock_add.assert_any_call(config.cores[1], True)
+    mock_add.assert_any_call(config.cores[0], try_add=True)
+    mock_add.assert_any_call(config.cores[1], try_add=True)
     assert mock_add.call_count == 2, "add core was called more than once per device"
     mock_run.assert_called_with(["udevadm", "settle"])
 
