@@ -90,7 +90,7 @@ static inline uint32_t cas_io_iter_size_done(struct bio_vec_iter *iter)
 static inline uint32_t cas_io_iter_size_left(struct bio_vec_iter *iter)
 {
 	if (iter->idx < iter->vec_size)
-		return iter->vec_size - iter->idx;
+		return min(iter->vec_size - iter->idx, BIO_MAX_VECS);
 	return 0;
 	/* TODO UNITTEST */
 }
