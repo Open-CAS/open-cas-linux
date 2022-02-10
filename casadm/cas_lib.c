@@ -2760,6 +2760,7 @@ int list_caches(unsigned int list_format, bool by_id_path)
 		char status_buf[CACHE_STATE_LENGHT];
 		const char *tmp_status;
 		char mode_string[12];
+		char cache_ctrl_dev[MAX_STR_LEN];
 		float cache_flush_prog;
 		float core_flush_prog;
 
@@ -2782,9 +2783,12 @@ int list_caches(unsigned int list_format, bool by_id_path)
 			tmp_status = get_cache_state_name(curr_cache->state);
 			if (curr_cache->state & (1 << ocf_cache_state_standby)) {
 				strncpy(mode_string, "-", sizeof(mode_string));
+				snprintf(cache_ctrl_dev, sizeof(cache_ctrl_dev),
+						"/dev/cas-cache-%d", curr_cache->id);
 			} else {
 				snprintf(mode_string, sizeof(mode_string), "%s",
 						cache_mode_to_name(curr_cache->mode));
+				strncpy(cache_ctrl_dev, "-", sizeof(cache_ctrl_dev));
 			}
 		}
 
@@ -2795,7 +2799,7 @@ int list_caches(unsigned int list_format, bool by_id_path)
 			curr_cache->device, /* device path */
 			tmp_status, /* cache status */
 			mode_string, /* write policy */
-			"-" /* device */);
+			cache_ctrl_dev  /* device */);
 
 		for (j = 0; j < curr_cache->core_count; ++j) {
 			char* core_path;
