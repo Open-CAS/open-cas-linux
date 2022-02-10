@@ -6,6 +6,7 @@
 import pytest
 from unittest.mock import patch, Mock
 import time
+import subprocess
 
 import opencas
 
@@ -305,10 +306,7 @@ def test_cas_settle_caches_didnt_start_01(
         cores=[],
         caches={
             42: opencas.cas_config.cache_config(
-                42,
-                "/dev/dummy",
-                "wt",
-                target_failover_state="standby"
+                42, "/dev/dummy", "wt", target_failover_state="standby"
             )
         },
     )
@@ -352,7 +350,7 @@ def test_cas_settle_caches_didnt_start_02(
 
     result = opencas.wait_for_startup(timeout=0, interval=0)
 
-    assert len(result) == 1, "didn't return uninitialized core"
+    assert len(result) == 1, "didn't return uninitialized cache"
 
 
 @patch("opencas.cas_config.from_file")
@@ -423,7 +421,7 @@ def test_cas_settle_caches_didnt_start_03(
 
     result = opencas.wait_for_startup(timeout=0, interval=0)
 
-    assert len(result) == 2, "didn't return uninitialized cores"
+    assert len(result) == 2, "didn't return uninitialized caches"
 
 
 @patch("opencas.cas_config.from_file")
@@ -967,3 +965,53 @@ def test_last_resort_add_06(mock_start, mock_add, mock_exists, mock_run, mock_li
     mock_start.assert_not_called()
     mock_add.assert_not_called()
     mock_run.assert_called_with(["udevadm", "settle"])
+
+
+def assert_option_value(call, option, value):
+    try:
+        index = call.index(option)
+    except ValueError as e:
+        raise AssertionError(f"{option} not found in call ({call})") from e
+
+    assert call[index + 1] == value
+
+
+@pytest.mark.parametrize("failover", ["standby", "active"])
+@pytest.mark.parametrize("force", [True, False])
+@pytest.mark.parametrize("load", [True, False])
+@patch("subprocess.run")
+def test_start_cache(mock_run, load, force, failover):
+    cache_config = opencas.cas_config.cache_config(
+        1,
+        "/dev/lizards",
+        "wt",
+        lazy_startup="true",
+        cache_line_size="64",
+        target_failover_state=failover,
+    )
+    mock_run.return_value = Mock(
+        returncode=0,
+        stderr="",
+        stdout="",
+    )
+
+    opencas.start_cache(cache_config, load, force)
+
+    casadm_call = mock_run.call_args[0][0]
+    assert "/sbin/casadm" in casadm_call
+    assert_option_value(casadm_call, "--cache-device", "/dev/lizards")
+
+    if not load:
+        assert_option_value(casadm_call, "--cache-id", "1")
+        assert_option_value(casadm_call, "--cache-line-size", "64")
+        if failover == "active":
+            assert "--start-cache" in casadm_call
+            assert_option_value(casadm_call, "--cache-mode", "wt")
+        else:
+            assert "--standby" in casadm_call
+            assert "--init" in casadm_call
+    else:
+        assert "--load" in casadm_call
+        assert "--cache-id" not in casadm_call
+        assert "--cache-mode" not in casadm_call
+        assert "--cache-line-size" not in casadm_call
