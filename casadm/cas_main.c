@@ -406,17 +406,24 @@ int handle_start()
 {
 	int status;
 
-	if (command_args_values.state == CACHE_INIT_LOAD && command_args_values.force) {
-		cas_printf(LOG_ERR, "Use of 'load' and 'force' simultaneously is forbidden.\n");
-		return FAILURE;
-	}
+	if (command_args_values.state == CACHE_INIT_LOAD) {
+		if (command_args_values.force ||
+				command_args_values.line_size != ocf_cache_line_size_none ||
+				command_args_values.cache_mode != ocf_cache_mode_none ||
+				command_args_values.cache_id != OCF_CACHE_ID_INVALID) {
+			cas_printf(LOG_ERR, "Use of 'load' with 'force', 'cache-id',"
+					" 'cache-mode' or 'cache-line-size'"
+					" simultaneously is forbidden.\n");
+			return FAILURE;
+		}
+	} else {
+		if (command_args_values.line_size == ocf_cache_line_size_none) {
+			command_args_values.line_size = ocf_cache_line_size_default;
+		}
 
-	if (command_args_values.line_size == ocf_cache_line_size_none) {
-		command_args_values.line_size = ocf_cache_line_size_default;
-	}
-
-	if (command_args_values.cache_mode == ocf_cache_mode_none) {
-		command_args_values.cache_mode = ocf_cache_mode_default;
+		if (command_args_values.cache_mode == ocf_cache_mode_none) {
+			command_args_values.cache_mode = ocf_cache_mode_default;
+		}
 	}
 
 	if (validate_cache_path(command_args_values.cache_device) == FAILURE)
@@ -1473,7 +1480,7 @@ int io_class_is_missing() {
 			/* Option is set, check if this option is allowed */
 			mask = (1 << io_class_params.subcmd);
 			if (0 == (mask & iter->priv)) {
-				cas_printf(LOG_INFO, "Option '%s' is not allowed\n", option_name);
+				cas_printf(LOG_ERR, "Option '%s' is not allowed\n", option_name);
 				result = -1;
 			}
 
@@ -1481,7 +1488,7 @@ int io_class_is_missing() {
 			/* Option is missing, check if it is required for this sub-command*/
 			mask = (1 << io_class_params.subcmd) | (1 << io_class_opt_flag_required);
 			if (mask == (iter->priv & mask)) {
-				cas_printf(LOG_INFO, "Option '%s' is missing\n", option_name);
+				cas_printf(LOG_ERR, "Option '%s' is missing\n", option_name);
 				result = -1;
 			}
 		}
@@ -1741,12 +1748,12 @@ int script_command_is_valid() {
 
 		if (option_is_set) {
 			if (!is_option_allowed(option_id)) {
-				cas_printf(LOG_INFO, "Option '%s' is not allowed\n", option_name);
+				cas_printf(LOG_ERR, "Option '%s' is not allowed\n", option_name);
 				result = FAILURE;
 			}
 		} else {
 			if (is_option_required(option_id)) {
-				cas_printf(LOG_INFO, "Option '%s' is missing\n", option_name);
+				cas_printf(LOG_ERR, "Option '%s' is missing\n", option_name);
 				result = FAILURE;
 			}
 		}
@@ -1926,7 +1933,6 @@ static cli_option standby_params_options[] = {
 		.args_count = 1,
 		.arg = "ID",
 		.priv = (1 << standby_opt_subcmd_init)
-			| (1 << standby_opt_subcmd_load)
 			| (1 << standby_opt_subcmd_detach)
 			| (1 << standby_opt_subcmd_activate)
 			| (1 << standby_opt_flag_required),
@@ -1941,7 +1947,6 @@ static cli_option standby_params_options[] = {
 		.args_count = 1,
 		.arg = "NUMBER",
 		.priv = (1 << standby_opt_subcmd_init)
-			| (1 << standby_opt_subcmd_load)
 			| (1 << standby_opt_flag_required),
 		.flags =  CLI_OPTION_DEFAULT_INT,
 		.default_value = ocf_cache_line_size_default / KiB,
@@ -2053,7 +2058,7 @@ int standby_is_missing() {
 			/* Option is set, check if this option is allowed */
 			mask = (1 << standby_params.subcmd);
 			if (0 == (mask & iter->priv)) {
-				cas_printf(LOG_INFO, "Option '%s' is not allowed\n", option_name);
+				cas_printf(LOG_ERR, "Option '%s' is not allowed\n", option_name);
 				result = -1;
 			}
 
@@ -2061,7 +2066,7 @@ int standby_is_missing() {
 			/* Option is missing, check if it is required for this sub-command*/
 			mask = (1 << standby_params.subcmd) | (1 << standby_opt_flag_required);
 			if (mask == (iter->priv & mask)) {
-				cas_printf(LOG_INFO, "Option '%s' is missing\n", option_name);
+				cas_printf(LOG_ERR, "Option '%s' is missing\n", option_name);
 				result = -1;
 			}
 		}
@@ -2075,6 +2080,16 @@ int standby_handle() {
 	/* Check if sub-command was specified */
 	if (standby_opt_subcmd_unknown == standby_params.subcmd) {
 		cmd_subcmd_print_invalid_subcmd(standby_params_options);
+		return FAILURE;
+	}
+
+	if (standby_params.subcmd == standby_opt_subcmd_load &&
+			(standby_params.force ||
+			 standby_params.line_size != ocf_cache_line_size_none ||
+			 standby_params.cache_id != OCF_CACHE_ID_INVALID)) {
+		cas_printf(LOG_ERR, "Use of 'load' with 'force', 'cache-id'"
+				" or 'cache-line-size' simultaneously is"
+				" forbidden.\n");
 		return FAILURE;
 	}
 

@@ -6,6 +6,7 @@
 import pytest
 from unittest.mock import patch, Mock
 import time
+import subprocess
 
 import opencas
 
@@ -74,7 +75,7 @@ def test_cas_settle_cores_didnt_start_02(mock_add, mock_exists, mock_run, mock_l
             "type": "cache",
             "id": "1",
             "disk": "/dev/dummy_cache",
-            "status": "Active",
+            "status": "Standby",
             "write policy": "wt",
             "device": "-",
         }
@@ -303,7 +304,11 @@ def test_cas_settle_caches_didnt_start_01(
     mock_config.return_value = Mock(
         spec_set=opencas.cas_config(),
         cores=[],
-        caches={42: opencas.cas_config.cache_config(42, "/dev/dummy", "wt")},
+        caches={
+            42: opencas.cas_config.cache_config(
+                42, "/dev/dummy", "wt", target_failover_state="standby"
+            )
+        },
     )
 
     result = opencas.wait_for_startup(timeout=0, interval=0)
@@ -345,7 +350,7 @@ def test_cas_settle_caches_didnt_start_02(
 
     result = opencas.wait_for_startup(timeout=0, interval=0)
 
-    assert len(result) == 1, "didn't return uninitialized core"
+    assert len(result) == 1, "didn't return uninitialized cache"
 
 
 @patch("opencas.cas_config.from_file")
@@ -416,7 +421,7 @@ def test_cas_settle_caches_didnt_start_03(
 
     result = opencas.wait_for_startup(timeout=0, interval=0)
 
-    assert len(result) == 2, "didn't return uninitialized cores"
+    assert len(result) == 2, "didn't return uninitialized caches"
 
 
 @patch("opencas.cas_config.from_file")
@@ -802,10 +807,10 @@ def test_last_resort_add_02(mock_start, mock_add, mock_exists, mock_run, mock_li
 
     result = opencas.wait_for_startup(timeout=0, interval=0)
 
-    mock_start.assert_any_call(config.caches[1], True)
-    mock_start.assert_any_call(config.caches[2], True)
-    mock_add.assert_any_call(config.cores[0], True)
-    mock_add.assert_any_call(config.cores[1], True)
+    mock_start.assert_any_call(config.caches[1], load=True)
+    mock_start.assert_any_call(config.caches[2], load=True)
+    mock_add.assert_any_call(config.cores[0], try_add=True)
+    mock_add.assert_any_call(config.cores[1], try_add=True)
     mock_run.assert_called_with(["udevadm", "settle"])
 
 
@@ -883,10 +888,10 @@ def test_last_resort_add_04(mock_start, mock_add, mock_exists, mock_run, mock_li
 
     result = opencas.wait_for_startup(timeout=2, interval=0.1)
 
-    mock_start.assert_any_call(config.caches[1], True)
-    mock_start.assert_any_call(config.caches[2], True)
-    mock_add.assert_any_call(config.cores[0], True)
-    mock_add.assert_any_call(config.cores[1], True)
+    mock_start.assert_any_call(config.caches[1], load=True)
+    mock_start.assert_any_call(config.caches[2], load=True)
+    mock_add.assert_any_call(config.cores[0], try_add=True)
+    mock_add.assert_any_call(config.cores[1], try_add=True)
     mock_run.assert_called_with(["udevadm", "settle"])
 
 
@@ -896,7 +901,7 @@ def test_last_resort_add_04(mock_start, mock_add, mock_exists, mock_run, mock_li
 @patch("os.path.exists")
 @patch("opencas.add_core")
 @patch("opencas.start_cache")
-def test_last_resort_add_04(mock_start, mock_add, mock_exists, mock_run, mock_list, mock_config):
+def test_last_resort_add_05(mock_start, mock_add, mock_exists, mock_run, mock_list, mock_config):
     """
     Check if adding cores/starting caches is attempted while waiting for startup for lazy_startup
     devices once before returning.
@@ -919,11 +924,11 @@ def test_last_resort_add_04(mock_start, mock_add, mock_exists, mock_run, mock_li
 
     result = opencas.wait_for_startup(timeout=0.5, interval=0.1)
 
-    mock_start.assert_any_call(config.caches[1], True)
-    mock_start.assert_any_call(config.caches[2], True)
+    mock_start.assert_any_call(config.caches[1], load=True)
+    mock_start.assert_any_call(config.caches[2], load=True)
     assert mock_start.call_count == 2, "start cache was called more than once per device"
-    mock_add.assert_any_call(config.cores[0], True)
-    mock_add.assert_any_call(config.cores[1], True)
+    mock_add.assert_any_call(config.cores[0], try_add=True)
+    mock_add.assert_any_call(config.cores[1], try_add=True)
     assert mock_add.call_count == 2, "add core was called more than once per device"
     mock_run.assert_called_with(["udevadm", "settle"])
 
@@ -934,7 +939,7 @@ def test_last_resort_add_04(mock_start, mock_add, mock_exists, mock_run, mock_li
 @patch("os.path.exists")
 @patch("opencas.add_core")
 @patch("opencas.start_cache")
-def test_last_resort_add_05(mock_start, mock_add, mock_exists, mock_run, mock_list, mock_config):
+def test_last_resort_add_06(mock_start, mock_add, mock_exists, mock_run, mock_list, mock_config):
     """
     Check if adding cores/starting caches is not attempted while waiting for startup for lazy
     startup devices if paths show up after half of the startup timeout expires.
@@ -960,3 +965,53 @@ def test_last_resort_add_05(mock_start, mock_add, mock_exists, mock_run, mock_li
     mock_start.assert_not_called()
     mock_add.assert_not_called()
     mock_run.assert_called_with(["udevadm", "settle"])
+
+
+def assert_option_value(call, option, value):
+    try:
+        index = call.index(option)
+    except ValueError as e:
+        raise AssertionError(f"{option} not found in call ({call})") from e
+
+    assert call[index + 1] == value
+
+
+@pytest.mark.parametrize("failover", ["standby", "active"])
+@pytest.mark.parametrize("force", [True, False])
+@pytest.mark.parametrize("load", [True, False])
+@patch("subprocess.run")
+def test_start_cache(mock_run, load, force, failover):
+    cache_config = opencas.cas_config.cache_config(
+        1,
+        "/dev/lizards",
+        "wt",
+        lazy_startup="true",
+        cache_line_size="64",
+        target_failover_state=failover,
+    )
+    mock_run.return_value = Mock(
+        returncode=0,
+        stderr="",
+        stdout="",
+    )
+
+    opencas.start_cache(cache_config, load, force)
+
+    casadm_call = mock_run.call_args[0][0]
+    assert "/sbin/casadm" in casadm_call
+    assert_option_value(casadm_call, "--cache-device", "/dev/lizards")
+
+    if not load:
+        assert_option_value(casadm_call, "--cache-id", "1")
+        assert_option_value(casadm_call, "--cache-line-size", "64")
+        if failover == "active":
+            assert "--start-cache" in casadm_call
+            assert_option_value(casadm_call, "--cache-mode", "wt")
+        else:
+            assert "--standby" in casadm_call
+            assert "--init" in casadm_call
+    else:
+        assert "--load" in casadm_call
+        assert "--cache-id" not in casadm_call
+        assert "--cache-mode" not in casadm_call
+        assert "--cache-line-size" not in casadm_call

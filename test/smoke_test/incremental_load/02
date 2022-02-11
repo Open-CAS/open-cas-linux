@@ -48,7 +48,7 @@ TARGET_DEVICE_OPTION="$CORE_DEVICE" PARTITION_SIZE_OPTION="4000M" PARTITION_IDS_
 sleep 1
 # Load cache, then add cores and check if chache is running
 # Try to load cache device, check its state and cores state
-CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" CACHE_LOAD_METADATA_OPTION="y" start_cache
+CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" CACHE_LOAD_METADATA_OPTION="y" start_cache
 DEVICE_ID_OPTION="${CACHE_DEVICE}-part1" DEMANDED_STATE_OPTION="Incomplete" check_device_state
 DEVICE_ID_OPTION="${DEVICE_NAME}1-1" DEMANDED_STATE_OPTION="Active" check_device_state
 DEVICE_ID_OPTION="${DEVICE_NAME}1-2" DEMANDED_STATE_OPTION="Active" check_device_state
@@ -66,7 +66,7 @@ DEVICE_ID_OPTION="${CORE_DEVICE}-part1" DEMANDED_STATE_OPTION="Detached" check_d
 DEVICE_ID_OPTION="${CORE_DEVICE}-part2" DEMANDED_STATE_OPTION="Detached" check_device_state
 DEVICE_ID_OPTION="${CORE_DEVICE}-part3" DEMANDED_STATE_OPTION="Detached" check_device_state
 
-CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" CACHE_LOAD_METADATA_OPTION="y" start_cache
+CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" CACHE_LOAD_METADATA_OPTION="y" start_cache
 
 DEVICE_ID_OPTION="${CACHE_DEVICE}-part1" DEMANDED_STATE_OPTION="Running" check_device_state
 DEVICE_ID_OPTION="${DEVICE_NAME}1-1" DEMANDED_STATE_OPTION="Active" check_device_state

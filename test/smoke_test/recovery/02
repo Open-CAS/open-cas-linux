@@ -72,7 +72,7 @@ done
 CACHE_DEVICE_OPTION="${SHORT_LINK}" turn_on_device
 
 for ID in 1 2 3 ; do
-    CACHE_ID_OPTION="$ID" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part${ID}" CACHE_LOAD_METADATA_OPTION="y" CACHE_MODE_OPTION="wb" start_cache
+    CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part${ID}" CACHE_LOAD_METADATA_OPTION="y" start_cache
     CACHE_ID_OPTION="$ID" CORE_ID_OPTION="1" mount_cache
 done
 

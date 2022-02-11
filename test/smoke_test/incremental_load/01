@@ -57,7 +57,7 @@ DEVICE_ID_OPTION="${CORE_DEVICE}-part3" DEMANDED_STATE_OPTION="Detached" check_d
 
 
 # Try to load cache device, check if it is running and if all cores status is appropirate
-CACHE_ID_OPTION="1" CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" CACHE_LOAD_METADATA_OPTION="y" start_cache
+CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" CACHE_LOAD_METADATA_OPTION="y" start_cache
 DEVICE_ID_OPTION="${CACHE_DEVICE}-part1" DEMANDED_STATE_OPTION="Running" check_device_state
 DEVICE_ID_OPTION="${DEVICE_NAME}1-1" DEMANDED_STATE_OPTION="Active" check_device_state
 DEVICE_ID_OPTION="${DEVICE_NAME}1-2" DEMANDED_STATE_OPTION="Active" check_device_state
