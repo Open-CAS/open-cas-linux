@@ -4,7 +4,9 @@
 #
 
 import os
+
 import pytest
+
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheModeTrait, CacheLineSize, CleaningPolicy, \
     FlushParametersAcp
@@ -84,6 +86,7 @@ def test_recovery_all_options(cache_mode, cache_line_size, cleaning_policy, file
     with TestRun.step("Reset platform."):
         os_utils.sync()
         core.unmount()
+        os_utils.drop_caches(DropCachesMode.ALL)
         TestRun.LOGGER.info(f"Number of dirty blocks in cache: {cache.get_dirty_blocks()}")
         power_cycle_dut()
 
@@ -106,6 +109,9 @@ def test_recovery_all_options(cache_mode, cache_line_size, cleaning_policy, file
             TestRun.LOGGER.info("Source and target file checksums are identical.")
         else:
             TestRun.fail("Source and target file checksums are different.")
+
+        core_disk.remove_partitions()
+        cache_disk.remove_partitions()
 
 
 def file_operation(target_path, data_pattern, io_pattern):

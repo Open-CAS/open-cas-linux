@@ -186,7 +186,7 @@ def test_acp_functional(cache_mode):
     "cache_mode", CacheMode.with_any_trait(CacheModeTrait.LazyWrites)
 )
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd, DiskType.hdd4k]))
 def test_acp_param_flush_max_buffers(cache_line_size, cache_mode):
     """
         title: Functional test for ACP flush-max-buffers parameter.
@@ -206,15 +206,16 @@ def test_acp_param_flush_max_buffers(cache_line_size, cache_mode):
 
         default_config = FlushParametersAcp.default_acp_params()
         acp_configs = [
-            FlushParametersAcp(flush_max_buffers=buf) for buf in buffer_values
+            FlushParametersAcp(flush_max_buffers=buf, wake_up_time=Time(seconds=1)) for buf in
+            buffer_values
         ]
         acp_configs.append(default_config)
 
     with TestRun.step("Prepare partitions."):
-        core_size = Size(10, Unit.GibiByte)
+        core_size = Size(5, Unit.GibiByte)
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
-        cache_device.create_partitions([Size(5, Unit.GibiByte)])
+        cache_device.create_partitions([Size(10, Unit.GibiByte)])
         core_device.create_partitions([core_size])
 
     with TestRun.step(
@@ -240,6 +241,7 @@ def test_acp_param_flush_max_buffers(cache_line_size, cache_mode):
         for acp_config in acp_configs:
             with TestRun.step(f"Setting {acp_config}"):
                 cache.set_params_acp(acp_config)
+
             with TestRun.step(
                 "Using blktrace verify if there is appropriate number of I/O requests, "
                 "which depends on flush-max-buffer parameter."
@@ -252,7 +254,7 @@ def test_acp_param_flush_max_buffers(cache_line_size, cache_mode):
                 cleaning_started = False
                 flush_writes = 0
                 for (prev, curr) in zip(blktrace_output, blktrace_output[1:]):
-                    if cleaning_started and write_to_core(prev, curr):
+                    if cleaning_started and write_to_core(prev):
                         flush_writes += 1
                     if new_acp_iteration(prev, curr):
                         if cleaning_started:
@@ -284,7 +286,7 @@ def test_acp_param_flush_max_buffers(cache_line_size, cache_mode):
     "cache_mode", CacheMode.with_any_trait(CacheModeTrait.LazyWrites)
 )
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd, DiskType.hdd4k]))
 def test_acp_param_wake_up_time(cache_line_size, cache_mode):
     """
         title: Functional test for ACP wake-up parameter.
@@ -309,10 +311,10 @@ def test_acp_param_wake_up_time(cache_line_size, cache_mode):
         acp_configs.append(FlushParametersAcp.default_acp_params())
 
     with TestRun.step("Prepare partitions."):
-        core_size = Size(10, Unit.GibiByte)
+        core_size = Size(5, Unit.GibiByte)
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
-        cache_device.create_partitions([Size(5, Unit.GibiByte)])
+        cache_device.create_partitions([Size(10, Unit.GibiByte)])
         core_device.create_partitions([core_size])
 
     with TestRun.step(
@@ -385,8 +387,8 @@ def new_acp_iteration(prev, curr):
     )
 
 
-def write_to_core(prev, curr):
-    return prev.action == ActionKind.IoHandled and curr.rwbs & RwbsKind.W
+def write_to_core(prev):
+    return prev.action == ActionKind.IoHandled and prev.rwbs & RwbsKind.W and prev.byte_count > 0
 
 
 def get_fio_cmd(core, core_size):
@@ -396,10 +398,10 @@ def get_fio_cmd(core, core_size):
         .target(core)
         .read_write(ReadWrite.write)
         .io_engine(IoEngine.libaio)
-        .io_size(Size(10, Unit.TebiByte))
         .size(core_size)
         .block_size(Size(1, Unit.Blocks4096))
-        .run_time(timedelta(seconds=9999))
+        .run_time(timedelta(hours=99))
+        .time_based()
         .io_depth(32)
         .num_jobs(1)
         .direct(1)
