@@ -100,7 +100,7 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
         )
 
         # Divergency may be casued be rounding max occupancy
-        if actuall_occupancy > occupancy_limit + Size(100, Unit.Blocks4096):
+        if actuall_occupancy > occupancy_limit * 1.01:
             TestRun.LOGGER.error(
                 f"Occupancy for ioclass id exceeded: {io_class.id}. "
                 f"Limit: {occupancy_limit}, actuall: {actuall_occupancy}"
@@ -144,7 +144,7 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
         )
 
         # Divergency may be casued be rounding max occupancy
-        if actuall_occupancy > occupancy_limit + Size(100, Unit.Blocks4096):
+        if actuall_occupancy > occupancy_limit * 1.01:
             TestRun.LOGGER.error(
                 f"Occupancy for ioclass id exceeded: {io_class.id}. "
                 f"Limit: {occupancy_limit}, actuall: {actuall_occupancy}"

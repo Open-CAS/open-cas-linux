@@ -5,6 +5,7 @@
 
 import random
 from datetime import datetime
+import time
 
 import pytest
 
@@ -173,6 +174,7 @@ def test_ioclass_directory_file_operations(filesystem):
         Directory.create_directory(path=nested_dir_path, parents=True)
         sync()
         drop_caches(DropCachesMode.ALL)
+        time.sleep(ioclass_config.MAX_CLASSIFICATION_DELAY.seconds)
 
     with TestRun.step("Create test file."):
         classified_before = cache.get_io_class_statistics(
@@ -180,6 +182,7 @@ def test_ioclass_directory_file_operations(filesystem):
         file_path = f"{test_dir_path}/test_file"
         (Dd().input("/dev/urandom").output(file_path).oflag("sync")
          .block_size(Size(1, Unit.MebiByte)).count(dd_blocks).run())
+        time.sleep(ioclass_config.MAX_CLASSIFICATION_DELAY.seconds)
         sync()
         drop_caches(DropCachesMode.ALL)
         test_file = File(file_path).refresh_item()
@@ -193,6 +196,7 @@ def test_ioclass_directory_file_operations(filesystem):
         classified_before = classified_after
         non_classified_before = cache.get_io_class_statistics(io_class_id=0).usage_stats.occupancy
         test_file.move(destination=mountpoint)
+        time.sleep(ioclass_config.MAX_CLASSIFICATION_DELAY.seconds)
         sync()
         drop_caches(DropCachesMode.ALL)
 
@@ -208,7 +212,10 @@ def test_ioclass_directory_file_operations(filesystem):
         classified_before = classified_after
         non_classified_before = non_classified_after
         (Dd().input(test_file.full_path).output("/dev/null")
-         .block_size(Size(1, Unit.Blocks4096)).run())
+         .iflag("sync").run())
+        time.sleep(ioclass_config.MAX_CLASSIFICATION_DELAY.seconds)
+        sync()
+        drop_caches(DropCachesMode.ALL)
 
     with TestRun.step("Check classified occupancy."):
         classified_after = cache.get_io_class_statistics(
@@ -222,6 +229,7 @@ def test_ioclass_directory_file_operations(filesystem):
         classified_before = classified_after
         non_classified_before = non_classified_after
         test_file.move(destination=nested_dir_path)
+        time.sleep(ioclass_config.MAX_CLASSIFICATION_DELAY.seconds)
         sync()
         drop_caches(DropCachesMode.ALL)
 
@@ -238,6 +246,9 @@ def test_ioclass_directory_file_operations(filesystem):
         non_classified_before = non_classified_after
         (Dd().input(test_file.full_path).output("/dev/null")
          .block_size(Size(1, Unit.Blocks4096)).run())
+        time.sleep(ioclass_config.MAX_CLASSIFICATION_DELAY.seconds)
+        sync()
+        drop_caches(DropCachesMode.ALL)
 
     with TestRun.step("Check classified occupancy."):
         classified_after = cache.get_io_class_statistics(
