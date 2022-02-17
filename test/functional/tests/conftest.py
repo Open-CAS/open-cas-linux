@@ -35,6 +35,16 @@ class Opencas(metaclass=Singleton):
         self.already_updated = False
 
 
+def pytest_collection_modifyitems(config, items):
+    if config.option.collectonly:
+        for item in items:
+            multidut = next(item.iter_markers(name="multidut"), None)
+            if multidut:
+                number = multidut.args[0]
+                print(f"multidut {item.nodeid} {number}")
+                sys.stdout.flush()
+
+
 def pytest_runtest_setup(item):
     # There should be dut config file added to config package and
     # pytest should be executed with option --dut-config=conf_name'.
@@ -45,45 +55,60 @@ def pytest_runtest_setup(item):
     # User can also have own test wrapper, which runs test prepare, cleanup, etc.
     # Then it should be placed in plugins package
 
-    try:
-        with open(item.config.getoption('--dut-config')) as cfg:
-            dut_config = yaml.safe_load(cfg)
-    except Exception as ex:
-        raise Exception(f"{ex}\nYou need to specify DUT config. See the example_dut_config.py file")
+    test_name = item.name.split('[')[0]
+    TestRun.LOGGER = create_log(item.config.getoption('--log-path'), test_name)
 
-    dut_config['plugins_dir'] = os.path.join(os.path.dirname(__file__), "../lib")
-    dut_config['opt_plugins'] = {"test_wrapper": {}, "serial_log": {}, "power_control": {}}
-    dut_config['extra_logs'] = {"cas": "/var/log/opencas.log"}
+    duts = item.config.getoption('--dut-config')
+    required_duts = next(item.iter_markers(name="multidut"), None)
+    required_duts = required_duts.args[0] if required_duts is not None else 1
+    if required_duts > len(duts):
+        raise Exception(f"Test requires {required_duts} DUTs, only {len(duts)} DUT configs "
+                        f"provided")
+    else:
+        duts = duts[:required_duts]
 
-    try:
-        TestRun.prepare(item, dut_config)
-
-        test_name = item.name.split('[')[0]
-        TestRun.LOGGER = create_log(item.config.getoption('--log-path'), test_name)
-
-        TestRun.presetup()
+    TestRun.duts = []
+    for dut in duts:
         try:
-            TestRun.executor.wait_for_connection(timedelta(seconds=20))
-        except paramiko.AuthenticationException:
-            raise
-        except Exception:
+            with open(dut) as cfg:
+                dut_config = yaml.safe_load(cfg)
+        except Exception as ex:
+            raise Exception(f"{ex}\n"
+                            f"You need to specify DUT config. See the example_dut_config.py file")
+
+        dut_config['plugins_dir'] = os.path.join(os.path.dirname(__file__), "../lib")
+        dut_config['opt_plugins'] = {"test_wrapper": {}, "serial_log": {}, "power_control": {}}
+        dut_config['extra_logs'] = {"cas": "/var/log/opencas.log"}
+
+        try:
+            TestRun.prepare(item, dut_config)
+
+            TestRun.presetup()
             try:
-                TestRun.plugin_manager.get_plugin('power_control').power_cycle()
-                TestRun.executor.wait_for_connection()
+                TestRun.executor.wait_for_connection(timedelta(seconds=20))
+            except paramiko.AuthenticationException:
+                raise
             except Exception:
-                raise Exception("Failed to connect to DUT.")
-        TestRun.setup()
-    except Exception as ex:
-        raise Exception(f"Exception occurred during test setup:\n"
-                        f"{str(ex)}\n{traceback.format_exc()}")
+                try:
+                    TestRun.plugin_manager.get_plugin('power_control').power_cycle()
+                    TestRun.executor.wait_for_connection()
+                except Exception:
+                    raise Exception("Failed to connect to DUT.")
+            TestRun.setup()
+        except Exception as ex:
+            raise Exception(f"Exception occurred during test setup:\n"
+                            f"{str(ex)}\n{traceback.format_exc()}")
 
-    TestRun.usr = Opencas(
-        repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
-        working_dir=dut_config['working_dir'])
+        TestRun.usr = Opencas(
+            repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
+            working_dir=dut_config['working_dir'])
 
-    TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
+        TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
+        TestRun.dut.plugin_manager = TestRun.plugin_manager
+        TestRun.dut.executor = TestRun.executor
+        TestRun.duts.append(TestRun.dut)
 
-    base_prepare(item)
+        base_prepare(item)
     TestRun.LOGGER.write_to_command_log("Test body")
     TestRun.LOGGER.start_group("Test body")
 
@@ -120,8 +145,12 @@ def pytest_runtest_teardown():
                                    f"{str(ex)}\n{traceback.format_exc()}")
 
     TestRun.LOGGER.end()
-    if TestRun.executor:
-        TestRun.LOGGER.get_additional_logs()
+    for dut in TestRun.duts:
+        with TestRun.use_dut(dut):
+            if TestRun.executor:
+                os.makedirs(os.path.join(TestRun.LOGGER.base_dir, "dut_info", dut.ip),
+                            exist_ok=True)
+                TestRun.LOGGER.get_additional_logs()
     Log.destroy()
     TestRun.teardown()
 
@@ -136,7 +165,7 @@ def pytest_generate_tests(metafunc):
 
 def pytest_addoption(parser):
     TestRun.addoption(parser)
-    parser.addoption("--dut-config", action="store", default="None")
+    parser.addoption("--dut-config", action="append", type=str)
     parser.addoption("--log-path", action="store",
                      default=f"{os.path.join(os.path.dirname(__file__), '../results')}")
     parser.addoption("--force-reinstall", action="store_true", default=False)
