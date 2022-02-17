@@ -5,9 +5,6 @@
 
 import pytest
 
-from test_tools.fio.fio import Fio
-from test_tools.fio.fio_param import ReadWrite, IoEngine, ErrorFilter, VerifyMethod
-from test_utils.filesystem.file import File
 from api.cas import casadm
 from api.cas.cache_config import (
     CacheMode,
@@ -16,12 +13,13 @@ from api.cas.cache_config import (
     CleaningPolicy,
     CacheStatus,
 )
-from test_tools.device_mapper import ErrorDevice, DmTable
-from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from core.test_run import TestRun
-from test_utils.size import Size, Unit
-from storage_devices.device import Device
+from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
+from test_tools.device_mapper import ErrorDevice, DmTable
+from test_tools.fio.fio import Fio
+from test_tools.fio.fio_param import ReadWrite, IoEngine, ErrorFilter, VerifyMethod
 from test_utils.os_utils import Udev
+from test_utils.size import Size, Unit
 
 
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
@@ -68,12 +66,12 @@ def test_cache_insert_error(cache_mode, cache_line_size):
         if occupancy != 0:
             TestRun.fail(f"Occupancy is not zero, but {occupancy}")
 
-        cache_writes = (stats.block_stats.cache.writes / cache_line_size.value).get_value()
+        cache_writes = stats.block_stats.cache.writes / cache_line_size.value
         cache_errors = stats.error_stats.cache.total
         if cache_writes != cache_errors:
             TestRun.fail(
                 f"Cache errors ({cache_errors}) should equal to number of"
-                " requests to cache ({cache_writes})"
+                f" requests to cache ({cache_writes})"
             )
 
     if cache_mode not in [CacheMode.WB, CacheMode.WO]:
@@ -125,7 +123,7 @@ def test_cache_write_lazy_insert_error(cache_mode, cache_line_size):
         if occupancy != 0:
             TestRun.fail(f"Occupancy is not zero, but {occupancy}")
 
-        cache_writes = (stats.block_stats.cache.writes / cache_line_size.value).get_value()
+        cache_writes = stats.block_stats.cache.writes / cache_line_size.value
         cache_errors = stats.error_stats.cache.total
 
         if cache_writes != 1:
@@ -133,7 +131,7 @@ def test_cache_write_lazy_insert_error(cache_mode, cache_line_size):
         if cache_writes != cache_errors:
             TestRun.fail(
                 f"Cache errors ({cache_errors}) should equal to number of requests to"
-                " cache ({cache_writes})"
+                f" cache ({cache_writes})"
             )
 
         state = cache.get_status()
@@ -146,12 +144,12 @@ def prepare_configuration(cache_mode, cache_line_size):
     core_device = TestRun.disks["core"]
 
     with TestRun.step("Creating cache partition"):
-        cache_device.create_partitions([Size(25, Unit.MebiByte)])
+        cache_device.create_partitions([Size(50, Unit.MebiByte)])
 
     with TestRun.step("Creating cache error device"):
         error_device = ErrorDevice("error", cache_device.partitions[0])
 
-    with TestRun.step("Staring cache to check metadata offset"):
+    with TestRun.step("Starting cache to check metadata offset"):
         cache = casadm.start_cache(error_device, cache_line_size=cache_line_size, force=True)
         cache_size = cache.size
         cache.stop()
