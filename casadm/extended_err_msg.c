@@ -186,6 +186,11 @@ struct {
 		OCF_ERR_STANDBY_ATTACHED,
 		"Cache device is attached, please detach it first with --standby --detach"
 	},
+	{
+		OCF_ERR_CORE_SIZE_MISMATCH,
+		"Core volume size does not match"
+		" the size stored in cache metadata"
+	},
 
 	/* CAS kernel error mappings*/
 	{
