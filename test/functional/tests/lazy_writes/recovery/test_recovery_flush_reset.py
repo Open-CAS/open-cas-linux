@@ -4,7 +4,9 @@
 #
 
 import os
+
 import pytest
+
 from api.cas import casadm, cli
 from api.cas.cache_config import CacheMode, CacheModeTrait, CleaningPolicy, SeqCutOffPolicy
 from core.test_run import TestRun
@@ -12,7 +14,7 @@ from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.disk_utils import Filesystem
 from test_tools.fs_utils import readlink
 from test_utils import os_utils
-from test_utils.os_utils import Udev
+from test_utils.os_utils import Udev, DropCachesMode
 from test_utils.output import CmdException
 from test_utils.size import Size, Unit
 from tests.lazy_writes.recovery.recovery_tests_methods import create_test_files, copy_file, \
@@ -65,6 +67,7 @@ def test_recovery_flush_reset_raw(cache_mode):
             raise CmdException("Error during hdparm", output)
 
     with TestRun.step("Trigger flush."):
+        os_utils.drop_caches(DropCachesMode.ALL)
         TestRun.executor.run_in_background(cli.flush_cache_cmd(f"{cache.cache_id}"))
 
     with TestRun.step("Hard reset DUT during data flushing."):
@@ -153,6 +156,7 @@ def test_recovery_flush_reset_fs(cache_mode, fs):
         core.unmount()
 
     with TestRun.step("Trigger flush."):
+        os_utils.drop_caches(DropCachesMode.ALL)
         TestRun.executor.run_in_background(cli.flush_cache_cmd(f"{cache.cache_id}"))
 
     with TestRun.step("Hard reset DUT during data flushing."):
