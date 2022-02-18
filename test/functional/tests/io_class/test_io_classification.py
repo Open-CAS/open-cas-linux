@@ -4,6 +4,7 @@
 #
 
 import random
+import time
 from itertools import permutations
 
 import pytest
@@ -444,6 +445,8 @@ def test_ioclass_id_as_condition(filesystem):
             ioclass_config_path=ioclass_config_path,
         )
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
+        # CAS needs some time to resolve directory to inode
+        time.sleep(ioclass_config.MAX_CLASSIFICATION_DELAY.seconds)
 
     with TestRun.step(f"Prepare {filesystem.name} filesystem "
                       f"and mount {core.path} at {mountpoint}."):
@@ -451,6 +454,8 @@ def test_ioclass_id_as_condition(filesystem):
         core.mount(mountpoint)
         fs_utils.create_directory(base_dir_path)
         sync()
+        # CAS needs some time to resolve directory to inode
+        time.sleep(ioclass_config.MAX_CLASSIFICATION_DELAY.seconds)
 
     with TestRun.step("Run IO fulfilling IO class 1 condition (and not IO class 2) and check if "
                       "it is classified properly."):
