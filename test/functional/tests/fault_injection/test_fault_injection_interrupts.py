@@ -323,6 +323,7 @@ def test_interrupt_cache_mode_switch_immediately(cache_mode, filesystem):
         with TestRun.step("Start switching cache mode."):
             flush_pid = TestRun.executor.run_in_background(cli.set_cache_mode_cmd(
                 str(CacheMode.DEFAULT.name.lower()), str(cache.cache_id), "yes"))
+            wait_for_flushing(cache, core)
 
         with TestRun.step("Send interruption signal."):
             TestRun.executor.run(f"kill -s SIGINT {flush_pid}")
