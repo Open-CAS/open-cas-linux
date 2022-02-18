@@ -76,9 +76,19 @@ def test_recovery_unplug_cache_fs(cache_mode, cls, filesystem, direct):
                             f"{cache.get_dirty_blocks().get_value(Unit.Blocks4096)}")
 
     with TestRun.step("Stop cache."):
-        cache.stop()
+        try:
+            cache.stop()
+            TestRun.fail("Stopping the cache should be aborted without --no-flush flag.")
+        except CmdException as e:
+            TestRun.LOGGER.info(str(e.output))
+            try:
+                cache.stop(no_data_flush=True)
+                TestRun.LOGGER.warning("Expected stopping cache with errors with --no-flush flag.")
+            except CmdException as e1:
+                cli_messages.check_stderr_msg(e1.output, cli_messages.stop_cache_errors)
 
     with TestRun.step("Plug missing cache device."):
+        TestRun.LOGGER.info(str(casadm.list_caches(by_id_path=False)))
         cache_disk.plug()
 
     with TestRun.step("Load cache."):
@@ -152,12 +162,18 @@ def test_recovery_unplug_cache_raw(cache_mode, cls):
 
     with TestRun.step("Stop cache."):
         try:
-            cache.stop(no_data_flush=True)
-            TestRun.LOGGER.warning("Expected stopping cache with errors.")
+            cache.stop()
+            TestRun.fail("Stopping the cache should be aborted without --no-flush flag.")
         except CmdException as e:
-            cli_messages.check_stderr_msg(e.output, cli_messages.stop_cache_errors)
+            TestRun.LOGGER.info(str(e.output))
+            try:
+                cache.stop(no_data_flush=True)
+                TestRun.LOGGER.warning("Expected stopping cache with errors with --no-flush flag.")
+            except CmdException as e1:
+                cli_messages.check_stderr_msg(e1.output, cli_messages.stop_cache_errors)
 
     with TestRun.step("Plug missing cache device."):
+        TestRun.LOGGER.info(str(casadm.list_caches(by_id_path=False)))
         cache_disk.plug()
 
     with TestRun.step("Load cache."):
