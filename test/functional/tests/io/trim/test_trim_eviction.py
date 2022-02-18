@@ -5,6 +5,7 @@
 
 import os
 import pytest
+import time
 from api.cas import casadm, ioclass_config
 from api.cas.cache_config import CacheMode, CacheLineSize, CleaningPolicy
 from core.test_run import TestRun
@@ -15,6 +16,7 @@ from test_tools.disk_utils import Filesystem
 from test_utils import os_utils
 from test_utils.os_utils import Udev
 from test_utils.size import Size, Unit
+from test_utils.filesystem.file import File
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand, DiskType.sata]))
@@ -66,10 +68,10 @@ def test_trim_eviction(cache_mode, cache_line_size, filesystem, cleaning):
         )
 
     with TestRun.step("Create random file using ddrescue."):
-        test_file = fs_utils.create_random_test_file(test_file_path, core_dev.size * 0.9)
-        create_file_with_ddrescue(core_dev, test_file)
+        test_file = create_file_with_ddrescue(core_dev, test_file_path)
         os_utils.sync()
         os_utils.drop_caches()
+        time.sleep(ioclass_config.MAX_CLASSIFICATION_DELAY.seconds)
 
     with TestRun.step("Remove file and create a new one."):
         cache_iostats_before = cache_dev.get_io_stats()
@@ -78,7 +80,10 @@ def test_trim_eviction(cache_mode, cache_line_size, filesystem, cleaning):
         test_file.remove()
         os_utils.sync()
         os_utils.drop_caches()
-        create_file_with_ddrescue(core_dev, test_file)
+        create_file_with_ddrescue(core_dev, test_file_path)
+        os_utils.sync()
+        os_utils.drop_caches()
+        time.sleep(ioclass_config.MAX_CLASSIFICATION_DELAY.seconds)
 
     with TestRun.step("Check using iostat that reads from cache did not occur."):
         cache_iostats_after = cache_dev.get_io_stats()
@@ -104,11 +109,13 @@ def test_trim_eviction(cache_mode, cache_line_size, filesystem, cleaning):
                 "Number of reads from cache before and after removing test file is the same.")
 
 
-def create_file_with_ddrescue(core_dev, test_file):
+def create_file_with_ddrescue(core_dev, test_file_path):
     ddrescue = Ddrescue() \
         .block_size(Size(1, Unit.Blocks4096)) \
         .size(core_dev.size * 0.9) \
         .synchronous() \
         .source("/dev/urandom") \
-        .destination(test_file.full_path)
+        .destination(test_file_path)
     ddrescue.run()
+
+    return File(test_file_path)
