@@ -164,7 +164,7 @@ struct {
 	},
 	{
 		OCF_ERR_INVAL_CACHE_DEV,
-		"Device does not meet requirements."
+		"Device does not meet requirements. See dmesg for more information"
 	},
 	{
 		OCF_ERR_NO_LOCK,
