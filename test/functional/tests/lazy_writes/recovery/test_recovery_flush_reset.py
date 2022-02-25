@@ -21,7 +21,7 @@ from tests.lazy_writes.recovery.recovery_tests_methods import create_test_files,
     compare_files, power_cycle_dut
 
 mount_point = "/mnt"
-test_file_size = Size(1.5, Unit.GibiByte)
+test_file_size = Size(4.5, Unit.GibiByte)
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -41,7 +41,7 @@ def test_recovery_flush_reset_raw(cache_mode):
     with TestRun.step("Prepare cache and core devices."):
         cache_disk = TestRun.disks['cache']
         core_disk = TestRun.disks['core']
-        cache_disk.create_partitions([Size(2, Unit.GibiByte)])
+        cache_disk.create_partitions([Size(5, Unit.GibiByte)])
         core_disk.create_partitions([Size(16, Unit.GibiByte)] * 2)
         cache_device = cache_disk.partitions[0]
         core_device = core_disk.partitions[0]
@@ -73,17 +73,10 @@ def test_recovery_flush_reset_raw(cache_mode):
     with TestRun.step("Hard reset DUT during data flushing."):
         power_cycle_dut(wait_for_flush_begin=True, core_device=core_device)
 
-    with TestRun.step("Copy file from core and check if current md5sum is different than "
-                      "before restart."):
-        copy_file(source=readlink(core_device.path), target=target_file.full_path,
-                  size=test_file_size, direct="iflag")
-        target_file_md5 = target_file.md5sum()
-        compare_files(source_file_md5, target_file_md5, should_differ=True)
-
     with TestRun.step("Load cache."):
         cache = casadm.load_cache(cache_device)
         if cache.get_dirty_blocks() == Size.zero():
-            TestRun.fail("There are no dirty blocks on cache device.")
+            TestRun.LOGGER.error("There are no dirty blocks on cache device.")
 
     with TestRun.step("Stop cache with dirty data flush."):
         core_writes_before = core_device.get_io_stats().sectors_written
@@ -125,7 +118,7 @@ def test_recovery_flush_reset_fs(cache_mode, fs):
     with TestRun.step("Prepare cache and core devices."):
         cache_disk = TestRun.disks['cache']
         core_disk = TestRun.disks['core']
-        cache_disk.create_partitions([Size(2, Unit.GibiByte)])
+        cache_disk.create_partitions([Size(5, Unit.GibiByte)])
         core_disk.create_partitions([Size(16, Unit.GibiByte)] * 2)
         cache_device = cache_disk.partitions[0]
         core_device = core_disk.partitions[0]
@@ -165,7 +158,7 @@ def test_recovery_flush_reset_fs(cache_mode, fs):
     with TestRun.step("Load cache."):
         cache = casadm.load_cache(cache_device)
         if cache.get_dirty_blocks() == Size.zero():
-            TestRun.fail("There are no dirty blocks on cache device.")
+            TestRun.LOGGER.error("There are no dirty blocks on cache device.")
 
     with TestRun.step("Stop cache with dirty data flush."):
         core_writes_before = core_device.get_io_stats().sectors_written
