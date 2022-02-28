@@ -1990,21 +1990,31 @@ struct {
 /* Parser of option for IO class command */
 int standby_handle_option(char *opt, const char **arg)
 {
-	if (io_class_opt_subcmd_unknown == io_class_params.subcmd) {
-		/* First parameters which defines sub-command */
-		if (!strcmp(opt, "init")) {
-			standby_params.subcmd = standby_opt_subcmd_init;
-			return 0;
-		} else if (!strcmp(opt, "load")) {
-			standby_params.subcmd = standby_opt_subcmd_load;
-			return 0;
-		} else if (!strcmp(opt, "detach")) {
-			standby_params.subcmd = standby_opt_subcmd_detach;
-			return 0;
-		} else if (!strcmp(opt, "activate")) {
-			standby_params.subcmd = standby_opt_subcmd_activate;
-			return 0;
-		}
+	/* First parameters which defines sub-command */
+	if (!strcmp(opt, "init")) {
+		if (standby_opt_subcmd_unknown != standby_params.subcmd)
+			goto err;
+
+		standby_params.subcmd = standby_opt_subcmd_init;
+		return 0;
+	} else if (!strcmp(opt, "load")) {
+		if (standby_opt_subcmd_unknown != standby_params.subcmd)
+			goto err;
+
+		standby_params.subcmd = standby_opt_subcmd_load;
+		return 0;
+	} else if (!strcmp(opt, "detach")) {
+		if (standby_opt_subcmd_unknown != standby_params.subcmd)
+			goto err;
+
+		standby_params.subcmd = standby_opt_subcmd_detach;
+		return 0;
+	} else if (!strcmp(opt, "activate")) {
+		if (standby_opt_subcmd_unknown != standby_params.subcmd)
+			goto err;
+
+		standby_params.subcmd = standby_opt_subcmd_activate;
+		return 0;
 	}
 
 	if (!strcmp(opt, "cache-id")) {
@@ -2038,6 +2048,12 @@ int standby_handle_option(char *opt, const char **arg)
 	}
 
 	return 0;
+
+err:
+	cas_printf(LOG_ERR, "Can't use '%s' and '%s' options simultaneously\n",
+			opt, standby_params_options[standby_params.subcmd].long_name);
+
+	return FAILURE;
 }
 
 /* Check if all required command were set depending on command type */
