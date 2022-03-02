@@ -170,7 +170,7 @@ static inline void cmd_subcmd_print_invalid_subcmd(cli_option* options)
 {
 	cas_printf(LOG_ERR, "Invalid or missing first sub-command parameter. ");
 	cas_printf(LOG_ERR, "Expected one of the: {");
-	print_options_usage(options, "|", cmd_subcmd_print_subcmd, 0);
+	print_options_usage(LOG_ERR, options, "|", cmd_subcmd_print_subcmd, 0);
 	cas_printf(LOG_ERR, "}\n");
 }
 
@@ -183,7 +183,7 @@ void cmd_subcmd_help(app *app_values, cli_command *cmd, int flag_required)
 
 	/* Print usage */
 	cas_printf(LOG_INFO, "Usage: %s --%s {", app_values->name, cmd->name);
-	print_options_usage(cmd->options, "|", cmd_subcmd_print_subcmd, 0);
+	print_options_usage(LOG_INFO, cmd->options, "|", cmd_subcmd_print_subcmd, 0);
 	cas_printf(LOG_INFO, "}\n\n");
 
 	print_command_header(app_values, cmd);
@@ -217,7 +217,7 @@ void cmd_subcmd_help(app *app_values, cli_command *cmd, int flag_required)
 			}
 		}
 
-		print_options_usage(cmd->options, " ", cmd_subcmd_print_param,
+		print_options_usage(LOG_INFO, cmd->options, " ", cmd_subcmd_print_param,
 				(1 << flag) | (1 << flag_required));
 
 		if (all_ops != printed_ops) {

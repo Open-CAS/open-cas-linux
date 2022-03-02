@@ -119,8 +119,9 @@ char *command_name_in_brackets(char *buf, size_t buf_size, char short_name, char
 
 void print_help(const app *app_values, const cli_command *commands);
 
-void print_options_usage(cli_option* options, const char *separator,
-		int (*view)(cli_option* options, int flag), int flag);
+void print_options_usage(int log_level, cli_option* options,
+		const char *separator, int (*view)(cli_option* options, int flag),
+		int flag);
 
 void print_list_options(cli_option* options, int flag,
 		int (*view)(cli_option* options, int flag));

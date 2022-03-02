@@ -64,8 +64,9 @@ char *command_name_in_brackets(char *buf, size_t buf_size, char short_name, char
 	return buf;
 }
 
-void print_options_usage(cli_option* options, const char *separator,
-		int (*view)(cli_option* options, int flag), int flag)
+void print_options_usage(int log_level, cli_option* options,
+		const char *separator, int (*view)(cli_option* options, int flag),
+		int flag)
 {
 	int print_separator = 0;
 	int i;
@@ -81,16 +82,16 @@ void print_options_usage(cli_option* options, const char *separator,
 
 		if (print_separator) {
 			/* Separator */
-			cas_printf(LOG_INFO, "%s", separator);
+			cas_printf(log_level, "%s", separator);
 		}
 		print_separator = 1;
 
 		/* Long option name */
-		cas_printf(LOG_INFO, "--%s", options[i].long_name);
+		cas_printf(log_level, "--%s", options[i].long_name);
 
 		/* Parameter */
 		if (options[i].arg != NULL) {
-			cas_printf(LOG_INFO, " <%s>",
+			cas_printf(log_level, " <%s>",
 			options[i].arg);
 		}
 	}
