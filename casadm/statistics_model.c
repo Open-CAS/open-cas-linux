@@ -537,6 +537,9 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 	const char *cache_path;
 	char dev_path[MAX_STR_LEN];
 	int inactive_cores;
+	bool standby = (cache_info->info.state & (1 << ocf_cache_state_standby));
+	bool standby_detached = cache_info->info.standby_detached;
+	bool cache_exported_obj_exists = (standby && !standby_detached);
 
 	if (strnlen(cache_info->cache_path_name, sizeof(cache_info->cache_path_name)) == 0) {
 		cache_path = "-";
@@ -561,6 +564,12 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 
 	print_kv_pair(outfile, "Cache Device", "%s",
 		      cache_path);
+	if (cache_exported_obj_exists) {
+		print_kv_pair(outfile, "Exported Object", "/dev/cas-cache-%d",
+				cache_info->cache_id);
+	} else {
+		print_kv_pair(outfile, "Exported Object", "-");
+	}
 	print_kv_pair(outfile, "Core Devices", "%d",
 		      cache_info->info.core_count);
 	inactive_cores = get_inactive_core_count(cache_info);
@@ -568,11 +577,11 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		return FAILURE;
 	print_kv_pair(outfile, "Inactive Core Devices", "%d", inactive_cores);
 
-	print_kv_pair(outfile, "Write Policy", "%s",
+	print_kv_pair(outfile, "Write Policy", "%s", standby ? "-" :
 		      cache_mode_to_name(cache_info->info.cache_mode));
-	print_kv_pair(outfile, "Cleaning Policy", "%s",
+	print_kv_pair(outfile, "Cleaning Policy", "%s", standby ? "-" :
 		      cleaning_policy_to_name(cache_info->info.cleaning_policy));
-	print_kv_pair(outfile, "Promotion Policy", "%s",
+	print_kv_pair(outfile, "Promotion Policy", "%s", standby ? "-" :
 		      promotion_policy_to_name(cache_info->info.promotion_policy));
 	print_kv_pair(outfile, "Cache line size", "%llu, [KiB]",
 		      cache_info->info.cache_line_size / KiB);
