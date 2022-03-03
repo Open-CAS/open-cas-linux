@@ -5,9 +5,9 @@
 
 # Order in arrays is important!
 config_stats_cache = [
-    "cache id", "cache size", "cache device", "core devices", "inactive core devices",
-    "write policy", "cleaning policy", "promotion policy", "cache line size",
-    "metadata memory footprint", "dirty for", "status"
+    "cache id", "cache size", "cache device", "exported object", "core devices",
+    "inactive core devices", "write policy", "cleaning policy", "promotion policy",
+    "cache line size", "metadata memory footprint", "dirty for", "status"
 ]
 config_stats_core = [
     "core id", "core device", "exported object", "core size", "dirty for", "status",
@@ -227,6 +227,7 @@ class CacheConfigStats:
         cache_id,
         cache_size,
         cache_dev,
+        exp_obj,
         core_dev,
         inactive_core_dev,
         write_policy,
@@ -240,6 +241,7 @@ class CacheConfigStats:
         self.cache_id = cache_id
         self.cache_size = cache_size
         self.cache_dev = cache_dev
+        self.exp_obj = exp_obj
         self.core_dev = core_dev
         self.inactive_core_dev = inactive_core_dev
         self.write_policy = write_policy
@@ -256,6 +258,7 @@ class CacheConfigStats:
             f"Cache ID: {self.cache_id}\n"
             f"Cache size: {self.cache_size}\n"
             f"Cache device: {self.cache_dev}\n"
+            f"Exported object: {self.exp_obj}\n"
             f"Core devices: {self.core_dev}\n"
             f"Inactive core devices: {self.inactive_core_dev}\n"
             f"Write policy: {self.write_policy}\n"
@@ -274,6 +277,7 @@ class CacheConfigStats:
             self.cache_id == other.cache_id
             and self.cache_size == other.cache_size
             and self.cache_dev == other.cache_dev
+            and self.exp_obj == other.exp_obj
             and self.core_dev == other.core_dev
             and self.inactive_core_dev == other.inactive_core_dev
             and self.write_policy == other.write_policy
