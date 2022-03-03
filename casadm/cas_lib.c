@@ -2775,8 +2775,12 @@ int list_caches(unsigned int list_format, bool by_id_path)
 
 			if (curr_cache->state & (1 << ocf_cache_state_standby)) {
 				strncpy(mode_string, "-", sizeof(mode_string));
-				snprintf(cache_ctrl_dev, sizeof(cache_ctrl_dev),
-						"/dev/cas-cache-%d", curr_cache->id);
+				if (!curr_cache->standby_detached) {
+					snprintf(cache_ctrl_dev, sizeof(cache_ctrl_dev),
+							"/dev/cas-cache-%d", curr_cache->id);
+				} else {
+					strncpy(cache_ctrl_dev, "-", sizeof(cache_ctrl_dev));
+				}
 			} else {
 				snprintf(mode_string, sizeof(mode_string), "%s",
 						cache_mode_to_name(curr_cache->mode));
