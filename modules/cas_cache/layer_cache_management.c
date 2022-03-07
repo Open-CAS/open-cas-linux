@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -8,7 +8,6 @@
 
 extern u32 max_writeback_queue_size;
 extern u32 writeback_queue_unblock_size;
-extern u32 metadata_layout;
 extern u32 unaligned_io;
 extern u32 seq_cut_off_mb;
 extern u32 use_io_scheduler;
@@ -1897,7 +1896,6 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	cfg->use_submit_io_fast = !use_io_scheduler;
 	cfg->locked = true;
 	cfg->metadata_volatile = false;
-	cfg->metadata_layout = metadata_layout;
 
 	cfg->backfill.max_queue_size = max_writeback_queue_size;
 	cfg->backfill.queue_unblock_size = writeback_queue_unblock_size;
