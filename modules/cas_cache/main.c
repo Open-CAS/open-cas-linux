@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -26,10 +26,6 @@ module_param(use_io_scheduler, uint, (S_IRUSR | S_IRGRP));
 MODULE_PARM_DESC(use_io_scheduler,
 		"Configure how IO shall be handled. "
 		"0 - in make request function, 1 - in request function");
-
-u32 metadata_layout = ocf_metadata_layout_default;
-module_param(metadata_layout, uint, (S_IRUSR | S_IRGRP));
-MODULE_PARM_DESC(metadata_layout, "Metadata layout, 0 - striping, 1 - sequential");
 
 u32 unaligned_io = 1;
 module_param(unaligned_io, uint, (S_IRUSR | S_IRGRP));
@@ -139,12 +135,6 @@ static int __init cas_init_module(void)
 		printk(KERN_ERR OCF_PREFIX_SHORT
 				"parameter writeback_queue_unblock_size"
 				" must be less than max_writeback_queue_size\n");
-		return -EINVAL;
-	}
-
-	if (metadata_layout >= ocf_metadata_layout_max) {
-		printk(KERN_ERR OCF_PREFIX_SHORT
-				"Invalid value for metadata_layout parameter\n");
 		return -EINVAL;
 	}
 

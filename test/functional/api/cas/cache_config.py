@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -254,13 +254,6 @@ class PromotionParametersNhit:
         return nhit_params
 
 
-# Specify layout of metadata on SSD
-class MetadataLayout(Enum):
-    striping = 0
-    sequential = 1
-    DEFAULT = striping
-
-
 # Specify how IO requests unaligned to 4KiB should be handled
 class UnalignedIo(Enum):
     PT = 0      # use PT mode
@@ -282,14 +275,12 @@ class KernelParameters:
 
     def __init__(
             self,
-            metadata_layout: MetadataLayout = None,
             unaligned_io: UnalignedIo = None,
             use_io_scheduler: UseIoScheduler = None,
             seq_cut_off_mb: int = None,
             max_writeback_queue_size: int = None,
             writeback_queue_unblock_size: int = None
     ):
-        self.metadata_layout = metadata_layout
         self.unaligned_io = unaligned_io
         self.use_io_scheduler = use_io_scheduler
         # Specify default sequential cut off threshold value in MiB
@@ -302,8 +293,7 @@ class KernelParameters:
 
     def __eq__(self, other):
         return (
-            equal_or_default(self.metadata_layout, other.metadata_layout, MetadataLayout.DEFAULT)
-            and equal_or_default(self.unaligned_io, other.unaligned_io, UnalignedIo.DEFAULT)
+            equal_or_default(self.unaligned_io, other.unaligned_io, UnalignedIo.DEFAULT)
             and equal_or_default(
                 self.use_io_scheduler, other.use_io_scheduler, UseIoScheduler.DEFAULT
             )
@@ -324,7 +314,6 @@ class KernelParameters:
     @classmethod
     def DEFAULT(cls):
         return KernelParameters(
-            MetadataLayout.DEFAULT,
             UnalignedIo.DEFAULT,
             UseIoScheduler.DEFAULT,
             cls.seq_cut_off_mb_DEFAULT,
@@ -336,7 +325,6 @@ class KernelParameters:
     def read_current_settings():
         module = "cas_cache"
         return KernelParameters(
-            MetadataLayout(int(get_kernel_module_parameter(module, "metadata_layout"))),
             UnalignedIo(int(get_kernel_module_parameter(module, "unaligned_io"))),
             UseIoScheduler(int(get_kernel_module_parameter(module, "use_io_scheduler"))),
             int(get_kernel_module_parameter(module, "seq_cut_off_mb")),
@@ -346,8 +334,6 @@ class KernelParameters:
 
     def get_parameter_dictionary(self):
         params = {}
-        if self.metadata_layout not in [None, MetadataLayout.DEFAULT]:
-            params["metadata_layout"] = str(self.metadata_layout.value)
         if self.unaligned_io not in [None, UnalignedIo.DEFAULT]:
             params["unaligned_io"] = str(self.unaligned_io.value)
         if self.use_io_scheduler not in [None, UseIoScheduler.DEFAULT]:
