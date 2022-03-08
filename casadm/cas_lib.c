@@ -3036,7 +3036,11 @@ int standby_activate(int cache_id, const char *cache_device)
 	}
 
 	if (cas_ioctl(KCAS_IOCTL_STANDBY_ACTIVATE, &cmd) != SUCCESS) {
-		print_err(cmd.ext_err_code ? : KCAS_ERR_SYSTEM);
+		if (cmd.ext_err_code == KCAS_ERR_CONTAINS_PART)
+			cas_printf(LOG_ERR, "Operation not allowed. Device contains partitions.\n");
+		else
+			print_err(cmd.ext_err_code ? : KCAS_ERR_SYSTEM);
+
 		return FAILURE;
 	}
 
