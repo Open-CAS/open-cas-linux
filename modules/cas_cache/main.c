@@ -46,7 +46,7 @@ MODULE_PARM_DESC(seq_cut_off_mb,
 ocf_ctx_t cas_ctx;
 struct casdsk_functions_mapper casdisk_functions;
 
-#ifdef SYMBOL_LOOKUP_SUPPORTED
+#if defined(SYMBOL_LOOKUP_SUPPORTED) && defined(MODULE_MUTEX_SUPPORTED)
 
 struct exported_symbol {
 	char *name;
@@ -83,7 +83,9 @@ int static cas_find_symbol(void *data, const char *namebuf,
 
 int static cas_casdisk_lookup_funtions(void)
 {
+#ifdef MODULE_MUTEX_SUPPORTED
 	mutex_lock(&module_mutex);
+#endif
 	cas_lookup_symbol(casdsk_disk_detach);
 	cas_lookup_symbol(casdsk_exp_obj_destroy);
 	cas_lookup_symbol(casdsk_exp_obj_create);
@@ -105,7 +107,9 @@ int static cas_casdisk_lookup_funtions(void)
 	cas_lookup_symbol(casdsk_disk_open);
 	cas_lookup_symbol(casdsk_disk_clear_pt);
 	cas_lookup_symbol(casdsk_exp_obj_get_gendisk);
+#ifdef MODULE_MUTEX_SUPPORTED
 	mutex_unlock(&module_mutex);
+#endif
 	return 0;
 }
 

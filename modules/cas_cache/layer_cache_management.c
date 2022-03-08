@@ -4,7 +4,6 @@
 */
 
 #include "cas_cache.h"
-#include "utils/utils_blk.h"
 #include "threads.h"
 
 extern u32 max_writeback_queue_size;
