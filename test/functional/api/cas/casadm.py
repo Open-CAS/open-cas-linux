@@ -42,6 +42,55 @@ def start_cache(cache_dev: Device, cache_mode: CacheMode = None,
     return Cache(cache_dev)
 
 
+def standby_init(cache_dev: Device, cache_id: int, cache_line_size: CacheLineSize,
+                 force: bool = False, shortcut: bool = False,
+                 kernel_params: KernelParameters = KernelParameters()):
+    if kernel_params != KernelParameters.read_current_settings():
+        reload_kernel_module("cas_cache", kernel_params.get_parameter_dictionary())
+    output = TestRun.executor.run(
+        standby_init_cmd(
+            cache_dev=cache_dev.path,
+            cache_id=str(cache_id),
+            cache_line_size=str(cache_line_size),
+            force=force,
+            shortcut=shortcut,
+        )
+    )
+    if output.exit_code != 0:
+        raise CmdException("Failed to init standby cache.", output)
+    return Cache(cache_dev)
+
+
+def standby_load(cache_dev: Device, shortcut: bool = False):
+    output = TestRun.executor.run(
+        standby_load_cmd(cache_dev=cache_dev.path, shortcut=shortcut)
+    )
+    if output.exit_code != 0:
+        raise CmdException("Failed to load standby cache.", output)
+    return Cache(cache_dev)
+
+
+def standby_detach_cache(cache_id: int, shortcut: bool = False):
+    output = TestRun.executor.run(
+        standby_detach_cmd(cache_id=str(cache_id), shortcut=shortcut)
+    )
+    if output.exit_code != 0:
+        raise CmdException("Failed to detach standby cache.", output)
+    return output
+
+
+def standby_activate_cache(cache_dev: Device, cache_id: int, shortcut: bool = False):
+    output = TestRun.executor.run(
+        standby_activate_cmd(
+            cache_dev=cache_dev.path, cache_id=str(cache_id), shortcut=shortcut
+        )
+    )
+    if output.exit_code != 0:
+        raise CmdException("Failed to activate standby cache.", output)
+    return output
+
+
+
 def stop_cache(cache_id: int, no_data_flush: bool = False, shortcut: bool = False):
     output = TestRun.executor.run(
         stop_cmd(cache_id=str(cache_id), no_data_flush=no_data_flush, shortcut=shortcut))
