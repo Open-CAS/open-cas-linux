@@ -146,13 +146,26 @@ static int _cache_mngt_async_caller_set_result(
 	return result;
 }
 
+static inline void _cache_mngt_async_context_init_common(
+		struct _cache_mngt_async_context *context)
+{
+	spin_lock_init(&context->lock);
+	context->result = 0;
+	context->compl_func = NULL;
+}
+
 static inline void _cache_mngt_async_context_init(
 		struct _cache_mngt_async_context *context)
 {
 	init_completion(&context->cmpl);
-	spin_lock_init(&context->lock);
-	context->result = 0;
-	context->compl_func = NULL;
+	_cache_mngt_async_context_init_common(context);
+}
+
+static inline void _cache_mngt_async_context_reinit(
+		struct _cache_mngt_async_context *context)
+{
+	reinit_completion(&context->cmpl);
+	_cache_mngt_async_context_init_common(context);
 }
 
 static void _cache_mngt_lock_complete(ocf_cache_t cache, void *priv, int error)
@@ -2371,8 +2384,7 @@ out_module_put:
 	return result;
 
 err:
-	reinit_completion(&context->async.cmpl);
-	context->async.result = 0;
+	_cache_mngt_async_context_reinit(&context->async);
 	ocf_mngt_cache_stop(cache, _cache_mngt_cache_stop_rollback_complete,
 			context);
 	rollback_result = wait_for_completion_interruptible(&context->async.cmpl);
@@ -2537,7 +2549,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 
 	return result;
 err:
-	_cache_mngt_async_context_init(&context->async);
+	_cache_mngt_async_context_reinit(&context->async);
 	ocf_mngt_cache_stop(cache, _cache_mngt_cache_stop_rollback_complete,
 			context);
 	rollback_result = wait_for_completion_interruptible(&context->async.cmpl);
