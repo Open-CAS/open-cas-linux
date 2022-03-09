@@ -2388,13 +2388,13 @@ err:
 	ocf_mngt_cache_stop(cache, _cache_mngt_cache_stop_rollback_complete,
 			context);
 	rollback_result = wait_for_completion_interruptible(&context->async.cmpl);
-	
+
 	rollback_result = _cache_mngt_async_caller_set_result(&context->async,
 							rollback_result);
-	
+
 	if (rollback_result != -KCAS_ERR_WAITING_INTERRUPTED)
 		kfree(context);
-	
+
 	return result;
 }
 
