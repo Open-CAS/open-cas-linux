@@ -2328,7 +2328,13 @@ int cache_mngt_activate(struct ocf_mngt_cache_standby_activate_config *cfg,
 	if (result)
 		goto out_cache_put;
 
-	result = cache_mngt_check_bdev(&cfg->device, false);
+	/*
+	 * We ignore partitions detected on the cache device despite we
+	 * know at this point that activate is gonna fail. We want OCF
+	 * to compare data on drive and in DRAM to provide more specific
+	 * error code.
+	 */
+	result = cache_mngt_check_bdev(&cfg->device, true);
 	if (result)
 		goto out_cache_unlock;
 
