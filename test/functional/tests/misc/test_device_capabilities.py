@@ -183,11 +183,23 @@ def compare_capabilities(cache_device, core_device, cache, core, msg):
             cache_val = cache_dev_capabilities[capability]
             core_val = core_dev_capabilities[capability]
 
-            comparison_val = method(core_val, cache_val) if method is not None else core_val
+            expected_val = method(core_val, cache_val) if method is not None else core_val
 
-            if comparison_val != cas_val:
+            if capability in ["max_sectors_kb", "max_hw_sectors_kb"] and expected_val != cas_val:
+                # On the newer kernels this trait is rounded. Instead of checking for
+                # the current kernel version, assume that both values are acceptable.
+                SECTOR_SHIFT = 9
+                lbs = measure_capabilities(core)["logical_block_size"]
+                # The original uint is kb, but number of sectors is needed
+                new_expected_val = expected_val * 2
+                round_val = lbs >> SECTOR_SHIFT
+                new_expected_val -= new_expected_val % round_val
+                # Restore the original unit
+                expected_val = new_expected_val // 2
+
+            if expected_val != cas_val:
                 TestRun.LOGGER.error(f"Cas device {capability} is not set properly. Is: {cas_val}, "
-                                     f"should be {comparison_val} (cache: {cache_val}, "
+                                     f"should be {expected_val} (cache: {cache_val}, "
                                      f"core: {core_val})")
                 continue
             TestRun.LOGGER.info(f"Cas device {capability} has proper value: {cas_val} "
