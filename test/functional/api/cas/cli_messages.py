@@ -81,8 +81,8 @@ stop_cache_mounted_core = [
 ]
 
 load_and_force = [
-    (r"Use of \'load\' and \'force\', \'cache-id\', \'cache-mode\' or \'cache-line-size\'",
-        r" simultaneously is forbidden.")
+    r"Use of \'load\' with \'force\', \'cache-id\', \'cache-mode\' or \'cache-line-size\'",
+    r" simultaneously is forbidden."
 ]
 
 try_add_core_sector_size_mismatch = [
