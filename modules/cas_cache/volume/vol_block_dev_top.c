@@ -359,9 +359,7 @@ static void _blockdev_handle_discard(ocf_core_t core, struct bio *bio)
 
 	io = ocf_core_new_io(core, cache_priv->io_queues[smp_processor_id()],
 			CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
-			CAS_BIO_BISIZE(bio), OCF_WRITE, 0,
-			CAS_CLEAR_FLUSH(CAS_BIO_OP_FLAGS(bio)));
-
+			CAS_BIO_BISIZE(bio), OCF_WRITE, 0, 0);
 	if (!io) {
 		CAS_PRINT_RL(KERN_CRIT
 			"Out of memory. Ending IO processing.\n");
