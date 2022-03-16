@@ -356,9 +356,7 @@ static void blkdev_handle_discard(struct bd_object *bvol, struct bio *bio)
 
 	io = ocf_volume_new_io(bvol->front_volume, queue,
 			CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
-			CAS_BIO_BISIZE(bio), OCF_WRITE, 0,
-			CAS_CLEAR_FLUSH(CAS_BIO_OP_FLAGS(bio)));
-
+			CAS_BIO_BISIZE(bio), OCF_WRITE, 0, 0);
 	if (!io) {
 		CAS_PRINT_RL(KERN_CRIT
 			"Out of memory. Ending IO processing.\n");
