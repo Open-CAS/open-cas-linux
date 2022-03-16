@@ -15,5 +15,6 @@ jobs:
         run: |
           chmod +x .github/verify_header.sh
           for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            echo $file
             .github/verify_header.sh $file
           done
