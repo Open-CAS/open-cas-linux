@@ -30,6 +30,12 @@ extern cas_printf_t cas_printf;
 #define CARRIAGE_RETURN		0xd
 #define INVALID_DIRTY_NO ((uint64_t) (-1))
 
+
+
+
+
+
+
 /* file descriptors for pipe */
 /* 1 is writing end, 0 is reading end of a pipe */
 int fdspipe[2];
