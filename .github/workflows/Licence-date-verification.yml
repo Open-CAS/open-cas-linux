@@ -1,5 +1,5 @@
 name: Licence-date-verification
-on: [push, pull_request]
+on: push
 jobs:
   verify-date:
     runs-on: ubuntu-latest
