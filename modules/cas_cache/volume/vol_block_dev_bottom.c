@@ -235,7 +235,7 @@ static void block_dev_submit_flush(struct ocf_io *io)
 	bio->bi_private = io;
 
 	atomic_inc(&blkio->rq_remaning);
-	cas_submit_bio(CAS_SET_FLUSH(0), bio);
+	cas_submit_bio(CAS_SET_FLUSH(io->dir), bio);
 
 out:
 	cas_bd_io_end(io, blkio->error);
