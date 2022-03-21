@@ -45,6 +45,7 @@ def test_trim_start_discard():
     with TestRun.step("Writing different pattern on partitions"):
         cas_fio = write_pattern(cas_part.path)
         non_cas_fio = write_pattern(non_cas_part.path)
+        non_cas_fio.verification_with_pattern("0xdeadbeef")
         cas_fio.run()
         non_cas_fio.run()
 
@@ -75,12 +76,16 @@ def test_trim_start_discard():
                 TestRun.fail(f"Discard request issued with wrong bytes count: {req.byte_count}, "
                              f"expected: {non_meta_size} bytes")
 
-        cas_fio.read_write(ReadWrite.read)
+    with TestRun.step("Check if data on the second part hasn't changed"):
         non_cas_fio.read_write(ReadWrite.read)
-        cas_fio.verification_with_pattern("0x00")
-        cas_fio.offset(metadata_size)
-        cas_fio.run()
         non_cas_fio.run()
+
+    if int(dev.get_discard_zeroes_data()):
+        with TestRun.step("Check if CAS zeroed data section on the cache device"):
+            cas_fio.offset(metadata_size)
+            cas_fio.verification_with_pattern("0x00")
+            cas_fio.read_write(ReadWrite.read)
+            cas_fio.run()
 
     with TestRun.step("Stopping cache"):
         cache.stop()
