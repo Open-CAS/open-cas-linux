@@ -26,9 +26,9 @@ Open CAS uses Safe string library (safeclib) that is MIT licensed.
 To download latest Open CAS Linux release run following commands:
 
 ```
-wget https://github.com/Open-CAS/open-cas-linux/releases/download/v21.6.1/open-cas-linux-21.06.1.0547.release.tar.gz
-tar -xf open-cas-linux-21.06.1.0547.release.tar.gz
-cd open-cas-linux-21.06.1.0547.release/
+wget https://github.com/Open-CAS/open-cas-linux/releases/download/v21.6.5/open-cas-linux-21.06.5.0555.release.tar.gz
+tar -xf open-cas-linux-21.06.5.0555.release.tar.gz
+cd open-cas-linux-21.06.5.0555.release/
 ```
 
 Alternatively, if you want recent development (unstable) version, you can clone GitHub repository:
@@ -101,9 +101,9 @@ Before running tests make sure you have a platform with at least 2 disks (one fo
 
 1. Go to test directory `cd test/functional`.
 1. Install dependencies with command `pip3 install -r test-framework/requirements.txt`.
-1. Create DUT config. See example [here](test/functional/config/example_dut_config.yml).  
-    a) Set disks params. You need at least two disks, of which at least one is an SSD drive.  
-    b) For remote execution uncomment and set the `ip`, `user` and `password` fields.  
+1. Create DUT config. See example [here](test/functional/config/example_dut_config.yml).
+    a) Set disks params. You need at least two disks, of which at least one is an SSD drive.
+    b) For remote execution uncomment and set the `ip`, `user` and `password` fields.
     c) For local execution just leave these fields commented.
 1. Run tests using command `pytest-3 --dut-config=<CONFIG>` where `<CONFIG>` is path to your config file, for example `pytest-3 --dut-config="config/dut_config.yml"`.
 
