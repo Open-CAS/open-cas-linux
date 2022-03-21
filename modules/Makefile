@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2012-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 # If $(M) is defined, we've been invoked from the
@@ -58,9 +58,8 @@ install: install_files
 
 install_files:
 	@echo "Installing Open-CAS modules"
-	@install -m 755 -d $(DESTDIR)$(MODULES_DIR)
-	@install -m 744 cas_disk/$(DISK_MODULE).ko $(DESTDIR)$(MODULES_DIR)/$(DISK_MODULE).ko
-	@install -m 744 cas_cache/$(CACHE_MODULE).ko $(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko
+	@install -m 644 -D cas_disk/$(DISK_MODULE).ko $(DESTDIR)$(MODULES_DIR)/$(DISK_MODULE).ko
+	@install -m 644 -D cas_cache/$(CACHE_MODULE).ko $(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko
 
 uninstall:
 	@echo "Uninstalling Open-CAS modules"

@@ -30,10 +30,10 @@ archives:
 	@tools/pckgen $(PWD) tar zip
 
 rpm:
-	@tools/pckgen $(PWD) rpm --debug
+	@tools/pckgen $(PWD) rpm
 
 srpm:
-	@tools/pckgen $(PWD) srpm --debug
+	@tools/pckgen $(PWD) srpm
 
 deb:
 	@tools/pckgen $(PWD) deb

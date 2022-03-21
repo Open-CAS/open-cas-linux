@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2012-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -132,11 +132,8 @@ install: install_files
 
 install_files:
 	@echo "Installing casadm"
-	@mkdir -p $(DESTDIR)$(BINARY_PATH)
-	@install -m 755 $(TARGET) $(DESTDIR)$(BINARY_PATH)/$(TARGET)
-	@mkdir -p $(DESTDIR)/usr/share/man/man8
-	@install -m 644 $(TARGET).8 $(DESTDIR)/usr/share/man/man8/$(TARGET).8
-	@mkdir -p $(DESTDIR)/usr/share/man/man5
+	@install -m 755 -D $(TARGET) $(DESTDIR)$(BINARY_PATH)/$(TARGET)
+	@install -m 644 -D $(TARGET).8 $(DESTDIR)/usr/share/man/man8/$(TARGET).8
 
 uninstall:
 	@echo "Uninstalling casadm"
