@@ -9,7 +9,7 @@ import time
 import pytest
 
 from api.cas import casadm
-from api.cas.cache_config import CacheMode, CacheModeTrait, CleaningPolicy
+from api.cas.cache_config import CacheMode, CacheModeTrait, CleaningPolicy, SeqCutOffPolicy
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet
 from test_tools import fs_utils
@@ -84,6 +84,86 @@ def test_trim_start_discard():
 
     with TestRun.step("Stopping cache"):
         cache.stop()
+
+
+@pytest.mark.require_disk("ssd1", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("ssd2", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_plugin("power_control")
+def test_trim_propagation():
+    """
+    title: Trim request not propagated to cache device
+    description: |
+      Sending trim request to exported object discards only data. The data from cache
+      is invalidated but the trim request is not propagated to cache device and metadata
+      of other cache lines is not affected.
+    pass_criteria:
+      - No system crash.
+      - No discards detected on caching device
+      - No data corruption after power failure.
+    """
+
+    with TestRun.step(f"Create partitions"):
+        TestRun.disks["ssd1"].create_partitions([Size(43, Unit.MegaByte)])
+        TestRun.disks["ssd2"].create_partitions([Size(512, Unit.KiloByte)])
+
+        cache_dev = TestRun.disks["ssd1"].partitions[0]
+        core_dev = TestRun.disks["ssd2"].partitions[0]
+
+        if not check_if_device_supports_trim(cache_dev):
+            raise Exception("Cache device doesn't support discards")
+        if not check_if_device_supports_trim(core_dev):
+            raise Exception("Core device doesn't support discards")
+
+    with TestRun.step(f"Disable udev"):
+        os_utils.Udev.disable()
+
+    with TestRun.step(f"Prepare cache instance in WB with one core"):
+        cache = casadm.start_cache(cache_dev, CacheMode.WB, force=True)
+        core = cache.add_core(core_dev)
+        cache.set_cleaning_policy(CleaningPolicy.nop)
+        cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+        cache.purge_cache()
+
+    with TestRun.step(f"Fill exported object with dirty data"):
+        core_size_4k = core.get_statistics().config_stats.core_size.get_value(Unit.Blocks4096)
+        core_size_4k = int(core_size_4k)
+
+        cas_fio = write_pattern(core.path)
+        cas_fio.verification_with_pattern("0xdeadbeef")
+        cas_fio.run()
+
+        dirty_4k = cache.get_statistics().usage_stats.dirty.get_value(Unit.Blocks4096)
+
+        if dirty_4k != core_size_4k:
+            TestRun.fail(
+                f"Failed to fill cache. Expected dirty blocks: {core_size_4k}, "
+                f"actual value {dirty_4k}"
+            )
+
+    with TestRun.step(f"Discard 4k of data on exported object"):
+        TestRun.executor.run_expect_success(f"blkdiscard {core.path} --length 4096 --offset 0")
+        old_occupancy = cache.get_statistics().usage_stats.occupancy.get_value(Unit.Blocks4096)
+
+    with TestRun.step("Power cycle"):
+        power_control = TestRun.plugin_manager.get_plugin("power_control")
+        power_control.power_cycle()
+        os_utils.Udev.disable()
+
+    with TestRun.step("Load cache"):
+        cache = casadm.start_cache(cache_dev, load=True)
+
+    with TestRun.step("Check if occupancy after dirty shutdown is correct"):
+        new_occupancy = cache.get_statistics().usage_stats.occupancy.get_value(Unit.Blocks4096)
+        if new_occupancy != old_occupancy:
+            TestRun.LOGGER.error(
+                f"Expected occupancy after dirty shutdown: {old_occupancy}. "
+                f"Actuall: {new_occupancy})"
+            )
+
+    with TestRun.step("Verify data after dirty shutdown"):
+        cas_fio.read_write(ReadWrite.read)
+        cas_fio.offset(Unit.Blocks4096)
+        cas_fio.run()
 
 
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.InsertWrite))
