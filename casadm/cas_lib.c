@@ -1013,7 +1013,7 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 			min_free_ram_gb /= GiB;
 
 			cas_printf(LOG_ERR, "Not enough free RAM.\n"
-					"You need at least %0.2gGB to start cache"
+					"You need at least %0.2fGB to start cache"
 					" with cache line size equal %llukB.\n",
 					min_free_ram_gb, line_size / KiB);
 
