@@ -1,0 +1,45 @@
+name: copyright-date-verification
+on:
+  pull_request:
+    branches:
+      - master
+
+env:
+  EXTENSIONS: "c h cpp py go"
+jobs:
+  verify-date:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2.1.0
+        with:
+          fetch-depth: 0
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v18.2
+      - name: List all changed files
+        run: |
+          for FILE in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            REGEX=".*\.(.*)"
+            if [[  $FILE =~ $REGEX ]]
+            then
+                EXTENSION=${BASH_REMATCH[1]}
+                EXTENSIONS_LIST=($EXTENSIONS)
+                if [[ " ${EXTENSIONS_LIST[*]} " =~ " ${EXTENSION} " ]]
+                then
+                    .github/verify_header.sh $FILE
+                fi
+            fi
+          done
+      
+      - name: Create failure commit comment
+        if: ${{ failure() }}
+        uses: marocchino/sticky-pull-request-comment@v2.2.0
+        with:
+          message: |
+            :x: Some file(s) contain copyright notice header with an outdated year set as modification date.
+      - name: Create success commit comment
+        if: ${{ success() }}
+        uses: marocchino/sticky-pull-request-comment@v2.2.0
+        with:
+          message: |
+            :heavy_check_mark: All files contain copyright notice header with an current year set as modification date.
