@@ -880,6 +880,11 @@ int cache_mngt_flush_device(const char *cache_name, size_t name_len)
 	if (result)
 		return result;
 
+	if (ocf_cache_is_standby(cache)) {
+		ocf_mngt_cache_put(cache);
+		return -OCF_ERR_CACHE_STANDBY;
+	}
+
 	result = _cache_mngt_read_lock_sync(cache);
 	if (result) {
 		ocf_mngt_cache_put(cache);
