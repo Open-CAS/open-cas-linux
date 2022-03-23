@@ -2540,7 +2540,6 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 
 	strlcpy(cmd->cache_elevator, context->cache_elevator,
 			MAX_ELEVATOR_NAME);
-	cmd->min_free_ram = context->min_free_ram;
 
 	result = _cache_start_finalize(cache, cmd->init_cache, false);
 	if (result)
@@ -2555,6 +2554,8 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 
 	return result;
 err:
+	cmd->min_free_ram = context->min_free_ram;
+
 	_cache_mngt_async_context_reinit(&context->async);
 	ocf_mngt_cache_stop(cache, _cache_mngt_cache_stop_rollback_complete,
 			context);
