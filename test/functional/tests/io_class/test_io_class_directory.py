@@ -305,6 +305,13 @@ def test_ioclass_directory_dir_operations(filesystem):
             rule=f"directory:{classified_dir_path_2}",
             ioclass_config_path=ioclass_config_path,
         )
+        ioclass_config.add_ioclass(
+            ioclass_id=32,
+            eviction_priority=255,
+            allocation="0.00",
+            rule=f"metadata",
+            ioclass_config_path=ioclass_config_path,
+        )
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
     with TestRun.step(f"Prepare {filesystem.name} filesystem "
@@ -435,7 +442,7 @@ def read_files_with_reclassification_check(cache, target_ioclass_id: int, source
                     continue
                 TestRun.LOGGER.error(
                     "Target IO class occupancy not changed properly!\n"
-                    f"Expected: {file.size + target_occupancy_before}\n"
+                    f"Expected: {(file.size + target_occupancy_before).set_unit(Unit.Blocks4096)}\n"
                     f"Actual: {target_occupancy_after}"
                 )
         elif target_occupancy_after > target_occupancy_before and with_delay:
