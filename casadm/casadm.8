@@ -138,6 +138,15 @@ Manage IO classes.
   2. \fB-L, --list\fR - print current IO class configuration. Allowed output formats: table or CSV.
 
 .TP
+.B --standby
+Manage standby failover mode. Valid commands are:
+.BR
+  \fB--init - \fRinitialize standby failover cache
+  \fB--load - \fRload cache in standby mode
+  \fB--detach - \fRdetach cache device in standby mode
+  \fB--activate - \fRactivate standby cache
+
+.TP
 .B --zero-metadata
 Remove metadata from previously used cache device.
 
@@ -572,6 +581,42 @@ Identifier of cache instance <1-16384>.
 .B -o --output-format {table|csv}
 Defines output format for printed IO class configuration. It can be either
 \fBtable\fR (default) or \fBcsv\fR.
+
+.SH Options that are valid with --standby --init are:
+.TP
+.B -i, --cache-id <ID>
+Identifier of a cache instance <1-16384>
+
+.TP
+.B -x, --cache-line-size
+Cache line size in kibibytes: {4,8,16,32,64} [KiB]
+
+.TP
+.B -d, --cache-device <DEVICE>
+Device to be used for standby cache
+
+.TP
+.B -f, --force
+Force the initialization of cache instance
+
+.SH Options that are valid with --standby --load are:
+.TP
+.B -d, --cache-device <DEVICE>
+Caching device to be used
+
+.SH Options that are valid with --standby --detach are:
+.TP
+.B -i, --cache-id <ID>
+Identifier of a cache instance <1-16384>
+
+.SH Options that are valid with --standby --activate are:
+.TP
+.B -i, --cache-id <ID>
+Identifier of a cache instance <1-16384>
+
+.TP
+.B -d, --cache-device <DEVICE>
+Caching device to be used
 
 .SH Options that are valid with --zero-metadata are:
 .TP
