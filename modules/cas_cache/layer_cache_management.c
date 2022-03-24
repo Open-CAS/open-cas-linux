@@ -2352,6 +2352,9 @@ int cache_mngt_activate(struct ocf_mngt_cache_standby_activate_config *cfg,
 
 	cache_priv = ocf_cache_get_priv(cache);
 	cache_priv->attach_context = context;
+	/* All the required memory has been alocated and initialized on cache_init,
+	 * just set the flag to allow deinit*/
+	context->priv_inited = true;
 
 	context->rollback_thread = cas_lazy_thread_create(cache_start_rollback,
 			context, "cas_cache_rollback_complete");
