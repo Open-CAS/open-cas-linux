@@ -3018,7 +3018,15 @@ int standby_detach(int cache_id)
 		.cache_id = cache_id
 	};
 
-	return cas_ioctl(KCAS_IOCTL_STANDBY_DETACH, &cmd);
+	if (cas_ioctl(KCAS_IOCTL_STANDBY_DETACH, &cmd) != SUCCESS) {
+		print_err(cmd.ext_err_code ? : KCAS_ERR_SYSTEM);
+		return FAILURE;
+	}
+
+	cas_printf(LOG_INFO, "Successfully detached cache instance %hu\n",
+			cache_id);
+
+	return SUCCESS;
 }
 
 int standby_activate(int cache_id, const char *cache_device)
@@ -3033,9 +3041,17 @@ int standby_activate(int cache_id, const char *cache_device)
 	}
 
 	if (cas_ioctl(KCAS_IOCTL_STANDBY_ACTIVATE, &cmd) != SUCCESS) {
-		print_err(cmd.ext_err_code ? : KCAS_ERR_SYSTEM);
+		if (abs(cmd.ext_err_code) == OCF_ERR_NOT_OPEN_EXC) {
+			cas_printf(LOG_ERR, "Cannot open the device exclusively. Make sure "
+					"to detach cache before activation.\n");
+		} else {
+			print_err(cmd.ext_err_code ? : KCAS_ERR_SYSTEM);
+		}
 		return FAILURE;
 	}
+
+	cas_printf(LOG_INFO, "Successfully activated cache instance %hu\n",
+			cache_id);
 
 	return SUCCESS;
 }
