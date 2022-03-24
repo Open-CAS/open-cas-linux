@@ -2372,12 +2372,13 @@ int cache_mngt_activate(struct ocf_mngt_cache_standby_activate_config *cfg,
 	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
 		goto out_cache_put;
 	if (result)
-		goto err;
+		goto activate_err;
 
 	result = _cache_start_finalize(cache, -1, true);
 	if (result)
-		goto err;
+		goto finalize_err;
 
+activate_err:
 	cas_lazy_thread_stop(context->rollback_thread);
 
 err_free_context:
@@ -2392,7 +2393,7 @@ out_module_put:
 	module_put(THIS_MODULE);
 	return result;
 
-err:
+finalize_err:
 	_cache_mngt_async_context_reinit(&context->async);
 	ocf_mngt_cache_stop(cache, _cache_mngt_cache_stop_rollback_complete,
 			context);
