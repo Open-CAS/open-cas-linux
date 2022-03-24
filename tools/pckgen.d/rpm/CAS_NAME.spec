@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -108,7 +108,8 @@ if [ $1 -eq 0 ]; then
     . /etc/os-release
     if [[ ! "$ID_LIKE" =~ suse|sles ]]; then
         # Search for all CAS modules to remove them from weak-modules
-        find /lib/modules/*/extra/ -name "cas_*.ko" >/var/run/rpm-open-cas-linux-modules
+        # Use realpath to resolve any possible symlinks (needed for weak-modules)
+        realpath $(find /lib/modules/*/extra/block/opencas/ -name "cas_*.ko") >/var/run/rpm-open-cas-linux-modules
     fi
 fi
 
@@ -116,8 +117,7 @@ fi
 if [ $1 -eq 0 ]; then
     . /etc/os-release
     if [[ ! "$ID_LIKE" =~ suse|sles ]]; then
-        # realpath to resolve any possible symlinks (needed for weak-modules)
-        modules=( $(realpath $(cat /var/run/rpm-open-cas-linux-modules)) )
+        modules=( $(cat /var/run/rpm-open-cas-linux-modules) )
         rm -f /var/run/rpm-open-cas-linux-modules
         printf "%s\n" "${modules[@]}" | weak-modules --no-initramfs --remove-modules
     fi
@@ -126,7 +126,7 @@ fi
 
 
 %files
-%defattr(-, root, root)
+%defattr(-, root, root, 755)
 %license LICENSE
 %doc README.md
 %dir /etc/opencas/
@@ -155,12 +155,16 @@ fi
 %ghost /lib/opencas/__pycache__
 
 %files  modules_%{kver_filename}
-%defattr(-, root, root)
-/lib/modules/%{kver}/extra/cas_cache.ko
-/lib/modules/%{kver}/extra/cas_disk.ko
+%defattr(644, root, root, 755)
+%license LICENSE
+/lib/modules/%{kver}
 
 
 %changelog
+* Mon Mar 21 2022 Rafal Stefanowski <rafal.stefanowski@intel.com> - 22.03-1
+- Update modules destination directory and permissions
+- Add license to modules package
+- Fix resolving of weak-modules symlinks
 * Mon Nov 22 2021 Michal Mielewczyk <michal.mielewczyk@intel.com> - 21.06-1
 - Update dependencies
 * Mon Feb 8 2021 Rafal Stefanowski <rafal.stefanowski@intel.com> - 21.03-1

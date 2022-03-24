@@ -26,7 +26,7 @@ OCFDIR=$(PWD)/../ocf
 PWD=$(shell pwd)
 KERNEL_VERSION ?= "$(shell uname -r)"
 KERNEL_DIR ?= "/lib/modules/$(KERNEL_VERSION)/build"
-MODULES_DIR=/lib/modules/$(shell uname -r)/extra
+MODULES_DIR=/lib/modules/$(KERNEL_VERSION)/extra/block/opencas
 
 DISK_MODULE = cas_disk
 CACHE_MODULE = cas_cache
@@ -68,6 +68,7 @@ uninstall:
 
 	$(call remove-file,$(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko)
 	$(call remove-file,$(DESTDIR)$(MODULES_DIR)/$(DISK_MODULE).ko)
+	$(call remove-directory,$(DESTDIR)$(MODULES_DIR))
 
 	@$(DEPMOD)
 
