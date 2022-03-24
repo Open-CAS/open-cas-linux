@@ -2405,6 +2405,7 @@ finalize_err:
 	if (rollback_result != -KCAS_ERR_WAITING_INTERRUPTED)
 		kfree(context);
 
+	module_put(THIS_MODULE);
 	return result;
 }
 
