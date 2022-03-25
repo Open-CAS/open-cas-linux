@@ -406,6 +406,8 @@ struct kcas_standby_activate
  *    35    *    KCAS_IOCTL_PURGE_CACHE                     *    OK            *
  *    36    *    KCAS_IOCTL_PURGE_CORE                      *    OK            *
  *    37    *    KCAS_IOCTL_REMOVE_INACTIVE                 *    OK            *
+ *    38    *    KCAS_IOCTL_STANDBY_DETACH                  *    OK            *
+ *    39    *    KCAS_IOCTL_STANDBY_ACTIVATE                *    OK            *
  *******************************************************************************
  */
 
