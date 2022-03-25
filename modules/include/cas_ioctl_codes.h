@@ -205,6 +205,8 @@ struct kcas_core_info {
 
 	ocf_core_state_t state;
 
+	bool exp_obj_exists;
+
 	int ext_err_code;
 };
 
@@ -393,7 +395,7 @@ struct kcas_standby_activate
  *    22    *    KCAS_IOCTL_INSERT_CORE                     *    OK            *
  *    23    *    KCAS_IOCTL_REMOVE_CORE                     *    OK            *
  *    24    *    KCAS_IOCTL_CACHE_INFO                      *    OK            *
- *    25    *    KCAS_IOCTL_CORE_INFO                       *    OK            *
+ *    25    *    KCAS_IOCTL_CORE_INFO                       *    DEPERCATED    *
  *    26    *    KCAS_IOCTL_GET_CORE_POOL_COUNT             *    OK            *
  *    27    *    KCAS_IOCTL_GET_CORE_POOL_PATHS             *    OK            *
  *    28    *    KCAS_IOCTL_CORE_POOL_REMOVE                *    OK            *
@@ -408,6 +410,7 @@ struct kcas_standby_activate
  *    37    *    KCAS_IOCTL_REMOVE_INACTIVE                 *    OK            *
  *    38    *    KCAS_IOCTL_STANDBY_DETACH                  *    OK            *
  *    39    *    KCAS_IOCTL_STANDBY_ACTIVATE                *    OK            *
+ *    40    *    KCAS_IOCTL_CORE_INFO                       *    OK            *
  *******************************************************************************
  */
 
@@ -459,9 +462,6 @@ struct kcas_standby_activate
 /** Retrieve properties of a running cache instance (incl. mode etc.) */
 #define KCAS_IOCTL_CACHE_INFO _IOWR(KCAS_IOCTL_MAGIC, 24, struct kcas_cache_info)
 
-/** Rretrieve statisting of a given core object */
-#define KCAS_IOCTL_CORE_INFO _IOWR(KCAS_IOCTL_MAGIC, 25, struct kcas_core_info)
-
 /** Get core pool count */
 #define KCAS_IOCTL_GET_CORE_POOL_COUNT _IOR(KCAS_IOCTL_MAGIC, 26, struct kcas_core_pool_count)
 
@@ -505,6 +505,9 @@ struct kcas_standby_activate
 
 /** Activate failover standby cache instance */
 #define KCAS_IOCTL_STANDBY_ACTIVATE _IOWR(KCAS_IOCTL_MAGIC, 39, struct kcas_standby_activate)
+
+/** Rretrieve statisting of a given core object */
+#define KCAS_IOCTL_CORE_INFO _IOWR(KCAS_IOCTL_MAGIC, 40, struct kcas_core_info)
 
 /**
  * Extended kernel CAS error codes

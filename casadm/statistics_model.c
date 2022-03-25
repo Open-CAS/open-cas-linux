@@ -188,15 +188,19 @@ static void print_core_conf(const struct kcas_core_info *info, FILE *outfile)
 {
 	uint64_t core_size;
 	float core_size_gb;
+	char exp_obj[32];
 
 	core_size = info->info.core_size_bytes / KiB / 4;
 	core_size_gb = calc_gb(core_size);
 
+	snprintf(exp_obj, sizeof(exp_obj), "/dev/cas%d-%d",
+			info->cache_id, info->core_id);
+
 	print_kv_pair(outfile, "Core Id", "%i", info->core_id);
 	print_kv_pair(outfile, "Core Device", "%s",
 				info->core_path_name);
-	print_kv_pair(outfile, "Exported Object", "/dev/cas%d-%d",
-				info->cache_id, info->core_id);
+	print_kv_pair(outfile, "Exported Object", "%s",
+				info->exp_obj_exists ? exp_obj : "-");
 	print_kv_pair(outfile, "Core Size", "%lu, [" UNIT_BLOCKS "], %.2f, [GiB]",
 				core_size, core_size_gb);
 	print_kv_pair_time(outfile, "Dirty for", info->info.dirty_for);
