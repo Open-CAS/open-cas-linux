@@ -249,6 +249,8 @@ int standby_detach(int cache_id);
  */
 int standby_activate(int cache_id, const char *cache_device);
 
+void check_cache_state_incomplete(int cache_id, int fd);
+
 /**
  * @brief remove inactive core device from a cache
  *

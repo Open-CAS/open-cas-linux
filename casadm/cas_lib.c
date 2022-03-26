@@ -974,8 +974,7 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 {
 	int fd = 0;
 	struct kcas_start_cache cmd;
-	struct cache_device *cache;
-	int i, status;
+	int status;
 	double min_free_ram_gb;
 
 	/* check if cache device given exists */
@@ -1039,30 +1038,7 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 
 	status = SUCCESS;
 
-	for (i = 0; i < CORE_ADD_MAX_TIMEOUT; ++i) {
-		cache = get_cache_device_by_id_fd(cache_id, fd, false);
-		status = FAILURE;
-
-		if (cache == NULL) {
-			break;
-		}
-
-		if (cache->core_count == cache->expected_core_count) {
-			if (cache->state & (1 << ocf_cache_state_incomplete)) {
-				cas_printf(LOG_WARNING, "WARNING: Cache is in incomplete state - at least one core is inactive\n");
-			}
-			status = SUCCESS;
-			free(cache);
-			cache = NULL;
-			break;
-		}
-
-		free(cache);
-		cache = NULL;
-
-		sleep(1);
-	}
-
+	check_cache_state_incomplete(cache_id, fd);
 	close(fd);
 
 	if (status == SUCCESS) {
@@ -1847,6 +1823,33 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
 	close(fd);
 
 	return SUCCESS;
+}
+
+void check_cache_state_incomplete(int cache_id, int fd) {
+	struct cache_device *cache;		
+	int i;
+	
+	for (i = 0; i < CORE_ADD_MAX_TIMEOUT; i++) {
+		cache = get_cache_device_by_id_fd(cache_id, fd, false);
+		
+		if (cache == NULL) {
+			return;	
+		}
+
+		if (cache->core_count == cache->expected_core_count) {
+			if (cache->state & (1 << ocf_cache_state_incomplete)) {
+				cas_printf(LOG_WARNING, "WARNING: Cache is in incomplete state - at least one core is inactive\n");
+			}
+			free(cache);
+			cache = NULL;
+			return;
+		}
+	
+		free(cache);
+		cache = NULL;
+
+		sleep(1);
+	}
 }
 
 int remove_inactive_core(unsigned int cache_id, unsigned int core_id,
@@ -3028,6 +3031,7 @@ int standby_detach(int cache_id)
 
 int standby_activate(int cache_id, const char *cache_device)
 {
+	int fd = 0;
 	struct kcas_standby_activate cmd = {
 		.cache_id = cache_id
 	};
@@ -3046,6 +3050,13 @@ int standby_activate(int cache_id, const char *cache_device)
 		}
 		return FAILURE;
 	}
+
+	fd = open_ctrl_device();
+	if(fd == -1)
+		return FAILURE;
+
+	check_cache_state_incomplete(cache_id, fd);	
+	close(fd);
 
 	cas_printf(LOG_INFO, "Successfully activated cache instance %hu\n",
 			cache_id);
