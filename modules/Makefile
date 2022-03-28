@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2012-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 # If $(M) is defined, we've been invoked from the
@@ -26,7 +26,7 @@ OCFDIR=$(PWD)/../ocf
 PWD=$(shell pwd)
 KERNEL_VERSION ?= "$(shell uname -r)"
 KERNEL_DIR ?= "/lib/modules/$(KERNEL_VERSION)/build"
-MODULES_DIR=/lib/modules/$(shell uname -r)/extra
+MODULES_DIR=/lib/modules/$(KERNEL_VERSION)/extra/block/opencas
 
 DISK_MODULE = cas_disk
 CACHE_MODULE = cas_cache
@@ -58,9 +58,8 @@ install: install_files
 
 install_files:
 	@echo "Installing Open-CAS modules"
-	@install -m 755 -d $(DESTDIR)$(MODULES_DIR)
-	@install -m 744 cas_disk/$(DISK_MODULE).ko $(DESTDIR)$(MODULES_DIR)/$(DISK_MODULE).ko
-	@install -m 744 cas_cache/$(CACHE_MODULE).ko $(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko
+	@install -m 644 -D cas_disk/$(DISK_MODULE).ko $(DESTDIR)$(MODULES_DIR)/$(DISK_MODULE).ko
+	@install -m 644 -D cas_cache/$(CACHE_MODULE).ko $(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko
 
 uninstall:
 	@echo "Uninstalling Open-CAS modules"
@@ -69,6 +68,7 @@ uninstall:
 
 	$(call remove-file,$(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko)
 	$(call remove-file,$(DESTDIR)$(MODULES_DIR)/$(DISK_MODULE).ko)
+	$(call remove-directory,$(DESTDIR)$(MODULES_DIR))
 
 	@$(DEPMOD)
 

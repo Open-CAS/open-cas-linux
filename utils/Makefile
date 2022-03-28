@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2012-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -34,39 +34,28 @@ else
 install_files:
 	@echo "Installing Open-CAS utils"
 
-	@install -m 755 -d $(DESTDIR)/etc/opencas
-	@install -m 644 $(UTILS_DIR)/opencas.conf $(DESTDIR)/etc/opencas/opencas.conf
-	@install -m 444 $(UTILS_DIR)/ioclass-config.csv $(DESTDIR)/etc/opencas/ioclass-config.csv
-	@install -m 755 -d $(DESTDIR)/var/lib/opencas
-	@install -m 644 $(METADATA_DIR)/cas_version $(DESTDIR)/var/lib/opencas/cas_version
-	@mkdir -p $(DESTDIR)/usr/share/man/man5
-	@install -m 644 $(UTILS_DIR)/opencas.conf.5 $(DESTDIR)/usr/share/man/man5/opencas.conf.5
+	@install -m 644 -D $(UTILS_DIR)/opencas.conf $(DESTDIR)/etc/opencas/opencas.conf
+	@install -m 644 -D $(UTILS_DIR)/ioclass-config.csv $(DESTDIR)/etc/opencas/ioclass-config.csv
+	@install -m 644 -D $(METADATA_DIR)/cas_version $(DESTDIR)/var/lib/opencas/cas_version
+	@install -m 644 -D $(UTILS_DIR)/opencas.conf.5 $(DESTDIR)/usr/share/man/man5/opencas.conf.5
 
-	@install -m 755 -d $(DESTDIR)$(CASCTL_DIR)
-	@install -m 644 opencas.py $(DESTDIR)$(CASCTL_DIR)/opencas.py
-	@install -m 755 casctl $(DESTDIR)$(CASCTL_DIR)/casctl
-	@install -m 755 open-cas-loader $(DESTDIR)$(CASCTL_DIR)/open-cas-loader
+	@install -m 644 -D opencas.py $(DESTDIR)$(CASCTL_DIR)/opencas.py
+	@install -m 755 -D casctl $(DESTDIR)$(CASCTL_DIR)/casctl
+	@install -m 755 -D open-cas-loader $(DESTDIR)$(CASCTL_DIR)/open-cas-loader
 
-	@mkdir -p $(DESTDIR)/etc/dracut.conf.d/
-	@install -m 644 etc/dracut.conf.d/opencas.conf $(DESTDIR)/etc/dracut.conf.d/opencas.conf
+	@install -m 644 -D etc/dracut.conf.d/opencas.conf $(DESTDIR)/etc/dracut.conf.d/opencas.conf
 
-	@mkdir -p $(DESTDIR)/sbin
+	@install -m 755 -d $(DESTDIR)/sbin
 	@ln -fs $(CASCTL_DIR)/casctl $(DESTDIR)/sbin/casctl
 
-	@mkdir -p $(DESTDIR)$(UDEVRULES_DIR)
-	@install -m 644 60-persistent-storage-cas-load.rules $(DESTDIR)$(UDEVRULES_DIR)/60-persistent-storage-cas-load.rules
-	@install -m 644 60-persistent-storage-cas.rules $(DESTDIR)$(UDEVRULES_DIR)/60-persistent-storage-cas.rules
+	@install -m 644 -D 60-persistent-storage-cas-load.rules $(DESTDIR)$(UDEVRULES_DIR)/60-persistent-storage-cas-load.rules
+	@install -m 644 -D 60-persistent-storage-cas.rules $(DESTDIR)$(UDEVRULES_DIR)/60-persistent-storage-cas.rules
 
-	@install -m 755 -d $(DESTDIR)/usr/share/doc/opencas
+	@install -m 644 -D casctl.8 $(DESTDIR)/usr/share/man/man8/casctl.8
 
-	@mkdir -p $(DESTDIR)/usr/share/man/man8
-	@install -m 644 casctl.8 $(DESTDIR)/usr/share/man/man8/casctl.8
-
-	@mkdir -p $(DESTDIR)$(SYSTEMD_DIR)
-	@install -m 644 open-cas-shutdown.service $(DESTDIR)$(SYSTEMD_DIR)/open-cas-shutdown.service
-	@install -m 644 open-cas.service $(DESTDIR)$(SYSTEMD_DIR)/open-cas.service
-	@install -m 755 -d $(DESTDIR)$(SYSTEMD_DIR)/../system-shutdown
-	@install -m 755 open-cas.shutdown $(DESTDIR)$(SYSTEMD_DIR)/../system-shutdown/open-cas.shutdown
+	@install -m 644 -D open-cas-shutdown.service $(DESTDIR)$(SYSTEMD_DIR)/open-cas-shutdown.service
+	@install -m 644 -D open-cas.service $(DESTDIR)$(SYSTEMD_DIR)/open-cas.service
+	@install -m 755 -D open-cas.shutdown $(DESTDIR)$(SYSTEMD_DIR)/../system-shutdown/open-cas.shutdown
 endif
 
 uninstall:

@@ -1,4 +1,8 @@
 #!/usr/bin/make -f
+#
+# Copyright(c) 2020-2022 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+#
 
 # output every command that modifies files on the build system
 #export DH_VERBOSE = 1
