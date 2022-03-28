@@ -2751,6 +2751,7 @@ int list_caches(unsigned int list_format, bool by_id_path)
 		char status_buf[CACHE_STATE_LENGHT];
 		const char *tmp_status;
 		char mode_string[12];
+		char exp_obj[32];
 		char cache_ctrl_dev[MAX_STR_LEN] = "-";
 		float cache_flush_prog;
 		float core_flush_prog;
@@ -2815,15 +2816,17 @@ int list_caches(unsigned int list_format, bool by_id_path)
 				tmp_status = get_core_state_name(curr_core->info.state);
 			}
 
+			snprintf(exp_obj, sizeof(exp_obj), "/dev/cas%d-%d",
+					curr_cache->id, curr_core->id);
+
 			fprintf(intermediate_file[1], TAG(TREE_LEAF)
-					"%s,%u,%s,%s,%s,/dev/cas%d-%d\n",
+					"%s,%u,%s,%s,%s,%s\n",
 					"core", /* type */
 					curr_core->id, /* id */
 					core_path, /* path to core*/
 					tmp_status, /* core status */
 					"-", /* write policy */
-					curr_cache->id, /* core id (part of path)*/
-					curr_core->id /* cache id (part of path)*/ );
+					curr_core->info.exp_obj_exists ? exp_obj : "-" /* exported object path */);
 		}
 	}
 

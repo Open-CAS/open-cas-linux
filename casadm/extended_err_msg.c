@@ -187,6 +187,11 @@ struct {
 		"Core volume size does not match"
 		" the size stored in cache metadata"
 	},
+	{
+		OCF_ERR_CORE_NOT_REMOVED,
+		"Unable fully remove core due to metadata flush error.\n"
+		"Exported object was removed, but core object still exists."
+	},
 
 	/* CAS kernel error mappings*/
 	{

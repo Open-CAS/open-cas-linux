@@ -44,10 +44,10 @@ EOM
 
 run_cmd "casctl init"
 
-DEVICE_ID_OPTION="${CACHE_DEVICE}-part1" DEMANDED_STATE_OPTION="Running" check_device_state
-DEVICE_ID_OPTION="${DEVICE_NAME}16384-0" DEMANDED_STATE_OPTION="Active" check_device_state
-DEVICE_ID_OPTION="${DEVICE_NAME}16384-4095" DEMANDED_STATE_OPTION="Active" check_device_state
-DEVICE_ID_OPTION="${DEVICE_NAME}16384-4094" DEMANDED_STATE_OPTION="Active" check_device_state
+CACHE_ID_OPTION="1" DEMANDED_STATE_OPTION="Running" check_cache_state
+CACHE_ID_OPTION="1" CORE_ID_OPTION="1" DEMANDED_STATE_OPTION="Active" check_core_state
+CACHE_ID_OPTION="1" CORE_ID_OPTION="2" DEMANDED_STATE_OPTION="Active" check_core_state
+CACHE_ID_OPTION="1" CORE_ID_OPTION="3" DEMANDED_STATE_OPTION="Active" check_core_state
 
 run_cmd "casadm -G -n cleaning -i 16384 | grep "acp" &>/dev/null"
 
@@ -57,10 +57,10 @@ check_no_cache_running
 
 run_cmd "casctl start"
 
-DEVICE_ID_OPTION="${CACHE_DEVICE}-part1" DEMANDED_STATE_OPTION="Running" check_device_state
-DEVICE_ID_OPTION="${DEVICE_NAME}16384-0" DEMANDED_STATE_OPTION="Active" check_device_state
-DEVICE_ID_OPTION="${DEVICE_NAME}16384-4095" DEMANDED_STATE_OPTION="Active" check_device_state
-DEVICE_ID_OPTION="${DEVICE_NAME}16384-4094" DEMANDED_STATE_OPTION="Active" check_device_state
+CACHE_ID_OPTION="1" DEMANDED_STATE_OPTION="Running" check_cache_state
+CACHE_ID_OPTION="1" CORE_ID_OPTION="1" DEMANDED_STATE_OPTION="Active" check_core_state
+CACHE_ID_OPTION="1" CORE_ID_OPTION="2" DEMANDED_STATE_OPTION="Active" check_core_state
+CACHE_ID_OPTION="1" CORE_ID_OPTION="3" DEMANDED_STATE_OPTION="Active" check_core_state
 
 run_cmd "casctl stop"
 

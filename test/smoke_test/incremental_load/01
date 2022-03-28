@@ -36,10 +36,10 @@ CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}-part1" add_core
 CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}-part2" add_core
 CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}-part3" add_core
 
-DEVICE_ID_OPTION="${CACHE_DEVICE}-part1" DEMANDED_STATE_OPTION="Running" check_device_state
-DEVICE_ID_OPTION="${DEVICE_NAME}1-1" DEMANDED_STATE_OPTION="Active" check_device_state
-DEVICE_ID_OPTION="${DEVICE_NAME}1-2" DEMANDED_STATE_OPTION="Active" check_device_state
-DEVICE_ID_OPTION="${DEVICE_NAME}1-3" DEMANDED_STATE_OPTION="Active" check_device_state
+CACHE_ID_OPTION="1" DEMANDED_STATE_OPTION="Running" check_cache_state
+CACHE_ID_OPTION="1" CORE_ID_OPTION="1" DEMANDED_STATE_OPTION="Active" check_core_state
+CACHE_ID_OPTION="1" CORE_ID_OPTION="2" DEMANDED_STATE_OPTION="Active" check_core_state
+CACHE_ID_OPTION="1" CORE_ID_OPTION="3" DEMANDED_STATE_OPTION="Active" check_core_state
 
 # Stop prepared setup
 CACHE_ID_OPTION="1" stop_cache
@@ -47,21 +47,21 @@ CACHE_ID_OPTION="1" stop_cache
 # Add cores to pool, then load cache and check if cache is running
 # Try to add core devices and check their states
 CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}-part1" CORE_ID_OPTION="1" try_add_core
-DEVICE_ID_OPTION="${CORE_DEVICE}-part1" DEMANDED_STATE_OPTION="Detached" check_device_state
+DEVICE_ID_OPTION="${CORE_DEVICE}-part1" check_device_in_core_pool
 
 CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}-part2" CORE_ID_OPTION="2" try_add_core
-DEVICE_ID_OPTION="${CORE_DEVICE}-part2" DEMANDED_STATE_OPTION="Detached" check_device_state
+DEVICE_ID_OPTION="${CORE_DEVICE}-part2" check_device_in_core_pool
 
 CACHE_ID_OPTION="1" CORE_DEVICE_OPTION="${CORE_DEVICE}-part3" CORE_ID_OPTION="3" try_add_core
-DEVICE_ID_OPTION="${CORE_DEVICE}-part3" DEMANDED_STATE_OPTION="Detached" check_device_state
+DEVICE_ID_OPTION="${CORE_DEVICE}-part3" check_device_in_core_pool
 
 
 # Try to load cache device, check if it is running and if all cores status is appropirate
 CACHE_DEVICE_OPTION="${CACHE_DEVICE}-part1" CACHE_LOAD_METADATA_OPTION="y" start_cache
-DEVICE_ID_OPTION="${CACHE_DEVICE}-part1" DEMANDED_STATE_OPTION="Running" check_device_state
-DEVICE_ID_OPTION="${DEVICE_NAME}1-1" DEMANDED_STATE_OPTION="Active" check_device_state
-DEVICE_ID_OPTION="${DEVICE_NAME}1-2" DEMANDED_STATE_OPTION="Active" check_device_state
-DEVICE_ID_OPTION="${DEVICE_NAME}1-3" DEMANDED_STATE_OPTION="Active" check_device_state
+CACHE_ID_OPTION="1" DEMANDED_STATE_OPTION="Running" check_cache_state
+CACHE_ID_OPTION="1" CORE_ID_OPTION="1" DEMANDED_STATE_OPTION="Active" check_core_state
+CACHE_ID_OPTION="1" CORE_ID_OPTION="2" DEMANDED_STATE_OPTION="Active" check_core_state
+CACHE_ID_OPTION="1" CORE_ID_OPTION="3" DEMANDED_STATE_OPTION="Active" check_core_state
 
 
 # Stop prepared setup

@@ -1567,7 +1567,7 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 
 	wait_for_completion(&context.cmpl);
 
-	if (!result && !cmd->detach)
+	if (result != -OCF_ERR_CORE_NOT_REMOVED && !cmd->detach)
 		mark_core_id_free(cache, cmd->core_id);
 
 unlock:
@@ -3123,6 +3123,8 @@ int cache_mngt_get_core_info(struct kcas_core_info *info)
 	ocf_cache_t cache;
 	ocf_core_t core;
 	const struct ocf_volume_uuid *uuid;
+	ocf_volume_t vol;
+	struct bd_object *bdvol;
 	int result;
 
 	result = mngt_get_cache_by_id(cas_ctx, info->cache_id, &cache);
@@ -3151,6 +3153,10 @@ int cache_mngt_get_core_info(struct kcas_core_info *info)
 	}
 
 	info->state = ocf_core_get_state(core);
+
+	vol = ocf_core_get_volume(core);
+	bdvol = bd_object(vol);
+	info->exp_obj_exists = bdvol->expobj_valid;
 
 unlock:
 	ocf_mngt_cache_read_unlock(cache);

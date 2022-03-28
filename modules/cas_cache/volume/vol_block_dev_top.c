@@ -695,6 +695,9 @@ static int kcas_core_lock_exported_object(ocf_core_t core, void *cntx)
 	struct bd_object *bvol = bd_object(
 			ocf_core_get_volume(core));
 
+	if (!bvol->expobj_valid)
+		return 0;
+
 	result = casdisk_functions.casdsk_exp_obj_lock(bvol->dsk);
 
 	if (-EBUSY == result) {
