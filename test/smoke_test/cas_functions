@@ -126,10 +126,56 @@ remove_core() {
     clear_options
 }
 
-check_device_state() {
+
+check_cache_state() {
     check_options ${FUNCNAME[0]}
 
-    local COMMAND="$CAS --list-caches -o csv | grep `readlink -m $DEVICE_ID_OPTION` | cut -d',' -f4 | grep $DEMANDED_STATE_OPTION &> /dev/null"
+    get_cache_device_entry() {
+        $CAS --list-caches -o csv | \
+            awk -F, -v cache=$CACHE_ID_OPTION '{
+            if ($1 == "cache" && $2 == cache) print $0;
+        }'
+    }
+
+    local COMMAND="get_cache_device_entry | grep $DEMANDED_STATE_OPTION &> /dev/null"
+
+    run_cmd $COMMAND
+
+    clear_options
+}
+
+check_core_state() {
+    check_options ${FUNCNAME[0]}
+
+    get_core_device_entry() {
+        $CAS --list-caches -o csv | \
+            awk -F, -v cache=$CACHE_ID_OPTION -v core=$CORE_ID_OPTION '{
+            if ($1 == "cache") curr_cache = $2;
+            if ($1 == "core") curr_core = $2;
+            if (curr_cache == cache && curr_core == core) print $0;
+        }'
+    }
+
+    local COMMAND="get_core_device_entry | grep $DEMANDED_STATE_OPTION &> /dev/null"
+
+    run_cmd $COMMAND
+
+    clear_options
+}
+
+check_device_in_core_pool() {
+    check_options ${FUNCNAME[0]}
+
+    get_core_pool_entry() {
+        $CAS --list-caches -o csv | \
+            awk -F, -v device=$(readlink -m $DEVICE_ID_OPTION) '{
+                if ($1 == "core pool") pool = 1;
+                if ($1 == "cache") pool = 0;
+                if (pool == 1 && $3 == device) print $0;
+            }'
+    }
+
+    local COMMAND="get_core_pool_entry | grep "Detached" &> /dev/null"
 
     run_cmd $COMMAND
 
@@ -694,7 +740,9 @@ export -f set_cache_mode
 export -f add_core
 export -f try_add_core
 export -f remove_core
-export -f check_device_state
+export -f check_cache_state
+export -f check_core_state
+export -f check_device_in_core_pool
 export -f get_stats_value
 export -f init
 export -f iteration
