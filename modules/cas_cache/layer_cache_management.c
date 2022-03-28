@@ -2792,6 +2792,11 @@ int cache_mngt_set_cache_mode(const char *cache_name, size_t name_len,
 	if (result)
 		return result;
 
+	if (ocf_cache_is_standby(cache)) {
+		result = -OCF_ERR_CACHE_STANDBY;
+		goto put;
+	}
+
 	old_mode = ocf_cache_get_mode(cache);
 	if (old_mode == mode) {
 		printk(KERN_INFO "%s is in requested cache mode already\n", cache_name);
