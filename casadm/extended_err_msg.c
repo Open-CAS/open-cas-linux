@@ -159,6 +159,10 @@ struct {
 		"Metadata on the device doesn't match with metadata in DRAM"
 	},
 	{
+		OCF_ERR_CRC_MISMATCH,
+		"Metadata checksum is not correct. Metadata is damaged"
+	},
+	{
 		OCF_ERR_CACHE_NAME_MISMATCH,
 		"Cache id specified by user and loaded from metadata are different"
 	},
