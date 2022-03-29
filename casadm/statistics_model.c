@@ -778,6 +778,17 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 		goto cleanup;
 	}
 
+	if ((cache_info.info.state & (1 << ocf_cache_state_standby)) &&
+			core_id != OCF_CORE_ID_INVALID) {
+		/* Explicitly fail due to standby mode rather than
+		 * bouncing off the fact that there are 0 cores in the
+		 * cache and saying "no such core device"
+		 */
+		print_err(OCF_ERR_CACHE_STANDBY);
+		ret = FAILURE;
+		goto cleanup;
+	}
+
 	/* Check if core exists in cache */
 	if (core_id != OCF_CORE_ID_INVALID) {
 		for (i = 0; i < cache_info.info.core_count; ++i) {
