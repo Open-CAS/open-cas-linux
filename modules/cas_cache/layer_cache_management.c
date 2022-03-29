@@ -2893,18 +2893,20 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 		goto unlock;
 	}
 
-	/* Destroy cache devices */
-	status = kcas_cache_destroy_all_core_exported_objects(cache);
-	if (status != 0) {
-		printk(KERN_WARNING
-				"Failed to remove all cached devices\n");
-		goto stop_thread;
-	}
-	status = kcas_cache_destroy_exported_object(cache);
-	if (status != 0) {
-		printk(KERN_WARNING
-				"Failed to remove cache exported object\n");
-		goto stop_thread;
+	if (!ocf_cache_is_standby(cache)) {
+		status = kcas_cache_destroy_all_core_exported_objects(cache);
+		if (status != 0) {
+			printk(KERN_WARNING
+					"Failed to remove all cached devices\n");
+			goto stop_thread;
+		}
+	} else {
+		status = kcas_cache_destroy_exported_object(cache);
+		if (status != 0) {
+			printk(KERN_WARNING
+					"Failed to remove cache exported object\n");
+			goto stop_thread;
+		}
 	}
 
 	/* Flush cache again. This time we don't allow interruption. */
