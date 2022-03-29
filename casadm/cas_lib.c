@@ -1305,8 +1305,9 @@ int core_params_get(unsigned int cache_id, unsigned int core_id,
 				cas_printf(LOG_ERR, "Cache id %d not running\n", cache_id);
 			else if (cmd.ext_err_code == OCF_ERR_CORE_NOT_AVAIL)
 				cas_printf(LOG_ERR, "Core id %d not available\n", core_id);
-			else
-				cas_printf(LOG_ERR, "Can't get parameters\n");
+			else {
+				print_err(cmd.ext_err_code);
+			}
 			fclose(intermediate_file[0]);
 			fclose(intermediate_file[1]);
 			close(fd);
