@@ -488,6 +488,7 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 					io_class_id);
 			return FAILURE;
 		} else if (ret) {
+			print_err(info.ext_err_code);
 			return FAILURE;
 		}
 
@@ -512,8 +513,10 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		ret = ioctl(ctrl_fd, KCAS_IOCTL_PARTITION_INFO, &info);
 		if (info.ext_err_code  == OCF_ERR_IO_CLASS_NOT_EXIST)
 			continue;
-		else if (ret)
+		else if (ret) {
+			print_err(info.ext_err_code);
 			return FAILURE;
+		}
 
 		ret = ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &stats);
 		if (ret)
