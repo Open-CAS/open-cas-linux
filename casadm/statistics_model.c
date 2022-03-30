@@ -632,12 +632,20 @@ static int cache_stats(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		      bool by_id_path)
 {
 	struct kcas_get_stats cache_stats = {};
+	bool standby;
+
 	cache_stats.cache_id = cache_id;
 	cache_stats.core_id = OCF_CORE_ID_INVALID;
 	cache_stats.part_id = OCF_IO_CLASS_INVALID;
 
-	if (ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &cache_stats) < 0)
-		return FAILURE;
+	standby = !!(cache_info->info.state & (1 << ocf_cache_state_standby));
+
+	if (!standby) {
+		if (ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &cache_stats)) {
+			print_err(cache_stats.ext_err_code);
+			return FAILURE;
+		}
+	}
 
 	begin_record(outfile);
 
@@ -645,7 +653,7 @@ static int cache_stats(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		cache_stats_conf(ctrl_fd, cache_info, cache_id, outfile, by_id_path);
 
 	/* Don't print stats for a cache in standby state */
-	if (cache_info->info.state & (1 << ocf_cache_state_standby))
+	if (standby)
 		return SUCCESS;
 
 	if (stats_filters & STATS_FILTER_USAGE)
@@ -766,6 +774,17 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 
 	if (ioctl(ctrl_fd, KCAS_IOCTL_CACHE_INFO, &cache_info) < 0) {
 		cas_printf(LOG_ERR, "Cache Id %d not running\n", cache_id);
+		ret = FAILURE;
+		goto cleanup;
+	}
+
+	if ((cache_info.info.state & (1 << ocf_cache_state_standby)) &&
+			core_id != OCF_CORE_ID_INVALID) {
+		/* Explicitly fail due to standby mode rather than
+		 * bouncing off the fact that there are 0 cores in the
+		 * cache and saying "no such core device"
+		 */
+		print_err(OCF_ERR_CACHE_STANDBY);
 		ret = FAILURE;
 		goto cleanup;
 	}
