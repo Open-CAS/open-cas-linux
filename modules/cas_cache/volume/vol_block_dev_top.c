@@ -584,11 +584,13 @@ static int kcas_volume_destroy_exported_object(ocf_volume_t volume)
 		return result;
 
 	result = casdisk_functions.casdsk_exp_obj_destroy(bvol->dsk);
-	if (!result)
-		bvol->expobj_valid = false;
+	if (result)
+		goto out;
 
+	bvol->expobj_valid = false;
 	destroy_workqueue(bvol->expobj_wq);
 
+out:
 	casdisk_functions.casdsk_exp_obj_unlock(bvol->dsk);
 
 	return result;
