@@ -79,3 +79,83 @@ def test_standby_neg_cli_params():
                     f'Expected error message in format "{disallowed_param[0]}" '
                     f'Got "{output.stderr}" instead.'
                 )
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
+def test_activate_neg_cli_params():
+    """
+    title: Verifying parameters for activating a standby cache instance.
+    description: |
+        Try executing the standby activate command with required arguments missing or unallowed
+        arguments present.
+    pass_criteria:
+        -The execution is unsuccessful for all improper argument combinations
+        -A proper error message is displayed for unsuccessful executions
+    """
+    with TestRun.step("Prepare the device for the cache."):
+        cache_device = TestRun.disks["cache"]
+        cache_device.create_partitions([Size(500, Unit.MebiByte)])
+        cache_device = cache_device.partitions[0]
+        cache_id = 1
+        cache_line_size = 32
+
+    with TestRun.step("Init standby cache"):
+        cache_dev = Device(cache_device.path)
+        cache = standby_init(cache_dev=cache_dev, cache_id=cache_id,
+                             cache_line_size=cache_line_size, force=True)
+
+    with TestRun.step("Detach standby cache"):
+        cache.standby_detach()
+
+    # Test standby activate
+    with TestRun.step("Prepare config for testing standby activate with required params"):
+        standby_activate_required_params = dict(
+            [("--cache-device", cache_device.path), ("--cache-id", cache_id)]
+        )
+        # Prepare full valid `standby activate` command
+        valid_cmd = casadm_bin + " --standby --activate"
+        for name, value in standby_activate_required_params.items():
+            valid_cmd += f" {name} {value}"
+
+        for name, value in standby_activate_required_params.items():
+            with TestRun.step(f'Try to standby activate instance without "{name}" param'):
+                tested_param = f"{name} {value}"
+                tested_cmd = valid_cmd.replace(tested_param, "")
+                output = TestRun.executor.run(tested_cmd)
+                if output.exit_code == 0:
+                    TestRun.LOGGER.error(
+                        f'"{tested_cmd}" command succeeded despite missing obligatory'
+                        f' "{name}" paramter!'
+                    )
+                if not check_stderr_msg(output, missing_param) or name not in output.stderr:
+                    TestRun.LOGGER.error(
+                        f'Expected error message in format "{missing_param[0]}" with "{name}" '
+                        f'(the missing param). Got "{output.stderr}" instead.'
+                    )
+
+    with TestRun.step("Prepare config for testing standby activate with disallowed params"):
+        activate_disallowed_params = dict(
+            [
+                ("--core-device", "/dev/disk/by-id/core_dev_id"),
+                ("--core-id", 5),
+                ("--cache-mode", 32),
+                ("--file", "/etc/opencas/ioclass-config.csv"),
+                ("--io-class-id", "0"),
+                ("--cache-line-size", 32),
+            ]
+        )
+
+    for name, value in activate_disallowed_params.items():
+        with TestRun.step(f'Try to activate standby instance with disallowed "{name}" param'):
+            tested_param = f"{name} {value}"
+            tested_cmd = f"{valid_cmd} {tested_param}"
+            output = TestRun.executor.run(tested_cmd)
+            if output.exit_code == 0:
+                TestRun.LOGGER.error(
+                    f'"{tested_cmd}" command succeeded despite disallowed "{name}" paramter!'
+                )
+            if not check_stderr_msg(output, disallowed_param):
+                TestRun.LOGGER.error(
+                    f'Expected error message in format "{disallowed_param[0]}" '
+                    f'Got "{output.stderr}" instead.'
+                )
