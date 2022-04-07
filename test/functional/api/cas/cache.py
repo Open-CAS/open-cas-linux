@@ -173,3 +173,6 @@ class Cache:
         return CacheConfig(self.get_cache_line_size(),
                            self.get_cache_mode(),
                            self.get_cleaning_policy())
+
+    def standby_detach(self, shortcut: bool = False):
+        return casadm.standby_detach_cache(cache_id=self.cache_id, shortcut=shortcut)
