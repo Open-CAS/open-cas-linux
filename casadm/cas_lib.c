@@ -1033,20 +1033,12 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 		}
 	}
 
-	check_cache_scheduler(cache_device,
-			      cmd.cache_elevator);
-
-	status = SUCCESS;
+	check_cache_scheduler(cache_device, cmd.cache_elevator);
 
 	check_cache_state_incomplete(cache_id, fd);
 	close(fd);
 
-	if (status == SUCCESS) {
-		cas_printf(LOG_INFO, "Successfully added cache instance %u\n", cache_id);
-	} else {
-		cas_printf(LOG_ERR, "Failed to start cache\n");
-		return FAILURE;
-	}
+	cas_printf(LOG_INFO, "Successfully added cache instance %u\n", cache_id);
 
 	return SUCCESS;
 }
@@ -1826,14 +1818,14 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
 }
 
 void check_cache_state_incomplete(int cache_id, int fd) {
-	struct cache_device *cache;		
+	struct cache_device *cache;
 	int i;
-	
+
 	for (i = 0; i < CORE_ADD_MAX_TIMEOUT; i++) {
 		cache = get_cache_device_by_id_fd(cache_id, fd, false);
-		
+
 		if (cache == NULL) {
-			return;	
+			return;
 		}
 
 		if (cache->core_count == cache->expected_core_count) {
@@ -1844,7 +1836,7 @@ void check_cache_state_incomplete(int cache_id, int fd) {
 			cache = NULL;
 			return;
 		}
-	
+
 		free(cache);
 		cache = NULL;
 
@@ -3055,7 +3047,7 @@ int standby_activate(int cache_id, const char *cache_device)
 	if(fd == -1)
 		return FAILURE;
 
-	check_cache_state_incomplete(cache_id, fd);	
+	check_cache_state_incomplete(cache_id, fd);
 	close(fd);
 
 	cas_printf(LOG_INFO, "Successfully activated cache instance %hu\n",
