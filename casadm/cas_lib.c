@@ -665,8 +665,7 @@ int get_core_info(int fd, int cache_id, int core_id,
 	return SUCCESS;
 }
 
-static int get_core_device(int cache_id, int core_id,
-			   struct core_device *core, bool by_id_path)
+static int get_core_device(int cache_id, int core_id, struct core_device *core, bool by_id_path)
 {
 	int fd;
 	struct kcas_core_info cmd_info;
@@ -1818,30 +1817,18 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
 }
 
 void check_cache_state_incomplete(int cache_id, int fd) {
-	struct cache_device *cache;
-	int i;
+	struct cache_device *cache =
+		get_cache_device_by_id_fd(cache_id, fd, false);
 
-	for (i = 0; i < CORE_ADD_MAX_TIMEOUT; i++) {
-		cache = get_cache_device_by_id_fd(cache_id, fd, false);
+	if (cache == NULL)
+		return;
 
-		if (cache == NULL) {
-			return;
-		}
-
-		if (cache->core_count == cache->expected_core_count) {
-			if (cache->state & (1 << ocf_cache_state_incomplete)) {
-				cas_printf(LOG_WARNING, "WARNING: Cache is in incomplete state - at least one core is inactive\n");
-			}
-			free(cache);
-			cache = NULL;
-			return;
-		}
-
-		free(cache);
-		cache = NULL;
-
-		sleep(1);
+	if (cache->state & (1 << ocf_cache_state_incomplete)) {
+		cas_printf(LOG_WARNING, "WARNING: Cache is in incomplete state - "
+				"at least one core is inactive\n");
 	}
+
+	free(cache);
 }
 
 int remove_inactive_core(unsigned int cache_id, unsigned int core_id,
