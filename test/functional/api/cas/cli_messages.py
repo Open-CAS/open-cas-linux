@@ -123,6 +123,14 @@ cache_dirty_shutdown = [
     r"Alternatively, if you wish to clear metadata anyway, please use \'--force\' option\."
 ]
 
+missing_param = [
+    r"Option \'.+\' is missing"
+]
+
+disallowed_param = [
+    r"Unrecognized option \S+"
+]
+
 
 def check_stderr_msg(output: Output, expected_messages):
     return __check_string_msg(output.stderr, expected_messages)
