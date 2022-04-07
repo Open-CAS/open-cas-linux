@@ -238,7 +238,7 @@ void cas_kick_cleaner_thread(ocf_cleaner_t c)
 void cas_stop_cleaner_thread(ocf_cleaner_t c)
 {
 	struct cas_thread_info *info = ocf_cleaner_get_priv(c);
-	ocf_cleaner_set_priv(c, NULL);
 	_cas_stop_thread(info);
+	ocf_cleaner_set_priv(c, NULL);
 }
 
