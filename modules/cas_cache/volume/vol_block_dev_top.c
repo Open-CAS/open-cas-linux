@@ -742,8 +742,10 @@ static int kcas_core_stop_exported_object(ocf_core_t core, void *cntx)
 			casdisk_functions.casdsk_exp_obj_get_gendisk(bvol->dsk)->disk_name);
 
 		ret = casdisk_functions.casdsk_exp_obj_destroy(bvol->dsk);
-		if (!ret)
+		if (!ret) {
 			bvol->expobj_valid = false;
+			destroy_workqueue(bvol->expobj_wq);
+		}
 	}
 
 	if (bvol->expobj_locked) {

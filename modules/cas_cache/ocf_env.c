@@ -43,7 +43,7 @@ struct _env_allocator_item {
 void *env_allocator_new(env_allocator *allocator)
 {
 	struct _env_allocator_item *item = NULL;
-	int cpu;
+	int cpu = 0;
 
 	if (allocator->rpool)
 		item = cas_rpool_try_get(allocator->rpool, &cpu);

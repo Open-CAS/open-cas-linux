@@ -241,7 +241,9 @@ int cas_blk_open_volume_by_bdev(ocf_volume_t *vol, struct block_device *bdev)
 	bdobj->btm_bd = bdev;
 	bdobj->opened_by_bdev = true;
 
-	return ocf_volume_open(*vol, NULL);
+	ret = ocf_volume_open(*vol, NULL);
+	if (ret)
+		ocf_volume_destroy(*vol);
 
 err:
 	return ret;
