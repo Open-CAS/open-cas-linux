@@ -203,6 +203,10 @@ static int _cas_cls_string_ctr(struct cas_classifier *cls,
 		CAS_CLS_MSG(KERN_ERR, "String specifier is empty\n");
 		return -EINVAL;
 	}
+	if (len == MAX_STRING_SPECIFIER_LEN) {
+		CAS_CLS_MSG(KERN_ERR, "String specifier is too long\n");
+		return -EINVAL;
+	}
 
 	ctx = kmalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
