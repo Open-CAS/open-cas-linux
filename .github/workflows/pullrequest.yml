@@ -1,0 +1,34 @@
+name: Licence-date-verification
+on:
+  pull_request:
+    branches:
+      - master
+      
+env:
+  EXTENSIONS: "c h cpp py go sh"
+jobs:
+  verify-date:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2.1.0
+        with:
+          fetch-depth: 0
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v18.2
+        with:
+          files_ignore: '.github/**'
+      - name: List all changed files
+        run: |
+          for FILE in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            REGEX=".*\.(.*)"
+            if [[  "$FILE" =~ $REGEX ]]
+            then
+                EXTENSION=${BASH_REMATCH[1]}
+                EXTENSIONS_LIST=($EXTENSIONS)
+                if [[ " ${EXTENSIONS_LIST[*]} " =~ " ${EXTENSION} " ]]
+                then
+                    .github/verify_header.sh $FILE
+                fi
+            fi
+          done
