@@ -180,7 +180,7 @@ struct {
 	},
 	{
 		OCF_ERR_CACHE_STANDBY,
-		"Operation not permitted in failover standby mode"
+		"The operation is not permited while the cache is in the standby mode"
 	},
 	{
 		OCF_ERR_STANDBY_ATTACHED,
