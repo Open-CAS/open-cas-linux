@@ -15,9 +15,9 @@ while read -r line; do
             echo $1 have appropriate license header
             exit 0
         fi
-        continue
+        echo $1 have wrong license header year
     fi
 done < "$1"
 
- echo $1 have wrong license header year
+echo $1 does not contain appropriate license header
 exit 1
