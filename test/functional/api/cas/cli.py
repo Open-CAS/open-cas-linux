@@ -273,6 +273,22 @@ def set_param_cutoff_cmd(cache_id: str, core_id: str = None, threshold: str = No
                           additional_params=add_params, shortcut=shortcut)
 
 
+def set_param_promotion_cmd(cache_id: str, policy: str, shortcut: bool = False):
+    add_params = (" -p " if shortcut else " --policy ") + policy
+    return _set_param_cmd(namespace="promotion", cache_id=cache_id,
+                          additional_params=add_params, shortcut=shortcut)
+
+
+def set_param_promotion_nhit_cmd(
+    cache_id: str, threshold=None, trigger=None, shortcut: bool = False
+):
+    add_param = ""
+    if threshold is not None:
+        add_param += (" -t " if shortcut else " --threshold ") + str(threshold)
+    if trigger is not None:
+        add_param += (" -o " if shortcut else " --trigger ") + str(trigger)
+
+
 def set_param_cleaning_cmd(cache_id: str, policy: str, shortcut: bool = False):
     add_params = (" -p " if shortcut else " --policy ") + policy
     return _set_param_cmd(namespace="cleaning", cache_id=cache_id,
