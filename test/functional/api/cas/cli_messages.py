@@ -131,6 +131,10 @@ disallowed_param = [
     r"Unrecognized option \S+"
 ]
 
+operation_forbiden_in_standby = [
+    r"The operation is not permited while the cache is in the standby mode"
+]
+
 
 def check_stderr_msg(output: Output, expected_messages):
     return __check_string_msg(output.stderr, expected_messages)
