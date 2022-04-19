@@ -135,6 +135,16 @@ operation_forbiden_in_standby = [
     r"The operation is not permited while the cache is in the standby mode"
 ]
 
+mutually_exclusive_params_init = [
+    r"Can\'t use \'load\' and \'init\' options simultaneously\n"
+    r"Error during options handling"
+]
+
+mutually_exclusive_params_load = [
+    r"Use of \'load\' with \'force\', \'cache-id\' or \'cache-line-size\' simultaneously is "
+    r"forbidden."
+]
+
 
 def check_stderr_msg(output: Output, expected_messages):
     return __check_string_msg(output.stderr, expected_messages)

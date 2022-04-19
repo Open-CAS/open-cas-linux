@@ -15,6 +15,8 @@ from api.cas.cli_messages import (
     missing_param,
     disallowed_param,
     operation_forbiden_in_standby,
+    mutually_exclusive_params_init,
+    mutually_exclusive_params_load,
 )
 from api.cas.cache_config import CacheLineSize
 from api.cas import cli
@@ -242,3 +244,56 @@ def test_standby_neg_cli_management():
     with TestRun.step("Stop the standby instance"):
         TestRun.executor.run(f"rm -rf {ioclass_config_path}")
         cache.stop()
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
+def test_start_neg_cli_flags():
+    """
+    title: Blocking standby start command with mutually exclusive flags
+    description: |
+       Try executing the standby start command with different combinations of mutually
+       exclusive flags.
+    pass_criteria:
+      - The command execution is unsuccessful for commands with mutually exclusive flags
+      - A proper error message is displayed
+    """
+
+    with TestRun.step("Prepare the device for the cache."):
+        cache_device = TestRun.disks["cache"]
+        cache_device.create_partitions([Size(500, Unit.MebiByte)])
+        cache_device = cache_device.partitions[0]
+        cache_id = 1
+        cache_line_size = 32
+
+    with TestRun.step("Try to start standby cache with mutually exclusive parameters"):
+        init_required_params = f' --cache-device {cache_device.path}' \
+                               f' --cache-id {cache_id}' \
+                               f' --cache-line-size {cache_line_size}'
+
+        mutually_exclusive_cmd_init = f"{casadm_bin} --standby --init --load" \
+                                      f" {init_required_params}"
+        output = TestRun.executor.run_expect_fail(mutually_exclusive_cmd_init)
+        if not check_stderr_msg(output, mutually_exclusive_params_init):
+            TestRun.LOGGER.error(
+                f'Expected error message in format '
+                f'"{mutually_exclusive_params_init[0]}"'
+                f'Got "{output.stderr}" instead.'
+            )
+
+        mutually_exclusive_cmd_load = [
+            f"{casadm_bin} --standby --load --cache-device {cache_device.path}"
+            f" --cache-id {cache_id}",
+            f"{casadm_bin} --standby --load --cache-device {cache_device.path}"
+            f" --cache-line-size {cache_line_size}",
+            f"{casadm_bin} --standby --load --cache-device {cache_device.path}"
+            f" --force"
+        ]
+
+        for cmd in mutually_exclusive_cmd_load:
+            output = TestRun.executor.run_expect_fail(cmd)
+            if not check_stderr_msg(output, mutually_exclusive_params_load):
+                TestRun.LOGGER.error(
+                    f'Expected error message in format '
+                    f'"{mutually_exclusive_params_load[0]}"'
+                    f'Got "{output.stderr}" instead.'
+                )
