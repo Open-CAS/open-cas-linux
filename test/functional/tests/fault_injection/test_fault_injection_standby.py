@@ -125,6 +125,67 @@ def test_load_corrupted():
         md_dump.remove()
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_activate_corrupted_after_dump():
+    """
+    title: Activate cache instance on metadata corrupted after the detach
+    description: |
+      Initialize standby cache, populate it with metadata, detach cache, corrupt metadata
+      on the cache-to-be device and try to activate.
+    pass_criteria:
+      - Kernel panic doesn't occur
+    """
+    with TestRun.step("Prepare devices for the cache and core."):
+        cache_device = TestRun.disks["cache"]
+        cache_device.create_partitions([Size(200, Unit.MebiByte)])
+        cache_device = cache_device.partitions[0]
+        core_device = TestRun.disks["core"]
+        core_device.create_partitions([Size(500, Unit.MebiByte)])
+        core_device = core_device.partitions[0]
+
+    with TestRun.step("Prepare metadata dump"):
+        cache_id = 1
+        cls = CacheLineSize.LINE_32KiB
+        md_dump = prepare_md_dump(cache_device, core_device, cls, cache_id)
+
+    for offset in get_offsets_to_corrupt(md_dump.size, block_size):
+
+        with TestRun.step("Prepare standby instance"):
+            cache = casadm.standby_init(
+                cache_dev=cache_device,
+                cache_line_size=int(cls.value.value / Unit.KibiByte.value),
+                cache_id=cache_id,
+                force=True,
+            )
+
+        with TestRun.step(f"Populate the passive instance with valid metadata"):
+            Dd().input(md_dump.full_path).output(f"/dev/cas-cache-{cache_id}").run()
+            sync()
+
+        with TestRun.step(f"Standby detach"):
+            cache.standby_detach()
+
+        with TestRun.step(f"Corrupt {block_size} on the offset {offset*block_size}"):
+            corrupted_md = prepare_corrupted_md(md_dump, offset, block_size)
+
+        with TestRun.step(f"Copy corrupted metadata to the passive instance"):
+            Dd().input(corrupted_md.full_path).output(cache_device.path).run()
+            sync()
+
+        with TestRun.step("Try to activate cache instance"):
+            output = TestRun.executor.run(
+                standby_activate_cmd(cache_dev=cache_device.path, cache_id=str(cache_id))
+            )
+
+        with TestRun.step("Per iteration cleanup"):
+            cache.stop()
+            corrupted_md.remove(force=True, ignore_errors=True)
+
+    with TestRun.step("Test cleanup"):
+        md_dump.remove()
+
+
 def get_offsets_to_corrupt(md_size, bs, count=100):
     offsets = list(range(0, int(md_size.value), bs.value))
     offsets = random.choices(offsets, k=min(len(offsets), count))
