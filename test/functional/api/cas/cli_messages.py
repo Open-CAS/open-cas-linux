@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 import re
@@ -124,19 +124,23 @@ cache_dirty_shutdown = [
 ]
 
 
-def check_stderr_msg(output: Output, expected_messages):
-    return __check_string_msg(output.stderr, expected_messages)
+def check_stderr_msg(output: Output, expected_messages, negate=False):
+    return __check_string_msg(output.stderr, expected_messages, negate)
 
 
-def check_stdout_msg(output: Output, expected_messages):
-    return __check_string_msg(output.stdout, expected_messages)
+def check_stdout_msg(output: Output, expected_messages, negate=False):
+    return __check_string_msg(output.stdout, expected_messages, negate)
 
 
-def __check_string_msg(text: str, expected_messages):
+def __check_string_msg(text: str, expected_messages, negate=False):
     msg_ok = True
     for msg in expected_messages:
         matches = re.search(msg, text)
-        if not matches:
+        if not matches and not negate:
             TestRun.LOGGER.error(f"Message is incorrect, expected: {msg}\n actual: {text}.")
+            msg_ok = False
+        elif matches and negate:
+            TestRun.LOGGER.error(f"Message is incorrect, expected to not find: {msg}\n "
+                                 f"actual: {text}.")
             msg_ok = False
     return msg_ok
