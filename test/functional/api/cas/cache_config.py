@@ -117,6 +117,8 @@ class CacheStatus(Enum):
     initializing = "initializing"
     flushing = "flushing"
     incomplete = "incomplete"
+    standby = "standby"
+    standby_detached = "standby detached"
 
     def __str__(self):
         return self.value
