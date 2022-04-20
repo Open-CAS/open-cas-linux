@@ -146,7 +146,7 @@ def test_recovery_unplug_cache_raw(cache_mode, cls):
         source_file_md5 = source_file.md5sum()
 
     with TestRun.step("Start cache and add core."):
-        cache = casadm.start_cache(cache_device, cache_mode, cls)
+        cache = casadm.start_cache(cache_device, cache_mode, cls, force=True)
         core = cache.add_core(core_device)
 
     with TestRun.step("Copy file to CAS."):
