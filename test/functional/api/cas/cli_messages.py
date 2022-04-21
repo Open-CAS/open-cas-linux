@@ -145,6 +145,10 @@ mutually_exclusive_params_load = [
     r"forbidden."
 ]
 
+activate_with_different_cache_id = [
+    r"Cache id specified by user and loaded from metadata are different"
+]
+
 
 def check_stderr_msg(output: Output, expected_messages):
     return __check_string_msg(output.stderr, expected_messages)

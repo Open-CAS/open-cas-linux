@@ -49,7 +49,11 @@ class Cache:
         return self.get_statistics().usage_stats.occupancy
 
     def get_status(self):
-        status = self.get_statistics().config_stats.status.replace(' ', '_').lower()
+        status = (
+            self.get_statistics(stat_filter=[StatsFilter.conf])
+            .config_stats.status.replace(" ", "_")
+            .lower()
+        )
         return CacheStatus[status]
 
     @property
