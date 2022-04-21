@@ -149,6 +149,18 @@ activate_with_different_cache_id = [
     r"Cache id specified by user and loaded from metadata are different"
 ]
 
+cache_activated_successfully = [
+    r"Successfully activated cache instance \d+"
+]
+
+invalid_core_volume_size = [
+    r"Core volume size does not match the size stored in cache metadata"
+]
+
+error_activating_cache = [
+    r"Error activating cache \d+"
+]
+
 
 def check_stderr_msg(output: Output, expected_messages):
     return __check_string_msg(output.stderr, expected_messages)
