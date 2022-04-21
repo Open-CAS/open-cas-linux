@@ -180,3 +180,8 @@ class Cache:
 
     def standby_detach(self, shortcut: bool = False):
         return casadm.standby_detach_cache(cache_id=self.cache_id, shortcut=shortcut)
+
+    def standby_activate(self, device, shortcut: bool = False):
+        return casadm.standby_activate_cache(
+            cache_id=self.cache_id, cache_dev=device, shortcut=shortcut
+        )
