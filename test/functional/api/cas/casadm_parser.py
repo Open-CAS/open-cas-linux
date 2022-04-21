@@ -4,6 +4,7 @@
 #
 
 import csv
+import io
 import json
 import re
 from datetime import timedelta
@@ -286,3 +287,16 @@ def get_io_class_list(cache_id: int):
         ioclass = IoClass(int(values[0]), values[1], int(values[2]), values[3])
         ret.append(ioclass)
     return ret
+
+
+def get_core_info_by_path(core_disk_path):
+    output = casadm.list_caches(OutputFormat.csv, by_id_path=True)
+    reader = csv.DictReader(io.StringIO(output.stdout))
+    for row in reader:
+        if row['type'] == "core" and row['disk'] == core_disk_path:
+            return {"core_id": row['id'],
+                    "core_device": row['disk'],
+                    "status": row['status'],
+                    "exp_obj": row['device']}
+
+    return None
