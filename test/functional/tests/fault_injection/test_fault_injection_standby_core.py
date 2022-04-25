@@ -94,3 +94,119 @@ def test_activate_neg_cache_id():
                 "The standby cache instance is in an invalid state "
                 f"Expected {CacheStatus.standby_detached}. Got {status}"
             )
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_activate_incomplete_cache():
+    """
+    title: Activating cache with a missing core device.
+    description: |
+      Try restoring cache operations from a standby cache when the core device
+      used before is missing.
+    pass_criteria:
+      -The activation succeedes when the required core device is missing
+      -The cache is transitioned into Incomplete state after a successful activation
+      -The message about activating into “Incomplete” state is displayed
+      -The cache instance is switched into “Running” mode when the core device appears
+       in the system
+    """
+    with TestRun.step("Prepare partitions"):
+        core_part_size = Size(200, Unit.MebiByte)
+        cache_disk = TestRun.disks["cache"]
+        core_disk = TestRun.disks["core"]
+        cache_disk.create_partitions([Size(200, Unit.MebiByte)])
+        core_disk.create_partitions([core_part_size])
+        cache_dev = cache_disk.partitions[0]
+        core_dev = core_disk.partitions[0]
+        core_dev_path = core_dev.path
+
+    with TestRun.step("Start a regular cache instance with a core"):
+        cache = casadm.start_cache(cache_dev, force=True)
+        cache.add_core(core_dev)
+
+    with TestRun.step("Stop the cache device"):
+        cache.stop()
+
+    with TestRun.step("Remove the partition used as core"):
+        core_disk.remove_partitions()
+        core_dev = None
+
+    with TestRun.step("Load standby cache instance"):
+        cache = casadm.standby_load(cache_dev)
+
+    with TestRun.step("Verify if the cache exported object appeared in the system"):
+        output = TestRun.executor.run_expect_success(f"ls -la /dev/ | grep cas-cache-1")
+        if output.stdout[0] != "b":
+            TestRun.fail("The cache exported object is not a block device")
+
+    with TestRun.step("Detach the standby instance"):
+        cache.standby_detach()
+
+    with TestRun.step("Activate standby cache and check if a proper incompleteness info appeared"):
+        output = cache.standby_activate(device=cache_dev)
+        check_stderr_msg(output, load_inactive_core_missing)
+        check_stdout_msg(output, cache_activated_successfully)
+
+    with TestRun.step("Verify that the cache is in Incomplete state"):
+        status = cache.get_status()
+        if status != CacheStatus.incomplete:
+            TestRun.LOGGER.error(
+                "The cache instance is in an invalid state. "
+                f"Expected {CacheStatus.incomplete}. Got {status}"
+            )
+
+    with TestRun.step("Check if the number of cores is valid"):
+        cache_conf_stats = cache.get_statistics(stat_filter=[StatsFilter.conf])
+        core_count = int(cache_conf_stats.config_stats.core_dev)
+        if core_count != 1:
+            TestRun.fail(f"Expected one core. Got {core_count}")
+
+    with TestRun.step("Check if the number of inactive cores is valid"):
+        inactive_core_count = int(cache_conf_stats.config_stats.inactive_core_dev)
+        if inactive_core_count != 1:
+            TestRun.fail(f"Expected one inactive core. Got {inactive_core_count}")
+
+    with TestRun.step("Check if core is in an appropriate state"):
+        core_status = CoreStatus[get_core_info_by_path(core_dev_path)["status"].lower()]
+        if core_status != CoreStatus.inactive:
+            TestRun.fail(
+                "The core is in an invalid state. "
+                f"Expected {CoreStatus.inactive}. Got {core_status}"
+            )
+
+    with TestRun.step("Restore core partition"):
+        core_disk.create_partitions([core_part_size])
+        core_dev = core_disk.partitions[0]
+
+    with TestRun.step("Add core using try-add script command"):
+        casadm.try_add(core_dev, cache_id=1, core_id=1)
+
+    with TestRun.step("Verify that the cache is in Running state"):
+        status = cache.get_status()
+        if status != CacheStatus.running:
+            TestRun.LOGGER.error(
+                "The cache instance is in an invalid state. "
+                f"Expected {CacheStatus.running}. Got {status}"
+            )
+
+    with TestRun.step("Verify that the core is in Active state"):
+        cache_conf_stats = cache.get_statistics(stat_filter=[StatsFilter.conf])
+        core_count = int(cache_conf_stats.config_stats.core_dev)
+        if core_count != 1:
+            TestRun.fail(f"Expected one core. Got {core_count}")
+
+    with TestRun.step("Check if the number of inactive cores is valid"):
+        inactive_core_count = int(cache_conf_stats.config_stats.inactive_core_dev)
+        if inactive_core_count != 0:
+            TestRun.fail(
+                f"The test didn't expect inactive cores at this point. "
+                f"Got {inactive_core_count}"
+            )
+
+        core_status = Core(core_device=core_dev.path, cache_id=1).get_status()
+        if core_status != CoreStatus.active:
+            TestRun.LOGGER.error(
+                "The core is in an invalid state. "
+                f"Expected {CoreStatus.active}. Got {core_status}"
+            )
