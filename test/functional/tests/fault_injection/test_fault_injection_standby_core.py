@@ -10,9 +10,20 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from test_utils.size import Size, Unit
 from api.cas.cache_config import CacheLineSize, CacheMode, CacheStatus
+from api.cas.casadm_params import StatsFilter
+from api.cas.casadm_parser import get_core_info_by_path
+from api.cas.core import CoreStatus, Core
 from test_tools.dd import Dd
 from api.cas.cli import standby_activate_cmd
-from api.cas.cli_messages import check_stderr_msg, activate_with_different_cache_id
+from api.cas.cli_messages import (
+    check_stderr_msg,
+    check_stdout_msg,
+    activate_with_different_cache_id,
+    load_inactive_core_missing,
+    cache_activated_successfully,
+    invalid_core_volume_size,
+    error_activating_cache,
+)
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
