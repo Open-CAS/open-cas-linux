@@ -16,6 +16,7 @@ from test_utils.size import Size, Unit
 from api.cas.cli_messages import check_stderr_msg, missing_param, disallowed_param
 from api.cas.cache_config import CacheLineSize, CacheMode
 from api.cas.cli import standby_activate_cmd, standby_load_cmd
+from api.cas.dmesg import get_md_section_size
 from api.cas.ioclass_config import IoClass
 from test_tools.dd import Dd
 from test_utils.os_utils import sync
@@ -23,6 +24,7 @@ from test_utils.filesystem.file import File
 
 
 block_size = Size(1, Unit.Blocks512)
+offset = 1  # offset is expressed in the number of blocks
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
@@ -47,35 +49,35 @@ def test_activate_corrupted():
         cache_id = 1
         cls = CacheLineSize.LINE_32KiB
         md_dump = prepare_md_dump(cache_device, core_device, cls, cache_id)
+        dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
+        superblock_size = get_md_section_size("Super block config", dmesg_out)
 
-    for offset in get_offsets_to_corrupt(md_dump.size, block_size):
+    with TestRun.step("Prepare standby instance"):
+        cache = casadm.standby_init(
+            cache_dev=cache_device,
+            cache_line_size=cls,
+            cache_id=cache_id,
+            force=True,
+        )
 
-        with TestRun.step("Prepare standby instance"):
-            cache = casadm.standby_init(
-                cache_dev=cache_device,
-                cache_line_size=cls,
-                cache_id=cache_id,
-                force=True,
-            )
+    with TestRun.step(f"Corrupt {block_size} on the offset {offset*block_size}"):
+        corrupted_md = prepare_corrupted_md(md_dump, offset, block_size)
 
-        with TestRun.step(f"Corrupt {block_size} on the offset {offset*block_size}"):
-            corrupted_md = prepare_corrupted_md(md_dump, offset, block_size)
+    with TestRun.step(f"Copy corrupted metadata to the passive instance"):
+        Dd().input(corrupted_md.full_path).output(f"/dev/cas-cache-{cache_id}").run()
+        sync()
 
-        with TestRun.step(f"Copy corrupted metadata to the passive instance"):
-            Dd().input(corrupted_md.full_path).output(f"/dev/cas-cache-{cache_id}").run()
-            sync()
+    with TestRun.step(f"Standby detach"):
+        cache.standby_detach()
 
-        with TestRun.step(f"Standby detach"):
-            cache.standby_detach()
+    with TestRun.step("Try to activate cache instance"):
+        output = TestRun.executor.run(
+            standby_activate_cmd(cache_dev=cache_device.path, cache_id=str(cache_id))
+        )
 
-        with TestRun.step("Try to activate cache instance"):
-            output = TestRun.executor.run(
-                standby_activate_cmd(cache_dev=cache_device.path, cache_id=str(cache_id))
-            )
-
-        with TestRun.step("Per iteration cleanup"):
-            cache.stop()
-            corrupted_md.remove(force=True, ignore_errors=True)
+    with TestRun.step("Per iteration cleanup"):
+        cache.stop()
+        corrupted_md.remove(force=True, ignore_errors=True)
 
     with TestRun.step("Test cleanup"):
         md_dump.remove()
@@ -103,23 +105,23 @@ def test_load_corrupted():
         cache_id = 1
         cls = CacheLineSize.LINE_32KiB
         md_dump = prepare_md_dump(cache_device, core_device, cls, cache_id)
+        dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
+        superblock_size = get_md_section_size("Super block config", dmesg_out)
 
-    for offset in get_offsets_to_corrupt(md_dump.size, block_size):
+    with TestRun.step(f"Corrupt {block_size} on the offset {offset*block_size}"):
+        corrupted_md = prepare_corrupted_md(md_dump, offset, block_size)
 
-        with TestRun.step(f"Corrupt {block_size} on the offset {offset*block_size}"):
-            corrupted_md = prepare_corrupted_md(md_dump, offset, block_size)
+    with TestRun.step(f"Copy corrupted metadata to the cache-to-be device"):
+        Dd().input(corrupted_md.full_path).output(cache_device.path).run()
+        sync()
 
-        with TestRun.step(f"Copy corrupted metadata to the cache-to-be device"):
-            Dd().input(corrupted_md.full_path).output(cache_device.path).run()
-            sync()
+    with TestRun.step("Try to load cache instance"):
+        output = TestRun.executor.run(standby_load_cmd(cache_dev=cache_device.path))
 
-        with TestRun.step("Try to load cache instance"):
-            output = TestRun.executor.run(standby_load_cmd(cache_dev=cache_device.path))
-
-        with TestRun.step("Per iteration cleanup"):
-            if output.exit_code:
-                casadm.stop_all_caches()
-            corrupted_md.remove(force=True, ignore_errors=True)
+    with TestRun.step("Per iteration cleanup"):
+        if output.exit_code:
+            casadm.stop_all_caches()
+        corrupted_md.remove(force=True, ignore_errors=True)
 
     with TestRun.step("Test cleanup"):
         md_dump.remove()
@@ -148,50 +150,42 @@ def test_activate_corrupted_after_dump():
         cache_id = 1
         cls = CacheLineSize.LINE_32KiB
         md_dump = prepare_md_dump(cache_device, core_device, cls, cache_id)
+        dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
+        superblock_size = get_md_section_size("Super block config", dmesg_out)
 
-    for offset in get_offsets_to_corrupt(md_dump.size, block_size):
+    with TestRun.step("Prepare standby instance"):
+        cache = casadm.standby_init(
+            cache_dev=cache_device,
+            cache_line_size=cls,
+            cache_id=cache_id,
+            force=True,
+        )
 
-        with TestRun.step("Prepare standby instance"):
-            cache = casadm.standby_init(
-                cache_dev=cache_device,
-                cache_line_size=cls,
-                cache_id=cache_id,
-                force=True,
-            )
+    with TestRun.step(f"Populate the passive instance with valid metadata"):
+        Dd().input(md_dump.full_path).output(f"/dev/cas-cache-{cache_id}").run()
+        sync()
 
-        with TestRun.step(f"Populate the passive instance with valid metadata"):
-            Dd().input(md_dump.full_path).output(f"/dev/cas-cache-{cache_id}").run()
-            sync()
+    with TestRun.step(f"Standby detach"):
+        cache.standby_detach()
 
-        with TestRun.step(f"Standby detach"):
-            cache.standby_detach()
+    with TestRun.step(f"Corrupt {block_size} on the offset {offset*block_size}"):
+        corrupted_md = prepare_corrupted_md(md_dump, offset, block_size)
 
-        with TestRun.step(f"Corrupt {block_size} on the offset {offset*block_size}"):
-            corrupted_md = prepare_corrupted_md(md_dump, offset, block_size)
+    with TestRun.step(f"Copy corrupted metadata to the passive instance"):
+        Dd().input(corrupted_md.full_path).output(cache_device.path).run()
+        sync()
 
-        with TestRun.step(f"Copy corrupted metadata to the passive instance"):
-            Dd().input(corrupted_md.full_path).output(cache_device.path).run()
-            sync()
+    with TestRun.step("Try to activate cache instance"):
+        output = TestRun.executor.run(
+            standby_activate_cmd(cache_dev=cache_device.path, cache_id=str(cache_id))
+        )
 
-        with TestRun.step("Try to activate cache instance"):
-            output = TestRun.executor.run(
-                standby_activate_cmd(cache_dev=cache_device.path, cache_id=str(cache_id))
-            )
-
-        with TestRun.step("Per iteration cleanup"):
-            cache.stop()
-            corrupted_md.remove(force=True, ignore_errors=True)
+    with TestRun.step("Per iteration cleanup"):
+        cache.stop()
+        corrupted_md.remove(force=True, ignore_errors=True)
 
     with TestRun.step("Test cleanup"):
         md_dump.remove()
-
-
-def get_offsets_to_corrupt(md_size, bs, count=100):
-    offsets = list(range(0, int(md_size.value), bs.value))
-    offsets = random.choices(offsets, k=min(len(offsets), count))
-
-    # Offset is expresed as a number of blocks
-    return [int(o / bs.value) for o in offsets]
 
 
 def prepare_md_dump(cache_device, core_device, cls, cache_id):
