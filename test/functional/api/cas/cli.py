@@ -282,11 +282,13 @@ def set_param_promotion_cmd(cache_id: str, policy: str, shortcut: bool = False):
 def set_param_promotion_nhit_cmd(
     cache_id: str, threshold=None, trigger=None, shortcut: bool = False
 ):
-    add_param = ""
+    add_params = ""
     if threshold is not None:
-        add_param += (" -t " if shortcut else " --threshold ") + str(threshold)
+        add_params += (" -t " if shortcut else " --threshold ") + str(threshold)
     if trigger is not None:
-        add_param += (" -o " if shortcut else " --trigger ") + str(trigger)
+        add_params += (" -o " if shortcut else " --trigger ") + str(trigger)
+    return _set_param_cmd(namespace="promotion-nhit", cache_id=cache_id,
+                          additional_params=add_params, shortcut=shortcut)
 
 
 def set_param_cleaning_cmd(cache_id: str, policy: str, shortcut: bool = False):
