@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -8,6 +8,10 @@ import pytest
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet
 from storage_devices.raid import Raid, RaidConfiguration, MetadataVariant, Level
+from storage_devices.ramdisk import RamDisk
+from test_utils.drbd import Resource, Node
+from storage_devices.drbd import Drbd
+from test_tools.drbdadm import Drbdadm
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from test_utils.filesystem.directory import Directory
@@ -147,3 +151,65 @@ def test_example_multidut():
                 TestRun.LOGGER.info(dut1_ex.run_expect_success("which casctl").stdout)
                 for name, disk in TestRun.disks.items():
                     TestRun.LOGGER.info(f"{name}: {disk.path}")
+
+
+@pytest.mark.require_disk("drbd_device", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.multidut(2)
+def test_drbd_example():
+    """
+    title: Example test using DRBD API.
+    description: Create primary and secondary resources on two DUTs using drbd.
+    pass_criteria:
+      - primary drbd resource created.
+      - secondary drbd resource created.
+    """
+    with TestRun.step("Check if DRBD is installed"):
+        for dut in TestRun.duts:
+            with TestRun.use_dut(dut):
+                if not Drbd.is_installed():
+                    TestRun.fail(f"DRBD is not installed on DUT {dut.ip}")
+
+    with TestRun.step("Prepare DUTs"):
+        dut1, dut2 = TestRun.duts
+
+        nodes = []
+        for dut in TestRun.duts:
+            with TestRun.use_dut(dut):
+                TestRun.dut.hostname = TestRun.executor.run_expect_success("uname -n").stdout
+                drbd_dev = TestRun.disks["drbd_device"]
+                drbd_md_dev = RamDisk.create(Size(100, Unit.MebiByte), 1)[0]
+                drbd_dev.create_partitions([Size(200, Unit.MebiByte)])
+                drbd_dev = drbd_dev.partitions[0]
+
+                nodes.append(
+                    Node(TestRun.dut.hostname, drbd_dev.path, drbd_md_dev.path, dut.ip, "7790")
+                )
+
+        caches = Resource(name="caches", device="/dev/drbd0", nodes=nodes)
+
+    with TestRun.step("Create DRBD config file on both DUTs"):
+        for dut in TestRun.duts:
+            with TestRun.use_dut(dut):
+                TestRun.LOGGER.info(f"Saving config file on dut {dut.ip}")
+                caches.save()
+
+    with TestRun.use_dut(dut1), TestRun.step(f"Create a DRBD instance on {dut1}"):
+        primary = Drbd(caches)
+        primary.create_metadata()
+        primary.up()
+
+    with TestRun.use_dut(dut2), TestRun.step(f"Create a DRBD instance on {dut2}"):
+        secondary = Drbd(caches)
+        secondary.create_metadata()
+        secondary.up()
+
+    with TestRun.use_dut(dut1), TestRun.step(f"Set {dut1} as primary node"):
+        primary.set_primary(force=True)
+
+    with TestRun.use_dut(dut1), TestRun.step("Wait for drbd to sync"):
+        primary.wait_for_sync()
+
+    with TestRun.step("Test cleanup"):
+        for dut in TestRun.duts:
+            with TestRun.use_dut(dut):
+                Drbdadm.down(caches.name)
