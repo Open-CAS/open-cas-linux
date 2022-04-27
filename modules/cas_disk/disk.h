@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #ifndef __
@@ -30,6 +30,10 @@ struct casdsk_disk {
 	char *path;
 
 	struct mutex lock;
+
+	struct mutex openers_lock;
+	unsigned int openers;
+	bool claimed;
 
 	struct block_device *bd;
 
