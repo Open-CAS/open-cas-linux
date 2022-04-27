@@ -8,8 +8,10 @@ import pytest
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet
 from storage_devices.raid import Raid, RaidConfiguration, MetadataVariant, Level
+from storage_devices.drbd import Resource, Node, install_drbd
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
+from test_tools.drbdadm import Drbdadm
 from test_utils.filesystem.directory import Directory
 from test_utils.filesystem.file import File
 from test_utils.size import Size, Unit
@@ -147,3 +149,62 @@ def test_example_multidut():
                 TestRun.LOGGER.info(dut1_ex.run_expect_success("which casctl").stdout)
                 for name, disk in TestRun.disks.items():
                     TestRun.LOGGER.info(f"{name}: {disk.path}")
+
+
+@pytest.mark.multidut(2)
+def test_drbd_example():
+    """
+        title: Example test using DRBD API.
+        description: Create primary and secondary resources on two DUTs using drbd.
+        pass_criteria:
+          - primary drbd resource created.
+          - secondary drbd resource created.
+    """
+    with TestRun.step("Prepare"):
+        dut1, dut2 = TestRun.duts
+        install_drbd()
+        nodes = []
+        for dut in TestRun.duts:
+            with TestRun.use_dut(dut):
+                TestRun.dut.hostname = TestRun.executor.run_expect_success('uname -n').stdout
+                TestRun.LOGGER.info(TestRun.dut.hostname)
+                for name, disk in TestRun.disks.items():
+                    TestRun.LOGGER.info(f"{name}: {disk.path}")
+                # TODO: retrieve disk path (/dev/nvme2n1) from config file?
+                nodes.append(Node(TestRun.dut.hostname, "/dev/nvme2n1", "/dev/sdb", dut.ip, "7790"))
+        caches = Resource("caches", "/dev/drbd0", nodes)
+        TestRun.LOGGER.info(str(caches))
+
+    with TestRun.step("Create DRBD config file on both DUTs"):
+        for dut in TestRun.duts:
+            with TestRun.use_dut(dut):
+                TestRun.LOGGER.info(f"Saving config file on dut {dut.ip}")
+                caches.save()
+
+    with TestRun.step("Create DRBD metadata"):
+        for dut in TestRun.duts:
+            with TestRun.use_dut(dut):
+                Drbdadm.create_md(caches.name)
+                Drbdadm.up(caches.name)
+
+    with TestRun.step("Set DUT 1 as primary"):
+        with TestRun.use_dut(dut1):
+            Drbdadm.primary(caches.name, True)  # use --force only for initial synchronization
+
+    with TestRun.step("Set DUT 2 as secondary"):
+        with TestRun.use_dut(dut2):
+            Drbdadm.secondary(caches.name)
+
+    with TestRun.step("Check drbd status"):
+        for dut in TestRun.duts:
+            with TestRun.use_dut(dut):
+                TestRun.LOGGER.info(f"Drbdadm status on dut {dut.ip}")
+                Drbdadm.status()
+                # note it will take time to sync duts depending on disks size
+
+    with TestRun.step("Test cleanup"):
+        for dut in TestRun.duts:
+            with TestRun.use_dut(dut):
+                TestRun.LOGGER.info(f"Drbdadm down on dut {dut.ip}")
+                # remember to turn down each resource for cleanup
+                Drbdadm.down(caches.name)
