@@ -2,8 +2,6 @@
 # Copyright(c) 2019-2021 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
-import csv
-import io
 from datetime import timedelta
 from typing import List
 
@@ -12,7 +10,7 @@ from aenum import Enum
 from api.cas import casadm
 from api.cas.cache_config import SeqCutOffParameters, SeqCutOffPolicy
 from api.cas.casadm_params import OutputFormat, StatsFilter
-from api.cas.casadm_parser import get_statistics, get_seq_cut_off_parameters
+from api.cas.casadm_parser import get_statistics, get_seq_cut_off_parameters, get_core_info_by_path
 from api.cas.statistics import CoreStats, CoreIoClassStats
 from core.test_run_utils import TestRun
 from storage_devices.device import Device
@@ -47,14 +45,7 @@ class Core(Device):
         self.block_size = None
 
     def __get_core_info(self):
-        output = casadm.list_caches(OutputFormat.csv, by_id_path=True)
-        reader = csv.DictReader(io.StringIO(output.stdout))
-        for row in reader:
-            if row['type'] == "core" and row['disk'] == self.core_device.path:
-                return {"core_id": row['id'],
-                        "core_device": row['disk'],
-                        "status": row['status'],
-                        "exp_obj": row['device']}
+        return get_core_info_by_path(self.core_device.path)
 
     def create_filesystem(self, fs_type: disk_utils.Filesystem, force=True, blocksize=None):
         super().create_filesystem(fs_type, force, blocksize)
