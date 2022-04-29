@@ -169,6 +169,68 @@ cache_line_size_mismatch = [
     r"Cache line size mismatch"
 ]
 
+headerless_io_class_config = [
+    r'Cannot parse configuration file - unknown column "1"\.\n'
+    r'Failed to parse I/O classes configuration file header\. It is either malformed or missing\.\n'
+    r'Please consult Admin Guide to check how columns in configuration file should be named\.'
+]
+
+illegal_io_class_config_L2C1 = [
+    r"Cannot parse configuration file - error in line 2 in column 1 \(IO class id\)\."
+]
+
+illegal_io_class_config_L2C2 = [
+    r"Empty or too long IO class name\n"
+    r"Cannot parse configuration file - error in line 2 in column 2 \(IO class name\)\."
+]
+
+illegal_io_class_config_L2C4 = [
+    r"Cannot parse configuration file - error in line 2 in column 4 \(Allocation\)\."
+]
+
+illegal_io_class_config_L2 = [
+    r"Cannot parse configuration file - error in line 2\."
+]
+
+double_io_class_config = [
+    r"Double configuration for IO class id \d+\n"
+    r"Cannot parse configuration file - error in line \d+ in column \d+ \(IO class id\)\."
+]
+
+illegal_io_class_invalid_id = [
+    r"Invalid id, must be a correct unsigned decimal integer\.\n"
+    r"Cannot parse configuration file - error in line 2 in column 1 \(IO class id\)\."
+]
+
+illegal_io_class_invalid_id_number = [
+    r"Invalid id, must be in the range 0-32\.\n"
+    r"Cannot parse configuration file - error in line 2 in column 1 \(IO class id\)\."
+]
+
+illegal_io_class_invalid_priority = [
+    r"Invalid prio, must be a correct unsigned decimal integer\.\n"
+    r"Cannot parse configuration file - error in line 2 in column 3 \(Eviction priority\)"
+]
+
+illegal_io_class_invalid_priority_number = [
+    r"Invalid prio, must be in the range 0-255\.\n"
+    r"Cannot parse configuration file - error in line 2 in column 3 \(Eviction priority\)"
+]
+
+illegal_io_class_invalid_allocation = [
+    r"Cannot parse configuration file - error in line 2 in column 4 \(Allocation\)\."
+]
+
+illegal_io_class_invalid_allocation_number = [
+    r"Cannot parse configuration file - error in line 2 in column 4 \(Allocation\)\."
+]
+
+malformed_io_class_header = [
+    r'Cannot parse configuration file - unknown column \"value_template\"\.\n'
+    r'Failed to parse I/O classes configuration file header\. It is either malformed or missing\.\n'
+    r'Please consult Admin Guide to check how columns in configuration file should be named\.'
+]
+
 
 def check_stderr_msg(output: Output, expected_messages):
     return __check_string_msg(output.stderr, expected_messages)
