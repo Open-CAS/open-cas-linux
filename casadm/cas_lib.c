@@ -3021,6 +3021,7 @@ int standby_activate(int cache_id, const char *cache_device)
 	}
 
 	if (cas_ioctl(KCAS_IOCTL_STANDBY_ACTIVATE, &cmd) != SUCCESS) {
+		cas_printf(LOG_ERR, "Error activating cache %d\n", cache_id);
 		if (abs(cmd.ext_err_code) == OCF_ERR_NOT_OPEN_EXC) {
 			cas_printf(LOG_ERR, "Cannot open the device exclusively. Make sure "
 					"to detach cache before activation.\n");
