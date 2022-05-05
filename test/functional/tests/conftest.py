@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -134,6 +134,16 @@ def pytest_runtest_teardown():
                 Udev.enable()
                 kill_all_io()
                 unmount_cas_devices()
+
+                from storage_devices.drbd import Drbd
+                if installer.check_if_installed() and Drbd.is_installed():
+                    try:
+                        casadm.stop_all_caches()
+                    finally:
+                        __drbd_cleanup()
+                elif Drbd.is_installed():
+                    Drbd.down_all()
+
                 if installer.check_if_installed():
                     casadm.remove_all_detached_cores()
                     casadm.stop_all_caches()
@@ -197,6 +207,15 @@ def get_force_param(item):
     return item.config.getoption("--force-reinstall")
 
 
+def __drbd_cleanup():
+    from storage_devices.drbd import Drbd
+    Drbd.down_all()
+    # If drbd instance had been configured on top of the CAS, the previos attempt to stop
+    # failed. As drbd has been stopped try to stop CAS one more time.
+    if installer.check_if_installed():
+        casadm.stop_all_caches()
+
+
 def base_prepare(item):
     with TestRun.LOGGER.step("Cleanup before test"):
         TestRun.executor.run("pkill --signal=SIGKILL fsck")
@@ -213,6 +232,10 @@ def base_prepare(item):
                 casadm.remove_all_detached_cores()
             except Exception:
                 pass  # TODO: Reboot DUT if test is executed remotely
+
+        from storage_devices.drbd import Drbd
+        if Drbd.is_installed():
+            __drbd_cleanup()
 
         raids = Raid.discover()
         for raid in raids:
