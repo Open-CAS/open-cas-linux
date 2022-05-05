@@ -5,8 +5,8 @@
 
 import pytest
 
-from api.cas import casadm
-from api.cas.cli import casadm_bin
+from api.cas import casadm, casadm_parser
+from api.cas.cli import casadm_bin, standby_activate_cmd
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.size import Size, Unit
@@ -16,9 +16,9 @@ from api.cas.cli_messages import (
     disallowed_param,
     operation_forbiden_in_standby,
     mutually_exclusive_params_init,
-    mutually_exclusive_params_load,
+    mutually_exclusive_params_load, activate_without_detach,
 )
-from api.cas.cache_config import CacheLineSize
+from api.cas.cache_config import CacheLineSize, CacheStatus
 from api.cas import cli
 from api.cas.ioclass_config import IoClass
 
@@ -297,3 +297,65 @@ def test_start_neg_cli_flags():
                     f'"{mutually_exclusive_params_load[0]}"'
                     f'Got "{output.stderr}" instead.'
                 )
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
+def test_activate_without_detach():
+    """
+    title: Activate cache without detach command.
+    description: |
+       Try activate passive cache without detach command before activation.
+    pass_criteria:
+      - The activation is not possible
+      - The cache remains in Standby state after unsuccessful activation
+      - The cache exported object is present after an unsuccessful activation
+    """
+
+    with TestRun.step("Prepare the device for the cache."):
+        cache_dev = TestRun.disks["cache"]
+        cache_dev.create_partitions([Size(500, Unit.MebiByte)])
+        cache_dev = cache_dev.partitions[0]
+        cache_id = 1
+        cache_exp_obj_name = f"cas-cache-{cache_id}"
+
+    with TestRun.step("Start cache instance."):
+        cache = casadm.start_cache(cache_dev=cache_dev, cache_id=cache_id)
+
+    with TestRun.step("Stop cache instance."):
+        cache.stop()
+
+    with TestRun.step("Load standby cache instance."):
+        casadm.standby_load(cache_dev=cache_dev)
+
+    with TestRun.step("Verify if the cache exported object appeared in the system"):
+        output = TestRun.executor.run_expect_success(f"ls -la /dev/ | grep {cache_exp_obj_name}")
+        if output.stdout[0] != "b":
+            TestRun.fail("The cache exported object is not a block device")
+
+    with TestRun.step("Try to activate cache instance"):
+        cmd = f"{casadm_bin} --standby --activate --cache-id {cache_id} --cache-device " \
+              f"{cache_dev.path}"
+        output = TestRun.executor.run(cmd)
+        if not check_stderr_msg(output, activate_without_detach):
+            TestRun.LOGGER.error(
+                f'Expected error message in format '
+                f'"{activate_without_detach[0]}"'
+                f'Got "{output.stderr}" instead.'
+            )
+
+    with TestRun.step("Verify if cache is in standby state after failed activation"):
+        caches = casadm_parser.get_caches()
+        if len(caches) < 1:
+            TestRun.LOGGER.error(f'Cache not present in system')
+        else:
+            cache_status = caches[0].get_status()
+            if cache_status != CacheStatus.standby:
+                TestRun.LOGGER.error(
+                    f'Expected Cache state: "{CacheStatus.standby.value}" '
+                    f'Got "{cache_status.value}" instead.'
+                )
+
+    with TestRun.step("Verify if the cache exported object remains in the system"):
+        output = TestRun.executor.run_expect_success(f"ls -la /dev/ | grep {cache_exp_obj_name}")
+        if output.stdout[0] != "b":
+            TestRun.fail("The cache exported object is not a block device")
