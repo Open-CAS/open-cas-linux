@@ -19,6 +19,7 @@ from api.cas import installer
 from api.cas import casadm
 from api.cas import git
 from storage_devices.raid import Raid
+from storage_devices.ramdisk import RamDisk
 from test_utils.os_utils import Udev, kill_all_io
 from test_utils.disk_finder import get_disk_serial_number
 from test_tools.disk_utils import PartitionTable, create_partition_table
@@ -150,6 +151,7 @@ def pytest_runtest_teardown():
                     from api.cas.init_config import InitConfig
                     InitConfig.create_default_init_config()
                 DeviceMapper.remove_all()
+                RamDisk.remove_all()
         except Exception as ex:
             TestRun.LOGGER.warning(f"Exception occurred during platform cleanup.\n"
                                    f"{str(ex)}\n{traceback.format_exc()}")
@@ -251,6 +253,8 @@ def base_prepare(item):
                 for device in raid.array_devices:
                     Mdadm.zero_superblock(os.path.join('/dev', device.get_device_id()))
                     Udev.settle()
+
+        RamDisk.remove_all()
 
         for disk in TestRun.dut.disks:
             disk_serial = get_disk_serial_number(disk.path)
