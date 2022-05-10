@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -180,7 +180,7 @@ struct {
 	},
 	{
 		OCF_ERR_CACHE_STANDBY,
-		"Operation not permitted in failover standby mode"
+		"The operation is not permited while the cache is in the standby mode"
 	},
 	{
 		OCF_ERR_STANDBY_ATTACHED,

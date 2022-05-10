@@ -1711,6 +1711,11 @@ int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 					name_len, &cache);
 	if (result)
 		goto out_get;
+	
+	if (ocf_cache_is_standby(cache)) {
+		result = -OCF_ERR_CACHE_STANDBY;
+		goto out_standby;
+	}
 
 	for (class_id = 0; class_id < OCF_USER_IO_CLASS_MAX; class_id++) {
 		result = cas_cls_rule_create(cache, class_id,
@@ -1744,6 +1749,7 @@ out_cls:
 		while (class_id--)
 			cas_cls_rule_destroy(cache, cls_rule[class_id]);
 	}
+out_standby:
 	ocf_mngt_cache_put(cache);
 out_get:
 	kfree(io_class_cfg);
