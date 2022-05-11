@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 import re
@@ -159,6 +159,10 @@ invalid_core_volume_size = [
 
 error_activating_cache = [
     r"Error activating cache \d+"
+]
+
+activate_without_detach = [
+    r"Cannot open the device exclusively. Make sure to detach cache before activation."
 ]
 
 
