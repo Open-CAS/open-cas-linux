@@ -354,6 +354,7 @@ deb_control_files_prepare() {
         sed -i "s/<CAS_GIT>/${CAS_GIT//\//\\/}/g" "$file"
         sed -i "s/<PACKAGE_MAINTAINER>/$PACKAGE_MAINTAINER/g" "$file"
         sed -i "s/<PACKAGE_DATE>/$PACKAGE_DATE/g" "$file"
+        sed -i "s/<YEAR>/$(date +%Y)/g" "$file"
     done
 
     if [ "$DEBUG" ]; then
