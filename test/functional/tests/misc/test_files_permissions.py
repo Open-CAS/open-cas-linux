@@ -14,12 +14,7 @@ from api.cas.installer import (
     rsync_opencas_sources,
 )
 from core.test_run import TestRun
-from test_tools.fs_utils import (
-    FilesPermissions,
-    find_all_files,
-    find_all_dirs,
-    find_all_items,
-)
+from test_tools.fs_utils import FilesPermissions, find_all_items
 
 
 repo_files_perms_exceptions = {
@@ -61,8 +56,8 @@ repo_files_perms_exceptions = {
     "test/smoke_test/run_tests": 755,
     "test/smoke_test/write_back/01": 755,
     "test/smoke_test/write_back/02": 755,
-    "tools/cas_version_gen": 755,
-    "tools/pckgen": 755,
+    "tools/cas_version_gen.sh": 755,
+    "tools/pckgen.sh": 755,
     "tools/pckgen.d/deb/debian/rules": 755,
     "tools/version2sha": 755,
     "utils/casctl": 755,

@@ -1,6 +1,6 @@
 ACTION=="remove", GOTO="cas_loader_end"
 SUBSYSTEM!="block", GOTO="cas_loader_end"
 
-RUN+="/lib/opencas/open-cas-loader /dev/$name"
+RUN+="/lib/opencas/open-cas-loader.py /dev/$name"
 
 LABEL="cas_loader_end"

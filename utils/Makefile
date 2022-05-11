@@ -41,7 +41,7 @@ install_files:
 
 	@install -m 644 -D opencas.py $(DESTDIR)$(CASCTL_DIR)/opencas.py
 	@install -m 755 -D casctl $(DESTDIR)$(CASCTL_DIR)/casctl
-	@install -m 755 -D open-cas-loader $(DESTDIR)$(CASCTL_DIR)/open-cas-loader
+	@install -m 755 -D open-cas-loader.py $(DESTDIR)$(CASCTL_DIR)/open-cas-loader.py
 
 	@install -m 644 -D etc/dracut.conf.d/opencas.conf $(DESTDIR)/etc/dracut.conf.d/opencas.conf
 
@@ -70,7 +70,7 @@ uninstall:
 
 	$(call remove-file,$(DESTDIR)$(CASCTL_DIR)/opencas.py)
 	$(call remove-file,$(DESTDIR)$(CASCTL_DIR)/casctl)
-	$(call remove-file,$(DESTDIR)$(CASCTL_DIR)/open-cas-loader)
+	$(call remove-file,$(DESTDIR)$(CASCTL_DIR)/open-cas-loader.py)
 	$(call remove-directory,$(DESTDIR)$(CASCTL_DIR))
 
 	$(call remove-file,$(DESTDIR)/etc/dracut.conf.d/opencas.conf)
