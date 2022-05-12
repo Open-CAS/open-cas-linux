@@ -114,7 +114,7 @@ async def test_data_integrity_unplug(cache_mode):
                 cache_dev.unplug()
 
             with TestRun.step("Analyze FIO execution after hot unplug"):
-                fio_output = await fio_task
+                fio_output = fio_task.result()
                 if fio_output.exit_code == 0:
                     TestRun.LOGGER.warning(
                         "Unexpectedly successful fio - check if the device was unplugged correctly."
