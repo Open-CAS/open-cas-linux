@@ -5,10 +5,16 @@
 
 import pytest
 
-from api.cas import casadm, casadm_parser
-from api.cas.cli import casadm_bin, standby_activate_cmd
+from api.cas import casadm, casadm_parser, dmesg
+from api.cas.casadm import standby_init
+from api.cas.cli import casadm_bin
 from core.test_run import TestRun
-from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
+from storage_devices.device import Device
+from storage_devices.disk import DiskType, DiskTypeSet
+from test_tools.dd import Dd
+from test_utils.filesystem.file import File
+from test_utils.os_utils import sync
+from test_utils.output import CmdException
 from test_utils.size import Size, Unit
 from api.cas.cli_messages import (
     check_stderr_msg,
@@ -16,7 +22,9 @@ from api.cas.cli_messages import (
     disallowed_param,
     operation_forbiden_in_standby,
     mutually_exclusive_params_init,
-    mutually_exclusive_params_load, activate_without_detach,
+    mutually_exclusive_params_load,
+    activate_without_detach,
+    cache_line_size_mismatch,
 )
 from api.cas.cache_config import CacheLineSize, CacheStatus
 from api.cas import cli
@@ -29,7 +37,7 @@ def test_standby_neg_cli_params():
     title: Verifying parameters for starting a standby cache instance
     description: |
       Try executing the standby init command with required arguments missing or
-      unallowed arguments present.
+      disallowed arguments present.
     pass_criteria:
       - The execution is unsuccessful for all improper argument combinations
       - A proper error message is displayed for unsuccessful executions
@@ -56,7 +64,7 @@ def test_standby_neg_cli_params():
             output = TestRun.executor.run(tested_cmd)
             if output.exit_code == 0:
                 TestRun.LOGGER.error(
-                    f'"{tested_cmd}" command succeeded despite missing required "{name}" paramter!'
+                    f'"{tested_cmd}" command succeeded despite missing required "{name}" parameter!'
                 )
             if not check_stderr_msg(output, missing_param) or name not in output.stderr:
                 TestRun.LOGGER.error(
@@ -82,7 +90,7 @@ def test_standby_neg_cli_params():
             output = TestRun.executor.run(tested_cmd)
             if output.exit_code == 0:
                 TestRun.LOGGER.error(
-                    f'"{tested_cmd}" command succeeded despite disallowed "{name}" paramter!'
+                    f'"{tested_cmd}" command succeeded despite disallowed "{name}" parameter!'
                 )
             if not check_stderr_msg(output, disallowed_param):
                 TestRun.LOGGER.error(
@@ -96,7 +104,7 @@ def test_activate_neg_cli_params():
     """
     title: Verifying parameters for activating a standby cache instance.
     description: |
-        Try executing the standby activate command with required arguments missing or unallowed
+        Try executing the standby activate command with required arguments missing or disallowed
         arguments present.
     pass_criteria:
         -The execution is unsuccessful for all improper argument combinations
@@ -136,7 +144,7 @@ def test_activate_neg_cli_params():
                 if output.exit_code == 0:
                     TestRun.LOGGER.error(
                         f'"{tested_cmd}" command succeeded despite missing obligatory'
-                        f' "{name}" paramter!'
+                        f' "{name}" parameter!'
                     )
                 if not check_stderr_msg(output, missing_param) or name not in output.stderr:
                     TestRun.LOGGER.error(
@@ -163,7 +171,7 @@ def test_activate_neg_cli_params():
             output = TestRun.executor.run(tested_cmd)
             if output.exit_code == 0:
                 TestRun.LOGGER.error(
-                    f'"{tested_cmd}" command succeeded despite disallowed "{name}" paramter!'
+                    f'"{tested_cmd}" command succeeded despite disallowed "{name}" parameter!'
                 )
             if not check_stderr_msg(output, disallowed_param):
                 TestRun.LOGGER.error(
@@ -359,3 +367,95 @@ def test_activate_without_detach():
         output = TestRun.executor.run_expect_success(f"ls -la /dev/ | grep {cache_exp_obj_name}")
         if output.stdout[0] != "b":
             TestRun.fail("The cache exported object is not a block device")
+
+
+@pytest.mark.require_disk("active_cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
+@pytest.mark.require_disk("standby_cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
+def test_activate_neg_cache_line_size():
+    """
+       title: Blocking cache with mismatching cache line size activation.
+       description: |
+          Try restoring cache operations from a replicated cache that was initialized
+          with different cache line size than the original cache.
+       pass_criteria:
+         - The activation is cancelled
+         - The cache remains in Standby detached state after an unsuccessful activation
+         - A proper error message is displayed
+    """
+
+    with TestRun.step("Prepare cache devices"):
+        active_cache_dev = TestRun.disks["active_cache"]
+        active_cache_dev.create_partitions([Size(500, Unit.MebiByte)])
+        active_cache_dev = active_cache_dev.partitions[0]
+        standby_cache_dev = TestRun.disks["standby_cache"]
+        standby_cache_dev.create_partitions([Size(500, Unit.MebiByte)])
+        standby_cache_dev = standby_cache_dev.partitions[0]
+        cache_id = 1
+        active_cls, standby_cls = CacheLineSize.LINE_4KiB, CacheLineSize.LINE_16KiB
+        cache_exp_obj_name = f"cas-cache-{cache_id}"
+
+        with TestRun.step("Start active cache instance."):
+            active_cache = casadm.start_cache(cache_dev=active_cache_dev, cache_id=cache_id,
+                                              cache_line_size=active_cls)
+
+        with TestRun.step("Create dump file with cache metadata"):
+            with TestRun.step("Get metadata size"):
+                dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
+                md_size = dmesg.get_metadata_size(dmesg_out)
+
+            with TestRun.step("Dump the metadata of the cache"):
+                dump_file_path = "/tmp/test_activate_corrupted.dump"
+                md_dump = File(dump_file_path)
+                md_dump.remove(force=True, ignore_errors=True)
+
+                dd_count = int(md_size / Size(1, Unit.MebiByte)) + 1
+                (
+                    Dd().input(active_cache_dev.path)
+                        .output(md_dump.full_path)
+                        .block_size(Size(1, Unit.MebiByte))
+                        .count(dd_count)
+                        .run()
+                )
+                md_dump.refresh_item()
+
+        with TestRun.step("Stop cache instance."):
+            active_cache.stop()
+
+        with TestRun.step("Start standby cache instance."):
+            standby_cache = casadm.standby_init(cache_dev=standby_cache_dev, cache_id=cache_id,
+                                                cache_line_size=int(
+                                                    standby_cls.value.value / Unit.KibiByte.value),
+                                                force=True)
+
+        with TestRun.step("Verify if the cache exported object appeared in the system"):
+            output = TestRun.executor.run_expect_success(
+                f"ls -la /dev/ | grep {cache_exp_obj_name}"
+            )
+            if output.stdout[0] != "b":
+                TestRun.fail("The cache exported object is not a block device")
+
+        with TestRun.step("Detach standby cache instance"):
+            standby_cache.standby_detach()
+
+        with TestRun.step(f"Copy changed metadata to the standby instance"):
+            Dd().input(md_dump.full_path).output(standby_cache_dev.path).run()
+            sync()
+
+        with TestRun.step("Try to activate cache instance"):
+            with pytest.raises(CmdException) as cmdExc:
+                output = standby_cache.standby_activate(standby_cache_dev)
+                if not check_stderr_msg(output, cache_line_size_mismatch):
+                    TestRun.LOGGER.error(
+                        f'Expected error message in format '
+                        f'"{cache_line_size_mismatch[0]}"'
+                        f'Got "{output.stderr}" instead.'
+                    )
+            assert "Failed to activate standby cache." in str(cmdExc.value)
+
+        with TestRun.step("Verify if cache is in standby detached state after failed activation"):
+            cache_status = standby_cache.get_status()
+            if cache_status != CacheStatus.standby_detached:
+                TestRun.LOGGER.error(
+                    f'Expected Cache state: "{CacheStatus.standby.value}" '
+                    f'Got "{cache_status.value}" instead.'
+                )
