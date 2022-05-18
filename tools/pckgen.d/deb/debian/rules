@@ -10,26 +10,29 @@
 %:
 	dh $@ --with dkms
 
-override_dh_auto_configure :
+override_dh_auto_configure:
 
-override_dh_auto_build :
+override_dh_auto_build:
 	(cd tools/; ./cas_version_gen build)
-	make -C casadm
+	<MAKE_BUILD>
 
-override_dh_auto_install :
+override_dh_auto_install:
 	(cd casadm; make install_files DESTDIR="$(shell pwd)/debian/tmp")
 	(cd utils; make install_files DESTDIR="$(shell pwd)/debian/tmp")
 	# clean and generate version again before installing sources for DKMS
 	make distclean
 	(cd tools/; ./cas_version_gen)
 
-override_dh_dkms :
+override_dh_dkms:
 	dh_dkms -V $(DEB_VERSION_UPSTREAM)
 
-override_dh_installsystemd :
+override_dh_installsystemd:
 	dh_installsystemd --no-start
 
-override_dh_missing :
+override_dh_strip:
+	<DEBUG_PACKAGE>
 
-override_dh_gencontrol :
+override_dh_missing:
+
+override_dh_gencontrol:
 	dh_gencontrol -- -Vkver="$(shell uname -r)"

@@ -11,7 +11,7 @@
 
 
 %global __python %{__python3}
-%define debug_package %{nil}
+<DEBUG_PACKAGE>
 %define kver %(uname -r)
 %define kver_filename k%{expand:%(kname="%{kver}"; echo "${kname%.*}" | sed -r "y/-/_/;")}
 
@@ -56,7 +56,7 @@ This package contains only CAS kernel modules.
 
 %build
 ./configure
-%make_build
+<MAKE_BUILD>
 
 
 %install
