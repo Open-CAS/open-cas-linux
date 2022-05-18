@@ -24,7 +24,7 @@ Group:      System
 Vendor:     Intel Corporation
 License:    <CAS_LICENSE_NAME>
 URL:        <CAS_HOMEPAGE>
-Source0:    https://github.com/Open-CAS/open-cas-linux/releases/download/v%{version}/%{name}-%{version}.tar.gz
+Source0:    https://github.com/Open-CAS/<CAS_NAME>/releases/download/v%{version}/%{name}-%{version}.tar.gz
 Packager:   <PACKAGE_MAINTAINER>
 BuildRequires:  coreutils, gawk, gcc, kernel-devel, kernel-headers, make
 Requires:   <CAS_NAME>-modules-%{version}, python3, sed, python3-packaging, python3-PyYAML
@@ -88,7 +88,7 @@ depmod
 . /etc/os-release
 # Determine the exact location of installed modules to add them to weak-modules
 for file in $(rpm -ql $(rpm -qa | grep <CAS_NAME>-modules)); do
-if [[ "$file" =~ cas_.*\.ko$ ]]; then
+if [[ "$file" =~ .*\.ko$ ]]; then
     # realpath to resolve any possible symlinks (needed for weak-modules)
     modules+=( $(realpath "$file") )
 fi
@@ -109,7 +109,7 @@ if [ $1 -eq 0 ]; then
     if [[ ! "$ID_LIKE" =~ suse|sles ]]; then
         # Search for all CAS modules to remove them from weak-modules
         # Use realpath to resolve any possible symlinks (needed for weak-modules)
-        realpath $(find /lib/modules/*/extra/block/opencas/ -name "cas_*.ko") >/var/run/rpm-open-cas-linux-modules
+        realpath $(find /lib/modules/%{kver}/<CAS_MODULES_DIR> -name "*.ko") >/var/run/rpm-<CAS_NAME>-modules
     fi
 fi
 
@@ -117,8 +117,8 @@ fi
 if [ $1 -eq 0 ]; then
     . /etc/os-release
     if [[ ! "$ID_LIKE" =~ suse|sles ]]; then
-        modules=( $(cat /var/run/rpm-open-cas-linux-modules) )
-        rm -f /var/run/rpm-open-cas-linux-modules
+        modules=( $(cat /var/run/rpm-<CAS_NAME>-modules) )
+        rm -f /var/run/rpm-<CAS_NAME>-modules
         printf "%s\n" "${modules[@]}" | weak-modules --no-initramfs --remove-modules
     fi
     depmod
