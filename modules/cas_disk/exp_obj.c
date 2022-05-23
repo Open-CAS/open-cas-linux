@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #include <linux/module.h>
@@ -183,6 +183,21 @@ static MAKE_RQ_RET_TYPE _casdsk_exp_obj_submit_bio(struct bio *bio)
 	KRETURN(0);
 }
 
+static int _casdsk_exp_obj_open(struct block_device *bdev, fmode_t mode)
+{
+	struct casdsk_disk *dsk = bdev->bd_disk->private_data;
+	int ret = 0;
+
+	casdsk_disk_lock(dsk);
+
+	if (dsk->exp_obj->locked_bd != NULL)
+		ret = -ENXIO;
+
+	casdsk_disk_unlock(dsk);
+
+	return ret;
+}
+
 static MAKE_RQ_RET_TYPE _casdsk_exp_obj_make_rq_fn(struct request_queue *q,
 						 struct bio *bio)
 {
@@ -342,6 +357,7 @@ static void _casdsk_exp_obj_clear_dev_t(struct casdsk_disk *dsk)
 static const struct block_device_operations _casdsk_exp_obj_ops = {
 	.owner = THIS_MODULE,
 	CAS_SET_SUBMIT_BIO(_casdsk_exp_obj_submit_bio)
+	.open = _casdsk_exp_obj_open
 };
 
 static int casdsk_exp_obj_alloc(struct casdsk_disk *dsk)
@@ -708,10 +724,12 @@ int casdsk_exp_obj_lock(struct casdsk_disk *dsk)
 		       exp_obj->locked_bd->bd_disk->disk_name,
 		       exp_obj->locked_bd->bd_openers);
 
+		mutex_unlock(&exp_obj->locked_bd->bd_mutex);
 		casdsk_exp_obj_unlock(dsk);
 		return -EBUSY;
 	}
 
+	mutex_unlock(&exp_obj->locked_bd->bd_mutex);
 	return 0;
 }
 EXPORT_SYMBOL(casdsk_exp_obj_lock);
@@ -724,7 +742,6 @@ int casdsk_exp_obj_unlock(struct casdsk_disk *dsk)
 
 	CASDSK_DEBUG_DISK_TRACE(dsk);
 
-	mutex_unlock(&dsk->exp_obj->locked_bd->bd_mutex);
 	bdput(dsk->exp_obj->locked_bd);
 	dsk->exp_obj->locked_bd = NULL;
 
