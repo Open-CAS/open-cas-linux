@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -88,7 +88,6 @@ def standby_activate_cache(cache_dev: Device, cache_id: int, shortcut: bool = Fa
     if output.exit_code != 0:
         raise CmdException("Failed to activate standby cache.", output)
     return output
-
 
 
 def stop_cache(cache_id: int, no_data_flush: bool = False, shortcut: bool = False):

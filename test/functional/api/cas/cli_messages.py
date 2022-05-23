@@ -165,6 +165,10 @@ activate_without_detach = [
     r"Cannot open the device exclusively. Make sure to detach cache before activation."
 ]
 
+cache_line_size_mismatch = [
+    r"Cache line size mismatch"
+]
+
 
 def check_stderr_msg(output: Output, expected_messages):
     return __check_string_msg(output.stderr, expected_messages)
