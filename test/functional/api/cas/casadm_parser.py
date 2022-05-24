@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -7,7 +7,7 @@ import csv
 import io
 import json
 import re
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import List
 
 from api.cas import casadm
@@ -15,6 +15,7 @@ from api.cas.cache_config import *
 from api.cas.casadm_params import *
 from api.cas.ioclass_config import IoClass
 from api.cas.version import CasVersion
+from core.test_run_utils import TestRun
 from storage_devices.device import Device
 from test_utils.output import CmdException
 from test_utils.size import parse_unit
@@ -228,6 +229,17 @@ def get_flushing_progress(cache_id: int, core_id: int = None):
     raise CmdException(f"There is no flushing progress in casadm list output. (cache {cache_id}"
                        f"{' core ' + str(core_id) if core_id is not None else ''})",
                        casadm_output)
+
+
+def wait_for_flushing(cache, core, timeout: timedelta = timedelta(seconds=30)):
+    start_time = datetime.now()
+    while datetime.now() - start_time < timeout:
+        try:
+            get_flushing_progress(cache.cache_id, core.core_id)
+            return
+        except CmdException:
+            continue
+    TestRun.fail("Flush not started!")
 
 
 def get_flush_parameters_alru(cache_id: int):

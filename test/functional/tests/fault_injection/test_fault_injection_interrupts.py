@@ -1,22 +1,18 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
-
-from datetime import timedelta, datetime
 
 import pytest
 
 from api.cas import casadm, casadm_parser, cli
-from api.cas.cache import Cache
 from api.cas.cache_config import CacheMode, CleaningPolicy, CacheModeTrait
-from api.cas.core import Core
+from api.cas.casadm_parser import wait_for_flushing
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.disk_utils import Filesystem
 from test_utils import os_utils
 from test_utils.os_utils import Udev, DropCachesMode
-from test_utils.output import CmdException
 from test_utils.size import Size, Unit
 
 mount_point = "/mnt/cas"
@@ -549,14 +545,3 @@ def create_test_file():
     dd.run()
     test_file.refresh_item()
     return test_file
-
-
-def wait_for_flushing(cache: Cache, core: Core, timeout: timedelta = timedelta(seconds=30)):
-    start_time = datetime.now()
-    while datetime.now() - start_time < timeout:
-        try:
-            casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
-            return
-        except CmdException:
-            continue
-    raise Exception("Management flush not started!")
