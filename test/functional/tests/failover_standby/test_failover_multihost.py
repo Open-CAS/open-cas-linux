@@ -226,6 +226,164 @@ def test_functional_activate_twice_round_trip(filesystem):
     TestRun.LOGGER.end_group()
 
 
+@pytest.mark.require_disk("metadata_dev", DiskTypeSet([DiskType.nand]))
+@pytest.mark.require_disk("core_dev", DiskTypeSet([DiskType.hdd]))
+@pytest.mark.require_disk("raid_dev1", DiskTypeSet([DiskType.optane]))
+@pytest.mark.require_disk("raid_dev2", DiskTypeSet([DiskType.optane]))
+@pytest.mark.multidut(2)
+@pytest.mark.require_plugin("power_control")
+@pytest.mark.parametrize("filesystem", [Filesystem.xfs, None])
+def test_functional_activate_twice_new_host(filesystem):
+    """
+    title:  Cache replication.
+    description:
+      Restore cache operations from a replicated cache and make sure
+      second failover is possible to return to original configuration
+    pass_criteria:
+      - A cache exported object appears after starting a cache in passive state
+      - The cache exported object can be used for replicating a cache device
+      - The cache exported object disappears after the cache activation
+      - The core exported object reappears after the cache activation
+      - A data integrity check passes for the core exported object before and after
+        switching cache instances
+      - CAS standby cahce starts automatically after starting OS when configured
+        in CAS config
+    """
+    with TestRun.step("Make sure DRBD is installed on both nodes"):
+        check_drbd_installed(TestRun.duts)
+
+    with TestRun.step("Prepare DUTs"):
+        prepare_devices(TestRun.duts)
+        primary_node, secondary_node = TestRun.duts
+        extra_init_config_flags = (
+            f"cache_line_size={str(cls.value.value//1024)},target_failover_state=standby"
+        )
+
+    # THIS IS WHERE THE REAL TEST STARTS
+    TestRun.LOGGER.start_group(
+        f"Initial configuration with {primary_node.ip} as primary node "
+        f"and {secondary_node.ip} as secondary node"
+    )
+
+    with TestRun.use_dut(secondary_node), TestRun.step(
+        f"Prepare standby cache instance on {secondary_node.ip}"
+    ):
+        secondary_node.cache = casadm.standby_init(
+            cache_dev=secondary_node.raid,
+            cache_line_size=str(cls.value.value // 1024),
+            cache_id=cache_id,
+            force=True,
+        )
+
+    with TestRun.step("Prepare DRBD config files on both DUTs"):
+        caches_original_resource, caches_failover_resource, cores_resource = get_drbd_configs(
+            primary_node, secondary_node
+        )
+
+    for dut in TestRun.duts:
+        with TestRun.use_dut(dut), TestRun.step(f"Create DRBD instances on {dut.ip}"):
+            caches_original_resource.save()
+            dut.cache_drbd = Drbd(caches_original_resource)
+            dut.cache_drbd.create_metadata()
+            dut.cache_drbd_dev = dut.cache_drbd.up()
+
+            cores_resource.save()
+            dut.core_drbd = Drbd(cores_resource)
+            dut.core_drbd.create_metadata()
+            dut.core_drbd_dev = dut.core_drbd.up()
+
+    with TestRun.use_dut(primary_node), TestRun.step(
+        f"Set {primary_node.ip} as primary node for both DRBD instances"
+    ):
+        primary_node.cache_drbd.set_primary(force=True)
+        primary_node.core_drbd.set_primary(force=True)
+
+    with TestRun.use_dut(primary_node), TestRun.step("Make sure drbd instances are in sync"):
+        primary_node.cache_drbd.wait_for_sync()
+        primary_node.core_drbd.wait_for_sync()
+
+    with TestRun.use_dut(primary_node), TestRun.step(f"Start cache on {primary_node.ip}"):
+        primary_node.cache = casadm.start_cache(
+            primary_node.cache_drbd_dev,
+            force=True,
+            cache_mode=CacheMode.WB,
+            cache_line_size=cls,
+            cache_id=cache_id,
+        )
+        core = primary_node.cache.add_core(primary_node.core_drbd_dev)
+        primary_node.cache.set_cleaning_policy(CleaningPolicy.nop)
+        primary_node.cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+        if filesystem:
+            TestRun.executor.run(f"rm -rf {mountpoint}")
+            fs_utils.create_directory(path=mountpoint)
+            core.create_filesystem(filesystem)
+            core.mount(mountpoint)
+
+    with TestRun.use_dut(primary_node), TestRun.step("Fill core with data randrwmix=50%"):
+        fio = Fio().create_command().read_write(ReadWrite.randrw).size(core_size * 0.9)
+        fio.file_name(test_file_path) if filesystem else fio.target(core.path).direct()
+        fio.run()
+        sync()
+
+    data_path = test_file_path if filesystem else core.path
+    original_core_md5, original_cache_stats = power_failure(primary_node, data_path)
+
+    TestRun.LOGGER.end_group()
+    TestRun.LOGGER.start_group(
+        f"First failover sequence. {secondary_node.ip} becomes"
+        f" primary node and {primary_node.ip} becomes secondary node"
+    )
+
+    failover_sequence(secondary_node, caches_failover_resource, filesystem, core)
+
+    postfailover_check(secondary_node, data_path, original_core_md5, original_cache_stats)
+
+    with TestRun.use_dut(secondary_node), TestRun.step(
+        "Fill half of the core with data randrwmix=50%"
+    ):
+        fio = Fio().create_command().read_write(ReadWrite.randrw).size(core_size * 0.5)
+        fio.file_name(f"{mountpoint}/test_file") if filesystem else fio.target(core.path).direct()
+        fio.run()
+        sync()
+
+    with TestRun.use_dut(primary_node), TestRun.step(f"Restore core DRBD on {primary_node.ip}"):
+        TestRun.executor.wait_for_connection()
+        primary_node.core_drbd_dev = primary_node.core_drbd.up()
+
+    new_failover_instance(primary_node, caches_failover_resource, autoload=False)
+
+    with TestRun.use_dut(secondary_node), TestRun.step(
+        "Fill the second half of the core with data randrwmix=50%"
+    ):
+        (
+            Fio()
+            .create_command()
+            .read_write(ReadWrite.randrw)
+            .size(core_size * 0.4)
+            .offset(core_size * 0.5)
+        ).run()
+        fio.file_name(f"{mountpoint}/test_file") if filesystem else fio.target(core.path).direct()
+        fio.run()
+        sync()
+
+    original_core_md5, original_cache_stats = power_failure(secondary_node, data_path)
+
+    TestRun.LOGGER.end_group()
+    TestRun.LOGGER.start_group(
+        f"Second failover sequence. {primary_node.ip} becomes"
+        f" primary node and {secondary_node.ip} becomes secondary node"
+    )
+
+    failover_sequence(primary_node, caches_original_resource, filesystem, core)
+
+    postfailover_check(primary_node, data_path, original_core_md5, original_cache_stats)
+
+    with TestRun.use_dut(secondary_node):
+        TestRun.executor.wait_for_connection()
+
+    TestRun.LOGGER.end_group()
+
+
 def check_drbd_installed(duts):
     for dut in duts:
         with TestRun.use_dut(dut):
@@ -374,6 +532,23 @@ def new_failover_instance(new_secondary_node, drbd_resource, *, autoload):
                         f'Expected Cache state: "{CacheStatus.standby.value}" '
                         f'Got "{cache_status.value}" instead.'
                     )
+    else:
+        with TestRun.use_dut(new_secondary_node), TestRun.step(
+            f"Zero the standby-cache-to-be device on {new_secondary_node.ip}"
+        ):
+            dd = Dd().input("/dev/zero").output(new_secondary_node.raid.path)
+            dd.run()
+            sync()
+
+        with TestRun.use_dut(new_secondary_node), TestRun.step(
+            f"Prepare standby cache instance on {new_secondary_node.ip}"
+        ):
+            new_secondary_node.cache = casadm.standby_init(
+                cache_dev=new_secondary_node.raid,
+                cache_line_size=str(cls.value.value // 1024),
+                cache_id=cache_id,
+                force=True,
+            )
 
     with TestRun.use_dut(new_secondary_node), TestRun.step(
         f"Start secondary DRBD on {new_secondary_node.ip}"
