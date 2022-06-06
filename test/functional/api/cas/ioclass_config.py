@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -88,16 +88,29 @@ class IoClass:
         return IoClass(DEFAULT_IO_CLASS_ID, DEFAULT_IO_CLASS_RULE, priority, allocation)
 
     @staticmethod
+    def default_header_dict():
+        return {
+            "id": "IO class id",
+            "name": "IO class name",
+            "eviction_prio": "Eviction priority",
+            "allocation": "Allocation"
+        }
+
+    @staticmethod
+    def default_header():
+        return ','.join(IoClass.default_header_dict().values())
+
+    @staticmethod
     def compare_ioclass_lists(list1: [], list2: []):
         return sorted(list1) == sorted(list2)
 
     @staticmethod
     def generate_random_ioclass_list(count: int, max_priority: int = MAX_IO_CLASS_PRIORITY):
         random_list = [IoClass.default(priority=random.randint(0, max_priority),
-                                       allocation=f"{random.randint(0,100)/100:0.2f}")]
+                                       allocation=f"{random.randint(0, 100) / 100:0.2f}")]
         for i in range(1, count):
             random_list.append(IoClass(i, priority=random.randint(0, max_priority),
-                                       allocation=f"{random.randint(0,100)/100:0.2f}")
+                                       allocation=f"{random.randint(0, 100) / 100:0.2f}")
                                .set_random_rule())
         return random_list
 
