@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 import os
@@ -225,7 +225,7 @@ def test_trim_device_discard_support(
 
     with TestRun.step("Create random file."):
         test_file = fs_utils.create_random_test_file(os.path.join(mount_point, "test_file"),
-                                                     core_dev.size * 0.9)
+                                                     core_dev.size * 0.2)
         occupancy_before = core.get_occupancy()
         TestRun.LOGGER.info(str(core.get_statistics()))
 
@@ -236,6 +236,15 @@ def test_trim_device_discard_support(
         os_utils.sync()
         os_utils.drop_caches()
         test_file.remove()
+
+    if filesystem == Filesystem.xfs:
+        with TestRun.step(
+            "Since issuing discard reqs is a lazy operation on XFS "
+            "write a small amount of data to the partition"
+        ):
+            test_file = fs_utils.create_random_test_file(
+                os.path.join(mount_point, "test_file"), core_dev.size * 0.1
+            )
 
     with TestRun.step(
             "Ensure that discards were detected by blktrace on proper devices."):
