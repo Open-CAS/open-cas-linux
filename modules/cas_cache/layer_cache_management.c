@@ -1837,26 +1837,50 @@ static int cache_mngt_initialize_cache_exported_object(ocf_cache_t cache)
 	return 0;
 }
 
-int cache_mngt_prepare_cache_device_cfg(struct ocf_mngt_cache_device_config *cfg,
-		char *cache_path)
+static int cache_mngt_create_cache_device_cfg(
+		struct ocf_mngt_cache_device_config *cfg, char *cache_path)
 {
+	int result = 0;
+	int path_length = strnlen(cache_path, MAX_STR_LEN);
+	struct ocf_volume_uuid uuid;
+	ocf_volume_t volume;
+	ocf_volume_type_t volume_type;
+	uint8_t volume_type_id;
+
 	memset(cfg, 0, sizeof(*cfg));
 
-	if (strnlen(cache_path, MAX_STR_LEN) == MAX_STR_LEN)
+	if (path_length == MAX_STR_LEN || path_length == 0)
 		return -OCF_ERR_INVAL;
 
-	cfg->uuid.data = cache_path;
-	cfg->uuid.size = strnlen(cfg->uuid.data, MAX_STR_LEN) + 1;
+	result = cas_blk_identify_type(cache_path, &volume_type_id);
+	if (result)
+		return result;
+
+	volume_type = ocf_ctx_get_volume_type(cas_ctx, volume_type_id);
+	if (!volume_type)
+		return -OCF_ERR_INVAL;
+
+	uuid.data = cache_path;
+	uuid.size = path_length + 1;
+
+	result = ocf_volume_create(&volume, volume_type, &uuid);
+	if (result)
+		return result;
+
 	cfg->perform_test = false;
+	cfg->volume = volume;
 
-	if (cfg->uuid.size <= 1)
-		return -OCF_ERR_INVAL;
-
-	return cas_blk_identify_type(cfg->uuid.data,
-		&cfg->volume_type);
+	return 0;
 }
 
-int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
+void cache_mngt_destroy_cache_cfg(struct ocf_mngt_cache_config *cfg,
+		struct ocf_mngt_cache_attach_config *attach_cfg)
+
+{
+	ocf_volume_destroy(attach_cfg->device.volume);
+}
+
+int cache_mngt_create_cache_cfg(struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_attach_config *attach_cfg,
 		struct kcas_start_cache *cmd)
 {
@@ -1898,13 +1922,10 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	memset(cfg, 0, sizeof(*cfg));
 	memset(attach_cfg, 0, sizeof(*attach_cfg));
 
-	result = cache_mngt_prepare_cache_device_cfg(&attach_cfg->device,
+	result = cache_mngt_create_cache_device_cfg(&attach_cfg->device,
 			cmd->cache_path_name);
 	if (result)
 		return result;
-
-	if (attach_cfg->device.uuid.size <= 1)
-		return -OCF_ERR_INVAL;
 
 	strncpy(cfg->name, cache_name, OCF_CACHE_NAME_SIZE - 1);
 	cfg->cache_mode = cmd->caching_mode;
@@ -1942,8 +1963,11 @@ int cache_mngt_prepare_cache_cfg(struct ocf_mngt_cache_config *cfg,
 static void _cache_mngt_log_cache_device_path(ocf_cache_t cache,
 		struct ocf_mngt_cache_device_config *device_cfg)
 {
+	const struct ocf_volume_uuid *uuid =
+		ocf_volume_get_uuid(device_cfg->volume);
+
 	printk(KERN_INFO OCF_PREFIX_SHORT "Adding device %s as cache %s\n",
-			(const char*)device_cfg->uuid.data,
+			(const char*)uuid->data,
 			ocf_cache_get_name(cache));
 }
 
@@ -2212,8 +2236,9 @@ int cache_mngt_check_bdev(struct ocf_mngt_cache_device_config *device_cfg,
 	struct block_device *bdev;
 	int part_count;
 	bool is_part;
+	const struct ocf_volume_uuid *uuid = ocf_volume_get_uuid(device_cfg->volume);
 
-	bdev = blkdev_get_by_path(device_cfg->uuid.data,
+	bdev = blkdev_get_by_path(uuid->data,
 			(FMODE_EXCL|FMODE_READ), holder);
 	if (IS_ERR(bdev)) {
 		return (PTR_ERR(bdev) == -EBUSY) ?
@@ -2285,7 +2310,13 @@ out_module_put:
 	return result;
 }
 
-int cache_mngt_prepare_cache_standby_activate_cfg(
+void cache_mngt_destroy_cache_standby_activate_cfg(
+		struct ocf_mngt_cache_standby_activate_config *cfg)
+{
+	ocf_volume_destroy(cfg->device.volume);
+}
+
+int cache_mngt_create_cache_standby_activate_cfg(
 		struct ocf_mngt_cache_standby_activate_config *cfg,
 		struct kcas_standby_activate *cmd)
 {
@@ -2296,7 +2327,7 @@ int cache_mngt_prepare_cache_standby_activate_cfg(
 
 	memset(cfg, 0, sizeof(*cfg));
 
-	result = cache_mngt_prepare_cache_device_cfg(&cfg->device,
+	result = cache_mngt_create_cache_device_cfg(&cfg->device,
 			cmd->cache_path);
 	if (result)
 		return result;
