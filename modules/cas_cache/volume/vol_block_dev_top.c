@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -713,13 +713,14 @@ static int kcas_core_lock_exported_object(ocf_core_t core, void *cntx)
 	}
 
 	bvol->expobj_locked = true;
+
 	return 0;
 }
 
+
 static int kcas_core_unlock_exported_object(ocf_core_t core, void *cntx)
 {
-	struct bd_object *bvol = bd_object(
-			ocf_core_get_volume(core));
+	struct bd_object *bvol = bd_object(ocf_core_get_volume(core));
 
 	if (bvol->expobj_locked) {
 		casdisk_functions.casdsk_exp_obj_unlock(bvol->dsk);

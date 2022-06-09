@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #include <linux/module.h>
@@ -339,8 +339,38 @@ static void _casdsk_exp_obj_clear_dev_t(struct casdsk_disk *dsk)
 	}
 }
 
+static int _casdsk_exp_obj_open(struct block_device *bdev, fmode_t mode)
+{
+	struct casdsk_disk *dsk = bdev->bd_disk->private_data;
+	int result = -ENAVAIL;
+
+	mutex_lock(&dsk->openers_lock);
+
+	if (!dsk->claimed) {
+		dsk->openers++;
+		result = 0;
+	}
+
+	mutex_unlock(&dsk->openers_lock);
+	return result;
+}
+
+static void _casdsk_exp_obj_close(struct gendisk *gd, fmode_t mode)
+{
+	struct casdsk_disk *dsk = gd->private_data;
+
+	BUG_ON(dsk->openers == 0);
+
+	mutex_lock(&dsk->openers_lock);
+	dsk->openers--;
+	mutex_unlock(&dsk->openers_lock);
+
+}
+
 static const struct block_device_operations _casdsk_exp_obj_ops = {
 	.owner = THIS_MODULE,
+	.open = _casdsk_exp_obj_open,
+	.release = _casdsk_exp_obj_close,
 	CAS_SET_SUBMIT_BIO(_casdsk_exp_obj_submit_bio)
 };
 
@@ -371,7 +401,6 @@ static int casdsk_exp_obj_alloc(struct casdsk_disk *dsk)
 	dsk->exp_obj = exp_obj;
 
 	return 0;
-
 error_pending_rqs_alloc:
 	kmem_cache_free(casdsk_module->exp_obj_cache, exp_obj);
 error_exp_obj_alloc:
@@ -396,7 +425,6 @@ EXPORT_SYMBOL(casdsk_exp_obj_free);
 
 static void __casdsk_exp_obj_release(struct casdsk_exp_obj *exp_obj)
 {
-	kfree(exp_obj->dev_name);
 	kmem_cache_free(casdsk_module->pending_rqs_cache, exp_obj->pending_rqs);
 	kmem_cache_free(casdsk_module->exp_obj_cache, exp_obj);
 }
@@ -415,6 +443,7 @@ static void _casdsk_exp_obj_release(struct kobject *kobj)
 
 	owner = exp_obj->owner;
 
+	kfree(exp_obj->dev_name);
 	__casdsk_exp_obj_release(exp_obj);
 
 	if (owner)
@@ -505,52 +534,44 @@ int casdsk_exp_obj_create(struct casdsk_disk *dsk, const char *dev_name,
 
 	result = casdsk_exp_obj_alloc(dsk);
 	if (result)
-		goto error_alloc;
+		goto error_exp_obj_alloc;
 
 	exp_obj = dsk->exp_obj;
 
 	exp_obj->dev_name = kstrdup(dev_name, GFP_KERNEL);
 	if (!exp_obj->dev_name) {
-		__casdsk_exp_obj_release(exp_obj);
 		result = -ENOMEM;
-		goto error_strdup;
-	}
-
-	result = _casdsk_exp_obj_init_kobject(dsk);
-	if (result) {
-		__casdsk_exp_obj_release(exp_obj);
-		goto error_kobject;
+		goto error_kstrdup;
 	}
 
 	if (!try_module_get(owner)) {
 		CASDSK_DEBUG_DISK_ERROR(dsk, "Cannot get reference to module");
 		result = -ENAVAIL;
-		goto error_module;
+		goto error_module_get;
 	}
 	exp_obj->owner = owner;
 	exp_obj->ops = ops;
 
-	gd = alloc_disk(1);
-	if (!gd) {
-		result = -ENOMEM;
-		goto error_alloc_disk;
+	result = _casdsk_exp_obj_init_kobject(dsk);
+	if (result) {
+		goto error_init_kobject;
 	}
-	exp_obj->gd = gd;
-
-	result = _casdsk_exp_obj_set_dev_t(dsk, gd);
-	if (result)
-		goto error_dev_t;
 
 	result = _casdsk_init_tag_set(dsk, &dsk->tag_set);
 	if (result) {
 		goto error_init_tag_set;
 	}
 
-	queue = blk_mq_init_queue(&dsk->tag_set);
-	if (IS_ERR_OR_NULL(queue)) {
-		result = queue ? PTR_ERR(queue) : -ENOMEM;
-		goto error_init_queue;
+	result = cas_alloc_mq_disk(&gd, &queue, &dsk->tag_set);
+	if (result) {
+		goto error_alloc_mq_disk;
 	}
+
+	exp_obj->gd = gd;
+
+	result = _casdsk_exp_obj_set_dev_t(dsk, gd);
+	if (result)
+		goto error_exp_obj_set_dev_t;
 
 	BUG_ON(queue->queuedata);
 	queue->queuedata = dsk;
@@ -559,7 +580,6 @@ int casdsk_exp_obj_create(struct casdsk_disk *dsk, const char *dev_name,
 	_casdsk_init_queues(dsk);
 
 	gd->fops = &_casdsk_exp_obj_ops;
-	gd->queue = queue;
 	gd->private_data = dsk;
 	strlcpy(gd->disk_name, exp_obj->dev_name, sizeof(gd->disk_name));
 
@@ -574,23 +594,27 @@ int casdsk_exp_obj_create(struct casdsk_disk *dsk, const char *dev_name,
 	return 0;
 
 error_set_geometry:
-	blk_cleanup_queue(exp_obj->queue);
-error_init_queue:
+	_casdsk_exp_obj_clear_dev_t(dsk);
+error_exp_obj_set_dev_t:
+	cas_cleanup_mq_disk(exp_obj);
+	dsk->exp_obj->gd = NULL;
+error_alloc_mq_disk:
 	blk_mq_free_tag_set(&dsk->tag_set);
 error_init_tag_set:
-	_casdsk_exp_obj_clear_dev_t(dsk);
-error_dev_t:
-	put_disk(gd);
-error_alloc_disk:
+	kobject_put(&exp_obj->kobj);
+	/* kobject put does all the cleanup below internally */
+	return result;
+error_init_kobject:
 	module_put(owner);
 	dsk->exp_obj->owner = NULL;
-error_module:
-	casdsk_exp_obj_free(dsk);
-error_kobject:
-error_strdup:
+error_module_get:
+	kfree(exp_obj->dev_name);
+error_kstrdup:
+	__casdsk_exp_obj_release(exp_obj);
 	dsk->exp_obj = NULL;
-error_alloc:
+error_exp_obj_alloc:
 	return result;
+
 }
 EXPORT_SYMBOL(casdsk_exp_obj_create);
 
@@ -689,6 +713,7 @@ EXPORT_SYMBOL(casdsk_exp_obj_activated);
 int casdsk_exp_obj_lock(struct casdsk_disk *dsk)
 {
 	struct casdsk_exp_obj *exp_obj;
+	int result = -EBUSY;
 
 	BUG_ON(!dsk);
 	BUG_ON(!dsk->exp_obj);
@@ -697,36 +722,26 @@ int casdsk_exp_obj_lock(struct casdsk_disk *dsk)
 
 	exp_obj = dsk->exp_obj;
 
-	exp_obj->locked_bd = cas_bdget_disk(exp_obj->gd);
-	if (!exp_obj->locked_bd)
-		return -ENAVAIL;
+	mutex_lock(&dsk->openers_lock);
 
-	mutex_lock(&exp_obj->locked_bd->bd_mutex);
-
-	if (exp_obj->locked_bd->bd_openers) {
-		printk(CASDSK_KERN_DEBUG "Device %s in use (openers=%d). Refuse to stop\n",
-		       exp_obj->locked_bd->bd_disk->disk_name,
-		       exp_obj->locked_bd->bd_openers);
-
-		casdsk_exp_obj_unlock(dsk);
-		return -EBUSY;
+	if (dsk->openers == 0) {
+		dsk->claimed = true;
+		result = 0;
 	}
 
-	return 0;
+	mutex_unlock(&dsk->openers_lock);
+	return result;
 }
 EXPORT_SYMBOL(casdsk_exp_obj_lock);
 
 int casdsk_exp_obj_unlock(struct casdsk_disk *dsk)
 {
 	BUG_ON(!dsk);
-	BUG_ON(!dsk->exp_obj);
-	BUG_ON(!dsk->exp_obj->locked_bd);
-
 	CASDSK_DEBUG_DISK_TRACE(dsk);
 
-	mutex_unlock(&dsk->exp_obj->locked_bd->bd_mutex);
-	bdput(dsk->exp_obj->locked_bd);
-	dsk->exp_obj->locked_bd = NULL;
+	mutex_lock(&dsk->openers_lock);
+	dsk->claimed = false;
+	mutex_unlock(&dsk->openers_lock);
 
 	return 0;
 }
@@ -740,8 +755,6 @@ int casdsk_exp_obj_destroy(struct casdsk_disk *dsk)
 
 	if (!dsk->exp_obj)
 		return -ENODEV;
-
-	BUG_ON(!dsk->exp_obj->locked_bd);
 
 	CASDSK_DEBUG_DISK_TRACE(dsk);
 

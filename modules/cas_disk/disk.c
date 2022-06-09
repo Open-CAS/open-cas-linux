@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #include <linux/module.h>
@@ -125,6 +125,8 @@ struct casdsk_disk *casdsk_disk_open(const char *path, void *private)
 		goto error_kmem;
 	}
 	mutex_init(&dsk->lock);
+
+	mutex_init(&dsk->openers_lock);
 
 	dsk->path = kstrdup(path, GFP_KERNEL);
 	if (!dsk->path) {
