@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -54,11 +54,13 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mngt_prepare_cache_cfg(&cfg, &attach_cfg, cmd_info);
+		retval = cache_mngt_create_cache_cfg(&cfg, &attach_cfg, cmd_info);
 		if (retval)
 			RETURN_CMD_RESULT(cmd_info, arg, retval);
 
 		retval = cache_mngt_init_instance(&cfg, &attach_cfg, cmd_info);
+
+		cache_mngt_destroy_cache_cfg(&cfg, &attach_cfg);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -393,12 +395,14 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
-		retval = cache_mngt_prepare_cache_standby_activate_cfg(&cfg,
+		retval = cache_mngt_create_cache_standby_activate_cfg(&cfg,
 				cmd_info);
 		if (retval)
 			RETURN_CMD_RESULT(cmd_info, arg, retval);
 
 		retval = cache_mngt_activate(&cfg, cmd_info);
+
+		cache_mngt_destroy_cache_standby_activate_cfg(&cfg);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
