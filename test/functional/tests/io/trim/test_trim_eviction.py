@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -11,7 +11,7 @@ from api.cas.cache_config import CacheMode, CacheLineSize, CleaningPolicy
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools import fs_utils, disk_utils
-from test_tools.ddrescue import Ddrescue
+from test_tools.dd import Dd
 from test_tools.disk_utils import Filesystem
 from test_utils import os_utils
 from test_utils.os_utils import Udev
@@ -110,12 +110,12 @@ def test_trim_eviction(cache_mode, cache_line_size, filesystem, cleaning):
 
 
 def create_file_with_ddrescue(core_dev, test_file_path):
-    ddrescue = Ddrescue() \
-        .block_size(Size(1, Unit.Blocks4096)) \
-        .size(core_dev.size * 0.9) \
-        .synchronous() \
-        .source("/dev/urandom") \
-        .destination(test_file_path)
-    ddrescue.run()
+    dd = Dd() \
+            .block_size(Size(1, Unit.MebiByte)) \
+            .count(900) \
+            .input("/dev/urandom") \
+            .output(test_file_path) \
+            .oflag("sync")
+    dd.run()
 
     return File(test_file_path)
