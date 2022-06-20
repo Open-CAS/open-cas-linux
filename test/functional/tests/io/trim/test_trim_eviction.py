@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -11,7 +11,7 @@ from api.cas.cache_config import CacheMode, CacheLineSize, CleaningPolicy
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools import fs_utils, disk_utils
-from test_tools.ddrescue import Ddrescue
+from test_tools.dd import Dd
 from test_tools.disk_utils import Filesystem
 from test_utils import os_utils
 from test_utils.os_utils import Udev
@@ -27,22 +27,22 @@ from test_utils.filesystem.file import File
 @pytest.mark.parametrizex("cleaning", [CleaningPolicy.alru, CleaningPolicy.nop])
 def test_trim_eviction(cache_mode, cache_line_size, filesystem, cleaning):
     """
-        title: Test verifying if trim requests do not cause eviction on CAS device.
-        description: |
-          When trim requests enabled and files are being added and removed from CAS device,
-          there is no eviction (no reads from cache).
-        pass_criteria:
-          - Reads from cache device are the same before and after removing test file.
+    title: Test verifying if trim requests do not cause eviction on CAS device.
+    description: |
+      When trim requests enabled and files are being added and removed from CAS device,
+      there is no eviction (no reads from cache).
+    pass_criteria:
+      - Reads from cache device are the same before and after removing test file.
     """
     mount_point = "/mnt"
     test_file_path = os.path.join(mount_point, "test_file")
 
     with TestRun.step("Prepare devices."):
-        cache_disk = TestRun.disks['cache']
+        cache_disk = TestRun.disks["cache"]
         cache_disk.create_partitions([Size(1, Unit.GibiByte)])
         cache_dev = cache_disk.partitions[0]
 
-        core_disk = TestRun.disks['core']
+        core_disk = TestRun.disks["core"]
         core_disk.create_partitions([Size(1, Unit.GibiByte)])
         core_dev = core_disk.partitions[0]
 
@@ -76,7 +76,9 @@ def test_trim_eviction(cache_mode, cache_line_size, filesystem, cleaning):
     with TestRun.step("Remove file and create a new one."):
         cache_iostats_before = cache_dev.get_io_stats()
         data_reads_before = cache.get_io_class_statistics(io_class_id=0).block_stats.cache.reads
-        metadata_reads_before = cache.get_io_class_statistics(io_class_id=1).block_stats.cache.reads
+        metadata_reads_before = cache.get_io_class_statistics(
+            io_class_id=1
+        ).block_stats.cache.reads
         test_file.remove()
         os_utils.sync()
         os_utils.drop_caches()
@@ -106,16 +108,19 @@ def test_trim_eviction(cache_mode, cache_line_size, filesystem, cleaning):
             )
         else:
             TestRun.LOGGER.info(
-                "Number of reads from cache before and after removing test file is the same.")
+                "Number of reads from cache before and after removing test file is the same."
+            )
 
 
 def create_file_with_ddrescue(core_dev, test_file_path):
-    ddrescue = Ddrescue() \
-        .block_size(Size(1, Unit.Blocks4096)) \
-        .size(core_dev.size * 0.9) \
-        .synchronous() \
-        .source("/dev/urandom") \
-        .destination(test_file_path)
-    ddrescue.run()
+    dd = (
+        Dd()
+        .block_size(Size(1, Unit.MebiByte))
+        .count(900)
+        .input("/dev/urandom")
+        .output(test_file_path)
+        .oflag("sync")
+    )
+    dd.run()
 
     return File(test_file_path)
