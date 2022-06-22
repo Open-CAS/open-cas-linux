@@ -235,7 +235,7 @@ def test_standby_neg_cli_management():
             cli.flush_core_cmd(str(cache_id), "1"),
             cli.load_io_classes_cmd(str(cache_id), ioclass_config_path),
             cli.list_io_classes_cmd(str(cache_id), output_format="csv"),
-            cli.script_try_add_cmd(str(cache_id), core_device.path, core_id=1),
+            cli.script_try_add_cmd(str(cache_id), core_device.path, core_id="1"),
             cli.script_purge_cache_cmd(str(cache_id)),
             cli.script_purge_core_cmd(str(cache_id), "1"),
             cli.script_detach_core_cmd(str(cache_id), "1"),
@@ -414,10 +414,10 @@ def test_activate_neg_cache_line_size():
                 dd_count = int(md_size / Size(1, Unit.MebiByte)) + 1
                 (
                     Dd().input(active_cache_dev.path)
-                        .output(md_dump.full_path)
-                        .block_size(Size(1, Unit.MebiByte))
-                        .count(dd_count)
-                        .run()
+                    .output(md_dump.full_path)
+                    .block_size(Size(1, Unit.MebiByte))
+                    .count(dd_count)
+                    .run()
                 )
                 md_dump.refresh_item()
 
@@ -625,3 +625,62 @@ def test_standby_activate_with_corepool():
     with TestRun.step("Check core status."):
         if core.get_status() is not CoreStatus.active:
             TestRun.fail(f"First core status should be active but is {core.get_status()}.")
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
+def test_standby_start_stop(cache_line_size):
+    """
+        title: Start and stop a standby cache instance.
+        description: Test if cache can be started in standby state and stopped without activation.
+        pass_criteria:
+          - A cache exported object appears after starting a cache in standby state
+          - The data written to the cache exported object committed on the underlying cache device
+          - The cache exported object disappears after stopping the standby cache instance
+    """
+    with TestRun.step("Prepare a cache device"):
+        cache_size = Size(500, Unit.MebiByte)
+        cache_device = TestRun.disks['cache']
+        cache_device.create_partitions([cache_size] * 2)
+        cache_part = cache_device.partitions[0]
+
+    with TestRun.step("Prepare partition with data to be written on the cache and count md5sum"):
+        data_part = cache_device.partitions[1]
+        block_size = Size(4, Unit.MebiByte)
+        offset = int(cache_size / block_size / 2)
+        Dd().output(data_part.path) \
+            .input("/dev/urandom") \
+            .block_size(block_size) \
+            .seek(offset) \
+            .run()
+        data_md5sum_cmd = f"dd if={data_part.path} bs={block_size.value} skip={offset} | md5sum"
+        data_md5 = TestRun.executor.run(data_md5sum_cmd).stdout.split()[0]
+
+    with TestRun.step("Start standby cache with the tested cache line size"):
+        cache_id = 1
+        cache = casadm.standby_init(cache_part, cache_id, cache_line_size, force=True)
+
+    with TestRun.step("Verify that a cache exported object appeared in the system"):
+        output = TestRun.executor.run_expect_success(f"ls -la /dev/ | grep 'cas-cache-{cache_id}'")
+        if output.stdout[0] != "b":
+            TestRun.fail("The cache exported object is not a block device")
+
+    with TestRun.step("Sequentially write data to the cache exported"
+                      "object (with offset set to the middle of the device)"):
+        Dd().output(f"/dev/cas-cache-{cache_id}") \
+            .input(data_part.path) \
+            .block_size(block_size) \
+            .seek(offset) \
+            .skip(offset) \
+            .run()
+
+    with TestRun.step("Stop the cache instance"):
+        cache.stop()
+
+    with TestRun.step("Count checksum of data read from the cache device "
+                      "and compare with the checksum of data writen to the standby cache"):
+        md5sum_cmd = f"dd if={cache_part.path} bs={block_size.value} skip={offset} | md5sum"
+        cache_part_md5 = TestRun.executor.run(md5sum_cmd).stdout.split()[0]
+        if data_md5 != cache_part_md5:
+            TestRun.fail("The counted checksum of the data read from cache device"
+                         " and written to the standby cache differ")
