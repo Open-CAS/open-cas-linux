@@ -609,6 +609,7 @@ struct _cache_mngt_attach_context {
 	char cache_elevator[MAX_ELEVATOR_NAME];
 	uint64_t min_free_ram;
 	struct ocf_mngt_cache_device_config *device_cfg;
+	char cache_path[MAX_STR_LEN];
 	ocf_cache_t cache;
 	int ocf_start_error;
 	struct cas_lazy_thread *rollback_thread;
@@ -1873,11 +1874,10 @@ static int cache_mngt_create_cache_device_cfg(
 	return 0;
 }
 
-void cache_mngt_destroy_cache_cfg(struct ocf_mngt_cache_config *cfg,
-		struct ocf_mngt_cache_attach_config *attach_cfg)
-
+static void cache_mngt_destroy_cache_device_cfg(
+		struct ocf_mngt_cache_device_config *cfg)
 {
-	ocf_volume_destroy(attach_cfg->device.volume);
+	ocf_volume_destroy(cfg->volume);
 }
 
 int cache_mngt_create_cache_cfg(struct ocf_mngt_cache_config *cfg,
@@ -2057,10 +2057,22 @@ static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv, int error)
 {
 	struct _cache_mngt_attach_context *ctx = priv;
 	int caller_status;
+	int result;
+
+	cache_mngt_destroy_cache_device_cfg(ctx->device_cfg);
 
 	if (error == -OCF_ERR_NO_FREE_RAM) {
-		ocf_mngt_get_ram_needed(cache, ctx->device_cfg,
-				&ctx->min_free_ram);
+		result = cache_mngt_create_cache_device_cfg(ctx->device_cfg,
+				ctx->cache_path);
+		if (result) {
+			printk(KERN_WARNING "Cannot calculate amount of DRAM "
+					"needed\n");
+			ctx->min_free_ram = 0;
+		} else {
+			ocf_mngt_get_ram_needed(cache, ctx->device_cfg,
+					&ctx->min_free_ram);
+			cache_mngt_destroy_cache_device_cfg(ctx->device_cfg);
+		}
 	}
 
 	caller_status =_cache_mngt_async_callee_set_result(&ctx->async, error);
@@ -2310,12 +2322,6 @@ out_module_put:
 	return result;
 }
 
-void cache_mngt_destroy_cache_standby_activate_cfg(
-		struct ocf_mngt_cache_standby_activate_config *cfg)
-{
-	ocf_volume_destroy(cfg->device.volume);
-}
-
 int cache_mngt_create_cache_standby_activate_cfg(
 		struct ocf_mngt_cache_standby_activate_config *cfg,
 		struct kcas_standby_activate *cmd)
@@ -2384,6 +2390,7 @@ int cache_mngt_activate(struct ocf_mngt_cache_standby_activate_config *cfg,
 	/* TODO: doesn't this need to be copied to avoid use-after-free
 	 * in case where calle is interrupted and returns???
 	 */
+	strncpy(context->cache_path, cmd->cache_path, MAX_STR_LEN);
 	context->device_cfg = &cfg->device;
 	context->cache = cache;
 
@@ -2523,6 +2530,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		return result;
 	}
 
+	strncpy(context->cache_path, cmd->cache_path_name, MAX_STR_LEN);
 	context->device_cfg = &attach_cfg->device;
 	_cache_mngt_async_context_init(&context->async);
 
