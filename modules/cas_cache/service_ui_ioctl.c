@@ -60,8 +60,6 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		retval = cache_mngt_init_instance(&cfg, &attach_cfg, cmd_info);
 
-		cache_mngt_destroy_cache_cfg(&cfg, &attach_cfg);
-
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
 
@@ -401,8 +399,6 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 			RETURN_CMD_RESULT(cmd_info, arg, retval);
 
 		retval = cache_mngt_activate(&cfg, cmd_info);
-
-		cache_mngt_destroy_cache_standby_activate_cfg(&cfg);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
