@@ -571,8 +571,13 @@ end:
 
 static int kcas_volume_destroy_exported_object(ocf_volume_t volume)
 {
-	struct bd_object *bvol = bd_object(volume);
+	struct bd_object *bvol;
 	int result;
+
+	BUG_ON(!volume);
+
+	bvol = bd_object(volume);
+	BUG_ON(!bvol);
 
 	if (!bvol->expobj_valid)
 		return 0;
