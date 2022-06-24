@@ -2946,7 +2946,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 			goto stop_thread;
 		}
 	} else {
-		status = kcas_cache_destroy_exported_object(cache);
+		status = cache_mngt_destroy_cache_exp_obj(cache);
 		if (status != 0) {
 			printk(KERN_WARNING
 					"Failed to remove cache exported object\n");
