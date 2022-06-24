@@ -608,7 +608,7 @@ struct _cache_mngt_attach_context {
 	struct _cache_mngt_async_context async;
 	char cache_elevator[MAX_ELEVATOR_NAME];
 	uint64_t min_free_ram;
-	struct ocf_mngt_cache_device_config *device_cfg;
+	struct ocf_mngt_cache_device_config device_cfg;
 	char cache_path[MAX_STR_LEN];
 	ocf_cache_t cache;
 	int ocf_start_error;
@@ -1961,14 +1961,10 @@ int cache_mngt_create_cache_cfg(struct ocf_mngt_cache_config *cfg,
 }
 
 static void _cache_mngt_log_cache_device_path(ocf_cache_t cache,
-		struct ocf_mngt_cache_device_config *device_cfg)
+		const char *cache_path)
 {
-	const struct ocf_volume_uuid *uuid =
-		ocf_volume_get_uuid(device_cfg->volume);
-
 	printk(KERN_INFO OCF_PREFIX_SHORT "Adding device %s as cache %s\n",
-			(const char*)uuid->data,
-			ocf_cache_get_name(cache));
+			cache_path, ocf_cache_get_name(cache));
 }
 
 static void _cas_queue_kick(ocf_queue_t q)
@@ -2059,19 +2055,19 @@ static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv, int error)
 	int caller_status;
 	int result;
 
-	cache_mngt_destroy_cache_device_cfg(ctx->device_cfg);
+	cache_mngt_destroy_cache_device_cfg(&ctx->device_cfg);
 
 	if (error == -OCF_ERR_NO_FREE_RAM) {
-		result = cache_mngt_create_cache_device_cfg(ctx->device_cfg,
+		result = cache_mngt_create_cache_device_cfg(&ctx->device_cfg,
 				ctx->cache_path);
 		if (result) {
 			printk(KERN_WARNING "Cannot calculate amount of DRAM "
 					"needed\n");
 			ctx->min_free_ram = 0;
 		} else {
-			ocf_mngt_get_ram_needed(cache, ctx->device_cfg,
+			ocf_mngt_get_ram_needed(cache, &ctx->device_cfg,
 					&ctx->min_free_ram);
-			cache_mngt_destroy_cache_device_cfg(ctx->device_cfg);
+			cache_mngt_destroy_cache_device_cfg(&ctx->device_cfg);
 		}
 	}
 
@@ -2193,7 +2189,7 @@ static int _cache_start_finalize(ocf_cache_t cache, int init_mode,
 	struct _cache_mngt_attach_context *ctx = cache_priv->attach_context;
 	int result;
 
-	_cache_mngt_log_cache_device_path(cache, ctx->device_cfg);
+	_cache_mngt_log_cache_device_path(cache, ctx->cache_path);
 
 	if (activate || (init_mode != CACHE_INIT_STANDBY_NEW &&
 			init_mode != CACHE_INIT_STANDBY_LOAD)) {
@@ -2387,11 +2383,8 @@ int cache_mngt_activate(struct ocf_mngt_cache_standby_activate_config *cfg,
 		goto out_cache_unlock;
 	}
 
-	/* TODO: doesn't this need to be copied to avoid use-after-free
-	 * in case where calle is interrupted and returns???
-	 */
 	strncpy(context->cache_path, cmd->cache_path, MAX_STR_LEN-1);
-	context->device_cfg = &cfg->device;
+	context->device_cfg = cfg->device;
 	context->cache = cache;
 
 	cache_priv = ocf_cache_get_priv(cache);
@@ -2531,7 +2524,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	}
 
 	strncpy(context->cache_path, cmd->cache_path_name, MAX_STR_LEN-1);
-	context->device_cfg = &attach_cfg->device;
+	context->device_cfg = attach_cfg->device;
 	_cache_mngt_async_context_init(&context->async);
 
 	/* Start cache. Returned cache instance will be locked as it was set
