@@ -105,9 +105,6 @@ def pytest_runtest_setup(item):
             working_dir=dut_config['working_dir'])
 
         TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
-        TestRun.dut.plugin_manager = TestRun.plugin_manager
-        TestRun.dut.executor = TestRun.executor
-        TestRun.duts.append(TestRun.dut)
 
         base_prepare(item)
     TestRun.LOGGER.write_to_command_log("Test body")
@@ -160,8 +157,6 @@ def pytest_runtest_teardown():
     for dut in TestRun.duts:
         with TestRun.use_dut(dut):
             if TestRun.executor:
-                os.makedirs(os.path.join(TestRun.LOGGER.base_dir, "dut_info", dut.ip),
-                            exist_ok=True)
                 TestRun.LOGGER.get_additional_logs()
     Log.destroy()
     TestRun.teardown()
