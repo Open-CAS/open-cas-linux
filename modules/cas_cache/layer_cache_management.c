@@ -1712,7 +1712,7 @@ int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 					name_len, &cache);
 	if (result)
 		goto out_get;
-	
+
 	if (ocf_cache_is_standby(cache)) {
 		result = -OCF_ERR_CACHE_STANDBY;
 		goto out_standby;
@@ -2390,7 +2390,7 @@ int cache_mngt_activate(struct ocf_mngt_cache_standby_activate_config *cfg,
 	/* TODO: doesn't this need to be copied to avoid use-after-free
 	 * in case where calle is interrupted and returns???
 	 */
-	strncpy(context->cache_path, cmd->cache_path, MAX_STR_LEN);
+	strncpy(context->cache_path, cmd->cache_path, MAX_STR_LEN-1);
 	context->device_cfg = &cfg->device;
 	context->cache = cache;
 
@@ -2530,7 +2530,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		return result;
 	}
 
-	strncpy(context->cache_path, cmd->cache_path_name, MAX_STR_LEN);
+	strncpy(context->cache_path, cmd->cache_path_name, MAX_STR_LEN-1);
 	context->device_cfg = &attach_cfg->device;
 	_cache_mngt_async_context_init(&context->async);
 
