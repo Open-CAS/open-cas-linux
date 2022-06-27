@@ -347,8 +347,12 @@ static int _casdsk_exp_obj_open(struct block_device *bdev, fmode_t mode)
 	mutex_lock(&dsk->openers_lock);
 
 	if (!dsk->claimed) {
-		dsk->openers++;
-		result = 0;
+		if (unlikely(dsk->openers == UINT_MAX)) {
+			result = -EBUSY;
+		} else {
+			dsk->openers++;
+			result = 0;
+		}
 	}
 
 	mutex_unlock(&dsk->openers_lock);
