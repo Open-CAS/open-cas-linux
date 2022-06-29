@@ -20,6 +20,11 @@ start_cache_with_existing_metadata = [
     r" discard on-disk metadata and start fresh cache instance\."
 ]
 
+standby_init_with_existing_filesystem = [
+    r"A filesystem exists on \S+. Specify the --force option if you wish to add the cache anyway.",
+    r"Note: this may result in loss of data"
+]
+
 error_inserting_cache = [
     r"Error inserting cache \d+"
 ]
