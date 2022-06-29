@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -329,7 +329,7 @@ static cli_option start_options[] = {
 	{0}
 };
 
-static int check_fs(const char* device)
+static int check_fs(const char* device, bool force)
 {
 	char cache_dev_path[MAX_STR_LEN];
 	static const char fsck_cmd[] = "/sbin/fsck -n %s > /dev/null 2>&1";
@@ -344,7 +344,7 @@ static int check_fs(const char* device)
 	snprintf(buff, sizeof(buff), fsck_cmd, cache_dev_path);
 
 	if (!system(buff)) {
-		if (command_args_values.force) {
+		if (force) {
 			cas_printf(LOG_INFO, "A filesystem existed on %s. "
 				"Data may have been lost\n",
 				device);
@@ -362,7 +362,7 @@ static int check_fs(const char* device)
 	return SUCCESS;
 }
 
-int validate_cache_path(const char* path)
+int validate_cache_path(const char* path, bool force)
 {
 	int cache_device;
 	struct stat device_info;
@@ -389,7 +389,7 @@ int validate_cache_path(const char* path)
 		return FAILURE;
 	}
 
-	if (check_fs(path)) {
+	if (check_fs(path, force)) {
 		close(cache_device);
 		return FAILURE;
 	}
@@ -426,8 +426,10 @@ int handle_start()
 		}
 	}
 
-	if (validate_cache_path(command_args_values.cache_device) == FAILURE)
+	if (validate_cache_path(command_args_values.cache_device,
+				command_args_values.force) == FAILURE) {
 		return FAILURE;
+	}
 
 	status = start_cache(command_args_values.cache_id,
 			command_args_values.state,
@@ -2111,6 +2113,11 @@ int standby_handle() {
 
 	/* Check if all required options are set */
 	if (standby_is_missing()) {
+		return FAILURE;
+	}
+
+	if (validate_cache_path(standby_params.cache_device,
+				standby_params.force) == FAILURE) {
 		return FAILURE;
 	}
 
