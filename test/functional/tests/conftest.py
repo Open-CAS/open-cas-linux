@@ -136,6 +136,12 @@ def pytest_runtest_teardown():
                 kill_all_io()
                 unmount_cas_devices()
 
+                if installer.check_if_installed():
+                    casadm.remove_all_detached_cores()
+                    casadm.stop_all_caches()
+                    from api.cas.init_config import InitConfig
+                    InitConfig.create_default_init_config()
+
                 from storage_devices.drbd import Drbd
                 if installer.check_if_installed() and Drbd.is_installed():
                     try:
@@ -145,11 +151,6 @@ def pytest_runtest_teardown():
                 elif Drbd.is_installed():
                     Drbd.down_all()
 
-                if installer.check_if_installed():
-                    casadm.remove_all_detached_cores()
-                    casadm.stop_all_caches()
-                    from api.cas.init_config import InitConfig
-                    InitConfig.create_default_init_config()
                 DeviceMapper.remove_all()
                 RamDisk.remove_all()
         except Exception as ex:
