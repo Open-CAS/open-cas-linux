@@ -7,11 +7,12 @@ import pytest
 
 from api.cas import casadm, casadm_parser, dmesg
 from api.cas.casadm import standby_init
-from api.cas.cli import casadm_bin
+from api.cas.cli import casadm_bin, standby_init_cmd
 from core.test_run import TestRun
 from storage_devices.device import Device
-from storage_devices.disk import DiskType, DiskTypeSet
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
+from test_tools.disk_utils import Filesystem
 from test_utils.filesystem.file import File
 from test_utils.os_utils import sync
 from test_utils.output import CmdException
@@ -25,6 +26,8 @@ from api.cas.cli_messages import (
     mutually_exclusive_params_load,
     activate_without_detach,
     cache_line_size_mismatch,
+    start_cache_with_existing_metadata,
+    standby_init_with_existing_filesystem,
 )
 from api.cas.cache_config import CacheLineSize, CacheStatus
 from api.cas import cli
@@ -459,3 +462,110 @@ def test_activate_neg_cache_line_size():
                     f'Expected Cache state: "{CacheStatus.standby.value}" '
                     f'Got "{cache_status.value}" instead.'
                 )
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_standby_init_with_preexisting_metadata():
+    """
+    title: Initialize standby cache instance with preexisting metadata
+    description: |
+        Initialize standby cache instance with preexisting metadata with and without force flag
+    pass_criteria:
+      - initialize cache without force flag fails and informative error message is printed
+      - initialize cache with force flag succeeds and passive instance is present in system
+    """
+    with TestRun.step("Prepare device for cache"):
+        cache_device = TestRun.disks["cache"]
+        cache_device.create_partitions([Size(200, Unit.MebiByte)])
+        cache_device = cache_device.partitions[0]
+        cls = CacheLineSize.LINE_32KiB
+        cache_id = 1
+
+    with TestRun.step("Start standby cache instance"):
+        cache = casadm.standby_init(
+            cache_dev=cache_device,
+            cache_line_size=int(cls.value.value / Unit.KibiByte.value),
+            cache_id=cache_id,
+            force=True,
+        )
+
+    with TestRun.step("Stop standby cache instance"):
+        cache.stop()
+
+    with TestRun.step("Try initialize cache without force flag"):
+        output = TestRun.executor.run(
+            standby_init_cmd(
+                cache_dev=cache_device.path,
+                cache_id=str(cache_id),
+                cache_line_size=str(int(cls.value.value / Unit.KibiByte.value)),
+            )
+        )
+        if not check_stderr_msg(output, start_cache_with_existing_metadata):
+            TestRun.LOGGER.error(
+                f"Invalid error message. Expected {start_cache_with_existing_metadata}."
+                f"Got {output.stderr}"
+            )
+
+    with TestRun.step("Try initialize cache with force flag"):
+        casadm.standby_init(
+            cache_dev=cache_device,
+            cache_line_size=int(cls.value.value / Unit.KibiByte.value),
+            cache_id=cache_id,
+            force=True,
+        )
+
+    with TestRun.step("Verify whether passive instance is running"):
+        caches = casadm_parser.get_caches()
+        if len(caches) != 1:
+            TestRun.LOGGER.error("Standby cache instance is not running!")
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.parametrizex("filesystem", Filesystem)
+def test_standby_init_with_preexisting_filesystem(filesystem):
+    """
+    title: Initialize standby cache instance with preexisting filesystem
+    description: |
+        Initialize standby cache instance with preexisting filesystem with and without force flag
+    pass_criteria:
+      - initialize cache without force flag fails and informative error message is printed
+      - initialize cache with force flag succeeds and passive instance is present in system
+    """
+    with TestRun.step("Prepare device for cache"):
+        cache_device = TestRun.disks["cache"]
+        cache_device.create_partitions([Size(200, Unit.MebiByte)])
+        cache_device = cache_device.partitions[0]
+        cls = CacheLineSize.LINE_32KiB
+        cache_id = 1
+
+    with TestRun.step("Create filesystem on cache device partition"):
+        cache_device.create_filesystem(filesystem)
+
+    with TestRun.step("Try initialize cache without force flag"):
+        output = TestRun.executor.run(
+            standby_init_cmd(
+                cache_dev=cache_device.path,
+                cache_id=str(cache_id),
+                cache_line_size=str(int(cls.value.value / Unit.KibiByte.value)),
+            )
+        )
+        if not check_stderr_msg(output, standby_init_with_existing_filesystem):
+            TestRun.LOGGER.error(
+                f"Invalid error message. Expected {standby_init_with_existing_filesystem}."
+                f"Got {output.stderr}"
+            )
+
+    with TestRun.step("Try initialize cache with force flag"):
+        casadm.standby_init(
+            cache_dev=cache_device,
+            cache_line_size=int(cls.value.value / Unit.KibiByte.value),
+            cache_id=cache_id,
+            force=True,
+        )
+
+    with TestRun.step("Verify whether passive instance is running"):
+        caches = casadm_parser.get_caches()
+        if len(caches) != 1:
+            TestRun.LOGGER.error("Standby cache instance is not running!")
