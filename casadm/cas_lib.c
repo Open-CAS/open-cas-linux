@@ -1738,9 +1738,9 @@ int check_if_mounted(int cache_id, int core_id)
 	}
 
 	while ((mstruct = getmntent(mtab)) != NULL) {
-		error = strncmp_s(mstruct->mnt_fsname, PATH_MAX, dev_buf, sizeof(dev_buf), &difference);
+		error = strcmp_s(mstruct->mnt_fsname, PATH_MAX, dev_buf, &difference);
 		/* mstruct->mnt_fsname is /dev/... block device path, not a mountpoint */
-		if (error)
+		if (error != EOK)
 			return FAILURE;
 		if (!difference) {
 			if (core_id<0) {
