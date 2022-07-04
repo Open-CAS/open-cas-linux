@@ -2116,9 +2116,11 @@ int standby_handle() {
 		return FAILURE;
 	}
 
-	if (validate_cache_path(standby_params.cache_device,
-				standby_params.force) == FAILURE) {
-		return FAILURE;
+	if (standby_params.subcmd != standby_opt_subcmd_detach) {
+		if (validate_cache_path(standby_params.cache_device,
+					standby_params.force) == FAILURE) {
+			return FAILURE;
+		}
 	}
 
 	switch (standby_params.subcmd) {
