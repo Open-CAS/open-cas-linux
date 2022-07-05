@@ -32,6 +32,7 @@ from api.cas.cli_messages import (
 from api.cas.cache_config import CacheLineSize, CacheStatus
 from api.cas import cli
 from api.cas.ioclass_config import IoClass
+from api.cas.core import CoreStatus
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
@@ -569,3 +570,60 @@ def test_standby_init_with_preexisting_filesystem(filesystem):
         caches = casadm_parser.get_caches()
         if len(caches) != 1:
             TestRun.LOGGER.error("Standby cache instance is not running!")
+
+
+@pytest.mark.require_disk("caches", DiskTypeSet([DiskType.nand, DiskType.optane]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("caches"))
+def test_standby_activate_with_corepool():
+    """
+    title: Activate standby cache instance with corepool
+    description: |
+        Activation of standby cache with core taken from core pool
+    pass_criteria:
+        - During activate metadata on the device match with metadata in DRAM
+        - Core is in active state after activate
+    """
+    with TestRun.step("Prepare cache and core devices"):
+        caches_dev = TestRun.disks["caches"]
+        caches_dev.create_partitions([Size(500, Unit.MebiByte), Size(500, Unit.MebiByte)])
+        active_cache_dev = caches_dev.partitions[0]
+        standby_cache_dev = caches_dev.partitions[1]
+        core_dev = TestRun.disks["core"]
+        core_dev.create_partitions([Size(200, Unit.MebiByte)])
+        core_dev = core_dev.partitions[0]
+
+        cache_id = 1
+        core_id = 1
+        cache_exp_obj_name = f"cas-cache-{cache_id}"
+        cls = CacheLineSize.LINE_16KiB
+
+    with TestRun.step("Start regular cache instance"):
+        cache = casadm.start_cache(cache_dev=active_cache_dev, cache_line_size=cls,
+                                   cache_id=cache_id)
+
+    with TestRun.step("Add core to regular cache instance"):
+        cache.add_core(core_dev)
+
+    with TestRun.step("Stop regular cache instance"):
+        cache.stop()
+
+    with TestRun.step("Add previously used core device to core pool using --try-add flag."):
+        core = casadm.try_add(core_device=core_dev, cache_id=cache_id, core_id=core_id)
+
+    with TestRun.step("Start standby cache instance."):
+        standby_cache = casadm.standby_init(cache_dev=standby_cache_dev, cache_id=cache_id,
+                                            cache_line_size=cls,
+                                            force=True)
+
+    with TestRun.step(f"Copy changed metadata to the standby instance"):
+        Dd().input(active_cache_dev.path).output(f"/dev/{cache_exp_obj_name}").run()
+
+    with TestRun.step("Detach standby cache instance"):
+        standby_cache.standby_detach()
+
+    with TestRun.step("Activate standby cache instance"):
+        standby_cache.standby_activate(standby_cache_dev)
+
+    with TestRun.step("Check core status."):
+        if core.get_status() is not CoreStatus.active:
+            TestRun.fail(f"First core status should be active but is {core.get_status()}.")
