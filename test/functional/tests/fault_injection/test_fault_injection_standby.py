@@ -53,7 +53,7 @@ def test_activate_corrupted():
         with TestRun.step("Prepare standby instance"):
             cache = casadm.standby_init(
                 cache_dev=cache_device,
-                cache_line_size=int(cls.value.value / Unit.KibiByte.value),
+                cache_line_size=cls,
                 cache_id=cache_id,
                 force=True,
             )
@@ -154,7 +154,7 @@ def test_activate_corrupted_after_dump():
         with TestRun.step("Prepare standby instance"):
             cache = casadm.standby_init(
                 cache_dev=cache_device,
-                cache_line_size=int(cls.value.value / Unit.KibiByte.value),
+                cache_line_size=cls,
                 cache_id=cache_id,
                 force=True,
             )

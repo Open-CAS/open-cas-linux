@@ -119,12 +119,12 @@ def test_activate_neg_cli_params():
         cache_device.create_partitions([Size(500, Unit.MebiByte)])
         cache_device = cache_device.partitions[0]
         cache_id = 1
-        cache_line_size = 32
 
     with TestRun.step("Init standby cache"):
         cache_dev = Device(cache_device.path)
         cache = standby_init(
-            cache_dev=cache_dev, cache_id=cache_id, cache_line_size=cache_line_size, force=True
+            cache_dev=cache_dev, cache_id=cache_id,
+            cache_line_size=CacheLineSize.LINE_32KiB, force=True
         )
 
     with TestRun.step("Detach standby cache"):
@@ -202,7 +202,8 @@ def test_standby_neg_cli_management():
     with TestRun.step("Prepare the standby instance"):
         cache_id = 1
         cache = casadm.standby_init(
-            cache_dev=cache_device, cache_id=cache_id, cache_line_size=32, force=True
+            cache_dev=cache_device, cache_id=cache_id,
+            cache_line_size=CacheLineSize.LINE_32KiB, force=True
         )
 
         ioclass_config_path = "/tmp/standby_cli_neg_mngt_test_ioclass_config_file.csv"
@@ -425,8 +426,7 @@ def test_activate_neg_cache_line_size():
 
         with TestRun.step("Start standby cache instance."):
             standby_cache = casadm.standby_init(cache_dev=standby_cache_dev, cache_id=cache_id,
-                                                cache_line_size=int(
-                                                    standby_cls.value.value / Unit.KibiByte.value),
+                                                cache_line_size=standby_cls,
                                                 force=True)
 
         with TestRun.step("Verify if the cache exported object appeared in the system"):
@@ -484,7 +484,7 @@ def test_standby_init_with_preexisting_metadata():
     with TestRun.step("Start standby cache instance"):
         cache = casadm.standby_init(
             cache_dev=cache_device,
-            cache_line_size=int(cls.value.value / Unit.KibiByte.value),
+            cache_line_size=cls,
             cache_id=cache_id,
             force=True,
         )
@@ -509,7 +509,7 @@ def test_standby_init_with_preexisting_metadata():
     with TestRun.step("Try initialize cache with force flag"):
         casadm.standby_init(
             cache_dev=cache_device,
-            cache_line_size=int(cls.value.value / Unit.KibiByte.value),
+            cache_line_size=cls,
             cache_id=cache_id,
             force=True,
         )
@@ -559,7 +559,7 @@ def test_standby_init_with_preexisting_filesystem(filesystem):
     with TestRun.step("Try initialize cache with force flag"):
         casadm.standby_init(
             cache_dev=cache_device,
-            cache_line_size=int(cls.value.value / Unit.KibiByte.value),
+            cache_line_size=cls,
             cache_id=cache_id,
             force=True,
         )

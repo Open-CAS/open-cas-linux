@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -62,7 +62,7 @@ def test_activate_neg_cache_id():
     ):
         standby_cache = casadm.standby_init(
             standby_dev,
-            cache_line_size=int(cls.value.value / Unit.KibiByte.value),
+            cache_line_size=cls,
             cache_id=standby_cache_id,
             force=True,
         )
