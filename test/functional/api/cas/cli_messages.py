@@ -236,6 +236,9 @@ malformed_io_class_header = [
     r'Please consult Admin Guide to check how columns in configuration file should be named\.'
 ]
 
+unexpected_cls_option = [
+    r"Option '--cache-line-size \(-x\)' is not allowed"
+]
 
 def check_stderr_msg(output: Output, expected_messages):
     return __check_string_msg(output.stderr, expected_messages)

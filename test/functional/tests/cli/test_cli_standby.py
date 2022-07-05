@@ -28,6 +28,7 @@ from api.cas.cli_messages import (
     cache_line_size_mismatch,
     start_cache_with_existing_metadata,
     standby_init_with_existing_filesystem,
+    unexpected_cls_option,
 )
 from api.cas.cache_config import CacheLineSize, CacheStatus
 from api.cas import cli
@@ -156,18 +157,16 @@ def test_activate_neg_cli_params():
                     )
 
     with TestRun.step("Prepare config for testing standby activate with disallowed params"):
-        activate_disallowed_params = dict(
-            [
-                ("--core-device", "/dev/disk/by-id/core_dev_id"),
-                ("--core-id", 5),
-                ("--cache-mode", 32),
-                ("--file", "/etc/opencas/ioclass-config.csv"),
-                ("--io-class-id", "0"),
-                ("--cache-line-size", 32),
-            ]
-        )
+        activate_disallowed_params = [
+            ("--cache-line-size", 32, unexpected_cls_option),
+            ("--core-device", "/dev/disk/by-id/core_dev_id", disallowed_param),
+            ("--core-id", 5, disallowed_param),
+            ("--cache-mode", 32, disallowed_param),
+            ("--file", "/etc/opencas/ioclass-config.csv", disallowed_param),
+            ("--io-class-id", "0", disallowed_param),
+        ]
 
-    for name, value in activate_disallowed_params.items():
+    for name, value, expected_error_message in activate_disallowed_params:
         with TestRun.step(f'Try to activate standby instance with disallowed "{name}" param'):
             tested_param = f"{name} {value}"
             tested_cmd = f"{valid_cmd} {tested_param}"
@@ -176,9 +175,9 @@ def test_activate_neg_cli_params():
                 TestRun.LOGGER.error(
                     f'"{tested_cmd}" command succeeded despite disallowed "{name}" parameter!'
                 )
-            if not check_stderr_msg(output, disallowed_param):
+            if not check_stderr_msg(output, expected_error_message):
                 TestRun.LOGGER.error(
-                    f'Expected error message in format "{disallowed_param[0]}" '
+                    f'Expected error message in format "{expected_error_message[0]}" '
                     f'Got "{output.stderr}" instead.'
                 )
 
