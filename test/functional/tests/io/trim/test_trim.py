@@ -233,18 +233,10 @@ def test_trim_device_discard_support(
         blktraces = start_monitoring(core_dev, cache_dev, core)
 
     with TestRun.step("Remove file."):
+        test_file.remove()
         os_utils.sync()
         os_utils.drop_caches()
-        test_file.remove()
-
-    if filesystem == Filesystem.xfs:
-        with TestRun.step(
-            "Since issuing discard reqs is a lazy operation on XFS "
-            "write a small amount of data to the partition"
-        ):
-            test_file = fs_utils.create_random_test_file(
-                os.path.join(mount_point, "test_file"), core_dev.size * 0.1
-            )
+        time.sleep(5)
 
     with TestRun.step(
             "Ensure that discards were detected by blktrace on proper devices."):
