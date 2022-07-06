@@ -207,7 +207,7 @@ def prepare_md_dump(cache_device, core_device, cls, cache_id):
 
     with TestRun.step("Get metadata size"):
         dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
-        md_size = dmesg.get_metadata_size(dmesg_out)
+        md_size = dmesg.get_metadata_size_on_device(dmesg_out)
 
     with TestRun.step("Dump the metadata of the cache"):
         dump_file_path = "/tmp/test_activate_corrupted.dump"

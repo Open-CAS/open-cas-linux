@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -7,6 +7,7 @@ import pytest
 import re
 
 from api.cas import casadm
+from api.cas.dmesg import get_metadata_size_on_device
 from core.test_run import TestRun
 from test_utils import os_utils
 from test_utils.size import Size, Unit
@@ -51,7 +52,8 @@ def test_trim_start_discard():
 
     with TestRun.step("Starting cache"):
         cache = casadm.start_cache(cas_part, force=True)
-        metadata_size = get_metadata_size_from_dmesg()
+        dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
+        metadata_size = get_metadata_size_on_device(dmesg_out)
 
     with TestRun.step("Stop blktrace and check if discard requests were issued"):
         cache_reqs = blktrace.stop_monitoring()
@@ -90,17 +92,3 @@ def write_pattern(device):
                  .direct()
                  .verification_with_pattern()
             )
-
-
-def get_metadata_size_from_dmesg():
-    dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
-    for s in dmesg_out.split("\n"):
-        if "Hash offset" in s:
-            offset = re.search("[0-9]* kiB", s).group()
-            offset = Size(int(re.search("[0-9]*", offset).group()), Unit.KibiByte)
-        if "Hash size" in s:
-            size = re.search("[0-9]* kiB", s).group()
-            size = Size(int(re.search("[0-9]*", size).group()), Unit.KibiByte)
-
-    # Metadata is 128KiB aligned
-    return (offset + size).align_up(128 * Unit.KibiByte.value)
