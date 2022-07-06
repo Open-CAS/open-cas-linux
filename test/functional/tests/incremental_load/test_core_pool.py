@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -37,6 +37,7 @@ def test_attach_core_pool():
         core_disk.create_partitions([Size(2, Unit.GibiByte), Size(2, Unit.GibiByte)])
         core_dev = core_disk.partitions[0]
         second_core_dev = core_disk.partitions[1]
+        core_1_id, core_2_id = 1, 2
 
     with TestRun.step("Start cache."):
         cache = casadm.start_cache(cache_dev, force=True)
@@ -48,10 +49,12 @@ def test_attach_core_pool():
         cache.stop()
 
     with TestRun.step("Add previously used core device to core pool using --try-add flag."):
-        first_core = casadm.try_add(core_dev, cache.cache_id)
+        first_core = casadm.try_add(core_device=core_dev, cache_id=cache.cache_id,
+                                    core_id=core_1_id)
 
     with TestRun.step("Add different core device to core pool using --try-add flag."):
-        second_core = casadm.try_add(second_core_dev, cache.cache_id)
+        second_core = casadm.try_add(core_device=second_core_dev, cache_id=cache.cache_id,
+                                     core_id=core_2_id)
 
     with TestRun.step("Load cache."):
         cache = casadm.load_cache(cache_dev)
@@ -86,9 +89,11 @@ def test_core_pool_exclusive_open():
         core_disk.create_partitions([Size(1, Unit.GibiByte)])
         core_dev = core_disk.partitions[0]
         core_dev.create_filesystem(Filesystem.ext4)
+        cache_id = 1
+        core_id = 1
 
     with TestRun.step("Add core device to core device pool using --try-add flag."):
-        core = casadm.try_add(core_dev, 1)
+        core = casadm.try_add(core_device=core_dev, cache_id=cache_id, core_id=core_id)
 
     with TestRun.step("Check if core status of added core in core pool is detached."):
         status = core.get_status()
