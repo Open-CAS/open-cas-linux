@@ -47,11 +47,15 @@ def standby_init(cache_dev: Device, cache_id: int, cache_line_size: CacheLineSiz
                  kernel_params: KernelParameters = KernelParameters()):
     if kernel_params != KernelParameters.read_current_settings():
         reload_kernel_module("cas_cache", kernel_params.get_parameter_dictionary())
+
+    _cache_line_size = None if cache_line_size is None else str(
+        int(cache_line_size.value.get_value(Unit.KibiByte)))
+
     output = TestRun.executor.run(
         standby_init_cmd(
             cache_dev=cache_dev.path,
             cache_id=str(cache_id),
-            cache_line_size=str(cache_line_size),
+            cache_line_size=_cache_line_size,
             force=force,
             shortcut=shortcut,
         )

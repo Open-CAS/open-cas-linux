@@ -100,7 +100,7 @@ def test_functional_activate_twice_round_trip(filesystem):
     ):
         secondary_node.cache = casadm.standby_init(
             cache_dev=secondary_node.raid,
-            cache_line_size=str(cls.value.value // 1024),
+            cache_line_size=cls,
             cache_id=cache_id,
             force=True,
         )
@@ -270,7 +270,7 @@ def test_functional_activate_twice_new_host(filesystem):
     ):
         secondary_node.cache = casadm.standby_init(
             cache_dev=secondary_node.raid,
-            cache_line_size=str(cls.value.value // 1024),
+            cache_line_size=cls,
             cache_id=cache_id,
             force=True,
         )
@@ -545,7 +545,7 @@ def new_failover_instance(new_secondary_node, drbd_resource, *, autoload):
         ):
             new_secondary_node.cache = casadm.standby_init(
                 cache_dev=new_secondary_node.raid,
-                cache_line_size=str(cls.value.value // 1024),
+                cache_line_size=cls,
                 cache_id=cache_id,
                 force=True,
             )
