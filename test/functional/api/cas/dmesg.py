@@ -8,13 +8,13 @@ import re
 from test_utils.size import Size, Unit
 
 
-def get_metadata_size(dmesg):
+def get_metadata_size_on_device(dmesg):
     for s in dmesg.split("\n"):
-        if "Metadata capacity:" in s:
-            size = re.search("[0-9]* MiB", s).group()
-            return Size(int(re.search("[0-9]*", size).group()), Unit.MebiByte)
+        m = re.search(r'Metadata size on device: ([0-9]*) kiB', s)
+        if m:
+            return Size(int(m.groups()[0]), Unit.KibiByte)
 
-    raise ValueError("Can't find the metadata size in the privded dmesg output")
+    raise ValueError("Can't find the metadata size in the provided dmesg output")
 
 
 def _get_metadata_info(dmesg, section_name):

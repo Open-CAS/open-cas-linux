@@ -405,13 +405,12 @@ def test_activate_neg_cache_line_size():
         with TestRun.step("Create dump file with cache metadata"):
             with TestRun.step("Get metadata size"):
                 dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
-                md_size = dmesg.get_metadata_size(dmesg_out)
+                md_size = dmesg.get_metadata_size_on_device(dmesg_out)
 
             with TestRun.step("Dump the metadata of the cache"):
                 dump_file_path = "/tmp/test_activate_corrupted.dump"
                 md_dump = File(dump_file_path)
                 md_dump.remove(force=True, ignore_errors=True)
-
                 dd_count = int(md_size / Size(1, Unit.MebiByte)) + 1
                 (
                     Dd().input(active_cache_dev.path)
