@@ -4,6 +4,7 @@
 #
 
 import pytest
+from collections import namedtuple
 
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet
@@ -14,9 +15,12 @@ from storage_devices.drbd import Drbd
 from test_tools.drbdadm import Drbdadm
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
+from test_tools.fs_utils import copy, check_if_file_exists
 from test_utils.filesystem.directory import Directory
 from test_utils.filesystem.file import File
 from test_utils.size import Size, Unit
+from test_utils.emergency_escape import EmergencyEscape
+from test_utils.fstab import add_mountpoint
 
 
 def setup_module():
@@ -213,3 +217,43 @@ def test_drbd_example():
         for dut in TestRun.duts:
             with TestRun.use_dut(dut):
                 Drbdadm.down(caches.name)
+
+
+def test_example_emergency_escape():
+    """
+    title: Example test EmergencyEscape class
+    description: |
+        Check if EmergencyEscape escapes emergency mode on DUT and leaves a verification marker
+    pass_criteria:
+      - DUT boots to default target after escaping emergency mode
+      - verification marker present in dmesg
+    """
+    with TestRun.step("Create not-working mount"):
+        FakeDevice = namedtuple("FakeDevice", ["path"])
+        copy("/etc/fstab", "/root/fstab.bkup", force=True)
+        dev = FakeDevice("/dev/not_existing_device")
+        add_mountpoint(dev, "/not/a/mountpoint", Filesystem.xfs, mount_now=False)
+
+    with TestRun.step("Configure emergency escape to restore working fstab from backup"):
+        escape = EmergencyEscape()
+        escape.add_escape_method_command("/usr/bin/cp /root/fstab.bkup /etc/fstab")
+        escape.add_cleanup_method_command("/usr/bin/rm -f /root/fstab.bkup")
+
+    with TestRun.step("Reboot with escape"):
+        with escape:
+            TestRun.executor.reboot()
+            TestRun.executor.wait_for_connection()
+
+    dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout.split("\n")
+    assert escape.verify_trigger_in_log(
+        dmesg_out
+    ), "Emergency Escape trigger marker not found in dmesg"
+
+    with TestRun.step("Reboot without escape"):
+        TestRun.executor.reboot()
+        TestRun.executor.wait_for_connection()
+
+    dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout.split("\n")
+    assert not escape.verify_trigger_in_log(
+        dmesg_out
+    ), "Emergency Escape trigger marker found in dmesg"
