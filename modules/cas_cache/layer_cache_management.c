@@ -1179,7 +1179,10 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 
 	if (strnlen(cmd_info->core_path_name, MAX_STR_LEN) >= MAX_STR_LEN)
 		return -OCF_ERR_INVAL;
-
+	
+	if (cmd_info->try_add && cmd_info->core_id == OCF_CORE_MAX)
+		return -OCF_ERR_INVAL;
+	
 	result = mngt_get_cache_by_id(cas_ctx, cmd_info->cache_id, &cache);
 	if (result && result != -OCF_ERR_CACHE_NOT_EXIST) {
 		return result;

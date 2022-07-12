@@ -1640,6 +1640,11 @@ int add_core(unsigned int cache_id, unsigned int core_id, const char *core_devic
 	const char *core_path;      /* core path sent down to kernel  */
 	const char *user_core_path; /* core path provided by user */
 
+	if (try_add && core_id == OCF_CORE_ID_INVALID) {
+		cas_printf(LOG_ERR, "Option '--core-id' is missing\n");
+		return FAILURE;
+	}
+
 	/* Check if core device provided is valid */
 	fd = open(core_device, 0);
 	if (fd < 0) {
