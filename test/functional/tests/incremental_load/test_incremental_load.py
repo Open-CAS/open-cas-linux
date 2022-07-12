@@ -500,7 +500,7 @@ def test_print_statistics_inactive(cache_mode):
                          f"({inactive_stats_after.inactive_usage_stats.inactive_occupancy}).")
 
     with TestRun.step("Remove inactive core from cache and check if cache is in running state."):
-        cache.remove_inactive_core(second_core.core_id)
+        cache.remove_inactive_core(second_core.core_id, force=True)
         cache_status = cache.get_status()
         if cache_status != CacheStatus.running:
             TestRun.fail(f"Cache did not change status to 'running' after plugging core device. "
