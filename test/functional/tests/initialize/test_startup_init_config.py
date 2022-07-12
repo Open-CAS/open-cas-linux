@@ -6,7 +6,7 @@
 import pytest
 
 from api.cas import casadm, casctl, casadm_parser
-from api.cas.casadm_parser import get_caches, get_cores
+from api.cas.casadm_parser import get_caches, get_cores, get_cas_devices_dict
 from api.cas.cache_config import CacheMode
 from api.cas.init_config import InitConfig
 from core.test_run import TestRun
@@ -16,6 +16,7 @@ from test_tools.disk_utils import Filesystem
 from test_utils import fstab
 from test_tools.dd import Dd
 from test_utils.size import Unit, Size
+from test_utils.os_utils import sync, Udev
 
 
 mountpoint = "/mnt"
@@ -136,7 +137,7 @@ def test_cas_init_with_changed_mode(cache_mode_pair):
         core = cache.add_core(core_part)
 
     with TestRun.step(
-            f"Create the configuration file with a different cache mode ({cache_mode_pair[1]})"
+        f"Create the configuration file with a different cache mode ({cache_mode_pair[1]})"
     ):
         init_conf = InitConfig()
         init_conf.add_cache(cache.cache_id, cache.cache_device, cache_mode_pair[1])
@@ -151,7 +152,9 @@ def test_cas_init_with_changed_mode(cache_mode_pair):
         validate_cache(cache_mode_pair[1])
 
 
-@pytest.mark.skip(reason="not implemented")
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd]))
+@pytest.mark.require_plugin("power_control")
 def test_cas_startup_lazy():
     """
     title: Test successful boot with CAS configuration including lazy_startup
@@ -160,21 +163,97 @@ def test_cas_startup_lazy():
     pass_criteria:
       - DUT boots sucesfully
       - caches are configured as expected
-    steps:
-      - Prepare one drive for caches and one for cores
-      - Create 2 cache partitions and 4 core partitons
-      - Create opencas.conf config for 2 caches each with 2 core partition as cores
-      - Mark first cache as lazy_startup=True
-      - Mark first core of second cache as lazy_startup=True
-      - Run casctl init
-      - Run casctl stop
-      - Remove first cache partition
-      - Remove first core of second cache partition
-      - Reboot DUT
-      - Verify DUT booted successfully
-      - Verify CAS configured properly
     """
-    pass
+    with TestRun.step("Prepare partitions"):
+        cache_disk = TestRun.disks["cache"]
+        core_disk = TestRun.disks["core"]
+        cache_disk.create_partitions([Size(200, Unit.MebiByte)] * 2)
+        core_disk.create_partitions([Size(200, Unit.MebiByte)] * 4)
+
+    with TestRun.step(f"Add a cache configuration with cache device with `lazy_startup` flag"):
+        init_conf = InitConfig()
+        init_conf.add_cache(1, cache_disk.partitions[0], extra_flags="lazy_startup=True")
+        init_conf.add_core(1, 1, core_disk.partitions[0])
+        init_conf.add_core(1, 2, core_disk.partitions[1])
+
+        expected_core_pool_paths = set(c.path for c in core_disk.partitions[:2])
+
+    with TestRun.step(f"Add a cache configuration with core device with `lazy_startup` flag"):
+        init_conf.add_cache(2, cache_disk.partitions[1])
+        init_conf.add_core(2, 1, core_disk.partitions[2])
+        init_conf.add_core(2, 2, core_disk.partitions[3], extra_flags="lazy_startup=True")
+        init_conf.save_config_file()
+        sync()
+
+        expected_caches_paths = set([cache_disk.partitions[1].path])
+        expected_cores_paths = set(c.path for c in core_disk.partitions[2:])
+        active_core_path = core_disk.partitions[2].path
+        inactive_core_path = core_disk.partitions[3].path
+
+    with TestRun.step(f"Start and stop all the configurations using the casctl utility"):
+        output = casctl.init(True)
+        if output.exit_code != 0:
+            TestRun.fail(f"Failed to initialize caches from config file. Error: {output.stdout}")
+        casadm.stop_all_caches()
+
+    with TestRun.step(
+        "Disable udev to allow manipulating partitions without CAS being automatically loaded"
+    ):
+        Udev.disable()
+
+    with TestRun.step(f"Remove one cache patition and one core partition"):
+        cache_disk.remove_partition(cache_disk.partitions[0])
+        core_disk.remove_partition(core_disk.partitions[3])
+
+    with TestRun.step("Reboot DUT"):
+        power_control = TestRun.plugin_manager.get_plugin("power_control")
+        power_control.power_cycle()
+
+    with TestRun.step("Verify if all the devices are initialized properly"):
+        core_pool_list = get_cas_devices_dict()["core_pool"]
+        caches_list = get_cas_devices_dict()["caches"].values()
+        cores_list = get_cas_devices_dict()["cores"].values()
+
+        core_pool_paths = {c["device"] for c in core_pool_list}
+        if core_pool_paths != expected_core_pool_paths:
+            TestRun.error(
+                f"Expected the following devices in core pool "
+                f"{expected_core_pool_paths}. Got {core_pool_paths}"
+            )
+        else:
+            TestRun.LOGGER.info("Core pool is ok")
+
+        caches_paths = {c["device"] for c in caches_list}
+        if caches_paths != expected_caches_paths:
+            TestRun.error(
+                f"Expected the following devices as caches "
+                f"{expected_caches_paths}. Got {caches_paths}"
+            )
+        else:
+            TestRun.LOGGER.info("Caches are ok")
+
+        cores_paths = {c["device"] for c in cores_list}
+        if cores_paths != expected_cores_paths:
+            TestRun.error(
+                f"Expected the following devices as cores "
+                f"{expected_caches_paths}. Got {cores_paths}"
+            )
+        else:
+            TestRun.LOGGER.info("Core devices are ok")
+
+        cores_paths = {c["device"] for c in cores_list}
+        cores_states = {c["device"]: c["status"] for c in cores_list}
+        if cores_states[active_core_path] != "Active":
+            TestRun.LOGGER.error(
+                f"Core {active_core_path} should be Active "
+                f"but is {cores_states[active_core_path]} instead!"
+            )
+
+        if cores_states[inactive_core_path] != "Inactive":
+            TestRun.LOGGER.error(
+                f"Core {inactive_core_path} should be Inactive "
+                f"but is {cores_states[inactive_core_path]} instead!"
+            )
 
 
 @pytest.mark.skip(reason="not implemented")
