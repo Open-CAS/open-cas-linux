@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -149,6 +149,121 @@ def test_cas_init_with_changed_mode(cache_mode_pair):
 
     with TestRun.step("Check if cache started in correct mode with core attached."):
         validate_cache(cache_mode_pair[1])
+
+
+@pytest.mark.skip(reason="not implemented")
+def test_cas_startup_lazy():
+    """
+    title: Test successful boot with CAS configuration including lazy_startup
+    description: |
+      Check that DUT boots succesfully with failing lazy-startup marked devices
+    pass_criteria:
+      - DUT boots sucesfully
+      - caches are configured as expected
+    steps:
+      - Prepare one drive for caches and one for cores
+      - Create 2 cache partitions and 4 core partitons
+      - Create opencas.conf config for 2 caches each with 2 core partition as cores
+      - Mark first cache as lazy_startup=True
+      - Mark first core of second cache as lazy_startup=True
+      - Run casctl init
+      - Run casctl stop
+      - Remove first cache partition
+      - Remove first core of second cache partition
+      - Reboot DUT
+      - Verify DUT booted successfully
+      - Verify CAS configured properly
+    """
+    pass
+
+
+@pytest.mark.skip(reason="not implemented")
+def test_cas_startup_negative_missing_core():
+    """
+    title: Test unsuccessful boot with CAS configuration
+    description: |
+      Check that DUT doesn't boot sucesfully when using invalid CAS configuration
+    pass_criteria:
+      - DUT enters emergency mode
+    steps:
+      - Prepare one drive for caches and one for cores
+      - Create 2 cache partitions and 4 core partitons
+      - Create opencas.conf config for 2 caches each with 2 core partitions as cores
+      - Mark second cache as lazy_startup=True
+      - Run casctl init
+      - Run casctl stop
+      - Remove second cache cores partitions
+      - Reboot DUT
+      - Verify the DUT entered emergency mode
+    """
+    pass
+
+
+@pytest.mark.skip(reason="not implemented")
+def test_cas_startup_negative_missing_cache():
+    """
+    title: Test unsuccessful boot with CAS configuration
+    description: |
+      Check that DUT doesn't boot sucesfully when using invalid CAS configuration
+    pass_criteria:
+      - DUT enters emergency mode
+    steps:
+      - Prepare one drive for caches and one for cores
+      - Create 2 cache partitions and 4 core partitons
+      - Create opencas.conf config for 2 caches each with 2 core partitions as cores
+      - Mark cores of second cache as lazy_startup=True
+      - Run casctl init
+      - Run casctl stop
+      - Remove second cache partition
+      - Reboot DUT
+      - Verify the DUT entered emergency mode
+    """
+    pass
+
+
+@pytest.mark.skip(reason="not implemented")
+def test_failover_config_startup():
+    """
+    title: Test successful boot with failover-specific configuration options
+    description: |
+      Check that DUT boots sucesfully and CAS is properly configured when using failover-specific
+      configuration options (target_failover_state)
+    pass_criteria:
+      - DUT boots sucesfully
+      - caches are configured as expected
+    steps:
+      - Prepare two drives for cache and one for core
+      - Create opencas.conf config for two caches: one target_failover_state=active with core
+      and one target_failover_state=standby
+      - Initialize configuration
+      - Reboot DUT
+      - Wait for successful boot
+      - Verify caches state
+    """
+    pass
+
+
+@pytest.mark.skip(reason="not implemented")
+def test_failover_config_startup_negative():
+    """
+    title: Test unsuccessful boot with failover-specific configuration options
+    description: |
+      Check that DUT doesn't boot successfully with misconfigured cache using failover-specific
+      configuration options (target_failover_state). After boot it should be verified that emergency
+      mode was in fact triggered.
+    pass_criteria:
+      - DUT enters emergency mode
+    steps:
+      - Prepare one drive for cache
+      - Create partition for cache
+      - Create opencas.conf config for single standby cache on created partiton
+      - Run casctl init
+      - Run casctl stop
+      - Remove cache partition
+      - Reboot DUT
+      - Verify the DUT entered emergency mode
+    """
+    pass
 
 
 def validate_cache(cache_mode):
