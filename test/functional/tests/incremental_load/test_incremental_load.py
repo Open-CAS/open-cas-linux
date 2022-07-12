@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -11,6 +11,7 @@ import pytest
 from api.cas import casadm, cli, cli_messages
 from api.cas.cache_config import CacheStatus, SeqCutOffPolicy, CacheModeTrait, CacheMode, \
     CleaningPolicy, FlushParametersAlru
+from api.cas.casadm_params import OutputFormat
 from api.cas.core import CoreStatus
 from api.cas.init_config import InitConfig
 from api.cas.statistics import CacheStats
@@ -577,7 +578,7 @@ def test_remove_detached_cores():
         casadm.remove_all_detached_cores()
 
     with TestRun.step("Verify that cores are no longer listed."):
-        output = casadm.list_caches().stdout
+        output = casadm.list_caches(output_format=OutputFormat.csv).stdout
         for dev in core_devs:
             if dev.path in output:
                 TestRun.fail(f"CAS device is still listed in casadm list output:\n{output}")
@@ -657,8 +658,9 @@ def test_remove_inactive_devices():
                                         f"as expected. Force option set to: {force}")
                     cli_messages.check_stderr_msg(
                         e.output, cli_messages.remove_inactive_core_with_remove_command)
-                    output = casadm.list_caches().stdout
-                    if core.path not in output:
+
+                    output = casadm.list_caches(output_format=OutputFormat.csv).stdout
+                    if core.core_device.path not in output:
                         TestRun.fail(
                             f"CAS device is not listed in casadm list output but it should be."
                             f"\n{output}")
@@ -680,8 +682,8 @@ def test_remove_inactive_devices():
                 TestRun.LOGGER.info("Remove-inactive operation without force option is blocked for "
                                     "dirty CAS device as expected.")
                 cli_messages.check_stderr_msg(e.output, cli_messages.remove_inactive_dirty_core)
-                output = casadm.list_caches().stdout
-                if core.path not in output:
+                output = casadm.list_caches(output_format=OutputFormat.csv).stdout
+                if core.core_device.path not in output:
                     TestRun.fail(f"CAS device is not listed in casadm list output but it should be."
                                  f"\n{output}")
                 core.remove_inactive(force=True)
