@@ -1,7 +1,8 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
+import os
 
 import pytest
 import uuid
@@ -11,6 +12,7 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskTypeLowerThan, DiskType
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
+from test_utils.filesystem.symlink import Symlink
 from test_utils.os_utils import Udev
 from test_utils.size import Size, Unit
 
@@ -18,7 +20,7 @@ from test_utils.size import Size, Unit
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("cache_mode", [mode for mode in CacheMode if
-                                        CacheModeTrait.InsertWrite & mode.get_traits(mode)])
+                                         CacheModeTrait.InsertWrite & mode.get_traits(mode)])
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 def test_write_fetch_full_misses(cache_mode, cache_line_size):
     """
@@ -35,7 +37,8 @@ def test_write_fetch_full_misses(cache_mode, cache_line_size):
     with TestRun.step("Start cache and add core."):
         cache_disk = TestRun.disks['cache']
         core_disk = TestRun.disks['core']
-        cache = casadm.start_cache(cache_disk, cache_mode, cache_line_size)
+        cache = casadm.start_cache(cache_dev=cache_disk, cache_mode=cache_mode,
+                                   cache_line_size=cache_line_size, force=True)
         Udev.disable()
         core = cache.add_core(core_disk)
     with TestRun.step("Run writes to CAS device using fio."):
@@ -62,7 +65,7 @@ def test_write_fetch_full_misses(cache_mode, cache_line_size):
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("cache_mode", [mode for mode in CacheMode if
-                                        CacheModeTrait.InsertWrite & CacheMode.get_traits(mode)])
+                                         CacheModeTrait.InsertWrite & CacheMode.get_traits(mode)])
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 def test_write_fetch_partial_misses(cache_mode, cache_line_size):
     """
@@ -97,7 +100,8 @@ def test_write_fetch_partial_misses(cache_mode, cache_line_size):
             TestRun.LOGGER.info(f"Skipped for {cache_mode} cache mode.")
 
     with TestRun.step("Start cache and add core."):
-        cache = casadm.start_cache(cache_disk, cache_mode, cache_line_size)
+        cache = casadm.start_cache(cache_dev=cache_disk, cache_mode=cache_mode,
+                                   cache_line_size=cache_line_size, force=True)
         Udev.disable()
         core = cache.add_core(core_part)
     with TestRun.step("Cache half of file."):
@@ -142,8 +146,10 @@ def test_write_fetch_partial_misses(cache_mode, cache_line_size):
 # Methods used in tests:
 def check_io_stats(cache_disk, cache, io_stats_before, io_size, blocksize, skip_size):
     io_stats_after = cache_disk.get_io_stats()
+    target = Symlink(cache_disk.path).get_target()
+    device_name = os.path.basename(target)
     logical_block_size = int(TestRun.executor.run(
-        f"cat /sys/block/{cache_disk.device_name}/queue/logical_block_size").stdout)
+        f"cat /sys/block/{device_name}/queue/logical_block_size").stdout)
     diff = io_stats_after.sectors_written - io_stats_before.sectors_written
     written_sector_size = Size(logical_block_size) * diff
     TestRun.LOGGER.info(f"Sectors written: "
