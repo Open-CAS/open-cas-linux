@@ -300,7 +300,9 @@ def test_cas_startup_negative_missing_cache():
     pass
 
 
-@pytest.mark.skip(reason="not implemented")
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd]))
+@pytest.mark.require_plugin("power_control")
 def test_failover_config_startup():
     """
     title: Test successful boot with failover-specific configuration options
@@ -310,16 +312,96 @@ def test_failover_config_startup():
     pass_criteria:
       - DUT boots sucesfully
       - caches are configured as expected
-    steps:
-      - Prepare two drives for cache and one for core
-      - Create opencas.conf config for two caches: one target_failover_state=active with core
-      and one target_failover_state=standby
-      - Initialize configuration
-      - Reboot DUT
-      - Wait for successful boot
-      - Verify caches state
     """
-    pass
+    with TestRun.step("Prepare partitions"):
+        cache_disk = TestRun.disks["cache"]
+        core_disk = TestRun.disks["core"]
+        cache_disk.create_partitions([Size(200, Unit.MebiByte)] * 2)
+        core_disk.create_partitions([Size(200, Unit.MebiByte)])
+
+    with TestRun.step(
+        f"Add a cache configuration with cache device with "
+        "`target_failover_state=active` flag and a core"
+    ):
+        init_conf = InitConfig()
+        init_conf.add_cache(
+            1, cache_disk.partitions[0], extra_flags="target_failover_state=active"
+        )
+        init_conf.add_core(1, 1, core_disk.partitions[0])
+        active_cache_path = cache_disk.partitions[0].path
+        active_core_path = core_disk.partitions[0].path
+
+    with TestRun.step(
+        f"Add a cache configuration with cache device with "
+        "`target_failover_state=failover` flag"
+    ):
+        init_conf.add_cache(
+            2,
+            cache_disk.partitions[1],
+            extra_flags="target_failover_state=standby,cache_line_size=4",
+        )
+        standby_cache_path = cache_disk.partitions[1].path
+        init_conf.save_config_file()
+        sync()
+
+    with TestRun.step(f"Start and stop all the configurations using the casctl utility"):
+        output = casctl.init(True)
+        if output.exit_code != 0:
+            TestRun.fail(f"Failed to initialize caches from config file. Error: {output.stdout}")
+        casadm.stop_all_caches()
+
+    with TestRun.step("Reboot DUT"):
+        power_control = TestRun.plugin_manager.get_plugin("power_control")
+        power_control.power_cycle()
+
+    with TestRun.step("Verify if all the devices are initialized properly"):
+        core_pool_list = get_cas_devices_dict()["core_pool"]
+        caches_list = get_cas_devices_dict()["caches"].values()
+        cores_list = get_cas_devices_dict()["cores"].values()
+
+        if len(core_pool_list) != 0:
+            TestRun.error(f"No cores expected in core pool. Got {core_pool_list}")
+        else:
+            TestRun.LOGGER.info("Core pool is ok")
+
+        expected_caches_paths = set([active_cache_path, standby_cache_path])
+        caches_paths = {c["device"] for c in caches_list}
+        if caches_paths != expected_caches_paths:
+            TestRun.error(
+                f"Expected the following devices as caches "
+                f"{expected_caches_paths}. Got {caches_paths}"
+            )
+        else:
+            TestRun.LOGGER.info("Caches are ok")
+
+        expected_core_paths = set([active_core_path])
+        cores_paths = {c["device"] for c in cores_list}
+        if cores_paths != expected_core_paths:
+            TestRun.error(
+                f"Expected the following devices as cores "
+                f"{expected_core_paths}. Got {cores_paths}"
+            )
+        else:
+            TestRun.LOGGER.info("Core devices are ok")
+
+        cores_states = {c["device"]: c["status"] for c in cores_list}
+        if cores_states[active_core_path] != "Active":
+            TestRun.LOGGER.error(
+                f"Core {active_core_path} should be Active "
+                f"but is {cores_states[active_core_path]} instead!"
+            )
+
+        caches_states = {c["device"]: c["status"] for c in caches_list}
+        if caches_states[active_cache_path] != "Running":
+            TestRun.LOGGER.error(
+                f"Cache {active_cache_path} should be Running "
+                f"but is {caches_states[active_cache_path]} instead!"
+            )
+        if caches_states[standby_cache_path] != "Standby":
+            TestRun.LOGGER.error(
+                f"Cache {standby_cache_path} should be Standby "
+                f"but is {caches_states[standby_cache_path]} instead!"
+            )
 
 
 @pytest.mark.skip(reason="not implemented")
