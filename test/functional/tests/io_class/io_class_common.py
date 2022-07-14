@@ -11,6 +11,7 @@ from api.cas.cache_config import (
     CleaningPolicy,
     SeqCutOffPolicy,
 )
+from api.cas.ioclass_config import IoClass
 from core.test_run import TestRun
 from test_tools.dd import Dd
 from test_tools.fio.fio import Fio
@@ -20,7 +21,8 @@ from test_utils.os_utils import drop_caches, DropCachesMode
 from test_utils.size import Size, Unit
 
 
-ioclass_config_path = "/tmp/opencas_ioclass.conf"
+ioclass_config_path = "/etc/opencas/ioclass.conf"
+template_config_path = "/etc/opencas/ioclass-config.csv"
 mountpoint = "/tmp/cas1-1"
 
 
@@ -85,6 +87,22 @@ def get_io_class_usage(cache, io_class_id, percent=False):
     return cache.get_io_class_statistics(
         io_class_id=io_class_id, percentage_val=percent
     ).usage_stats
+
+
+def generate_and_load_random_io_class_config(cache):
+    random_list = IoClass.generate_random_ioclass_list(ioclass_config.MAX_IO_CLASS_ID + 1)
+    IoClass.save_list_to_config_file(random_list, add_default_rule=False)
+    cache.load_io_class(ioclass_config.default_config_file_path)
+    return random_list
+
+
+def compare_io_classes_list(expected, actual):
+    if not IoClass.compare_ioclass_lists(expected, actual):
+        TestRun.LOGGER.error("IO classes configuration is not as expected.")
+        expected = '\n'.join(str(i) for i in expected)
+        TestRun.LOGGER.error(f"Expected IO classes:\n{expected}")
+        actual = '\n'.join(str(i) for i in actual)
+        TestRun.LOGGER.error(f"Actual IO classes:\n{actual}")
 
 
 def run_io_dir(path, size_4k, offset=0):

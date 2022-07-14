@@ -56,7 +56,7 @@ class IoClass:
             class_id=int(parts[0]),
             rule=parts[1],
             priority=int(parts[2]),
-            allocation=parts[3])
+            allocation="%.2f" % float(parts[3]))
 
     @staticmethod
     def list_to_csv(ioclass_list: [], add_default_rule: bool = True):
