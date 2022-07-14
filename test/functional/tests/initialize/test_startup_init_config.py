@@ -4,6 +4,7 @@
 #
 
 import pytest
+from datetime import timedelta
 
 from api.cas import casadm, casctl, casadm_parser
 from api.cas.casadm_parser import get_caches, get_cores, get_cas_devices_dict
@@ -17,6 +18,8 @@ from test_utils import fstab
 from test_tools.dd import Dd
 from test_utils.size import Unit, Size
 from test_utils.os_utils import sync, Udev
+from test_utils.emergency_escape import EmergencyEscape
+from api.cas.cas_service import set_cas_service_timeout, clear_cas_service_timeout
 
 
 mountpoint = "/mnt"
@@ -256,7 +259,8 @@ def test_cas_startup_lazy():
             )
 
 
-@pytest.mark.skip(reason="not implemented")
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd]))
 def test_cas_startup_negative_missing_core():
     """
     title: Test unsuccessful boot with CAS configuration
@@ -264,21 +268,60 @@ def test_cas_startup_negative_missing_core():
       Check that DUT doesn't boot sucesfully when using invalid CAS configuration
     pass_criteria:
       - DUT enters emergency mode
-    steps:
-      - Prepare one drive for caches and one for cores
-      - Create 2 cache partitions and 4 core partitons
-      - Create opencas.conf config for 2 caches each with 2 core partitions as cores
-      - Mark second cache as lazy_startup=True
-      - Run casctl init
-      - Run casctl stop
-      - Remove second cache cores partitions
-      - Reboot DUT
-      - Verify the DUT entered emergency mode
     """
-    pass
+    with TestRun.step("Create 2 cache partitions and 4 core partitons"):
+        cache_disk = TestRun.disks["cache"]
+        core_disk = TestRun.disks["core"]
+        cache_disk.create_partitions([Size(200, Unit.MebiByte)] * 2)
+        core_disk.create_partitions([Size(200, Unit.MebiByte)] * 4)
+
+    with TestRun.step(f"Add a cache configuration with cache device with `lazy_startup` flag"):
+        init_conf = InitConfig()
+        init_conf.add_cache(1, cache_disk.partitions[0], extra_flags="lazy_startup=True")
+        init_conf.add_core(1, 1, core_disk.partitions[0])
+        init_conf.add_core(1, 2, core_disk.partitions[1])
+
+    with TestRun.step(f"Add a cache configuration with core device with `lazy_startup` flag"):
+        init_conf.add_cache(2, cache_disk.partitions[1])
+        init_conf.add_core(2, 1, core_disk.partitions[2])
+        init_conf.add_core(2, 2, core_disk.partitions[3], extra_flags="lazy_startup=True")
+        init_conf.save_config_file()
+        sync()
+
+    with TestRun.step(f"Start and stop all the configurations using the casctl utility"):
+        output = casctl.init(True)
+        if output.exit_code != 0:
+            TestRun.fail(f"Failed to initialize caches from config file. Error: {output.stdout}")
+        casadm.stop_all_caches()
+
+    with TestRun.step(
+        "Disable udev to allow manipulating partitions without CAS being automatically loaded"
+    ):
+        Udev.disable()
+
+    with TestRun.step(f"Remove core partition"):
+        core_disk.remove_partition(core_disk.partitions[0])
+
+    escape = EmergencyEscape()
+    escape.add_escape_method_command("/usr/bin/rm /etc/opencas/opencas.conf")
+    set_cas_service_timeout(timedelta(seconds=10), interval=timedelta(seconds=1))
+
+    with TestRun.step("Reboot DUT with emergency escape armed"):
+        with escape:
+            TestRun.executor.reboot()
+            TestRun.executor.wait_for_connection()
+
+    with TestRun.step("Verify the DUT entered emergency mode"):
+        dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout.split("\n")
+        if not escape.verify_trigger_in_log(dmesg_out):
+            TestRun.LOGGER.error("DUT didn't enter emergency mode after reboot")
+
+    clear_cas_service_timeout()
+    InitConfig().create_default_init_config()
 
 
-@pytest.mark.skip(reason="not implemented")
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd]))
 def test_cas_startup_negative_missing_cache():
     """
     title: Test unsuccessful boot with CAS configuration
@@ -286,18 +329,56 @@ def test_cas_startup_negative_missing_cache():
       Check that DUT doesn't boot sucesfully when using invalid CAS configuration
     pass_criteria:
       - DUT enters emergency mode
-    steps:
-      - Prepare one drive for caches and one for cores
-      - Create 2 cache partitions and 4 core partitons
-      - Create opencas.conf config for 2 caches each with 2 core partitions as cores
-      - Mark cores of second cache as lazy_startup=True
-      - Run casctl init
-      - Run casctl stop
-      - Remove second cache partition
-      - Reboot DUT
-      - Verify the DUT entered emergency mode
     """
-    pass
+    with TestRun.step("Create 2 cache partitions and 4 core partitons"):
+        cache_disk = TestRun.disks["cache"]
+        core_disk = TestRun.disks["core"]
+        cache_disk.create_partitions([Size(200, Unit.MebiByte)] * 2)
+        core_disk.create_partitions([Size(200, Unit.MebiByte)] * 4)
+
+    with TestRun.step(f"Add a cache configuration with cache device with `lazy_startup` flag"):
+        init_conf = InitConfig()
+        init_conf.add_cache(1, cache_disk.partitions[0], extra_flags="lazy_startup=True")
+        init_conf.add_core(1, 1, core_disk.partitions[0])
+        init_conf.add_core(1, 2, core_disk.partitions[1])
+
+    with TestRun.step(f"Add a cache configuration with core devices with `lazy_startup` flag"):
+        init_conf.add_cache(2, cache_disk.partitions[1])
+        init_conf.add_core(2, 1, core_disk.partitions[2], extra_flags="lazy_startup=True")
+        init_conf.add_core(2, 2, core_disk.partitions[3], extra_flags="lazy_startup=True")
+        init_conf.save_config_file()
+        sync()
+
+    with TestRun.step(f"Start and stop all the configurations using the casctl utility"):
+        output = casctl.init(True)
+        if output.exit_code != 0:
+            TestRun.fail(f"Failed to initialize caches from config file. Error: {output.stdout}")
+        casadm.stop_all_caches()
+
+    with TestRun.step(
+        "Disable udev to allow manipulating partitions without CAS being automatically loaded"
+    ):
+        Udev.disable()
+
+    with TestRun.step(f"Remove second cache partition"):
+        cache_disk.remove_partition(cache_disk.partitions[1])
+
+    escape = EmergencyEscape()
+    escape.add_escape_method_command("/usr/bin/rm /etc/opencas/opencas.conf")
+    set_cas_service_timeout(timedelta(minutes=1))
+
+    with TestRun.step("Reboot DUT with emergency escape armed"):
+        with escape:
+            TestRun.executor.reboot()
+            TestRun.executor.wait_for_connection()
+
+    with TestRun.step("Verify the DUT entered emergency mode"):
+        dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout.split("\n")
+        if not escape.verify_trigger_in_log(dmesg_out):
+            TestRun.LOGGER.error("DUT didn't enter emergency mode after reboot")
+
+    clear_cas_service_timeout()
+    InitConfig().create_default_init_config()
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -404,7 +485,7 @@ def test_failover_config_startup():
             )
 
 
-@pytest.mark.skip(reason="not implemented")
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 def test_failover_config_startup_negative():
     """
     title: Test unsuccessful boot with failover-specific configuration options
@@ -414,17 +495,52 @@ def test_failover_config_startup_negative():
       mode was in fact triggered.
     pass_criteria:
       - DUT enters emergency mode
-    steps:
-      - Prepare one drive for cache
-      - Create partition for cache
-      - Create opencas.conf config for single standby cache on created partiton
-      - Run casctl init
-      - Run casctl stop
-      - Remove cache partition
-      - Reboot DUT
-      - Verify the DUT entered emergency mode
     """
-    pass
+    with TestRun.step("Create cache partition"):
+        cache_disk = TestRun.disks["cache"]
+        cache_disk.create_partitions([Size(200, Unit.MebiByte)])
+
+    with TestRun.step(f"Add a cache configuration with standby cache"):
+        init_conf = InitConfig()
+        init_conf.add_cache(
+            1,
+            cache_disk.partitions[0],
+            extra_flags="target_failover_state=standby,cache_line_size=4"
+        )
+        init_conf.save_config_file()
+        sync()
+
+    with TestRun.step(f"Start and stop all the configurations using the casctl utility"):
+        output = casctl.init(True)
+        if output.exit_code != 0:
+            TestRun.fail(f"Failed to initialize caches from config file. Error: {output.stdout}")
+        casadm.stop_all_caches()
+
+    with TestRun.step(
+        "Disable udev to allow manipulating partitions without CAS being automatically loaded"
+    ):
+        Udev.disable()
+
+    with TestRun.step(f"Remove second cache partition"):
+        cache_disk.remove_partition(cache_disk.partitions[0])
+
+    escape = EmergencyEscape()
+    escape.add_escape_method_command("/usr/bin/rm /etc/opencas/opencas.conf")
+    set_cas_service_timeout(timedelta(seconds=32))
+
+    with TestRun.step("Reboot DUT with emergency escape armed"):
+        with escape:
+            TestRun.executor.reboot()
+            TestRun.executor.wait_for_connection()
+
+    with TestRun.step("Verify the DUT entered emergency mode"):
+        dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout.split("\n")
+        if not escape.verify_trigger_in_log(dmesg_out):
+            TestRun.LOGGER.error("DUT didn't enter emergency mode after reboot")
+
+    clear_cas_service_timeout()
+    InitConfig().create_default_init_config()
+
 
 
 def validate_cache(cache_mode):
