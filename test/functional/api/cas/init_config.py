@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -24,6 +24,10 @@ class InitConfig:
 
     def add_core(self, cache_id, core_id, core_device: Device, extra_flags=""):
         self.core_config_lines.append(CoreConfigLine(cache_id, core_id, core_device, extra_flags))
+
+    def remove_config_file(self):
+        fs_utils.remove(opencas_conf_path, force=False)
+
 
     def save_config_file(self):
         config_lines = []
