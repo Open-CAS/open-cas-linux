@@ -25,6 +25,7 @@ from test_utils.filesystem.file import File
 block_size = Size(1, Unit.Blocks512)
 
 
+@pytest.mark.CI
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_activate_corrupted():
@@ -81,6 +82,7 @@ def test_activate_corrupted():
         md_dump.remove()
 
 
+@pytest.mark.CI
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_load_corrupted():
@@ -125,6 +127,7 @@ def test_load_corrupted():
         md_dump.remove()
 
 
+@pytest.mark.CI
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_activate_corrupted_after_dump():
