@@ -253,7 +253,6 @@ def base_prepare(item):
                 raid.stop()
                 for device in raid.array_devices:
                     Mdadm.zero_superblock(os.path.join('/dev', device.get_device_id()))
-                    Udev.settle()
 
         RamDisk.remove_all()
 
@@ -266,10 +265,11 @@ def base_prepare(item):
                 )
 
             disk.umount_all_partitions()
-            Mdadm.zero_superblock(os.path.join('/dev', disk.get_device_id()))
-            TestRun.executor.run_expect_success("udevadm settle")
+            Mdadm.zero_superblock(os.path.join('/dev', disk.device_id))
             disk.remove_partitions()
             create_partition_table(disk, PartitionTable.gpt)
+
+        Udev.settle()
 
         if get_force_param(item) and not TestRun.usr.already_updated:
             installer.rsync_opencas_sources()
