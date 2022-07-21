@@ -256,7 +256,7 @@ def base_prepare(item):
 
         RamDisk.remove_all()
 
-        for disk in TestRun.dut.disks:
+        for disk in TestRun.disks.values():
             disk_serial = get_disk_serial_number(disk.path)
             if disk.serial_number != disk_serial:
                 raise Exception(
