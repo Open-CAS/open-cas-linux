@@ -259,10 +259,7 @@ def base_prepare(item):
         for disk in TestRun.disks.values():
             disk_serial = get_disk_serial_number(disk.path)
             if disk.serial_number != disk_serial:
-                raise Exception(
-                    f"Serial for {disk.path} doesn't match the one from the config."
-                    f"Serial from config {disk.serial_number}, actual serial {disk_serial}"
-                )
+                disk.serial_number = disk_serial
 
             disk.umount_all_partitions()
             Mdadm.zero_superblock(os.path.join('/dev', disk.device_id))
