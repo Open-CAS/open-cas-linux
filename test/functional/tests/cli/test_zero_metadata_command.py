@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2021 Intel Corporation
+# Copyright(c) 2021-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 import time
@@ -110,7 +110,7 @@ def test_zero_metadata_filesystem(filesystem):
         except CmdException as e:
             cli_messages.check_stderr_msg(e.output, cli_messages.no_cas_metadata)
 
-        file_system = get_device_filesystem_type(core.get_device_id())
+        file_system = get_device_filesystem_type(core.device_id)
 
         if file_system != filesystem:
             TestRun.LOGGER.error(f"Incorrect filesystem: {file_system}; expected: {filesystem}")
