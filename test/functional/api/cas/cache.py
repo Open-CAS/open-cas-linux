@@ -17,12 +17,12 @@ class Cache:
         self.__metadata_size = None
 
     def __get_cache_id(self):
-        cmd = f"{list_cmd(by_id_path=False)} | grep {self.cache_device.get_device_id()}"
+        cmd = f"{list_cmd(by_id_path=False)} | grep {self.cache_device.device_id}"
         output = TestRun.executor.run(cmd)
         if output.exit_code == 0 and output.stdout.strip():
             return output.stdout.split()[1]
         else:
-            raise Exception(f"There is no cache started on {self.cache_device.get_device_id()}.")
+            raise Exception(f"There is no cache started on {self.cache_device.device_id}.")
 
     def get_core_devices(self):
         return get_cores(self.cache_id)
