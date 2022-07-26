@@ -240,7 +240,7 @@ def test_interrupt_core_remove(cache_mode, filesystem):
             wait_for_flushing(cache, core)
             percentage = casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
             while percentage < 50:
-                percentage = casadm_parser.get_flushing_progress(cache.cache_i, core.core_id)
+                percentage = casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
             TestRun.executor.run(f"kill -s SIGINT {flush_pid}")
 
         with TestRun.step(
