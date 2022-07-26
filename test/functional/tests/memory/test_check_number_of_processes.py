@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -15,7 +15,6 @@ from test_utils.size import Size, Unit
 cleaning_threads_expected = 1
 management_thread_expected = 1
 fill_threads_expected = 0
-metadata_updater_threads_expected = 1
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -25,7 +24,7 @@ def test_check_number_of_processes():
         title: Check the number of processes created by CAS.
         description: |
           For created CAS device check number of IO threads, cleaning threads, management threads,
-           fill threads, metadata updater threads.
+           fill threads.
         pass_criteria:
           - Successful CAS creation.
           - Successful validation of each thread number.
@@ -63,12 +62,6 @@ def test_check_number_of_processes():
     with TestRun.step("Check number of fill threads."):
         fill_threads_actual = get_number_of_processes("cas_wb")
         validate_threads_number("fill threads", fill_threads_actual, fill_threads_expected)
-
-    with TestRun.step("Check number of metadata updater threads."):
-        metadata_updater_threads_actual = get_number_of_processes("cas_mu")
-
-        validate_threads_number("metadata updater threads", metadata_updater_threads_actual,
-                                metadata_updater_threads_expected)
 
 
 def validate_threads_number(threads_name, threads_number, threads_expected):
