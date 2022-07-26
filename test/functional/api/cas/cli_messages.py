@@ -82,7 +82,8 @@ remove_mounted_core = [
 ]
 
 stop_cache_mounted_core = [
-    r"Can\'t stop cache instance \d+\. Device /dev/cas\d+-\d+ is mounted\!"
+    r"Error while removing cache \d+",
+    r"Device opens or mount are pending to this cache"
 ]
 
 load_and_force = [
