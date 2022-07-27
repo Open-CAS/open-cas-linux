@@ -26,6 +26,7 @@ from api.cas.cli_messages import (
 )
 
 
+@pytest.mark.CI
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 def test_activate_neg_cache_id():
     """
@@ -96,6 +97,7 @@ def test_activate_neg_cache_id():
             )
 
 
+@pytest.mark.CI
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_activate_incomplete_cache():
@@ -212,6 +214,7 @@ def test_activate_incomplete_cache():
             )
 
 
+@pytest.mark.CI
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_activate_neg_core_size():

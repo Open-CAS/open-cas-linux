@@ -13,6 +13,7 @@ from test_utils.size import Size, Unit
 from api.cas.cache_config import CacheStatus
 
 
+@pytest.mark.CI
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_standby_activate_the_same_cache_path():

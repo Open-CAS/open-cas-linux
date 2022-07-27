@@ -25,6 +25,7 @@ fio_jobs = 4
 cls = CacheLineSize.LINE_4KiB
 
 
+@pytest.mark.CI
 @pytest.mark.require_disk("cache_1", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("cache_2", DiskTypeSet([DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd, DiskType.hdd4k]))
