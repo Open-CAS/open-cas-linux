@@ -2,6 +2,7 @@
 # Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
+
 import re
 
 from core.test_run import TestRun

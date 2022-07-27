@@ -1,10 +1,11 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-import pytest
 import re
+
+import pytest
 
 from api.cas import casadm
 from api.cas.casadm_params import OutputFormat
@@ -88,6 +89,10 @@ def test_cli_help(shortcut):
     output = TestRun.executor.run("casadm" + (" -H" if shortcut else " --help")
                                   + (" -H" if shortcut else " --help"))
     check_stdout_msg(output, help_help)
+
+    output = TestRun.executor.run("casadm" + " --standby"
+                                  + (" -H" if shortcut else " --help"))
+    check_stdout_msg(output, standby_help)
 
     output = TestRun.executor.run("casadm" + " --zero-metadata"
                                   + (" -H" if shortcut else " --help"))
