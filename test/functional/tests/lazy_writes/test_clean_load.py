@@ -26,11 +26,11 @@ def test_clean_load():
           - Occupancy and dirty statistics shouldn't change after reboot.
     """
     with TestRun.step("Prepare devices."):
-        cache_disk = TestRun.disks['cache']
+        cache_disk = TestRun.disks["cache"]
         cache_disk.create_partitions([Size(1, Unit.GibiByte)])
         cache_dev = cache_disk.partitions[0]
 
-        core_disk = TestRun.disks['core']
+        core_disk = TestRun.disks["core"]
         core_disk.create_partitions([Size(2, Unit.GibiByte)] * 2)
         core_devices = core_disk.partitions
 
@@ -45,11 +45,14 @@ def test_clean_load():
         cache.set_cleaning_policy(CleaningPolicy.nop)
 
     with TestRun.step("Populate cache with dirty data."):
-        fio = Fio().create_command()\
-            .size(Size(1, Unit.GibiByte))\
-            .read_write(ReadWrite.randwrite)\
-            .io_engine(IoEngine.libaio)\
+        fio = (
+            Fio()
+            .create_command()
+            .size(Size(1, Unit.GibiByte))
+            .read_write(ReadWrite.randwrite)
+            .io_engine(IoEngine.libaio)
             .block_size(Size(1, Unit.Blocks4096))
+        )
         for i, core in enumerate(cores):
             fio.add_job(f"core{i}").target(core.path)
         fio.run()
@@ -89,11 +92,14 @@ def test_clean_load():
         if occupancy_before == occupancy_after:
             TestRun.LOGGER.info("Cache occupancy statistics after reboot are the same.")
         else:
-            TestRun.LOGGER.error(f"Cache occupancy stats changed. Before: {occupancy_before} "
-                                 f"After: {occupancy_after}.")
+            TestRun.LOGGER.error(
+                f"Cache occupancy stats changed. Before: {occupancy_before} "
+                f"After: {occupancy_after}."
+            )
 
         if dirty_before == dirty_after:
             TestRun.LOGGER.info("Cache dirty statistics after reboot are the same.")
         else:
-            TestRun.LOGGER.error(f"Cache dirty stats changed. Before: {dirty_before} "
-                                 f"After: {dirty_after}.")
+            TestRun.LOGGER.error(
+                f"Cache dirty stats changed. Before: {dirty_before} " f"After: {dirty_after}."
+            )
