@@ -6,6 +6,15 @@
 #include "cas_cache.h"
 #include "utils/cas_err.h"
 
+//temp
+#define CAS_BLK_QUEUE_EXIT(X) {percpu_ref_put(X);}
+
+#define CAS_BLK_QUEUE_EXIT_BVOL(BVOL) \
+{\
+	struct request_queue *q = casdisk_functions.casdsk_exp_obj_get_queue(BVOL->dsk);\
+	percpu_ref_put(&q->q_usage_counter);\
+}\
+
 static void blkdev_set_bio_data(struct blk_data *data, struct bio *bio)
 {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0)
@@ -181,8 +190,8 @@ static void blkdev_defer_bio(struct bd_object *bvol, struct bio *bio,
 
 	context = kmalloc(sizeof(*context), GFP_ATOMIC);
 	if (!context) {
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio),
-			CAS_ERRNO_TO_BLK_STS(-ENOMEM));
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));
+		CAS_BLK_QUEUE_EXIT_BVOL(bvol);
 		return;
 	}
 
@@ -207,6 +216,8 @@ static void blkdev_complete_data_master(struct blk_data *master, int error)
 	result = map_cas_err_to_generic(master->error);
 	CAS_BIO_ENDIO(master->bio, master->master_size,
 			CAS_ERRNO_TO_BLK_STS(result));
+	CAS_BLK_QUEUE_EXIT_BVOL(master->bvol);
+
 	cas_free_blk_data(master);
 }
 
@@ -275,6 +286,10 @@ static int blkdev_handle_data_single(struct bd_object *bvol, struct bio *bio,
 		data->bio = master_ctx->bio;
 		data->master_size = master_ctx->master_size;
 		data->start_time = master_ctx->start_time;
+
+		//temp
+		data->bvol = bvol;
+
 		master_ctx->data = data;
 	}
 
@@ -305,6 +320,7 @@ static void blkdev_handle_data(struct bd_object *bvol, struct bio *bio)
 			CAS_BIO_OP_FLAGS_FORMAT "\n",  CAS_BIO_OP_FLAGS(bio));
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio),
 				CAS_ERRNO_TO_BLK_STS(-EINVAL));
+		CAS_BLK_QUEUE_EXIT_BVOL(bvol);
 		return;
 	}
 
@@ -334,16 +350,20 @@ err:
 		bio_put(split);
 	if (master_ctx.data)
 		blkdev_complete_data_master(master_ctx.data, error);
-	else
+	else {
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(error));
+		CAS_BLK_QUEUE_EXIT_BVOL(bvol);
+	}
 }
 
 static void blkdev_complete_discard(struct ocf_io *io, int error)
 {
 	struct bio *bio = io->priv1;
+	struct bd_object *bvol = io->priv2;
 	int result = map_cas_err_to_generic(error);
 
 	CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(result));
+	CAS_BLK_QUEUE_EXIT_BVOL(bvol);
 	ocf_io_put(io);
 }
 
@@ -361,10 +381,11 @@ static void blkdev_handle_discard(struct bd_object *bvol, struct bio *bio)
 		CAS_PRINT_RL(KERN_CRIT
 			"Out of memory. Ending IO processing.\n");
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));
+		CAS_BLK_QUEUE_EXIT_BVOL(bvol);
 		return;
 	}
 
-	ocf_io_set_cmpl(io, bio, NULL, blkdev_complete_discard);
+	ocf_io_set_cmpl(io, bio, bvol, blkdev_complete_discard);
 
 	ocf_volume_submit_discard(io);
 }
@@ -388,6 +409,7 @@ static void blkdev_complete_flush(struct ocf_io *io, int error)
 	if (CAS_BIO_BISIZE(bio) == 0 || error) {
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio),
 				CAS_ERRNO_TO_BLK_STS(result));
+		CAS_BLK_QUEUE_EXIT_BVOL(bvol);
 		return;
 	}
 
@@ -410,6 +432,7 @@ static void blkdev_handle_flush(struct bd_object *bvol, struct bio *bio)
 		CAS_PRINT_RL(KERN_CRIT
 			"Out of memory. Ending IO processing.\n");
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));
+		CAS_BLK_QUEUE_EXIT_BVOL(bvol);
 		return;
 	}
 
@@ -431,6 +454,7 @@ static void blkdev_submit_bio(struct bd_object *bvol, struct bio *bio)
 	if (blkdev_can_hndl_bio(bio)) {
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio),
 				CAS_ERRNO_TO_BLK_STS(-ENOTSUPP));
+		CAS_BLK_QUEUE_EXIT_BVOL(bvol);
 		return;
 	}
 

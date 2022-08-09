@@ -8,6 +8,7 @@
 #define __CONTEXT_H__
 
 #include "linux_kernel_version.h"
+#include "volume/obj_blk.h"
 
 struct bio_vec_iter {
 	struct bio_vec *vec;
@@ -19,6 +20,9 @@ struct bio_vec_iter {
 };
 
 struct blk_data {
+	//temp
+	struct bd_object *bvol;
+
 	/**
 	 * @brief Atomic counter for core device
 	 */
