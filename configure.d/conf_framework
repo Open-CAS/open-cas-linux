@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2012-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -52,7 +52,7 @@ compile_module(){
 		return 0;
 	}
 	void cleanup_module(void) {};
-    MODULE_LICENSE("GPL");
+	MODULE_LICENSE("GPL");
 	EOF
 	#######################################
 
