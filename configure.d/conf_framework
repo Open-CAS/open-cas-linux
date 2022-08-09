@@ -48,7 +48,7 @@ compile_module(){
 	$INCLUDE
 
 	int init_module(void) {
-		$2;
+		$2
 		return 0;
 	}
 	void cleanup_module(void) {};
