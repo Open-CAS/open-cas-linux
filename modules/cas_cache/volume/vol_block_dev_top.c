@@ -35,7 +35,6 @@ static inline int blkdev_can_hndl_bio(struct bio *bio)
 	if (CAS_CHECK_BARRIER(bio)) {
 		CAS_PRINT_RL(KERN_WARNING
 			"special bio was sent, not supported!\n");
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-EOPNOTSUPP));
 		return -ENOTSUPP;
 	}
 
