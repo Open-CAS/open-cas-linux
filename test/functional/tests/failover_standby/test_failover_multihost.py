@@ -114,12 +114,12 @@ def test_functional_activate_twice_round_trip(filesystem):
         with TestRun.use_dut(dut), TestRun.step(f"Create DRBD instances on {dut.ip}"):
             caches_original_resource.save()
             dut.cache_drbd = Drbd(caches_original_resource)
-            dut.cache_drbd.create_metadata()
+            dut.cache_drbd.create_metadata(force=True)
             dut.cache_drbd_dev = dut.cache_drbd.up()
 
             cores_resource.save()
             dut.core_drbd = Drbd(cores_resource)
-            dut.core_drbd.create_metadata()
+            dut.core_drbd.create_metadata(force=True)
             dut.core_drbd_dev = dut.core_drbd.up()
 
     with TestRun.use_dut(primary_node), TestRun.step(
@@ -284,12 +284,12 @@ def test_functional_activate_twice_new_host(filesystem):
         with TestRun.use_dut(dut), TestRun.step(f"Create DRBD instances on {dut.ip}"):
             caches_original_resource.save()
             dut.cache_drbd = Drbd(caches_original_resource)
-            dut.cache_drbd.create_metadata()
+            dut.cache_drbd.create_metadata(force=True)
             dut.cache_drbd_dev = dut.cache_drbd.up()
 
             cores_resource.save()
             dut.core_drbd = Drbd(cores_resource)
-            dut.core_drbd.create_metadata()
+            dut.core_drbd.create_metadata(force=True)
             dut.core_drbd_dev = dut.core_drbd.up()
 
     with TestRun.use_dut(primary_node), TestRun.step(
@@ -556,6 +556,6 @@ def new_failover_instance(new_secondary_node, drbd_resource, *, autoload):
     ):
         drbd_resource.save()
         if not autoload:
-            new_secondary_node.cache_drbd.create_metadata()
+            new_secondary_node.cache_drbd.create_metadata(force=True)
         new_secondary_node.cache_drbd = Drbd(drbd_resource)
         new_secondary_node.cache_drbd_dev = new_secondary_node.cache_drbd.up()
