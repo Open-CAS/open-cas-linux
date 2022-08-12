@@ -1,10 +1,11 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include "cas_cache.h"
 #include "utils/utils_rpool.h"
+#include <linux/kmemleak.h>
 
 /* *** ALLOCATOR *** */
 
@@ -77,6 +78,9 @@ static void *env_allocator_new_rpool(void *allocator_ctx, int cpu)
 		item->from_rpool = 1;
 		item->cpu = cpu;
 	}
+	/* As it isn't an actuall allocation but only a rpool preparation
+	   kmemleak shouldn't track the allocated memory yet. */
+	kmemleak_free(item);
 
 	return item;
 }
@@ -88,6 +92,7 @@ static void env_allocator_del_rpool(void *allocator_ctx, void *_item)
 
 	BUG_ON(item->used);
 
+	kmemleak_alloc(item, allocator->item_size, 1, GFP_NOIO);
 	kmem_cache_free(allocator->kmem_cache, item);
 }
 

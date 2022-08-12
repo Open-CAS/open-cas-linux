@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -10,6 +10,7 @@
 #include "utils/utils_gc.h"
 #include "utils/utils_mpool.h"
 #include "threads.h"
+#include <linux/kmemleak.h>
 
 struct env_mpool *cas_bvec_pool;
 
@@ -66,6 +67,7 @@ void *_cas_alloc_page_rpool(void *allocator_ctx, int cpu)
 
 	_cas_page_set_priv(page);
 	_cas_page_set_cpu(page, cpu);
+
 	return page_address(page);
 }
 
@@ -103,6 +105,11 @@ ctx_data_t *__cas_ctx_data_alloc(uint32_t pages, bool zalloc)
 			_cas_page_set_cpu(data->vec[i].bv_page, cpu);
 		} else {
 			data->vec[i].bv_page = alloc_page(GFP_NOIO);
+			if (data->vec[i].bv_page) {
+				/* Failed to get memory from rpool but backup allocation worked.
+				   Need to keep track of this page as well */
+				kmemleak_alloc(page_address(data->vec[i].bv_page), PAGE_SIZE, 1, GFP_NOIO);
+			}
 		}
 
 		if (!data->vec[i].bv_page)
@@ -171,8 +178,11 @@ void cas_ctx_data_free(ctx_data_t *ctx_data)
 		if (!(_cas_page_test_priv(page) && !cas_rpool_try_put(
 				cas_bvec_pages_rpool,
 				page_address(page),
-				_cas_page_get_cpu(page))))
+				_cas_page_get_cpu(page)))) {
 			__free_page(page);
+			/* It wasn't a page from rpool thus need to stop tracking it explicitly */
+			kmemleak_free(page_address(page));
+		}
 	}
 
 	env_mpool_del(cas_bvec_pool, data, data->size);
