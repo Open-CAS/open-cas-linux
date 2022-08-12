@@ -186,7 +186,9 @@ static MAKE_RQ_RET_TYPE _casdsk_exp_obj_submit_bio(struct bio *bio)
 static MAKE_RQ_RET_TYPE _casdsk_exp_obj_make_rq_fn(struct request_queue *q,
 						 struct bio *bio)
 {
-	return _casdsk_exp_obj_submit_bio(bio);
+	_casdsk_exp_obj_submit_bio(bio);
+	cas_blk_queue_exit(q);
+	KRETURN(0);
 }
 
 static int _casdsk_del_partitions(struct casdsk_disk *dsk)
