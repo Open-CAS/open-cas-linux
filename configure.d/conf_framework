@@ -97,7 +97,7 @@ EOM
 
 	rm -Rf $test_module_dir
 
-	grep -Pom 1 "note:.*$define_name .*" $test_module_log | cut -d' ' -f 5- | tr -d '"'
+	grep -Pom 1 "note:.*$define_name .*" $test_module_log | sed 's/[^0-9.]*//g'
 	local ret=$?
 
 	rm -f $test_module_log

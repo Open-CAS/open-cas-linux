@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -19,6 +19,11 @@ struct bio_vec_iter {
 };
 
 struct blk_data {
+	/**
+	 * @brief bd_object for accessing request queue. Workaround for RHEL8.5
+	 */
+	struct bd_object *bvol;
+
 	/**
 	 * @brief Atomic counter for core device
 	 */
