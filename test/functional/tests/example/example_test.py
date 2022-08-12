@@ -199,12 +199,12 @@ def test_drbd_example():
 
     with TestRun.use_dut(dut1), TestRun.step(f"Create a DRBD instance on {dut1}"):
         primary = Drbd(caches)
-        primary.create_metadata()
+        primary.create_metadata(force=True)
         primary.up()
 
     with TestRun.use_dut(dut2), TestRun.step(f"Create a DRBD instance on {dut2}"):
         secondary = Drbd(caches)
-        secondary.create_metadata()
+        secondary.create_metadata(force=True)
         secondary.up()
 
     with TestRun.use_dut(dut1), TestRun.step(f"Set {dut1} as primary node"):
