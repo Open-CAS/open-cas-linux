@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -22,7 +22,7 @@ from test_utils.size import Size, Unit
 @pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_soft_hot_plug_cache(cache_mode):
+def test_soft_hot_unplug_cache(cache_mode):
     """
         title: Test for soft hot plug of cache device.
         description: |
@@ -99,7 +99,7 @@ def test_soft_hot_plug_cache(cache_mode):
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core1", DiskTypeLowerThan("cache"))
 @pytest.mark.require_disk("core2", DiskTypeLowerThan("cache"))
-def test_soft_hot_plug_core(cache_mode):
+def test_soft_hot_unplug_core(cache_mode):
     """
         title: Test for soft hot plug of one core device.
         description: |

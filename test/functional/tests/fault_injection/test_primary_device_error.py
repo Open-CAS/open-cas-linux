@@ -22,12 +22,11 @@ from test_utils.os_utils import Udev
 from test_utils.size import Size, Unit
 
 
-@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 @pytest.mark.parametrizex("cache_mode", CacheMode.without_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.parametrizex("io_dir", [ReadWrite.randread, ReadWrite.randwrite])
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_core_device_error(io_dir, cache_mode, cache_line_size):
+def test_core_device_error(io_dir, cache_mode):
     """
         title: Check if CAS behaves correctly when encountering errors on core device
         description: |
@@ -39,6 +38,7 @@ def test_core_device_error(io_dir, cache_mode, cache_line_size):
           - I/O error count in FIO and in cache statistics match
           - Positively passed fio verify on both core devices
     """
+    cache_line_size = CacheLineSize.DEFAULT
     with TestRun.step("Prepare error device and setup cache and cores"):
         cache, error_core, good_core = prepare_configuration(cache_mode, cache_line_size)
 
