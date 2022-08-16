@@ -20,11 +20,6 @@ struct bio_vec_iter {
 
 struct blk_data {
 	/**
-	 * @brief bd_object for accessing request queue. Workaround for RHEL8.5
-	 */
-	struct bd_object *bvol;
-
-	/**
 	 * @brief Atomic counter for core device
 	 */
 	atomic_t master_remaining;
