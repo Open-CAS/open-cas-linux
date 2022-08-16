@@ -275,12 +275,14 @@ def base_prepare(item):
             disk.remove_partitions()
             create_partition_table(disk, PartitionTable.gpt)
 
+        cas_version = TestRun.config.get("cas_version") or git.get_current_commit_hash()
         if get_force_param(item) and not TestRun.usr.already_updated:
             installer.rsync_opencas_sources()
-            installer.reinstall_opencas()
-        elif not installer.check_if_installed():
+            installer.reinstall_opencas(cas_version)
+        elif not installer.check_if_installed(cas_version):
             installer.rsync_opencas_sources()
-            installer.set_up_opencas()
+            installer.set_up_opencas(cas_version)
+
         TestRun.usr.already_updated = True
         TestRun.LOGGER.add_build_info(f'Commit hash:')
         TestRun.LOGGER.add_build_info(f"{git.get_current_commit_hash()}")
