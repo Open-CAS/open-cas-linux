@@ -1,11 +1,13 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import re
 
 from api.cas import git
+from core.test_run import TestRun
+from test_utils.output import CmdException
 
 
 class CasVersion:
@@ -43,3 +45,15 @@ def get_available_cas_versions():
     versions = [CasVersion.from_git_tag(tag) for tag in release_tags]
 
     return versions
+
+
+def get_installed_cas_version():
+    output = TestRun.executor.run("grep -i '^LAST_COMMIT_HASH=' /var/lib/opencas/cas_version")
+    if output.exit_code != 0:
+        raise CmdException(
+            "Could not find commit hash of installed version. "
+            "Check if Open CAS Linux is properly installed.",
+            output,
+        )
+
+    return output.stdout.split("=")[1]
