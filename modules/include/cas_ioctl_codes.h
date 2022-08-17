@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -556,6 +556,9 @@ enum kcas_error {
 
 	/** Removing core failed and rollback failed too */
 	KCAS_ERR_DETACHED,
+
+	/** Cache is already in standby detached state */
+	KCAS_ERR_STANDBY_DETACHED,
 
 	/** Cache has been stopped, but it may contain dirty data */
 	KCAS_ERR_STOPPED_DIRTY,
