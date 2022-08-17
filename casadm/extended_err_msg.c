@@ -282,6 +282,10 @@ struct {
 		"The cache contains dirty data assigned to the core. If you want to "
 		"continue, please use --force option.\nWarning: the data will be lost"
 	},
+	{
+		KCAS_ERR_STANDBY_DETACHED,
+		"Cache device is already in standby detached state."
+	},
 };
 
 const char *cas_strerr(int cas_error_code)
