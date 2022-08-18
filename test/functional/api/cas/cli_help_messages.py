@@ -13,7 +13,8 @@ casadm_help = [
     r"-G  --get-param                Get various runtime parameters",
     r"-Q  --set-cache-mode           Set cache mode",
     r"-A  --add-core                 Add core device to cache instance",
-    r"-R  --remove-core              Remove core device from cache instance",
+    r"-R  --remove-core              Remove active core device from cache instance",
+    r"--remove-inactive          Remove inactive core device from cache instance",
     r"--remove-detached          Remove core device from core pool",
     r"-L  --list-caches              List all cache instances and core devices",
     r"-P  --stats                    Print statistics for cache instance",
@@ -24,6 +25,7 @@ casadm_help = [
     r"-C  --io-class                 Manage IO classes",
     r"-V  --version                  Print CAS version",
     r"-H  --help                     Print help",
+    r"--standby                  Manage failover standby",
     r"--zero-metadata            Clear metadata from caching device",
     r"For detailed help on the above commands use --help after the command\.",
     r"e\.g\.",
@@ -114,12 +116,12 @@ remove_detached_help = [
 
 remove_core_help = [
     r"Usage: casadm --remove-core --cache-id \<ID\> --core-id \<ID\> \[option\.\.\.\]",
-    r"Remove core device from cache instance",
+    r"Remove active core device from cache instance",
     r"Options that are valid with --remove-core \(-R\) are:",
     r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
     r"-j  --core-id \<ID\>                  Identifier of core \<0-4095\> within given cache "
     r"instance",
-    r"-f  --force                         Force remove inactive core"
+    r"-f  --force                         Force active core removal without data flush"
 ]
 
 add_core_help = [
@@ -249,11 +251,38 @@ start_cache_help = [
     r"\{4,8,16,32,64\}\[KiB\] \(default: 4\)"
 ]
 
+standby_help = [
+    r"Usage: casadm --standby \{--init|--load|--detach|--activate\}",
+    r"Manage failover standby",
+    r"Initialize cache in standby mode:",
+    r"Usage: casadm --standby --init --cache-id \<ID\> --cache-line-size \<NUMBER\> "
+    r"--cache-device \<DEVICE\> \[option...\]",
+    r"Options that are valid with --init are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-x  --cache-line-size \<NUMBER\>      Set cache line size in kibibytes: \{4,8,16,32,64\}"
+    r"\[KiB\] \(default: 4\)",
+    r"-d  --cache-device \<DEVICE\>         Caching device to be used",
+    r"-f  --force                         Force the initialization of cache instance",
+    r"Load cache in standby mode:",
+    r"Usage: casadm --standby --load --cache-device \<DEVICE\>",
+    r"Options that are valid with --load are:",
+    r"-d  --cache-device \<DEVICE\>         Caching device to be used",
+    r"Detach cache device in standby mode:",
+    r"Usage: casadm --standby --detach --cache-id \<ID\>",
+    r"Options that are valid with --detach are:",
+    r" -i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"Activate standby cache:",
+    r"Usage: casadm --standby --activate --cache-id \<ID\> --cache-device \<DEVICE\>",
+    r"Options that are valid with --activate are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-d  --cache-device \<DEVICE\>         Caching device to be used"
+]
+
 zero_metadata_help = [
-    r"Usage: casadm --zero-metadata --device \<DEVICE\>",
+    r"Usage: casadm --zero-metadata --device \<DEVICE\> \[option...\]",
     r"Clear metadata from caching device",
     r"Options that are valid with --zero-metadata are:",
-    r"-d  --device \<DEVICE\>               Path to device on which metadata would be cleared"
+    r"-d  --device \<DEVICE\>               Path to device on which metadata would be cleared",
     r"-f  --force                         Ignore potential dirty data on cache device"
 ]
 
