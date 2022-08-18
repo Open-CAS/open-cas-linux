@@ -14,6 +14,15 @@ type: "local"
 allow_disk_autoselect: False
 working_dir: "/tmp/open-cas-linux/"
 
+# CAS version to test.
+# This version will be installed on DUT before test. Can be any string
+# digestible by git-checkout. If not specified, by default current state
+# of your controller's repo (HEAD) will be used as version to install.
+# NOTE: Make sure to have a local master branch synced with upstream
+# as the local repo will be taken for version reference. To do this
+# simply run: `git fetch origin master:master`
+cas_version: "master"
+
 disks:
   - path: "/dev/device_name1" # disk device path
     serial: "ABC"             # disk serial number
