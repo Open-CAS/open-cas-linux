@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -9,8 +9,8 @@ from api.cas import casadm, cli
 from api.cas.cache_config import CacheMode
 from api.cas.casadm_params import OutputFormat
 from api.cas.init_config import InitConfig
-from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from test_utils.output import CmdException
@@ -122,7 +122,7 @@ def test_user_cli():
 
     with TestRun.step("Try to zero metadata."):
         try:
-            output = run_as_other_user(cli.zero_metadata_cmd(str(cache_dev)), user_name)
+            output = run_as_other_user(cli.zero_metadata_cmd(str(cache_dev.path)), user_name)
             if output.exit_code == 0:
                 TestRun.LOGGER.error("Zeroing metadata should fail!")
         except CmdException:
@@ -354,10 +354,12 @@ def test_user_cli():
 
     with TestRun.step("Try to zero metadata with 'sudo'."):
         try:
-            run_as_other_user(cli.zero_metadata_cmd(str(cache_dev)),
-                              user_name, True)
+            output = run_as_other_user(cli.zero_metadata_cmd(str(cache_dev.path)), user_name, True)
+            if output.exit_code == 0:
+                TestRun.LOGGER.error("Zeroing metadata with 'sudo' on running cache should fail!")
         except CmdException:
-            TestRun.LOGGER.error("Non-root sudoer user should be able to zero metadata.")
+            TestRun.LOGGER.info("Non-root sudoer user should be able to run zero metadata command "
+                                "but the command should fail (expected).")
 
     with TestRun.step("Try to print help for casadm with 'sudo'."):
         try:
