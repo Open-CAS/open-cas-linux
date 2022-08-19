@@ -1,21 +1,23 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-import pytest
 from collections import namedtuple
 from math import isclose
+
+import pytest
+
 from api.cas import ioclass_config, casadm
-from tests.io_class.io_class_common import prepare, mountpoint, TestRun, Unit, \
-    ioclass_config_path, run_io_dir, get_io_class_dirty, get_io_class_usage, get_io_class_occupancy
 from api.cas.cache_config import CacheMode, CacheLineSize
-from api.cas.ioclass_config import IoClass
+from api.cas.ioclass_config import IoClass, default_config_file_path
 from storage_devices.device import Device
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from test_utils.os_utils import sync, Udev
+from tests.io_class.io_class_common import prepare, mountpoint, TestRun, Unit, \
+    run_io_dir, get_io_class_dirty, get_io_class_usage, get_io_class_occupancy
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -75,7 +77,7 @@ def test_ioclass_occuppancy_load(cache_line_size):
                 f"{io_class.max_occupancy:0.2f}",
             )
 
-        casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
+        casadm.load_io_classes(cache_id=cache.cache_id, file=default_config_file_path)
 
     with TestRun.step("Reset cache stats"):
         cache.purge_cache()

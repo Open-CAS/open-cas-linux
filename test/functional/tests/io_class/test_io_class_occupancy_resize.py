@@ -1,21 +1,21 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
+from recordclass import recordclass
+
 from api.cas import ioclass_config, casadm
-from core.test_run import TestRun
-from test_utils.size import Unit, Size
-from tests.io_class.io_class_common import mountpoint, prepare, ioclass_config_path, \
-    get_io_class_occupancy, run_io_dir
 from api.cas.cache_config import CacheMode, CacheLineSize
-from api.cas.ioclass_config import IoClass
+from api.cas.ioclass_config import IoClass, default_config_file_path
+from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from test_utils.os_utils import sync, Udev
-from recordclass import recordclass
+from test_utils.size import Unit
+from tests.io_class.io_class_common import mountpoint, prepare, get_io_class_occupancy, run_io_dir
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -60,10 +60,9 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
             rule="metadata&done",
             eviction_priority=1,
             allocation="1.00",
-            ioclass_config_path=ioclass_config_path
+            ioclass_config_path=default_config_file_path
         )
         ioclass_config.add_ioclass(*str(IoClass.default(allocation="0.00")).split(","))
-
 
     with TestRun.step("Add directory for ioclass"):
         ioclass_config.add_ioclass(
@@ -73,7 +72,7 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
             f"{io_class.max_occupancy:0.2f}",
         )
 
-        casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
+        casadm.load_io_classes(cache_id=cache.cache_id, file=default_config_file_path)
 
     with TestRun.step("Reset cache stats"):
         cache.purge_cache()
@@ -120,7 +119,7 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
             rule="metadata&done",
             eviction_priority=1,
             allocation="1.00",
-            ioclass_config_path=ioclass_config_path
+            ioclass_config_path=default_config_file_path
         )
         ioclass_config.add_ioclass(
             io_class.id,
@@ -129,7 +128,7 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
             f"{io_class.max_occupancy:0.2f}",
         )
 
-        casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
+        casadm.load_io_classes(cache_id=cache.cache_id, file=default_config_file_path)
 
     with TestRun.step(f"Perform IO with size equal to cache size"):
         run_io_dir(f"{io_class.dir_path}/tmp_file", int((cache_size) / Unit.Blocks4096))
