@@ -2296,7 +2296,7 @@ int cache_mngt_standby_detach(struct kcas_standby_detach *cmd)
 
 	cache_priv = ocf_cache_get_priv(cache);
 	if (!cache_priv->cache_exp_obj_initialized) {
-		result = -KCAS_ERR_DETACHED;
+		result = -KCAS_ERR_STANDBY_DETACHED;
 		goto out_cache_put;
 	}
 
