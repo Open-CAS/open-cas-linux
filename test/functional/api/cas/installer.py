@@ -5,6 +5,7 @@
 
 
 import logging
+import os
 
 from tests import conftest
 from core.test_run import TestRun
@@ -17,13 +18,17 @@ from test_utils.output import CmdException
 def rsync_opencas_sources():
     TestRun.LOGGER.info("Copying Open CAS repository to DUT")
     TestRun.executor.rsync_to(
-        f"{TestRun.usr.repo_dir}/",
-        f"{TestRun.usr.working_dir}/",
+        # Place an empty string as the last argument to os.path.join()
+        # to make sure path ends with directory separator.
+        # Needed for rsync to copy only contents of a directory
+        # and not the directory itself.
+        os.path.join(TestRun.usr.repo_dir, ''),
+        os.path.join(TestRun.usr.working_dir, ''),
         exclude_list=["test/functional/results/"],
         delete=True)
 
 
-def _clean_opencas_repo():
+def clean_opencas_repo():
     TestRun.LOGGER.info("Cleaning Open CAS repo")
     output = TestRun.executor.run(
         f"cd {TestRun.usr.working_dir} && "
@@ -42,17 +47,24 @@ def build_opencas():
         raise CmdException("Make command executed with nonzero status", output)
 
 
-def install_opencas():
+def install_opencas(destdir: str = ""):
     TestRun.LOGGER.info("Installing Open CAS")
+
+    if destdir:
+        destdir = os.path.join(TestRun.usr.working_dir, destdir)
+
     output = TestRun.executor.run(
         f"cd {TestRun.usr.working_dir} && "
-        f"make install")
+        f"make {'DESTDIR='+destdir if destdir else ''} install")
     if output.exit_code != 0:
         raise CmdException("Failed to install Open CAS", output)
 
     output = TestRun.executor.run("rmmod cas_cache cas_disk; modprobe cas_cache")
     if output.exit_code != 0:
         raise CmdException("Failed to reload modules", output)
+
+    if destdir:
+        return
 
     TestRun.LOGGER.info("Check if casadm is properly installed.")
     output = TestRun.executor.run("casadm -V")
@@ -63,7 +75,7 @@ def install_opencas():
 
 
 def set_up_opencas(version: str = ""):
-    _clean_opencas_repo()
+    clean_opencas_repo()
 
     if version:
         git.checkout_cas_version(version)
