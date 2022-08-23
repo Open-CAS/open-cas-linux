@@ -5,14 +5,18 @@
 
 import pytest
 
+from api.cas.cache_config import CacheMode, CacheLineSize
 from core.test_run import TestRun
-from api.cas import cli
+from api.cas import cli, casadm
 from api.cas.cli_messages import (
     check_stderr_msg,
     start_cache_on_already_used_dev,
     start_cache_with_existing_id
 )
-from storage_devices.disk import DiskType, DiskTypeSet
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
+from test_tools.dd import Dd
+from test_tools.disk_utils import Filesystem
+from test_utils.filesystem.file import File
 from test_utils.size import Size, Unit
 
 
@@ -77,3 +81,62 @@ def test_negative_start_cache():
         )
         if not check_stderr_msg(output, start_cache_with_existing_id):
             TestRun.fail(f"Received unexpected error message: {output.stderr}")
+
+
+@pytest.mark.CI
+@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_data_integrity(cache_mode, cache_line_size, filesystem):
+    """
+    title: Check basic data integrity after stopping the cache
+    pass criteria:
+        - System does not crash.
+        - All operations complete successfully.
+        - Data consistency is preserved.
+    """
+    cache_id = core_id = 1
+    mountpoint = "/mnt"
+    filepath = f"{mountpoint}/file"
+
+    with TestRun.step("Prepare partitions for cache (200MiB) and for core (100MiB)"):
+        cache_device = TestRun.disks["cache"]
+        cache_device.create_partitions([Size(200, Unit.MebiByte)])
+        cache_part = cache_device.partitions[0]
+
+        core_device = TestRun.disks["core"]
+        core_device.create_partitions([Size(100, Unit.MebiByte)])
+        core_part = core_device.partitions[0]
+
+    with TestRun.step("Start cache and add core device"):
+        cache = casadm.start_cache(cache_part, cache_mode, cache_line_size, cache_id, True)
+        core = cache.add_core(core_part, core_id)
+
+    with TestRun.step("Create filesystem on CAS device and mount it"):
+        core.create_filesystem(filesystem)
+        core.mount(mountpoint)
+
+    with TestRun.step("Create test file and calculate md5 checksum"):
+        (
+            Dd()
+            .input("/dev/urandom")
+            .output(filepath)
+            .count(1)
+            .block_size(Size(50, Unit.MebiByte))
+            .run()
+        )
+        test_file = File(filepath)
+        md5_before = test_file.md5sum()
+
+    with TestRun.step("Unmount and stop the cache"):
+        core.unmount()
+        cache.flush_cache()
+        cache.stop()
+
+    with TestRun.step("Mount the core device and check for file"):
+        core_part.mount(mountpoint)
+        md5_after = test_file.md5sum()
+        if md5_before != md5_after:
+            TestRun.fail("md5 checksum mismatch!")
