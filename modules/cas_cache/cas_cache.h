@@ -1,7 +1,7 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
-* SPDX-License-Identifier: BSD-3-Clause
-*/
+ * Copyright(c) 2012-2022 Intel Corporation
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #ifndef __CAS_CACHE_H__
 #define __CAS_CACHE_H__
@@ -67,7 +67,6 @@ extern ocf_ctx_t cas_ctx;
 extern struct casdsk_functions_mapper casdisk_functions;
 
 struct casdsk_functions_mapper {
-	int (*casdsk_disk_detach)(struct casdsk_disk *dsk);
 	int (*casdsk_exp_obj_destroy)(struct casdsk_disk *dsk);
 	int (*casdsk_exp_obj_create)(struct casdsk_disk *dsk, const char *dev_name,
 		struct module *owner, struct casdsk_exp_obj_ops *ops);
@@ -79,16 +78,9 @@ struct casdsk_functions_mapper {
 	void (*casdsk_disk_close)(struct casdsk_disk *dsk);
 	struct casdsk_disk *(*casdsk_disk_claim)(const char *path, void *private);
 	int (*casdsk_exp_obj_unlock)(struct casdsk_disk *dsk);
-	int (*casdsk_disk_set_pt)(struct casdsk_disk *dsk);
-	struct gendisk *(*casdsk_disk_get_gendisk)(struct casdsk_disk *dsk);
-	int (*casdsk_disk_attach) (struct casdsk_disk *dsk, struct module *owner,
-		struct casdsk_exp_obj_ops *ops);
-	int (*casdsk_disk_set_attached)(struct casdsk_disk *dsk);
 	int (*casdsk_exp_obj_activate)(struct casdsk_disk *dsk);
-	bool (*casdsk_exp_obj_activated)(struct casdsk_disk *ds);
 	int (*casdsk_exp_obj_lock)(struct casdsk_disk *dsk);
 	struct casdsk_disk *(*casdsk_disk_open)(const char *path, void *private);
-	int (*casdsk_disk_clear_pt)(struct casdsk_disk *dsk);
 	struct gendisk *(*casdsk_exp_obj_get_gendisk)(struct casdsk_disk *dsk);
 };
 

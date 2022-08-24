@@ -82,7 +82,6 @@ int static cas_casdisk_lookup_funtions(void)
 #ifdef MODULE_MUTEX_SUPPORTED
 	mutex_lock(&module_mutex);
 #endif
-	cas_lookup_symbol(casdsk_disk_detach);
 	cas_lookup_symbol(casdsk_exp_obj_destroy);
 	cas_lookup_symbol(casdsk_exp_obj_create);
 	cas_lookup_symbol(casdsk_exp_obj_free);
@@ -93,15 +92,9 @@ int static cas_casdisk_lookup_funtions(void)
 	cas_lookup_symbol(casdsk_disk_close);
 	cas_lookup_symbol(casdsk_disk_claim);
 	cas_lookup_symbol(casdsk_exp_obj_unlock);
-	cas_lookup_symbol(casdsk_disk_set_pt);
-	cas_lookup_symbol(casdsk_disk_get_gendisk);
-	cas_lookup_symbol(casdsk_disk_attach);
-	cas_lookup_symbol(casdsk_disk_set_attached);
 	cas_lookup_symbol(casdsk_exp_obj_activate);
-	cas_lookup_symbol(casdsk_exp_obj_activated);
 	cas_lookup_symbol(casdsk_exp_obj_lock);
 	cas_lookup_symbol(casdsk_disk_open);
-	cas_lookup_symbol(casdsk_disk_clear_pt);
 	cas_lookup_symbol(casdsk_exp_obj_get_gendisk);
 #ifdef MODULE_MUTEX_SUPPORTED
 	mutex_unlock(&module_mutex);

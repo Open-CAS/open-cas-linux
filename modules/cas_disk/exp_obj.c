@@ -714,7 +714,6 @@ bool casdsk_exp_obj_activated(struct casdsk_disk *dsk)
 	BUG_ON(!dsk);
 	return dsk->exp_obj->activated;
 }
-EXPORT_SYMBOL(casdsk_exp_obj_activated);
 
 int casdsk_exp_obj_lock(struct casdsk_disk *dsk)
 {
