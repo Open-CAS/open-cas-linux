@@ -21,48 +21,20 @@
 
 int __init casdsk_init_exp_objs(void)
 {
-	int ncpus;
-
 	CASDSK_DEBUG_TRACE();
 
 	casdsk_module->exp_obj_cache = kmem_cache_create("casdsk_exp_obj",
 			sizeof(struct casdsk_exp_obj), 0, 0, NULL);
 	if (!casdsk_module->exp_obj_cache)
-		goto error_exp_obj_cache;
-
-	ncpus = num_online_cpus();
-
-	casdsk_module->pending_rqs_cache =
-		kmem_cache_create("casdsk_exp_obj_pending_rqs",
-			((sizeof(atomic_t) * ncpus) < KMEM_CACHE_MIN_SIZE) ?
-			KMEM_CACHE_MIN_SIZE : (sizeof(atomic_t) * ncpus),
-			0, 0, NULL);
-	if (!casdsk_module->pending_rqs_cache)
-		goto error_pending_rqs_cache;
-
-	casdsk_module->pt_io_ctx_cache =
-		kmem_cache_create("casdsk_exp_obj_pt_io_ctx",
-				sizeof(struct casdsk_exp_obj_pt_io_ctx),
-				0, 0, NULL);
-	if (!casdsk_module->pt_io_ctx_cache)
-		goto error_pt_io_ctx_cache;
+		return -ENOMEM;
 
 	return 0;
-
-error_pt_io_ctx_cache:
-	kmem_cache_destroy(casdsk_module->pending_rqs_cache);
-error_pending_rqs_cache:
-	kmem_cache_destroy(casdsk_module->exp_obj_cache);
-error_exp_obj_cache:
-	return -ENOMEM;
 }
 
 void casdsk_deinit_exp_objs(void)
 {
 	CASDSK_DEBUG_TRACE();
 
-	kmem_cache_destroy(casdsk_module->pt_io_ctx_cache);
-	kmem_cache_destroy(casdsk_module->pending_rqs_cache);
 	kmem_cache_destroy(casdsk_module->exp_obj_cache);
 }
 
@@ -72,113 +44,25 @@ static inline void _casdsk_exp_obj_handle_bio_att(struct casdsk_disk *dsk,
 	dsk->exp_obj->ops->submit_bio(dsk, bio, dsk->private);
 }
 
-CAS_DECLARE_BLOCK_CALLBACK(_casdsk_exp_obj_bio_pt_io, struct bio *bio,
-		unsigned int bytes_done, int error)
-{
-	struct casdsk_exp_obj_pt_io_ctx *io;
-
-	BUG_ON(!bio);
-	CAS_BLOCK_CALLBACK_INIT(bio);
-
-	io = bio->bi_private;
-	BUG_ON(!io);
-	CAS_BIO_ENDIO(io->bio, CAS_BIO_BISIZE(io->bio),
-			CAS_BLOCK_CALLBACK_ERROR(bio, CAS_ERRNO_TO_BLK_STS(error)));
-
-	if (atomic_dec_return(&io->dsk->exp_obj->pt_ios) < 0)
-		BUG();
-
-	bio_put(bio);
-	kmem_cache_free(casdsk_module->pt_io_ctx_cache, io);
-	CAS_BLOCK_CALLBACK_RETURN();
-}
-
-static inline void _casdsk_exp_obj_handle_bio_pt(struct casdsk_disk *dsk,
-					       struct bio *bio)
-{
-	struct bio *cloned_bio;
-	struct casdsk_exp_obj_pt_io_ctx *io;
-
-	io = kmem_cache_zalloc(casdsk_module->pt_io_ctx_cache, GFP_NOIO);
-	if (!io) {
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));
-		return;
-	}
-
-	cloned_bio = cas_bio_clone(bio, GFP_NOIO);
-	if (!cloned_bio) {
-		kmem_cache_free(casdsk_module->pt_io_ctx_cache, io);
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-ENOMEM));
-		return;
-	}
-
-	io->bio = bio;
-	io->dsk = dsk;
-
-	atomic_inc(&dsk->exp_obj->pt_ios);
-
-	CAS_BIO_SET_DEV(cloned_bio, casdsk_disk_get_blkdev(dsk));
-	cloned_bio->bi_private = io;
-	cloned_bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(_casdsk_exp_obj_bio_pt_io);
-	cas_submit_bio(CAS_BIO_OP_FLAGS(cloned_bio), cloned_bio);
-}
-
 static inline void _casdsk_exp_obj_handle_bio(struct casdsk_disk *dsk,
 					    struct bio *bio)
 {
 	if (likely(casdsk_disk_is_attached(dsk)))
 		_casdsk_exp_obj_handle_bio_att(dsk, bio);
-	else if (casdsk_disk_is_pt(dsk))
-		_casdsk_exp_obj_handle_bio_pt(dsk, bio);
 	else if (casdsk_disk_is_shutdown(dsk))
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-EIO));
 	else
 		BUG();
 }
 
-static inline void _casdsk_exp_obj_end_rq(struct casdsk_disk *dsk, unsigned int cpu)
-{
-	return atomic_dec(&dsk->exp_obj->pending_rqs[cpu]);
-}
-
-static inline unsigned int _casdsk_exp_obj_begin_rq(struct casdsk_disk *dsk)
-{
-	unsigned int cpu;
-
-	BUG_ON(!dsk);
-
-retry:
-	while (unlikely(casdsk_disk_in_transition(dsk)))
-		io_schedule();
-
-	cpu = smp_processor_id();
-	atomic_inc(&dsk->exp_obj->pending_rqs[cpu]);
-
-	if (unlikely(casdsk_disk_in_transition(dsk))) {
-		/*
-		 * If we are in transition state, decrement pending rqs counter
-		 * and retry bio processing
-		 */
-		_casdsk_exp_obj_end_rq(dsk, cpu);
-		goto retry;
-	}
-
-	return cpu;
-}
-
 static MAKE_RQ_RET_TYPE _casdsk_exp_obj_submit_bio(struct bio *bio)
 {
 	struct casdsk_disk *dsk;
-	unsigned int cpu;
 
 	BUG_ON(!bio);
 	dsk = CAS_BIO_GET_GENDISK(bio)->private_data;
 
-	cpu = _casdsk_exp_obj_begin_rq(dsk);
-
 	_casdsk_exp_obj_handle_bio(dsk, bio);
-
-	_casdsk_exp_obj_end_rq(dsk, cpu);
 
 	KRETURN(0);
 }
@@ -383,7 +267,6 @@ static const struct block_device_operations _casdsk_exp_obj_ops = {
 static int casdsk_exp_obj_alloc(struct casdsk_disk *dsk)
 {
 	struct casdsk_exp_obj *exp_obj;
-	int result;
 
 	BUG_ON(!dsk);
 	BUG_ON(dsk->exp_obj);
@@ -393,24 +276,12 @@ static int casdsk_exp_obj_alloc(struct casdsk_disk *dsk)
 	exp_obj = kmem_cache_zalloc(casdsk_module->exp_obj_cache, GFP_KERNEL);
 	if (!exp_obj) {
 		CASDSK_DEBUG_ERROR("Cannot allocate memory");
-		result = -ENOMEM;
-		goto error_exp_obj_alloc;
-	}
-
-	exp_obj->pending_rqs = kmem_cache_zalloc(casdsk_module->pending_rqs_cache,
-						 GFP_KERNEL);
-	if (!exp_obj->pending_rqs) {
-		result = -ENOMEM;
-		goto error_pending_rqs_alloc;
+		return -ENOMEM;
 	}
 
 	dsk->exp_obj = exp_obj;
 
 	return 0;
-error_pending_rqs_alloc:
-	kmem_cache_free(casdsk_module->exp_obj_cache, exp_obj);
-error_exp_obj_alloc:
-	return result;
 }
 
 void casdsk_exp_obj_free(struct casdsk_disk *dsk)
@@ -431,7 +302,6 @@ EXPORT_SYMBOL(casdsk_exp_obj_free);
 
 static void __casdsk_exp_obj_release(struct casdsk_exp_obj *exp_obj)
 {
-	kmem_cache_free(casdsk_module->pending_rqs_cache, exp_obj->pending_rqs);
 	kmem_cache_free(casdsk_module->exp_obj_cache, exp_obj);
 }
 
@@ -784,68 +654,3 @@ int casdsk_exp_obj_destroy(struct casdsk_disk *dsk)
 
 }
 EXPORT_SYMBOL(casdsk_exp_obj_destroy);
-
-int casdsk_exp_obj_detach(struct casdsk_disk *dsk)
-{
-	module_put(dsk->exp_obj->owner);
-
-	dsk->exp_obj->owner = NULL;
-	dsk->exp_obj->ops = NULL;
-
-	return 0;
-}
-
-int casdsk_exp_obj_attach(struct casdsk_disk *dsk, struct module *owner,
-			struct casdsk_exp_obj_ops *ops)
-{
-	if (!try_module_get(owner)) {
-		CASDSK_DEBUG_DISK_ERROR(dsk, "Cannot get reference to module");
-		return -ENAVAIL;
-	}
-	dsk->exp_obj->owner = owner;
-	dsk->exp_obj->ops = ops;
-
-	return 0;
-}
-
-static void _casdsk_exp_obj_wait_for_pending_rqs(struct casdsk_disk *dsk)
-{
-	int i, ncpus;
-	struct casdsk_exp_obj *exp_obj = dsk->exp_obj;
-
-	ncpus = num_online_cpus();
-	for (i = 0; i < ncpus; i++)
-		while (atomic_read(&exp_obj->pending_rqs[i]))
-			schedule();
-}
-
-static void _casdsk_exp_obj_flush_queue(struct casdsk_disk *dsk)
-{
-	struct casdsk_exp_obj *exp_obj = dsk->exp_obj;
-	struct request_queue *q = exp_obj->queue;
-
-	blk_mq_run_hw_queues(q, false);
-	blk_sync_queue(q);
-}
-
-void casdsk_exp_obj_prepare_pt(struct casdsk_disk *dsk)
-{
-	_casdsk_exp_obj_wait_for_pending_rqs(dsk);
-	_casdsk_exp_obj_flush_queue(dsk);
-}
-
-void casdsk_exp_obj_prepare_attached(struct casdsk_disk *dsk)
-{
-	_casdsk_exp_obj_wait_for_pending_rqs(dsk);
-
-	while (atomic_read(&dsk->exp_obj->pt_ios))
-		schedule_timeout(msecs_to_jiffies(200));
-}
-
-void casdsk_exp_obj_prepare_shutdown(struct casdsk_disk *dsk)
-{
-	_casdsk_exp_obj_wait_for_pending_rqs(dsk);
-
-	while (atomic_read(&dsk->exp_obj->pt_ios))
-		schedule_timeout(msecs_to_jiffies(200));
-}

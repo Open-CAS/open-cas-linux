@@ -1,7 +1,7 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
-* SPDX-License-Identifier: BSD-3-Clause
-*/
+ * Copyright(c) 2012-2022 Intel Corporation
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 #ifndef __CASDISK_DEFS_H__
 #define __CASDISK_DEFS_H__
 
@@ -22,8 +22,6 @@ struct casdsk_module {
 
 	struct kmem_cache *disk_cache;
 	struct kmem_cache *exp_obj_cache;
-	struct kmem_cache *pt_io_ctx_cache;
-	struct kmem_cache *pending_rqs_cache;
 
 	struct kobject kobj;
 };

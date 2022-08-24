@@ -16,10 +16,7 @@
 
 static const char * const _casdsk_disk_modes[] = {
 	[CASDSK_MODE_UNKNOWN] = "unknown",
-	[CASDSK_MODE_PT] = "pass-through",
 	[CASDSK_MODE_ATTACHED] = "attached",
-	[CASDSK_MODE_TRANS_TO_PT] = "attached -> pass-through",
-	[CASDSK_MODE_TRANS_TO_ATTACHED] = "pass-through -> attached"
 };
 
 static void _casdsk_disk_release(struct kobject *kobj)
@@ -241,12 +238,7 @@ void __exit casdsk_disk_shutdown_all(void)
 
 		casdsk_disk_lock(dsk);
 
-		BUG_ON(!casdsk_disk_is_pt(dsk) && !casdsk_disk_is_unknown(dsk));
-
-		if (casdsk_disk_is_pt(dsk)) {
-			atomic_set(&dsk->mode, CASDSK_MODE_TRANS_TO_SHUTDOWN);
-			casdsk_exp_obj_prepare_shutdown(dsk);
-		}
+		BUG_ON(!casdsk_disk_is_unknown(dsk));
 
 		atomic_set(&dsk->mode, CASDSK_MODE_SHUTDOWN);
 
