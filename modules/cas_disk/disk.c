@@ -10,13 +10,8 @@
 #include "cas_cache.h"
 #include "disk.h"
 #include "exp_obj.h"
-#include "sysfs.h"
 
 #define CASDSK_DISK_OPEN_FMODE (FMODE_READ | FMODE_WRITE)
-
-static const char * const _casdsk_disk_modes[] = {
-	[CASDSK_MODE_ATTACHED] = "attached",
-};
 
 static void _casdsk_disk_release(struct kobject *kobj)
 {
@@ -34,28 +29,8 @@ static void _casdsk_disk_release(struct kobject *kobj)
 	kmem_cache_free(casdsk_module->disk_cache, dsk);
 }
 
-static ssize_t _casdsk_disk_mode_show(struct kobject *kobj, char *page)
-{
-	struct casdsk_disk *dsk = casdsk_kobj_to_disk(kobj);
-
-	CASDSK_DEBUG_DISK_TRACE(dsk);
-
-	return scnprintf(page, PAGE_SIZE, "%s",
-			 _casdsk_disk_modes[atomic_read(&dsk->mode)]);
-}
-
-static struct casdsk_attribute _casdsk_disk_mode_attr =
-	__ATTR(mode, S_IRUGO, _casdsk_disk_mode_show, NULL);
-
-static struct attribute *_casdsk_disk_attrs[] = {
-	&_casdsk_disk_mode_attr.attr,
-	NULL
-};
-
 static struct kobj_type casdsk_disk_ktype = {
 	.release = _casdsk_disk_release,
-	.sysfs_ops = &casdsk_sysfs_ops,
-	.default_attrs = _casdsk_disk_attrs
 };
 
 int __init casdsk_init_disks(void)

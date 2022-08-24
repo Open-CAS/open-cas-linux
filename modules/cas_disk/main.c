@@ -10,7 +10,6 @@
 #include "cas_disk.h"
 #include "disk.h"
 #include "exp_obj.h"
-#include "sysfs.h"
 
 /* Layer information. */
 MODULE_AUTHOR("Intel(R) Corporation");
