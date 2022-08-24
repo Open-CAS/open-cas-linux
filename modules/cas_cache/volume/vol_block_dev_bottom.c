@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -35,7 +35,7 @@ int block_dev_open_object(ocf_volume_t vol, void *volume_params)
 		return 0;
 	}
 
-	dsk = casdisk_functions.casdsk_disk_open(uuid->data, NULL);
+	dsk = casdsk_disk_open(uuid->data, NULL);
 	if (IS_ERR_OR_NULL(dsk)) {
 		int error = PTR_ERR(dsk) ?: -EINVAL;
 
@@ -46,7 +46,7 @@ int block_dev_open_object(ocf_volume_t vol, void *volume_params)
 	}
 
 	bdobj->dsk = dsk;
-	bdobj->btm_bd = casdisk_functions.casdsk_disk_get_blkdev(dsk);
+	bdobj->btm_bd = casdsk_disk_get_blkdev(dsk);
 
 	return 0;
 }
@@ -58,7 +58,7 @@ void block_dev_close_object(ocf_volume_t vol)
 	if (bdobj->opened_by_bdev)
 		return;
 
-	casdisk_functions.casdsk_disk_close(bdobj->dsk);
+	casdsk_disk_close(bdobj->dsk);
 }
 
 unsigned int block_dev_get_max_io_size(ocf_volume_t vol)

@@ -64,26 +64,6 @@ struct cache_priv {
 
 extern ocf_ctx_t cas_ctx;
 
-extern struct casdsk_functions_mapper casdisk_functions;
-
-struct casdsk_functions_mapper {
-	int (*casdsk_exp_obj_destroy)(struct casdsk_disk *dsk);
-	int (*casdsk_exp_obj_create)(struct casdsk_disk *dsk, const char *dev_name,
-		struct module *owner, struct casdsk_exp_obj_ops *ops);
-	void(*casdsk_exp_obj_free)(struct casdsk_disk *dsk);
-	struct request_queue *(*casdsk_disk_get_queue)(struct casdsk_disk *dsk);
-	struct block_device *(*casdsk_disk_get_blkdev)(struct casdsk_disk *dsk);
-	struct request_queue *(*casdsk_exp_obj_get_queue)(struct casdsk_disk *dsk);
-	uint32_t (*casdsk_get_version)(void);
-	void (*casdsk_disk_close)(struct casdsk_disk *dsk);
-	struct casdsk_disk *(*casdsk_disk_claim)(const char *path, void *private);
-	int (*casdsk_exp_obj_unlock)(struct casdsk_disk *dsk);
-	int (*casdsk_exp_obj_activate)(struct casdsk_disk *dsk);
-	int (*casdsk_exp_obj_lock)(struct casdsk_disk *dsk);
-	struct casdsk_disk *(*casdsk_disk_open)(const char *path, void *private);
-	struct gendisk *(*casdsk_exp_obj_get_gendisk)(struct casdsk_disk *dsk);
-};
-
 static inline void cache_name_from_id(char *name, uint16_t id)
 {
 	int result;

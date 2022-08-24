@@ -40,79 +40,12 @@ MODULE_PARM_DESC(seq_cut_off_mb,
 
 /* globals */
 ocf_ctx_t cas_ctx;
-struct casdsk_functions_mapper casdisk_functions;
-
-#if defined(SYMBOL_LOOKUP_SUPPORTED) && defined(MODULE_MUTEX_SUPPORTED)
-
-struct exported_symbol {
-	char *name;
-	unsigned long addr;
-};
-
-int static cas_find_symbol(void *data, const char *namebuf,
-		struct module *module, unsigned long kallsyms_addresses)
-{
-	struct exported_symbol *sym = data;
-
-	if (strcmp(namebuf, sym->name) == 0)
-		sym->addr = kallsyms_addresses;
-	return 0;
-}
-
-#define cas_lookup_symbol(f) ({ \
-	struct exported_symbol sym = {#f, 0}; \
-	kallsyms_on_each_symbol(&cas_find_symbol, &sym); \
-	casdisk_functions.f = (void *)sym.addr; \
-        if (!casdisk_functions.f)  \
-             return -EINVAL; \
-})
-
-#else
-
-#include "../cas_disk/cas_disk.h"
-#include "../cas_disk/exp_obj.h"
-#define cas_lookup_symbol(f) ({ \
-	casdisk_functions.f = (void *)f; \
-})
-
-#endif
-
-int static cas_casdisk_lookup_funtions(void)
-{
-#ifdef MODULE_MUTEX_SUPPORTED
-	mutex_lock(&module_mutex);
-#endif
-	cas_lookup_symbol(casdsk_exp_obj_destroy);
-	cas_lookup_symbol(casdsk_exp_obj_create);
-	cas_lookup_symbol(casdsk_exp_obj_free);
-	cas_lookup_symbol(casdsk_disk_get_queue);
-	cas_lookup_symbol(casdsk_disk_get_blkdev);
-	cas_lookup_symbol(casdsk_exp_obj_get_queue);
-	cas_lookup_symbol(casdsk_get_version);
-	cas_lookup_symbol(casdsk_disk_close);
-	cas_lookup_symbol(casdsk_disk_claim);
-	cas_lookup_symbol(casdsk_exp_obj_unlock);
-	cas_lookup_symbol(casdsk_exp_obj_activate);
-	cas_lookup_symbol(casdsk_exp_obj_lock);
-	cas_lookup_symbol(casdsk_disk_open);
-	cas_lookup_symbol(casdsk_exp_obj_get_gendisk);
-#ifdef MODULE_MUTEX_SUPPORTED
-	mutex_unlock(&module_mutex);
-#endif
-	return 0;
-}
 
 static int __init cas_init_module(void)
 {
 	int result = 0;
-	result = cas_casdisk_lookup_funtions();
-	if (result) {
-		printk(KERN_ERR OCF_PREFIX_SHORT
-				"Could not find cas_disk functions.\n");
-		return result;
-	}
 
-	if (casdisk_functions.casdsk_get_version() != CASDSK_IFACE_VERSION) {
+	if (casdsk_get_version() != CASDSK_IFACE_VERSION) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
 				"Incompatible cas_disk module\n");
 		return -EINVAL;
