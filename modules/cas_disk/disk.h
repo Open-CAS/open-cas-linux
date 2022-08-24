@@ -13,12 +13,8 @@
 
 struct casdsk_exp_obj;
 
-#define CASDSK_MODE_ATTACHED		(1 << 1)
-#define CASDSK_MODE_SHUTDOWN		(1 << 2)
-
 struct casdsk_disk {
 	uint32_t id;
-	atomic_t mode;
 	char *path;
 
 	struct mutex lock;
@@ -59,18 +55,6 @@ static inline void casdsk_disk_unlock(struct casdsk_disk *dsk)
 static inline struct casdsk_disk *casdsk_kobj_to_disk(struct kobject *kobj)
 {
 	return container_of(kobj, struct casdsk_disk, kobj);
-}
-
-static inline bool casdsk_disk_is_attached(struct casdsk_disk *dsk)
-{
-	return (atomic_read(&dsk->mode) & CASDSK_MODE_ATTACHED) ==
-			CASDSK_MODE_ATTACHED;
-}
-
-static inline bool casdsk_disk_is_shutdown(struct casdsk_disk *dsk)
-{
-	return (atomic_read(&dsk->mode) & CASDSK_MODE_SHUTDOWN) ==
-			CASDSK_MODE_SHUTDOWN;
 }
 
 #endif

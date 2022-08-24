@@ -38,21 +38,10 @@ void casdsk_deinit_exp_objs(void)
 	kmem_cache_destroy(casdsk_module->exp_obj_cache);
 }
 
-static inline void _casdsk_exp_obj_handle_bio_att(struct casdsk_disk *dsk,
-						struct bio *bio)
-{
-	dsk->exp_obj->ops->submit_bio(dsk, bio, dsk->private);
-}
-
 static inline void _casdsk_exp_obj_handle_bio(struct casdsk_disk *dsk,
 					    struct bio *bio)
 {
-	if (likely(casdsk_disk_is_attached(dsk)))
-		_casdsk_exp_obj_handle_bio_att(dsk, bio);
-	else if (casdsk_disk_is_shutdown(dsk))
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(-EIO));
-	else
-		BUG();
+	dsk->exp_obj->ops->submit_bio(dsk, bio, dsk->private);
 }
 
 static MAKE_RQ_RET_TYPE _casdsk_exp_obj_submit_bio(struct bio *bio)
@@ -553,7 +542,6 @@ int casdsk_exp_obj_activate(struct casdsk_disk *dsk)
 	kfree(path);
 
 	dsk->exp_obj->activated = true;
-	atomic_set(&dsk->mode, CASDSK_MODE_ATTACHED);
 	add_disk(dsk->exp_obj->gd);
 
 	result = bd_claim_by_disk(dsk->bd, dsk, dsk->exp_obj->gd);
