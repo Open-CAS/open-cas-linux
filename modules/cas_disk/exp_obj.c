@@ -647,7 +647,6 @@ int casdsk_exp_obj_destroy(struct casdsk_disk *dsk)
 
 	blk_mq_free_tag_set(&dsk->tag_set);
 
-	atomic_set(&dsk->mode, CASDSK_MODE_UNKNOWN);
 	put_disk(exp_obj->gd);
 
 	return 0;

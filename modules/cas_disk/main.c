@@ -1,7 +1,7 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
-* SPDX-License-Identifier: BSD-3-Clause
-*/
+ * Copyright(c) 2012-2022 Intel Corporation
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
 #include <linux/module.h>
 #include <linux/fs.h>
@@ -112,7 +112,6 @@ static void __exit casdsk_deinit_kobjects(void)
 
 static void __exit casdsk_exit_module(void)
 {
-	casdsk_disk_shutdown_all();
 	casdsk_deinit_disks();
 	casdsk_deinit_exp_objs();
 	casdsk_deinit_kobjects();

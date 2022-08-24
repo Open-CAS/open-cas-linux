@@ -15,7 +15,6 @@
 #define CASDSK_DISK_OPEN_FMODE (FMODE_READ | FMODE_WRITE)
 
 static const char * const _casdsk_disk_modes[] = {
-	[CASDSK_MODE_UNKNOWN] = "unknown",
 	[CASDSK_MODE_ATTACHED] = "attached",
 };
 
@@ -131,8 +130,6 @@ struct casdsk_disk *casdsk_disk_open(const char *path, void *private)
 		goto error_kstrdup;
 	}
 
-	atomic_set(&dsk->mode, CASDSK_MODE_UNKNOWN);
-
 	dsk->bd = open_bdev_exclusive(path, CASDSK_DISK_OPEN_FMODE, dsk);
 	if (IS_ERR(dsk->bd)) {
 		CASDSK_DEBUG_ERROR("Cannot open exclusive");
@@ -221,40 +218,6 @@ void casdsk_disk_close(struct casdsk_disk *dsk)
 	__casdsk_disk_close(dsk);
 }
 EXPORT_SYMBOL(casdsk_disk_close);
-
-void __exit casdsk_disk_shutdown_all(void)
-{
-	struct list_head *item, *n;
-	struct casdsk_disk *dsk;
-
-	CASDSK_DEBUG_TRACE();
-
-	mutex_lock(&casdsk_module->lock);
-
-	list_for_each_safe(item, n, &casdsk_module->disk_list) {
-		dsk = list_entry(item, struct casdsk_disk, list);
-
-		list_del(item);
-
-		casdsk_disk_lock(dsk);
-
-		BUG_ON(!casdsk_disk_is_unknown(dsk));
-
-		atomic_set(&dsk->mode, CASDSK_MODE_SHUTDOWN);
-
-		if (dsk->exp_obj) {
-			casdsk_exp_obj_lock(dsk);
-			casdsk_exp_obj_destroy(dsk);
-			casdsk_exp_obj_unlock(dsk);
-		}
-
-		casdsk_disk_unlock(dsk);
-		__casdsk_disk_close(dsk);
-
-	}
-
-	mutex_unlock(&casdsk_module->lock);
-}
 
 struct block_device *casdsk_disk_get_blkdev(struct casdsk_disk *dsk)
 {

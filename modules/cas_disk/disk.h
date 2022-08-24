@@ -13,7 +13,6 @@
 
 struct casdsk_exp_obj;
 
-#define CASDSK_MODE_UNKNOWN		0
 #define CASDSK_MODE_ATTACHED		(1 << 1)
 #define CASDSK_MODE_SHUTDOWN		(1 << 2)
 
@@ -45,8 +44,6 @@ struct casdsk_disk {
 int __init casdsk_init_disks(void);
 void casdsk_deinit_disks(void);
 
-void __exit casdsk_disk_shutdown_all(void);
-
 int casdsk_disk_allocate_minors(int count);
 
 static inline void casdsk_disk_lock(struct casdsk_disk *dsk)
@@ -74,11 +71,6 @@ static inline bool casdsk_disk_is_shutdown(struct casdsk_disk *dsk)
 {
 	return (atomic_read(&dsk->mode) & CASDSK_MODE_SHUTDOWN) ==
 			CASDSK_MODE_SHUTDOWN;
-}
-
-static inline bool casdsk_disk_is_unknown(struct casdsk_disk *dsk)
-{
-	return atomic_read(&dsk->mode) == CASDSK_MODE_UNKNOWN;
 }
 
 #endif
