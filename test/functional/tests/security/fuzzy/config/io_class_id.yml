@@ -1,0 +1,11 @@
+- name: String
+  attributes:
+    name: IoClasssId
+    value: '0'
+    size: '8'
+    mutable: 'true'
+  children:
+   - name: Hint
+     attributes:
+       name: NumericalString
+       value: 'true'

@@ -252,19 +252,23 @@ unexpected_cls_option = [
     r"Option '--cache-line-size \(-x\)' is not allowed"
 ]
 
-def check_stderr_msg(output: Output, expected_messages):
-    return __check_string_msg(output.stderr, expected_messages)
+def check_stderr_msg(output: Output, expected_messages, negate=False):
+    return __check_string_msg(output.stderr, expected_messages, negate)
 
 
-def check_stdout_msg(output: Output, expected_messages):
-    return __check_string_msg(output.stdout, expected_messages)
+def check_stdout_msg(output: Output, expected_messages, negate=False):
+    return __check_string_msg(output.stdout, expected_messages, negate)
 
 
-def __check_string_msg(text: str, expected_messages):
+def __check_string_msg(text: str, expected_messages, negate=False):
     msg_ok = True
     for msg in expected_messages:
         matches = re.search(msg, text)
-        if not matches:
+        if not matches and not negate:
             TestRun.LOGGER.error(f"Message is incorrect, expected: {msg}\n actual: {text}.")
+            msg_ok = False
+        elif matches and negate:
+            TestRun.LOGGER.error(f"Message is incorrect, expected to not find: {msg}\n "
+                                 f"actual: {text}.")
             msg_ok = False
     return msg_ok

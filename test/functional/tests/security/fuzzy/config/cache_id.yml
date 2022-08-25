@@ -1,0 +1,11 @@
+- name: String
+  attributes:
+    name: CacheId
+    value: '1'
+    size: '14'
+    mutable: 'true'
+  children:
+   - name: Hint
+     attributes:
+       name: NumericalString
+       value: 'true'

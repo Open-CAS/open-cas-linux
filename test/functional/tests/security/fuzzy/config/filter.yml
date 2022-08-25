@@ -1,0 +1,10 @@
+- name: String
+  attributes:
+    name: FilterValue
+    value: 'all'
+    mutable: 'true'
+  children:
+   - name: Hint
+     attributes:
+       name: ValidValues
+       value: 'conf;usage;req;blk;ext;'

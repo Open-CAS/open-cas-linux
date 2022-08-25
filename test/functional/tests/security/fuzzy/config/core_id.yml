@@ -1,0 +1,11 @@
+- name: String
+  attributes:
+    name: CoreId
+    value: '1'
+    size: '12'
+    mutable: 'true'
+  children:
+   - name: Hint
+     attributes:
+       name: NumericalString
+       value: 'true'

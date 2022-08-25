@@ -1,0 +1,10 @@
+- name: String
+  attributes:
+    name: Format
+    value: 'table'
+    mutable: 'true'
+  children:
+   - name: Hint
+     attributes:
+       name: ValidValues
+       value: 'csv;'
