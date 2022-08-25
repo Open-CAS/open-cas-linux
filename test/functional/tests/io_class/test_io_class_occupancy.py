@@ -28,6 +28,7 @@ from tests.io_class.io_class_common import (
 )
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("io_size_multiplication", [0.5, 2])
@@ -157,6 +158,7 @@ def test_io_class_occupancy_directory_write(io_size_multiplication, cache_mode):
                 )
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("io_size_multiplication", [0.5, 2])
@@ -290,6 +292,7 @@ def test_io_class_occupancy_directory_read(io_size_multiplication):
                 )
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_ioclass_occupancy_sum_cache():

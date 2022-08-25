@@ -155,6 +155,7 @@ def test_cas_init_with_changed_mode(cache_mode_pair):
         validate_cache(cache_mode_pair[1])
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd]))
 @pytest.mark.require_plugin("power_control")
@@ -259,6 +260,7 @@ def test_cas_startup_lazy():
             )
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd]))
 def test_cas_startup_negative_missing_core():
@@ -320,6 +322,7 @@ def test_cas_startup_negative_missing_core():
     InitConfig().create_default_init_config()
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd]))
 def test_cas_startup_negative_missing_cache():
@@ -381,6 +384,7 @@ def test_cas_startup_negative_missing_cache():
     InitConfig().create_default_init_config()
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd]))
 @pytest.mark.require_plugin("power_control")
@@ -485,6 +489,7 @@ def test_failover_config_startup():
             )
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 def test_failover_config_startup_negative():
     """

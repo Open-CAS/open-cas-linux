@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -278,6 +278,7 @@ def test_acp_param_flush_max_buffers(cache_line_size, cache_mode):
         casadm.stop_all_caches()
 
 
+@pytest.mark.os_dependent
 @pytest.mark.parametrizex(
     "cache_line_size",
     [CacheLineSize.LINE_4KiB, CacheLineSize.LINE_16KiB, CacheLineSize.LINE_64KiB],

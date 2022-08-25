@@ -19,6 +19,7 @@ from test_utils.size import Unit, Size
 from tests.io_class.io_class_common import prepare, mountpoint, ioclass_config_path
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_ioclass_usage_sum():

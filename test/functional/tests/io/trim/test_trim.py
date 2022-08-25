@@ -171,6 +171,7 @@ def test_trim_propagation():
         cas_fio.run()
 
 
+@pytest.mark.os_dependent
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.InsertWrite))
 @pytest.mark.parametrizex("filesystem", Filesystem)
 @pytest.mark.parametrizex("cleaning_policy", CleaningPolicy)

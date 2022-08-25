@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -22,6 +22,7 @@ from test_utils.output import CmdException
 from storage_devices.disk import DiskTypeSet, DiskTypeLowerThan, DiskType
 
 
+@pytest.mark.os_dependent
 @pytest.mark.performance()
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))

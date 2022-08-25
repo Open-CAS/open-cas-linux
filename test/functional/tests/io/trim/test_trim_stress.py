@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -14,6 +14,7 @@ from test_tools.disk_utils import Filesystem
 from test_utils.size import Size, Unit
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand, DiskType.sata]))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.optane, DiskType.nand, DiskType.sata]))
 @pytest.mark.parametrizex("cache_mode", CacheMode)

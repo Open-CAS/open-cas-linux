@@ -1,16 +1,19 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import os
 import re
 
+import pytest
+
 from core.test_run import TestRun
 from test_tools.fs_utils import Permissions, PermissionsUsers, PermissionSign
 from test_utils.filesystem.fs_item import FsItem
 
 
+@pytest.mark.os_dependent
 def test_checksec():
     """
         title: Checking defenses enabled compilation flags.

@@ -76,9 +76,10 @@ def timed_async_power_cycle():
         )
 
 
+@pytest.mark.os_dependent_standby_mode_specific
+@pytest.mark.multidut(2)
 @pytest.mark.require_disk("cache_dev", DiskTypeSet([DiskType.optane]))
 @pytest.mark.require_disk("core_dev", DiskTypeSet([DiskType.nand]))
-@pytest.mark.multidut(2)
 @pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.parametrize("cls", [CacheLineSize.LINE_4KiB, CacheLineSize.LINE_64KiB])
 @pytest.mark.parametrize("cleaning_policy", [c for c in CleaningPolicy if c != CleaningPolicy.nop])
@@ -336,9 +337,10 @@ def test_failover_during_background_cleaning(cache_mode, cls, cleaning_policy, n
             TestRun.executor.wait_for_connection()
 
 
+@pytest.mark.os_dependent_standby_mode_specific
+@pytest.mark.multidut(2)
 @pytest.mark.require_disk("cache_dev", DiskTypeSet([DiskType.optane]))
 @pytest.mark.require_disk("core_dev", DiskTypeSet([DiskType.nand]))
-@pytest.mark.multidut(2)
 @pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.parametrize("cls", [CacheLineSize.LINE_4KiB, CacheLineSize.LINE_64KiB])
 @pytest.mark.parametrize("num_iterations", [2])
@@ -586,9 +588,10 @@ def test_failover_during_dirty_flush(cache_mode, cls, num_iterations):
             TestRun.executor.wait_for_connection()
 
 
+@pytest.mark.os_dependent_standby_mode_specific
+@pytest.mark.multidut(2)
 @pytest.mark.require_disk("cache_dev", DiskTypeSet([DiskType.optane]))
 @pytest.mark.require_disk("core_dev", DiskTypeSet([DiskType.nand]))
-@pytest.mark.multidut(2)
 @pytest.mark.parametrize("cache_mode", CacheMode.with_any_trait(CacheModeTrait.InsertRead))
 @pytest.mark.parametrize("cls", [CacheLineSize.LINE_4KiB, CacheLineSize.LINE_64KiB])
 @pytest.mark.parametrize("cleaning_policy", CleaningPolicy)
@@ -872,9 +875,10 @@ def test_failover_during_io_with_eviction(cache_mode, cls, cleaning_policy, num_
             TestRun.executor.wait_for_connection()
 
 
+@pytest.mark.os_dependent_standby_mode_specific
+@pytest.mark.multidut(2)
 @pytest.mark.require_disk("cache_dev", DiskTypeSet([DiskType.optane]))
 @pytest.mark.require_disk("core_dev", DiskTypeSet([DiskType.nand]))
-@pytest.mark.multidut(2)
 @pytest.mark.parametrize("cls", [CacheLineSize.LINE_4KiB, CacheLineSize.LINE_64KiB])
 @pytest.mark.parametrize("cleaning_policy", [c for c in CleaningPolicy if c != CleaningPolicy.alru])
 @pytest.mark.parametrize("num_iterations", [1])

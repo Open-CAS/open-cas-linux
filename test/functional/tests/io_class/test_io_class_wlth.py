@@ -15,6 +15,7 @@ from test_utils.size import Unit, Size
 from tests.io_class.io_class_common import prepare
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_ioclass_wlth():

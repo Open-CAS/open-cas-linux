@@ -71,6 +71,7 @@ def test_attach_core_pool():
         cache.stop()
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_core_pool_exclusive_open():
