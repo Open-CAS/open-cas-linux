@@ -1179,7 +1179,10 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 
 	if (strnlen(cmd_info->core_path_name, MAX_STR_LEN) >= MAX_STR_LEN)
 		return -OCF_ERR_INVAL;
-
+	
+	if (cmd_info->try_add && cmd_info->core_id == OCF_CORE_MAX)
+		return -OCF_ERR_INVAL;
+	
 	result = mngt_get_cache_by_id(cas_ctx, cmd_info->cache_id, &cache);
 	if (result && result != -OCF_ERR_CACHE_NOT_EXIST) {
 		return result;
@@ -2293,7 +2296,7 @@ int cache_mngt_standby_detach(struct kcas_standby_detach *cmd)
 
 	cache_priv = ocf_cache_get_priv(cache);
 	if (!cache_priv->cache_exp_obj_initialized) {
-		result = -KCAS_ERR_DETACHED;
+		result = -KCAS_ERR_STANDBY_DETACHED;
 		goto out_cache_put;
 	}
 
