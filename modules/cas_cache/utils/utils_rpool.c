@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -95,19 +95,6 @@ void _cas_rpool_pre_alloc_do(struct work_struct *ws)
 	complete(&info->cmpl);
 }
 
-
-int _cas_rpool_pre_alloc_schedule(int cpu,
-		struct _cas_rpool_pre_alloc_info *info)
-{
-	init_completion(&info->cmpl);
-	INIT_WORK(&info->ws, _cas_rpool_pre_alloc_do);
-	schedule_work_on(cpu, &info->ws);
-	schedule();
-
-	wait_for_completion(&info->cmpl);
-	return info->error;
-}
-
 void cas_rpool_destroy(struct cas_reserve_pool *rpool_master,
 		cas_rpool_del rpool_del, void *allocator_ctx)
 {
@@ -188,7 +175,13 @@ struct cas_reserve_pool *cas_rpool_create(uint32_t limit, char *name,
 		spin_lock_init(&current_rpool->lock);
 		INIT_LIST_HEAD(&current_rpool->list);
 
-		if (_cas_rpool_pre_alloc_schedule(i, &info))
+		init_completion(&info.cmpl);
+		INIT_WORK_ONSTACK(&info.ws, _cas_rpool_pre_alloc_do);
+		schedule_work_on(i, &info.ws);
+		schedule();
+
+		wait_for_completion(&info.cmpl);
+		if (info.error)
 			goto error;
 
 		CAS_DEBUG_PARAM("Created reserve poll [%s] for cpu %d",
