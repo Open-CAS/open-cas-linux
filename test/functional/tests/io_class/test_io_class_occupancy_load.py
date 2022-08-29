@@ -16,23 +16,32 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from test_utils.os_utils import sync, Udev
-from tests.io_class.io_class_common import prepare, mountpoint, TestRun, Unit, \
-    run_io_dir, get_io_class_dirty, get_io_class_usage, get_io_class_occupancy
+from tests.io_class.io_class_common import (
+    prepare,
+    mountpoint,
+    TestRun,
+    Unit,
+    run_io_dir,
+    get_io_class_dirty,
+    get_io_class_usage,
+    get_io_class_occupancy,
+)
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
-def test_ioclass_occuppancy_load(cache_line_size):
+def test_ioclass_occupancy_load():
     """
-        title: Load cache with occupancy limit specified
-        description: |
-          Load cache and verify if occupancy limits are loaded correctly and if
-          each part has assigned apropriate number of
-          dirty blocks.
-        pass_criteria:
-          - Occupancy thresholds have correct values for each ioclass after load
+    title: Load cache with occupancy limit specified
+    description: |
+      Load cache and verify if occupancy limits are loaded correctly and if
+      each part has assigned appropriate number of dirty blocks.
+    pass_criteria:
+      - Occupancy thresholds have correct values for each ioclass after load
     """
+    cache_line_size = CacheLineSize.LINE_64KiB
+    blocks4096 = Unit.Blocks4096.get_value()
+
     with TestRun.step("Prepare CAS device"):
         cache, core = prepare(cache_mode=CacheMode.WB, cache_line_size=cache_line_size)
         cache_size = cache.get_statistics().config_stats.cache_size
@@ -40,18 +49,14 @@ def test_ioclass_occuppancy_load(cache_line_size):
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(
-        f"Prepare filesystem and mount {core.path} at {mountpoint}"
-    ):
+    with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}"):
         filesystem = Filesystem.xfs
         core.create_filesystem(filesystem)
         core.mount(mountpoint)
         sync()
 
     with TestRun.step("Prepare test dirs"):
-        IoclassConfig = namedtuple(
-            "IoclassConfig", "id eviction_prio max_occupancy dir_path"
-        )
+        IoclassConfig = namedtuple("IoclassConfig", "id eviction_prio max_occupancy dir_path")
         io_classes = [
             IoclassConfig(1, 3, 0.30, f"{mountpoint}/A"),
             IoclassConfig(2, 3, 0.30, f"{mountpoint}/B"),
@@ -65,10 +70,10 @@ def test_ioclass_occuppancy_load(cache_line_size):
         ioclass_config.remove_ioclass_config()
         ioclass_config.create_ioclass_config(False)
 
-    with TestRun.step("Add default ioclasses"):
+    with TestRun.step("Add default io classes"):
         ioclass_config.add_ioclass(*str(IoClass.default(allocation="0.00")).split(","))
 
-    with TestRun.step("Add ioclasses for all dirs"):
+    with TestRun.step("Add io classes for all dirs"):
         for io_class in io_classes:
             ioclass_config.add_ioclass(
                 io_class.id,
@@ -88,32 +93,28 @@ def test_ioclass_occuppancy_load(cache_line_size):
             occupancy = get_io_class_occupancy(cache, io_class.id)
             if occupancy.get_value() != 0:
                 TestRun.LOGGER.error(
-                    f"Incorrect inital occupancy for ioclass id: {io_class.id}."
+                    f"Incorrect initial occupancy for ioclass id: {io_class.id}."
                     f" Expected 0, got: {occupancy}"
                 )
 
     with TestRun.step(f"Perform IO with size equal to cache size"):
         for io_class in io_classes:
-            run_io_dir(
-                f"{io_class.dir_path}/tmp_file", int((cache_size) / Unit.Blocks4096)
-            )
+            run_io_dir(f"{io_class.dir_path}/tmp_file", int(cache_size / blocks4096))
 
     with TestRun.step("Check if the ioclass did not exceed specified occupancy"):
         for io_class in io_classes:
-            actuall_dirty = get_io_class_dirty(cache, io_class.id)
+            actual_dirty = get_io_class_dirty(cache, io_class.id)
 
             dirty_limit = (
                 (io_class.max_occupancy * cache_size)
-                .align_down(Unit.Blocks4096.get_value())
+                .align_down(blocks4096)
                 .set_unit(Unit.Blocks4096)
             )
 
-            if not isclose(
-                actuall_dirty.get_value(), dirty_limit.get_value(), rel_tol=0.1
-            ):
+            if not isclose(actual_dirty.get_value(), dirty_limit.get_value(), rel_tol=0.1):
                 TestRun.LOGGER.error(
                     f"Dirty for ioclass id: {io_class.id} doesn't match expected."
-                    f"Expected: {dirty_limit}, actuall: {actuall_dirty}"
+                    f"Expected: {dirty_limit}, actual: {actual_dirty}"
                 )
 
     with TestRun.step("Stop cache without flushing the data"):
@@ -131,20 +132,18 @@ def test_ioclass_occuppancy_load(cache_line_size):
 
     with TestRun.step("Check if the ioclass did not exceed specified occupancy"):
         for io_class in io_classes:
-            actuall_dirty = get_io_class_dirty(cache, io_class.id)
+            actual_dirty = get_io_class_dirty(cache, io_class.id)
 
             dirty_limit = (
                 (io_class.max_occupancy * cache_size)
-                .align_down(Unit.Blocks4096.get_value())
+                .align_down(blocks4096)
                 .set_unit(Unit.Blocks4096)
             )
 
-            if not isclose(
-                actuall_dirty.get_value(), dirty_limit.get_value(), rel_tol=0.1
-            ):
+            if not isclose(actual_dirty.get_value(), dirty_limit.get_value(), rel_tol=0.1):
                 TestRun.LOGGER.error(
                     f"Dirty for ioclass id: {io_class.id} doesn't match expected."
-                    f"Expected: {dirty_limit}, actuall: {actuall_dirty}"
+                    f"Expected: {dirty_limit}, actual: {actual_dirty}"
                 )
 
     with TestRun.step("Compare ioclass configs"):
@@ -172,10 +171,10 @@ def test_ioclass_occuppancy_load(cache_line_size):
 
     with TestRun.step("Compare usage stats before and after the load"):
         for io_class in io_classes:
-            actuall_usage_stats = get_io_class_usage(cache, io_class.id)
-            if original_usage_stats[io_class.id] != actuall_usage_stats:
+            actual_usage_stats = get_io_class_usage(cache, io_class.id)
+            if original_usage_stats[io_class.id] != actual_usage_stats:
                 TestRun.LOGGER.error(
                     f"Usage stats doesn't match for ioclass {io_class.id}. "
                     f"Original: {original_usage_stats[io_class.id]}, "
-                    f"loaded: {actuall_usage_stats}"
+                    f"loaded: {actual_usage_stats}"
                 )

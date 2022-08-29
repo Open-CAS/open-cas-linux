@@ -1,19 +1,17 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
 
-from test_tools.disk_utils import Filesystem
 from api.cas import ioclass_config, casadm
 from api.cas.cache_config import CacheMode, CleaningPolicy, SeqCutOffPolicy
+from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
 from test_utils.os_utils import sync, Udev, drop_caches
 from test_utils.size import Unit, Size
-from core.test_run import TestRun
-
 
 dd_bs = Size(1, Unit.Blocks4096)
 dd_count = 1230
@@ -23,8 +21,7 @@ not_cached_mountpoint = "/tmp/ioclass_core_id_test/not_cached"
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrizex("filesystem", [fs for fs in Filesystem] + [None])
-def test_ioclass_core_id(filesystem):
+def test_ioclass_core_id():
     """
     title: Test for `core_id` classification rule
     description: |
@@ -34,12 +31,11 @@ def test_ioclass_core_id(filesystem):
      - IO to core with enabled selective allocation is cached
      - IO to core with disabled selective allocation is not cached
     """
-    fs_info = f"with {filesystem}" if filesystem else ""
+
     with TestRun.step(
-        f"Start cache with two cores on created partitions {fs_info}, "
-        "with NOP, disabled seq cutoff"
+        f"Start cache with two cores on created partitions with NOP, disabled seq cutoff"
     ):
-        cache, cores = prepare(filesystem, 2)
+        cache, cores = prepare(2)
         core_1, core_2 = cores[0], cores[1]
 
     with TestRun.step(f"Add core_id based classification rules"):
@@ -66,11 +62,6 @@ def test_ioclass_core_id(filesystem):
             cache_id=cache.cache_id, file=ioclass_config.default_config_file_path
         )
 
-    if filesystem:
-        with TestRun.step(f"Mount cores"):
-            core_1.mount(cached_mountpoint)
-            core_2.mount(not_cached_mountpoint)
-
     with TestRun.step(f"Reset counters"):
         sync()
         drop_caches()
@@ -78,21 +69,18 @@ def test_ioclass_core_id(filesystem):
         cache.reset_counters()
 
     with TestRun.step(f"Trigger IO to both cores"):
-        if filesystem:
-            dd_dst_paths = [cached_mountpoint + "/test_file", not_cached_mountpoint + "/test_file"]
-        else:
-            dd_dst_paths = [core_1.path, core_2.path]
+        dd_dst_paths = [core_1.path, core_2.path]
 
         for path in dd_dst_paths:
-            dd = (
+            (
                 Dd()
                 .input("/dev/zero")
                 .output(path)
                 .count(dd_count)
                 .block_size(dd_bs)
                 .oflag("sync")
+                .run()
             )
-            dd.run()
         sync()
         drop_caches()
 
@@ -105,13 +93,13 @@ def test_ioclass_core_id(filesystem):
         if core_1_occupancy < dd_size:
             TestRun.LOGGER.error(
                 f"First core's occupancy is {core_1_occupancy} "
-                f"- it is less than {dd_size} - triggerd IO size!"
+                f"- it is less than {dd_size} - triggered IO size!"
             )
 
         if core_2_occupancy.get_value() != 0:
             TestRun.LOGGER.error(f"First core's occupancy is {core_2_occupancy} instead of 0!")
 
-    with TestRun.step(f"Check ioclasses occupancy"):
+    with TestRun.step(f"Check io classes occupancy"):
         cached_ioclass_occupancy = cache.get_io_class_statistics(
             io_class_id=cached_ioclass_id
         ).usage_stats.occupancy
@@ -122,7 +110,7 @@ def test_ioclass_core_id(filesystem):
         if cached_ioclass_occupancy < dd_size:
             TestRun.LOGGER.error(
                 f"Cached ioclass occupancy is {cached_ioclass_occupancy} "
-                f"- it is less than {dd_size} - triggerd IO size!"
+                f"- it is less than {dd_size} - triggered IO size!"
             )
         if not_cached_ioclass_occupancy.get_value() != 0:
             TestRun.LOGGER.error(
@@ -138,7 +126,7 @@ def test_ioclass_core_id(filesystem):
             )
 
 
-def prepare(filesystem, cores_number):
+def prepare(cores_number):
     ioclass_config.remove_ioclass_config()
     cache_device = TestRun.disks["cache"]
     core_device = TestRun.disks["core"]
@@ -155,14 +143,13 @@ def prepare(filesystem, cores_number):
 
     cores = []
     for part in core_device.partitions:
-        if filesystem:
-            part.create_filesystem(filesystem)
         cores.append(casadm.add_core(cache, core_dev=part))
 
     cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
 
     ioclass_config.create_ioclass_config(
-        add_default_rule=False, ioclass_config_path=ioclass_config.default_config_file_path
+        add_default_rule=False,
+        ioclass_config_path=ioclass_config.default_config_file_path,
     )
     # To make test more precise all workload except of tested ioclass should be
     # put in pass-through mode

@@ -20,8 +20,14 @@ from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_utils import os_utils
 from test_utils.os_utils import Runlevel
 from test_utils.size import Size, Unit
-from tests.io_class.io_class_common import prepare, mountpoint, ioclass_config_path, \
-    compare_io_classes_list, run_io_dir_read, template_config_path
+from tests.io_class.io_class_common import (
+    prepare,
+    mountpoint,
+    ioclass_config_path,
+    compare_io_classes_list,
+    run_io_dir_read,
+    template_config_path,
+)
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -37,8 +43,7 @@ def test_io_class_service_load(runlevel):
         - IO class configuration is the same before and after reboot
     """
     with TestRun.step("Prepare devices."):
-        cache, core = prepare(core_size=Size(300, Unit.MebiByte),
-                              cache_mode=CacheMode.WT)
+        cache, core = prepare(core_size=Size(300, Unit.MebiByte), cache_mode=CacheMode.WT)
 
     with TestRun.step("Read the whole CAS device."):
         run_io_dir_read(core.path)
@@ -47,30 +52,37 @@ def test_io_class_service_load(runlevel):
         core.create_filesystem(Filesystem.ext4)
         core.mount(mountpoint)
 
-    with TestRun.step("Load IO class configuration file with rules that metadata will not be "
-                      "cached and all other IO will be cached as unclassified."):
+    with TestRun.step(
+        "Load IO class configuration file with rules that metadata will not be "
+        "cached and all other IO will be cached as unclassified."
+    ):
         config_io_classes = prepare_and_load_io_class_config(cache, metadata_not_cached=True)
 
     with TestRun.step("Run IO."):
         run_io()
 
     with TestRun.step("Save IO class usage and configuration statistic."):
-        saved_usage_stats = cache.get_io_class_statistics(io_class_id=0, stat_filter=[
-            StatsFilter.usage]).usage_stats
-        saved_conf_stats = cache.get_io_class_statistics(io_class_id=0, stat_filter=[
-            StatsFilter.conf]).config_stats
+        saved_usage_stats = cache.get_io_class_statistics(
+            io_class_id=0, stat_filter=[StatsFilter.usage]
+        ).usage_stats
+        saved_conf_stats = cache.get_io_class_statistics(
+            io_class_id=0, stat_filter=[StatsFilter.conf]
+        ).config_stats
 
     with TestRun.step("Create init config from running CAS configuration."):
         InitConfig.create_init_config_from_running_configuration(
-            cache_extra_flags=f"ioclass_file={ioclass_config_path}")
+            cache_extra_flags=f"ioclass_file={ioclass_config_path}"
+        )
         os_utils.sync()
 
     with TestRun.step(f"Reboot system to runlevel {runlevel}."):
         os_utils.change_runlevel(runlevel)
         TestRun.executor.reboot()
 
-    with TestRun.step("Check if CAS device loads properly - "
-                      "IO class configuration and statistics shall not change"):
+    with TestRun.step(
+        "Check if CAS device loads properly - "
+        "IO class configuration and statistics shall not change"
+    ):
         caches = casadm_parser.get_caches()
         if len(caches) != 1:
             TestRun.fail("Cache did not start at boot time.")
@@ -85,18 +97,26 @@ def test_io_class_service_load(runlevel):
         # Reads from core can invalidate some data so it is possible that occupancy after reboot
         # is lower than before
         reads_from_core = cache.get_statistics(stat_filter=[StatsFilter.blk]).block_stats.core.reads
-        read_usage_stats = cache.get_io_class_statistics(io_class_id=0, stat_filter=[
-            StatsFilter.usage]).usage_stats
-        read_conf_stats = cache.get_io_class_statistics(io_class_id=0, stat_filter=[
-            StatsFilter.conf]).config_stats
+        read_usage_stats = cache.get_io_class_statistics(
+            io_class_id=0, stat_filter=[StatsFilter.usage]
+        ).usage_stats
+        read_conf_stats = cache.get_io_class_statistics(
+            io_class_id=0, stat_filter=[StatsFilter.conf]
+        ).config_stats
 
         if read_conf_stats != saved_conf_stats:
-            TestRun.LOGGER.error(f"Statistics do not match. Before: {str(saved_conf_stats)} "
-                                 f"After: {str(read_conf_stats)}")
-        if read_usage_stats != saved_usage_stats and \
-                saved_usage_stats.occupancy - read_usage_stats.occupancy > reads_from_core:
-            TestRun.LOGGER.error(f"Statistics do not match. Before: {str(saved_usage_stats)} "
-                                 f"After: {str(read_usage_stats)}")
+            TestRun.LOGGER.error(
+                f"Statistics do not match. Before: {str(saved_conf_stats)} "
+                f"After: {str(read_conf_stats)}"
+            )
+        if (
+            read_usage_stats != saved_usage_stats
+            and saved_usage_stats.occupancy - read_usage_stats.occupancy > reads_from_core
+        ):
+            TestRun.LOGGER.error(
+                f"Statistics do not match. Before: {str(saved_usage_stats)} "
+                f"After: {str(read_usage_stats)}"
+            )
 
     with TestRun.step("Mount CAS device and run IO again."):
         core.mount(mountpoint)
@@ -108,24 +128,28 @@ def test_io_class_service_load(runlevel):
         read_total = cache_stats.request_stats.read.total
         read_hits_percentage = read_hits / read_total * 100
         if read_hits_percentage <= 95:
-            TestRun.LOGGER.error(f"Read hits percentage too low: {read_hits_percentage}%\n"
-                                 f"Read hits: {read_hits}, read total: {read_total}")
+            TestRun.LOGGER.error(
+                f"Read hits percentage too low: {read_hits_percentage}%\n"
+                f"Read hits: {read_hits}, read total: {read_total}"
+            )
 
 
 def run_io():
-    fio = Fio() \
-        .create_command() \
-        .block_size(Size(1, Unit.Blocks4096)) \
-        .io_engine(IoEngine.libaio) \
-        .read_write(ReadWrite.read) \
-        .directory(os.path.join(mountpoint)) \
-        .sync() \
-        .do_verify() \
-        .num_jobs(32) \
-        .run_time(timedelta(minutes=1)) \
-        .time_based()\
-        .nr_files(30)\
+    fio = (
+        Fio()
+        .create_command()
+        .block_size(Size(1, Unit.Blocks4096))
+        .io_engine(IoEngine.libaio)
+        .read_write(ReadWrite.read)
+        .directory(os.path.join(mountpoint))
+        .sync()
+        .do_verify()
+        .num_jobs(32)
+        .run_time(timedelta(minutes=1))
+        .time_based()
+        .nr_files(30)
         .file_size(Size(250, Unit.KiB))
+    )
     fio.run()
 
     os_utils.sync()

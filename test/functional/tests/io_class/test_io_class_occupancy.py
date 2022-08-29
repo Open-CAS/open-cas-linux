@@ -18,26 +18,33 @@ from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from test_utils.os_utils import sync, Udev
 from test_utils.size import Unit, Size
-from tests.io_class.io_class_common import prepare, mountpoint, run_io_dir, \
-    get_io_class_occupancy, run_io_dir_read, get_io_class_usage
+from tests.io_class.io_class_common import (
+    prepare,
+    mountpoint,
+    run_io_dir,
+    get_io_class_occupancy,
+    run_io_dir_read,
+    get_io_class_usage,
+)
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("io_size_multiplication", [0.5, 2])
 @pytest.mark.parametrize("cache_mode", [CacheMode.WT, CacheMode.WB])
-@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
-def test_ioclass_occupancy_directory_write(io_size_multiplication, cache_mode, cache_line_size):
+def test_io_class_occupancy_directory_write(io_size_multiplication, cache_mode):
     """
-        title: Test for max occupancy set for ioclass based on directory
-        description: |
-          Create ioclass for 3 different directories, each with different
-          max cache occupancy configured. Run IO against each directory and see
-          if occupancy limit is repected.
-        pass_criteria:
-          - Max occupancy is set correctly for each ioclass
-          - Each ioclass does not exceed max occupancy
+    title: Test for max occupancy set for ioclass based on directory
+    description: |
+      Create ioclass for 3 different directories, each with different
+      max cache occupancy configured. Run IO against each directory and see
+      if occupancy limit is respected.
+    pass_criteria:
+      - Max occupancy is set correctly for each ioclass
+      - Each ioclass does not exceed max occupancy
     """
+    cache_line_size = CacheLineSize.LINE_64KiB
+
     with TestRun.step("Prepare CAS device"):
         cache, core = prepare(cache_mode=cache_mode, cache_line_size=cache_line_size)
         cache_size = cache.get_statistics().config_stats.cache_size
@@ -66,10 +73,10 @@ def test_ioclass_occupancy_directory_write(io_size_multiplication, cache_mode, c
         ioclass_config.remove_ioclass_config()
         ioclass_config.create_ioclass_config(False)
 
-    with TestRun.step("Add default ioclasses"):
+    with TestRun.step("Add default io classes"):
         ioclass_config.add_ioclass(*str(IoClass.default(allocation="0.00")).split(","))
 
-    with TestRun.step("Add ioclasses for all dirs"):
+    with TestRun.step("Add io classes for all dirs"):
         for io_class in io_classes:
             ioclass_config.add_ioclass(
                 io_class.id,
@@ -94,7 +101,8 @@ def test_ioclass_occupancy_directory_write(io_size_multiplication, cache_mode, c
                 )
 
     with TestRun.step(
-        f"To each directory perform IO with size of {io_size_multiplication} max io_class occupancy"
+        f"To each directory perform IO"
+        f" with size of {io_size_multiplication} max io_class occupancy"
     ):
         for io_class in io_classes:
             original_occupancies = {}
@@ -123,7 +131,7 @@ def test_ioclass_occupancy_directory_write(io_size_multiplication, cache_mode, c
                 io_count = get_io_count(i, cache_size, cache_line_size, io_size_multiplication)
                 if (
                     original_occupancies[i.id] != actual_occupancy
-                    and io_count * Unit.Blocks4096.value < actual_occupancy.value
+                    and io_count * Unit.Blocks4096.get_value() < actual_occupancy.value
                 ):
                     TestRun.LOGGER.error(
                         f"Occupancy for ioclass {i.id} should not change "
@@ -141,7 +149,7 @@ def test_ioclass_occupancy_directory_write(io_size_multiplication, cache_mode, c
                 .set_unit(Unit.Blocks4096)
             )
 
-            # Divergency may be caused by rounding max occupancy
+            # Divergence may be caused by rounding max occupancy
             if actual_occupancy > occupancy_limit * 1.01:
                 TestRun.LOGGER.error(
                     f"Occupancy for ioclass id exceeded: {io_class.id}. "
@@ -152,20 +160,20 @@ def test_ioclass_occupancy_directory_write(io_size_multiplication, cache_mode, c
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("io_size_multiplication", [0.5, 2])
-@pytest.mark.parametrize("cache_mode", [CacheMode.WT, CacheMode.WB])
-@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
-def test_ioclass_occupancy_directory_read(io_size_multiplication, cache_line_size, cache_mode):
+def test_io_class_occupancy_directory_read(io_size_multiplication):
     """
-        title: Test for max occupancy set for ioclass based on directory - read
-        description: |
-          Set cache mode to pass-through and create files on mounted core
-          device. Swtich cache to write through, and load ioclasses applaying
-          to different files. Read files and check if occupancy threshold is
-          respected.
-        pass_criteria:
-          - Max occupancy is set correctly for each ioclass
-          - Each ioclass does not exceed max occupancy
+    title: Test for max occupancy set for ioclass based on directory - read
+    description: |
+      Set cache mode to pass-through and create files on mounted core device.
+      Switch cache to write through, and load io classes applying to different files.
+      Read files and check if occupancy threshold is respected.
+    pass_criteria:
+      - Max occupancy is set correctly for each ioclass
+      - Each ioclass does not exceed max occupancy
     """
+    cache_line_size = CacheLineSize.LINE_64KiB
+    cache_mode = CacheMode.WB
+
     with TestRun.step("Prepare CAS device"):
         cache, core = prepare(cache_mode=cache_mode, cache_line_size=cache_line_size)
         cache_size = cache.get_statistics().config_stats.cache_size
@@ -202,10 +210,10 @@ def test_ioclass_occupancy_directory_read(io_size_multiplication, cache_line_siz
         ioclass_config.remove_ioclass_config()
         ioclass_config.create_ioclass_config(False)
 
-    with TestRun.step("Add default ioclasses"):
+    with TestRun.step("Add default io classes"):
         ioclass_config.add_ioclass(*str(IoClass.default(allocation="0.00")).split(","))
 
-    with TestRun.step("Add ioclasses for all dirs"):
+    with TestRun.step("Add io classes for all dirs"):
         for io_class in io_classes:
             ioclass_config.add_ioclass(
                 io_class.id,
@@ -225,7 +233,7 @@ def test_ioclass_occupancy_directory_read(io_size_multiplication, cache_line_siz
             occupancy = get_io_class_occupancy(cache, io_class.id)
             if occupancy.get_value() != 0:
                 TestRun.LOGGER.error(
-                    f"Incorrect inital occupancy for ioclass id: {io_class.id}."
+                    f"Incorrect initial occupancy for ioclass id: {io_class.id}."
                     f" Expected 0, got: {occupancy}"
                 )
 
@@ -256,7 +264,7 @@ def test_ioclass_occupancy_directory_read(io_size_multiplication, cache_line_siz
                 io_count = get_io_count(i, cache_size, cache_line_size, io_size_multiplication)
                 if (
                     original_occupancies[i.id] != actual_occupancy
-                    and io_count * Unit.Blocks4096.value < actual_occupancy.value
+                    and io_count * Unit.Blocks4096.get_value() < actual_occupancy.value
                 ):
                     TestRun.LOGGER.error(
                         f"Occupancy for ioclass {i.id} should not change "
@@ -274,7 +282,7 @@ def test_ioclass_occupancy_directory_read(io_size_multiplication, cache_line_siz
                 .set_unit(Unit.Blocks4096)
             )
 
-            # Divergency may be caused by rounding max occupancy
+            # Divergence may be caused by rounding max occupancy
             if actual_occupancy > occupancy_limit * 1.01:
                 TestRun.LOGGER.error(
                     f"Occupancy for ioclass id exceeded: {io_class.id}. "
@@ -286,14 +294,14 @@ def test_ioclass_occupancy_directory_read(io_size_multiplication, cache_line_siz
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_ioclass_occupancy_sum_cache():
     """
-        title: Test for ioclasses occupancy sum
-        description: |
-          Create ioclass for 3 different directories, each with different
-          max cache occupancy configured. Trigger IO to each ioclass and check
-          if sum of their Usage stats is equal to cache Usage stats.
-        pass_criteria:
-          - Max occupancy is set correctly for each ioclass
-          - Sum of ioclassess stats is equal to cache stats
+    title: Test for io classes occupancy sum
+    description: |
+      Create ioclass for 3 different directories, each with different
+      max cache occupancy configured. Trigger IO to each ioclass and check
+      if sum of their Usage stats is equal to cache Usage stats.
+    pass_criteria:
+      - Max occupancy is set correctly for each ioclass
+      - Sum of io classes stats is equal to cache stats
     """
     with TestRun.step("Prepare CAS device"):
         cache, core = prepare()
@@ -324,7 +332,7 @@ def test_ioclass_occupancy_sum_cache():
         ioclass_config.remove_ioclass_config()
         ioclass_config.create_ioclass_config(False)
 
-    with TestRun.step("Add default ioclasses"):
+    with TestRun.step("Add default io classes"):
         ioclass_config.add_ioclass(*str(IoClass.default(allocation="0.00")).split(","))
 
     with TestRun.step("Add ioclasses for all dirs"):
@@ -365,7 +373,7 @@ def test_ioclass_occupancy_sum_cache():
         for io_class in io_classes:
             run_io_dir(
                 f"{io_class.dir_path}/tmp_file",
-                int((io_class.max_occupancy * cache_size) / Unit.Blocks4096),
+                int((io_class.max_occupancy * cache_size) / Unit.Blocks4096.get_value()),
             )
 
     with TestRun.step("Verify stats after IO"):

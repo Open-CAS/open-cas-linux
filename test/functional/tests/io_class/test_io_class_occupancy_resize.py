@@ -15,7 +15,12 @@ from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from test_utils.os_utils import sync, Udev
 from test_utils.size import Unit
-from tests.io_class.io_class_common import mountpoint, prepare, get_io_class_occupancy, run_io_dir
+from tests.io_class.io_class_common import (
+    mountpoint,
+    prepare,
+    get_io_class_occupancy,
+    run_io_dir,
+)
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -24,12 +29,12 @@ from tests.io_class.io_class_common import mountpoint, prepare, get_io_class_occ
 @pytest.mark.parametrize("new_occupancy", [25, 50, 70, 100])
 def test_ioclass_resize(cache_line_size, new_occupancy):
     """
-        title: Resize ioclass
-        description: |
-          Add ioclass, fill it with data, change it's size and check if new
-          limit is respected
-        pass_criteria:
-          - Occupancy threshold is respected
+    title: Resize ioclass
+    description: |
+      Add ioclass, fill it with data, change it's size and check if new
+      limit is respected
+    pass_criteria:
+      - Occupancy threshold is respected
     """
     with TestRun.step("Prepare CAS device"):
         cache, core = prepare(cache_mode=CacheMode.WT, cache_line_size=cache_line_size)
@@ -54,13 +59,13 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
         ioclass_config.remove_ioclass_config()
         ioclass_config.create_ioclass_config(False)
 
-    with TestRun.step("Add default ioclasses"):
+    with TestRun.step("Add default io classes"):
         ioclass_config.add_ioclass(
             ioclass_id=1,
             rule="metadata&done",
             eviction_priority=1,
             allocation="1.00",
-            ioclass_config_path=default_config_file_path
+            ioclass_config_path=default_config_file_path,
         )
         ioclass_config.add_ioclass(*str(IoClass.default(allocation="0.00")).split(","))
 
@@ -82,15 +87,15 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
         occupancy = get_io_class_occupancy(cache, io_class.id)
         if occupancy.get_value() != 0:
             TestRun.LOGGER.error(
-                f"Incorrect inital occupancy for ioclass id: {io_class.id}."
+                f"Incorrect initial occupancy for ioclass id: {io_class.id}."
                 f" Expected 0, got: {occupancy}"
             )
 
     with TestRun.step(f"Perform IO with size equal to cache size"):
-        run_io_dir(f"{io_class.dir_path}/tmp_file", int((cache_size) / Unit.Blocks4096))
+        run_io_dir(f"{io_class.dir_path}/tmp_file", int(cache_size / Unit.Blocks4096))
 
     with TestRun.step("Check if the ioclass did not exceed specified occupancy"):
-        actuall_occupancy = get_io_class_occupancy(cache, io_class.id)
+        actual_occupancy = get_io_class_occupancy(cache, io_class.id)
 
         occupancy_limit = (
             (io_class.max_occupancy * cache_size)
@@ -98,15 +103,16 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
             .set_unit(Unit.Blocks4096)
         )
 
-        # Divergency may be casued be rounding max occupancy
-        if actuall_occupancy > occupancy_limit * 1.01:
+        # Divergence may be caused be rounding max occupancy
+        if actual_occupancy > occupancy_limit * 1.01:
             TestRun.LOGGER.error(
                 f"Occupancy for ioclass id exceeded: {io_class.id}. "
-                f"Limit: {occupancy_limit}, actuall: {actuall_occupancy}"
+                f"Limit: {occupancy_limit}, actual: {actual_occupancy}"
             )
 
     with TestRun.step(
-        f"Resize ioclass from {io_class.max_occupancy*100}% to {new_occupancy}%" " cache occupancy"
+        f"Resize ioclass from {io_class.max_occupancy * 100}% to {new_occupancy}%"
+        " cache occupancy"
     ):
         io_class.max_occupancy = new_occupancy / 100
         ioclass_config.remove_ioclass_config()
@@ -119,7 +125,7 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
             rule="metadata&done",
             eviction_priority=1,
             allocation="1.00",
-            ioclass_config_path=default_config_file_path
+            ioclass_config_path=default_config_file_path,
         )
         ioclass_config.add_ioclass(
             io_class.id,
@@ -131,10 +137,10 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
         casadm.load_io_classes(cache_id=cache.cache_id, file=default_config_file_path)
 
     with TestRun.step(f"Perform IO with size equal to cache size"):
-        run_io_dir(f"{io_class.dir_path}/tmp_file", int((cache_size) / Unit.Blocks4096))
+        run_io_dir(f"{io_class.dir_path}/tmp_file", int(cache_size / Unit.Blocks4096))
 
     with TestRun.step("Check if the ioclass did not exceed specified occupancy"):
-        actuall_occupancy = get_io_class_occupancy(cache, io_class.id)
+        actual_occupancy = get_io_class_occupancy(cache, io_class.id)
 
         occupancy_limit = (
             (io_class.max_occupancy * cache_size)
@@ -142,9 +148,9 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
             .set_unit(Unit.Blocks4096)
         )
 
-        # Divergency may be casued be rounding max occupancy
-        if actuall_occupancy > occupancy_limit * 1.01:
+        # Divergence may be caused be rounding max occupancy
+        if actual_occupancy > occupancy_limit * 1.01:
             TestRun.LOGGER.error(
                 f"Occupancy for ioclass id exceeded: {io_class.id}. "
-                f"Limit: {occupancy_limit}, actuall: {actuall_occupancy}"
+                f"Limit: {occupancy_limit}, actual: {actual_occupancy}"
             )
