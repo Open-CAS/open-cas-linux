@@ -31,6 +31,14 @@ def test_ioclass_wlth():
 
     with TestRun.step(f"Add wlth based classification rules"):
         cached_ioclass_id = 10
+        ioclass_config.create_ioclass_config(add_default_rule=False)
+        ioclass_config.add_ioclass(
+            ioclass_id=0,
+            eviction_priority=22,
+            allocation="0",
+            rule=f"unclassified",
+            ioclass_config_path=ioclass_config.default_config_file_path,
+        )
         ioclass_config.add_ioclass(
             ioclass_id=cached_ioclass_id,
             eviction_priority=22,
