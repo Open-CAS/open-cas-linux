@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -175,7 +175,7 @@ def test_seq_cutoff_set_invalid_threshold(threshold):
                       f"{_threshold}"):
         command = set_param_cutoff_cmd(
             cache_id=str(cache.cache_id), core_id=str(cores[0].core_id),
-            threshold=str(int(_threshold.get_value())))
+            threshold=str(int(_threshold.get_value(Unit.KiloByte))))
         output = TestRun.executor.run_expect_fail(command)
         if "Invalid sequential cutoff threshold, must be in the range 1-4194181"\
                 not in output.stderr:
@@ -185,7 +185,7 @@ def test_seq_cutoff_set_invalid_threshold(threshold):
                       f"to value passed as a float"):
         command = set_param_cutoff_cmd(
             cache_id=str(cache.cache_id), core_id=str(cores[0].core_id),
-            threshold=str(_threshold.get_value()))
+            threshold=str(_threshold.get_value(Unit.KiloByte)))
         output = TestRun.executor.run_expect_fail(command)
         if "Invalid sequential cutoff threshold, must be a correct unsigned decimal integer"\
                 not in output.stderr:
