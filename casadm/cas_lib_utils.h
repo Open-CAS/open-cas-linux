@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -16,7 +16,7 @@ struct progress_status {
 	int progress_accumulated;	/*!< this is to ensure that progressbar is always
 					 *!< from 0 to 100% and progress indicated by it
 					 *!< never actually drops. */
-	int time_started;		/*!< time when particular long running
+	time_t time_started;		/*!< time when particular long running
 					 *!< operation was started */
 	char *friendly_name;		/*!< name of management operation that shall
 					 *!< be displayed in command prompt */
