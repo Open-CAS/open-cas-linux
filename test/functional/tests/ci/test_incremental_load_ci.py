@@ -110,8 +110,11 @@ def test_incremental_load_hidden_core():
 
     with TestRun.step("Load cache"):
         cache = casadm.load_cache(cache_dev)
-        if cache.get_status() is not CacheStatus.running:
-            TestRun.fail(f"Cache {cache.cache_id} should be running but is {cache.get_status()}.")
+        if cache.get_status() is not CacheStatus.incomplete:
+            TestRun.fail(
+                f"Cache {cache.cache_id} should be incomplete but is "
+                f"{cache.get_status()}."
+            )
         for core in cache.get_core_devices():
             if core.get_status() is not CoreStatus.active:
                 TestRun.fail(f"Core {core.core_id} should be Active but is {core.get_status()}.")
