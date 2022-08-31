@@ -23,6 +23,8 @@
 #include <cas_ioctl_codes.h>
 #include "statistics_view.h"
 
+#define DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
+
 #define HELP_HEADER OCF_PREFIX_LONG
 
 #define WRONG_DEVICE_ERROR "Specified caching device '%s' is not supported.\n"
@@ -826,7 +828,7 @@ int set_param_seq_cutoff_handle_option(char *opt, const char **arg)
 {
 	if (!strcmp(opt, "threshold")) {
 		if (validate_str_num(arg[0], "sequential cutoff threshold",
-					OCF_SEQ_CUTOFF_MIN_THRESHOLD / KiB,
+					DIV_ROUND_UP(OCF_SEQ_CUTOFF_MIN_THRESHOLD, KiB),
 					OCF_SEQ_CUTOFF_MAX_THRESHOLD / KiB) == FAILURE)
 			return FAILURE;
 
