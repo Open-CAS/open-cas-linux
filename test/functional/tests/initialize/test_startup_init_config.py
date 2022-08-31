@@ -304,7 +304,7 @@ def test_cas_startup_negative_missing_core():
 
     escape = EmergencyEscape()
     escape.add_escape_method_command("/usr/bin/rm /etc/opencas/opencas.conf")
-    set_cas_service_timeout(timedelta(seconds=10), interval=timedelta(seconds=1))
+    set_cas_service_timeout(timedelta(seconds=10))
 
     with TestRun.step("Reboot DUT with emergency escape armed"):
         with escape:
