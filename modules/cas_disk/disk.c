@@ -13,6 +13,18 @@
 
 #define CASDSK_DISK_OPEN_FMODE (FMODE_READ | FMODE_WRITE)
 
+static inline struct block_device *open_bdev_exclusive(const char *path,
+						       fmode_t mode,
+						       void *holder)
+{
+	return blkdev_get_by_path(path, mode | FMODE_EXCL, holder);
+}
+
+static inline void close_bdev_exclusive(struct block_device *bdev, fmode_t mode)
+{
+	blkdev_put(bdev, mode | FMODE_EXCL);
+}
+
 static void _casdsk_disk_release(struct kobject *kobj)
 {
 	struct casdsk_disk *dsk;

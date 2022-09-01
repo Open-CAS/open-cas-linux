@@ -11,6 +11,8 @@
 #include "disk.h"
 #include "exp_obj.h"
 
+#define CASDSK_LOGO "CAS Disk"
+
 /* Layer information. */
 MODULE_AUTHOR("Intel(R) Corporation");
 MODULE_LICENSE("Dual BSD/GPL");

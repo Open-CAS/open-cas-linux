@@ -19,6 +19,29 @@
 #define CASDSK_DEV_MINORS 16
 #define KMEM_CACHE_MIN_SIZE sizeof(void *)
 
+static inline int bd_claim_by_disk(struct block_device *bdev, void *holder,
+				   struct gendisk *disk)
+{
+	return bd_link_disk_holder(bdev, disk);
+}
+
+static inline void bd_release_from_disk(struct block_device *bdev,
+					struct gendisk *disk)
+{
+	return bd_unlink_disk_holder(bdev, disk);
+}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
+	#define KRETURN(x)	({ return (x); })
+	#define MAKE_RQ_RET_TYPE blk_qc_t
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0)
+	#define KRETURN(x)	return
+	#define MAKE_RQ_RET_TYPE void
+#else
+	#define KRETURN(x)	({ return (x); })
+	#define MAKE_RQ_RET_TYPE int
+#endif
+
 int __init casdsk_init_exp_objs(void)
 {
 	CASDSK_DEBUG_TRACE();
