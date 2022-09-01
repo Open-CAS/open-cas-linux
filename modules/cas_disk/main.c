@@ -51,7 +51,7 @@ static int __init casdsk_init_module(void)
 
 	mutex_unlock(&casdsk_module->lock);
 
-	printk(CASDSK_KERN_INFO "%s Version %s (%s)::Module loaded successfully\n",
+	printk(KERN_INFO "%s Version %s (%s)::Module loaded successfully\n",
 		CASDSK_LOGO, CAS_VERSION, CAS_KERNEL);
 
 	return result;

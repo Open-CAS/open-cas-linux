@@ -28,19 +28,7 @@ struct casdsk_module {
 
 extern struct casdsk_module *casdsk_module;
 
-/* prefixes for messages */
 #define CASDSK_LOGO "CAS Disk"
-#define CASDSK_PREFIX_SHORT "[" CASDSK_LOGO "] "
-#define CASDSK_PREFIX_LONG "Cache Acceleration Software Linux"
-
-#define CASDSK_KERN_EMERG KERN_EMERG""CASDSK_PREFIX_SHORT
-#define CASDSK_KERN_ALERT KERN_ALERT""CASDSK_PREFIX_SHORT
-#define CASDSK_KERN_CRIT KERN_CRIT""CASDSK_PREFIX_SHORT
-#define CASDSK_KERN_ERR KERN_ERR""CASDSK_PREFIX_SHORT
-#define CASDSK_KERN_WARNING KERN_WARNING""CASDSK_PREFIX_SHORT
-#define CASDSK_KERN_NOTICE KERN_NOTICE""CASDSK_PREFIX_SHORT
-#define CASDSK_KERN_INFO KERN_INFO""CASDSK_PREFIX_SHORT
-#define CASDSK_KERN_DEBUG KERN_DEBUG""CASDSK_PREFIX_SHORT
 
 static inline struct block_device *open_bdev_exclusive(const char *path,
 						       fmode_t mode,

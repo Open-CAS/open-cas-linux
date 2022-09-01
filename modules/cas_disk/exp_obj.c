@@ -113,10 +113,10 @@ static int _casdsk_del_partitions(struct casdsk_disk *dsk)
 		}
 		result = cas_vfs_ioctl(bd_file, BLKPG, usr_barg);
 		if (result == 0) {
-			printk(CASDSK_KERN_INFO "Partition %d on %s hidden\n",
+			printk(KERN_INFO "Partition %d on %s hidden\n",
 				part_no, bd->bd_disk->disk_name);
 		} else {
-			printk(CASDSK_KERN_ERR "Error(%d) hiding the partition %d on %s\n",
+			printk(KERN_ERR "Error(%d) hiding the partition %d on %s\n",
 				result, part_no, bd->bd_disk->disk_name);
 			break;
 		}
@@ -148,7 +148,7 @@ static int _casdsk_exp_obj_hide_parts(struct casdsk_disk *dsk)
 
 	if (disk_max_parts(dsk->bd->bd_disk) > 1) {
 		if (_casdsk_del_partitions(dsk)) {
-			printk(CASDSK_KERN_ERR "Error deleting a partition on thedevice %s\n",
+			printk(KERN_ERR "Error deleting a partition on thedevice %s\n",
 				gdsk->disk_name);
 
 			/* Try restore previous partitions by rescaning */
@@ -534,7 +534,7 @@ int casdsk_exp_obj_activate(struct casdsk_disk *dsk)
 
 	snprintf(path, PATH_MAX, "/dev/%s", dsk->exp_obj->dev_name);
 	if (_casdsk_exp_obj_exists(path)) {
-		printk(CASDSK_KERN_ERR "Could not activate exported object, "
+		printk(KERN_ERR "Could not activate exported object, "
 				"because file %s exists.\n", path);
 		kfree(path);
 		return -EEXIST;
