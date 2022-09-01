@@ -129,3 +129,33 @@ def check_if_installed(version: str = ""):
         TestRun.LOGGER.info(f"CAS version '{version}' is installed")
 
     return True
+
+
+def create_packages(
+    package_type,
+    sources_dir,
+    packages_dir: str = "",
+    debug: bool = False,
+    arch: str = "",
+    source: bool = False,
+):
+    packages_dir = packages_dir or os.path.join(sources_dir, "packages")
+    pckgen = os.path.join(sources_dir, "tools", "pckgen")
+
+    opts = f"{package_type} --output-dir {packages_dir}"
+    if debug:
+        opts += " --debug"
+    if arch:
+        opts += f" --arch {arch}"
+    if source:
+        if package_type.lower() == "rpm":
+            source_package_type = "srpm"
+        elif package_type.lower() == "deb":
+            source_package_type = "dsc"
+        else:
+            source_package_type = ""
+
+        opts += f" {source_package_type}"
+
+    TestRun.LOGGER.info(f"Creating Open CAS {package_type.upper()} packages")
+    TestRun.executor.run_expect_success(f"{pckgen} {opts} {sources_dir}")
