@@ -59,7 +59,7 @@ def install_opencas(destdir: str = ""):
     if output.exit_code != 0:
         raise CmdException("Failed to install Open CAS", output)
 
-    output = TestRun.executor.run("rmmod cas_cache cas_disk; modprobe cas_cache")
+    output = TestRun.executor.run("rmmod cas_cache; modprobe cas_cache")
     if output.exit_code != 0:
         raise CmdException("Failed to reload modules", output)
 

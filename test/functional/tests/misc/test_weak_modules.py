@@ -19,7 +19,7 @@ from test_tools.packaging import Packages
 
 
 modules_links_dir = "/lib/modules/$(uname -r)/weak-updates/block/opencas"
-modules_names = ["cas_cache.ko", "cas_disk.ko"]
+modules_names = ["cas_cache.ko"]
 
 
 def test_weak_modules():
