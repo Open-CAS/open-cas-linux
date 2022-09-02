@@ -2508,34 +2508,6 @@ int cas_module_version(char *buff, int size)
 	}
 }
 
-int disk_module_version(char *buff, int size)
-{
-	FILE *fd;
-	int n_read;
-
-	if (size <= 0 || size > MAX_STR_LEN) {
-		return FAILURE;
-	}
-
-	fd = fopen("/sys/module/cas_disk/version", "r");
-	if (!fd) {
-		return FAILURE;
-	}
-
-	n_read = fread(buff, 1, size, fd);
-	if (ferror(fd)) {
-		n_read = 0;
-	}
-	fclose(fd);
-
-	if (n_read > 0) {
-		buff[n_read - 1] = '\0';
-		return SUCCESS;
-	} else {
-		return FAILURE;
-	}
-}
-
 float calculate_flush_progress(unsigned dirty, unsigned flushed)
 {
 	unsigned total_dirty;

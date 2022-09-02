@@ -7,11 +7,8 @@
 
 #include <linux/blkdev.h>
 #include "linux_kernel_version.h"
-
-/**
- * Version of cas_disk interface
- */
-#define CASDSK_IFACE_VERSION 3
+#include "disk.h"
+#include "exp_obj.h"
 
 struct casdsk_disk;
 
@@ -30,12 +27,6 @@ struct casdsk_exp_obj_ops {
 	void (*submit_bio)(struct casdsk_disk *dsk,
 			       struct bio *bio, void *private);
 };
-
-/**
- * @brief Get version of cas_disk interface
- * @return cas_disk interface version
- */
-uint32_t casdsk_get_version(void);
 
 /**
  * @brief Open block device

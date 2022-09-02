@@ -40,16 +40,12 @@ MODULE_PARM_DESC(seq_cut_off_mb,
 
 /* globals */
 ocf_ctx_t cas_ctx;
+struct casdsk_module cas_module;
+struct casdsk_module *casdsk_module;
 
 static int __init cas_init_module(void)
 {
 	int result = 0;
-
-	if (casdsk_get_version() != CASDSK_IFACE_VERSION) {
-		printk(KERN_ERR OCF_PREFIX_SHORT
-				"Incompatible cas_disk module\n");
-		return -EINVAL;
-	}
 
 	if (!writeback_queue_unblock_size || !max_writeback_queue_size) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
@@ -76,18 +72,28 @@ static int __init cas_init_module(void)
 		return -EINVAL;
 	}
 
+	casdsk_module = &cas_module;
+
+	result = casdsk_init_exp_objs();
+	if (result)
+		return result;
+
+	result = casdsk_init_disks();
+	if (result)
+		goto error_init_disks;
+
 	result = cas_initialize_context();
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
 				"Cannot initialize cache library\n");
-		return result;
+		goto error_init_context;
 	}
 
 	result = cas_ctrl_device_init();
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
 				"Cannot initialize control device\n");
-		goto error_cas_ctx_init;
+		goto error_init_device;
 	}
 
 	printk(KERN_INFO "%s Version %s (%s)::Module loaded successfully\n",
@@ -95,8 +101,12 @@ static int __init cas_init_module(void)
 
 	return 0;
 
-error_cas_ctx_init:
+error_init_device:
 	cas_cleanup_context();
+error_init_context:
+	casdsk_deinit_disks();
+error_init_disks:
+	casdsk_deinit_exp_objs();
 
 	return result;
 }
@@ -107,6 +117,8 @@ static void __exit cas_exit_module(void)
 {
 	cas_ctrl_device_deinit();
 	cas_cleanup_context();
+	casdsk_deinit_disks();
+	casdsk_deinit_exp_objs();
 }
 
 module_exit(cas_exit_module);

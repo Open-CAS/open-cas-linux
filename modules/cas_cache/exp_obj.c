@@ -10,11 +10,12 @@
 #include <linux/elevator.h>
 #include <linux/blk-mq.h>
 
-#include "cas_disk_defs.h"
 #include "cas_disk.h"
 #include "disk.h"
 #include "exp_obj.h"
 #include "linux_kernel_version.h"
+#include "cas_cache.h"
+#include "debug.h"
 
 #define CASDSK_DEV_MINORS 16
 #define KMEM_CACHE_MIN_SIZE sizeof(void *)
@@ -310,7 +311,6 @@ void casdsk_exp_obj_free(struct casdsk_disk *dsk)
 	kobject_put(&exp_obj->kobj);
 	dsk->exp_obj = NULL;
 }
-EXPORT_SYMBOL(casdsk_exp_obj_free);
 
 static void __casdsk_exp_obj_release(struct casdsk_exp_obj *exp_obj)
 {
@@ -504,7 +504,6 @@ error_exp_obj_alloc:
 	return result;
 
 }
-EXPORT_SYMBOL(casdsk_exp_obj_create);
 
 struct request_queue *casdsk_exp_obj_get_queue(struct casdsk_disk *dsk)
 {
@@ -512,7 +511,6 @@ struct request_queue *casdsk_exp_obj_get_queue(struct casdsk_disk *dsk)
 	BUG_ON(!dsk->exp_obj);
 	return dsk->exp_obj->queue;
 }
-EXPORT_SYMBOL(casdsk_exp_obj_get_queue);
 
 struct gendisk *casdsk_exp_obj_get_gendisk(struct casdsk_disk *dsk)
 {
@@ -520,7 +518,6 @@ struct gendisk *casdsk_exp_obj_get_gendisk(struct casdsk_disk *dsk)
 	BUG_ON(!dsk->exp_obj);
 	return dsk->exp_obj->gd;
 }
-EXPORT_SYMBOL(casdsk_exp_obj_get_gendisk);
 
 static bool _casdsk_exp_obj_exists(const char *path)
 {
@@ -588,7 +585,6 @@ error_bd_claim:
 	dsk->exp_obj->activated = false;
 	return result;
 }
-EXPORT_SYMBOL(casdsk_exp_obj_activate);
 
 bool casdsk_exp_obj_activated(struct casdsk_disk *dsk)
 {
@@ -618,7 +614,6 @@ int casdsk_exp_obj_lock(struct casdsk_disk *dsk)
 	mutex_unlock(&dsk->openers_lock);
 	return result;
 }
-EXPORT_SYMBOL(casdsk_exp_obj_lock);
 
 int casdsk_exp_obj_unlock(struct casdsk_disk *dsk)
 {
@@ -631,7 +626,6 @@ int casdsk_exp_obj_unlock(struct casdsk_disk *dsk)
 
 	return 0;
 }
-EXPORT_SYMBOL(casdsk_exp_obj_unlock);
 
 int casdsk_exp_obj_destroy(struct casdsk_disk *dsk)
 {
@@ -663,4 +657,3 @@ int casdsk_exp_obj_destroy(struct casdsk_disk *dsk)
 	return 0;
 
 }
-EXPORT_SYMBOL(casdsk_exp_obj_destroy);

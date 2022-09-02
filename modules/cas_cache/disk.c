@@ -6,10 +6,10 @@
 #include <linux/slab.h>
 #include <linux/fs.h>
 #include <linux/delay.h>
-#include "cas_disk_defs.h"
 #include "cas_cache.h"
 #include "disk.h"
 #include "exp_obj.h"
+#include "debug.h"
 
 #define CASDSK_DISK_OPEN_FMODE (FMODE_READ | FMODE_WRITE)
 
@@ -107,7 +107,6 @@ struct casdsk_disk *casdsk_disk_open(const char *path, void *private)
 		result = -ENOMEM;
 		goto error_kmem;
 	}
-	mutex_init(&dsk->lock);
 
 	mutex_init(&dsk->openers_lock);
 
@@ -126,12 +125,8 @@ struct casdsk_disk *casdsk_disk_open(const char *path, void *private)
 
 	dsk->private = private;
 
-	mutex_lock(&casdsk_module->lock);
-
 	dsk->id = casdsk_module->next_disk_id++;
 	list_add(&dsk->list, &casdsk_module->disk_list);
-
-	mutex_unlock(&casdsk_module->lock);
 
 	result = _casdsk_disk_init_kobject(dsk);
 	if (result)
@@ -142,9 +137,7 @@ struct casdsk_disk *casdsk_disk_open(const char *path, void *private)
 	return dsk;
 
 error_kobject:
-	mutex_lock(&casdsk_module->lock);
 	list_del(&dsk->list);
-	mutex_unlock(&casdsk_module->lock);
 	close_bdev_exclusive(dsk->bd, CASDSK_DISK_OPEN_FMODE);
 error_open_bdev:
 	kfree(dsk->path);
@@ -153,7 +146,6 @@ error_kstrdup:
 error_kmem:
 	return ERR_PTR(result);
 }
-EXPORT_SYMBOL(casdsk_disk_open);
 
 static void _casdsk_disk_claim(struct casdsk_disk *dsk, void *private)
 {
@@ -167,19 +159,15 @@ struct casdsk_disk *casdsk_disk_claim(const char *path, void *private)
 
 	BUG_ON(!path);
 
-	mutex_lock(&casdsk_module->lock);
 	list_for_each(item, &casdsk_module->disk_list) {
 		dsk = list_entry(item, struct casdsk_disk, list);
 		if (strncmp(path, dsk->path, PATH_MAX) == 0) {
 			_casdsk_disk_claim(dsk, private);
-			mutex_unlock(&casdsk_module->lock);
 			return dsk;
 		}
 	}
-	mutex_unlock(&casdsk_module->lock);
 	return NULL;
 }
-EXPORT_SYMBOL(casdsk_disk_claim);
 
 static void __casdsk_disk_close(struct casdsk_disk *dsk)
 {
@@ -196,22 +184,16 @@ void casdsk_disk_close(struct casdsk_disk *dsk)
 
 	CASDSK_DEBUG_DISK(dsk, "Destroying (%p)", dsk);
 
-	mutex_lock(&casdsk_module->lock);
-
 	list_del(&dsk->list);
-
-	mutex_unlock(&casdsk_module->lock);
 
 	__casdsk_disk_close(dsk);
 }
-EXPORT_SYMBOL(casdsk_disk_close);
 
 struct block_device *casdsk_disk_get_blkdev(struct casdsk_disk *dsk)
 {
 	BUG_ON(!dsk);
 	return dsk->bd;
 }
-EXPORT_SYMBOL(casdsk_disk_get_blkdev);
 
 struct gendisk *casdsk_disk_get_gendisk(struct casdsk_disk *dsk)
 {
@@ -226,18 +208,15 @@ struct request_queue *casdsk_disk_get_queue(struct casdsk_disk *dsk)
 	BUG_ON(!dsk->bd);
 	return cas_bdev_whole(dsk->bd)->bd_disk->queue;
 }
-EXPORT_SYMBOL(casdsk_disk_get_queue);
 
 int casdsk_disk_allocate_minors(int count)
 {
 	int minor = -1;
 
-	mutex_lock(&casdsk_module->lock);
 	if (casdsk_module->next_minor + count <= (1 << MINORBITS)) {
 		minor = casdsk_module->next_minor;
 		casdsk_module->next_minor += count;
 	}
-	mutex_unlock(&casdsk_module->lock);
 
 	return minor;
 }

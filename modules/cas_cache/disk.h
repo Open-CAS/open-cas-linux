@@ -2,7 +2,7 @@
 * Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
-#ifndef __
+#ifndef __CASDISK_DISK_H__
 #define __CASDISK_DISK_H__
 
 #include <linux/kobject.h>
@@ -10,14 +10,13 @@
 #include <linux/blkdev.h>
 #include <linux/mutex.h>
 #include <linux/blk-mq.h>
+#include "cas_cache.h"
 
 struct casdsk_exp_obj;
 
 struct casdsk_disk {
 	uint32_t id;
 	char *path;
-
-	struct mutex lock;
 
 	struct mutex openers_lock;
 	unsigned int openers;

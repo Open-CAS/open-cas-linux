@@ -1849,13 +1849,6 @@ static int handle_version(void)
 		fprintf(intermediate_file[1], "%s\n", buff);
 	}
 
-	fprintf(intermediate_file[1], TAG(TABLE_ROW) OCF_LOGO " Disk Kernel Module,");
-	if (disk_module_version(buff, MAX_STR_LEN)) {
-		fprintf(intermediate_file[1], "Not Loaded\n");
-	} else {
-		fprintf(intermediate_file[1], "%s\n", buff);
-	}
-
 	fprintf(intermediate_file[1], TAG(TABLE_ROW) OCF_LOGO " CLI Utility,");
 	fprintf(intermediate_file[1], "%s\n", CAS_VERSION);
 
