@@ -41,16 +41,6 @@ void casdsk_deinit_disks(void);
 
 int casdsk_disk_allocate_minors(int count);
 
-static inline void casdsk_disk_lock(struct casdsk_disk *dsk)
-{
-	mutex_lock(&dsk->lock);
-}
-
-static inline void casdsk_disk_unlock(struct casdsk_disk *dsk)
-{
-	mutex_unlock(&dsk->lock);
-}
-
 static inline struct casdsk_disk *casdsk_kobj_to_disk(struct kobject *kobj)
 {
 	return container_of(kobj, struct casdsk_disk, kobj);
