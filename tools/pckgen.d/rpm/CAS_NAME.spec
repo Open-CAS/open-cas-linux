@@ -27,7 +27,7 @@ URL:        <CAS_HOMEPAGE>
 Source0:    https://github.com/Open-CAS/open-cas-linux/releases/download/v%{version}/%{name}-%{version}.tar.gz
 Packager:   <PACKAGE_MAINTAINER>
 BuildRequires:  coreutils, gawk, gcc, kernel-devel, kernel-headers, make
-Requires:   <CAS_NAME>-modules-%{version}, python3, sed, python3-packaging, python3-PyYAML
+Requires:   <CAS_NAME>-modules-%{version}, python3, sed, python3-PyYAML
 %description
 Open Cache Acceleration Software (Open CAS) is an open source project
 encompassing block caching software libraries, adapters, tools and more.
