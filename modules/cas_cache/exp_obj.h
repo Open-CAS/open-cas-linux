@@ -40,9 +40,4 @@ void casdsk_deinit_exp_objs(void);
 
 void casdsk_exp_obj_free(struct casdsk_disk *dsk);
 
-static inline struct casdsk_exp_obj *casdsk_kobj_to_exp_obj(struct kobject *kobj)
-{
-	return container_of(kobj, struct casdsk_exp_obj, kobj);
-}
-
 #endif

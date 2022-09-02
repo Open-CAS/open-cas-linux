@@ -13,6 +13,11 @@
 
 #define CASDSK_DISK_OPEN_FMODE (FMODE_READ | FMODE_WRITE)
 
+static inline struct casdsk_disk *casdsk_kobj_to_disk(struct kobject *kobj)
+{
+	return container_of(kobj, struct casdsk_disk, kobj);
+}
+
 static inline struct block_device *open_bdev_exclusive(const char *path,
 						       fmode_t mode,
 						       void *holder)

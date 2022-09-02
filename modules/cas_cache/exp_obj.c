@@ -20,6 +20,11 @@
 #define CASDSK_DEV_MINORS 16
 #define KMEM_CACHE_MIN_SIZE sizeof(void *)
 
+static inline struct casdsk_exp_obj *casdsk_kobj_to_exp_obj(struct kobject *kobj)
+{
+	return container_of(kobj, struct casdsk_exp_obj, kobj);
+}
+
 static inline int bd_claim_by_disk(struct block_device *bdev, void *holder,
 				   struct gendisk *disk)
 {
