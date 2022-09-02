@@ -19,7 +19,8 @@
 #include "classifier.h"
 #include "context.h"
 #include <linux/kallsyms.h>
-#include "cas_disk.h"
+#include "disk.h"
+#include "exp_obj.h"
 
 #define CAS_KERN_EMERG KERN_EMERG OCF_PREFIX_SHORT
 #define CAS_KERN_ALERT KERN_ALERT OCF_PREFIX_SHORT

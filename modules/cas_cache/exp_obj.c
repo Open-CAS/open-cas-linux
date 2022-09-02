@@ -10,7 +10,6 @@
 #include <linux/elevator.h>
 #include <linux/blk-mq.h>
 
-#include "cas_disk.h"
 #include "disk.h"
 #include "exp_obj.h"
 #include "linux_kernel_version.h"
