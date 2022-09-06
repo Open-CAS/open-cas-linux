@@ -78,6 +78,9 @@ CFLAGS    += -O0 -g
 else
 CFLAGS    += -O2 -D_FORTIFY_SOURCE=2
 endif
+ifdef DEBUG_PACKAGE
+CFLAGS    += -g3
+endif
 CFLAGS    += -Wall -Werror -z relro -z now -fstack-protector -fPIC -Wformat -Wformat-security -fno-strict-aliasing
 
 #

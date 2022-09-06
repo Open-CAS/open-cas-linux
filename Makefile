@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2012-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -30,13 +30,13 @@ archives:
 	@tools/pckgen $(PWD) tar zip
 
 rpm:
-	@tools/pckgen $(PWD) rpm
+	@tools/pckgen $(PWD) rpm --debug
 
 srpm:
 	@tools/pckgen $(PWD) srpm
 
 deb:
-	@tools/pckgen $(PWD) deb
+	@tools/pckgen $(PWD) deb --debug
 
 dsc:
 	@tools/pckgen $(PWD) dsc

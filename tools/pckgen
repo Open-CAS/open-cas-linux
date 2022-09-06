@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -16,6 +16,7 @@ CAS_NAME="open-cas-linux"
 CAS_HOMEPAGE="https://open-cas.github.io"
 CAS_GIT="https://github.com/Open-CAS/open-cas-linux.git"
 CAS_LICENSE_NAME="BSD-3-Clause"
+CAS_MODULES_DIR="extra/block/opencas"
 SUPPORTED_FROM_VERSION="20.03"
 THIS=$(basename "$0")
 ARCH="$(uname -i)"
@@ -71,7 +72,7 @@ print_help() {
     echo "  -a, --arch <ARCH>               target platform architecture for packages"
     echo "  -o, --output-dir <DIR>          put all created files in the given directory;"
     echo "                                  default: 'SOURCES_PATH/packages/'"
-    echo "  -d, --debug                     create all debug files and packages as well"
+    echo "  -d, --debug                     include debug information and create debug packages"
     echo "  -c, --clean                     clean all temporary files and folders that"
     echo "                                  may have been left around if $THIS ended"
     echo "                                  unexpectedly in the previous run"
@@ -298,14 +299,21 @@ rpm_spec_prepare() {
     sed -i "s/<CAS_NAME>/$CAS_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     sed -i "s/<CAS_VERSION>/$CAS_VERSION/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     sed -i "s/<CAS_LICENSE_NAME>/$CAS_LICENSE_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+    sed -i "s|<CAS_MODULES_DIR>|$CAS_MODULES_DIR|g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     sed -i "s/<CAS_HOMEPAGE>/${CAS_HOMEPAGE//\//\\/}/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     sed -i "s/<PACKAGE_MAINTAINER>/$PACKAGE_MAINTAINER/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+
     if [ "$DEBUG" ]; then
-        echo "---   Debug RPMs will be built as well"
-        sed -i "s/%define debug_package %{nil}//g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        echo "---   Debug info will be included and debug packages created as well"
+
+        sed -i "s/<MAKE_BUILD>/%make_build DEBUG_PACKAGE=1/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        sed -i "/<DEBUG_PACKAGE>/d" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         if [[ $(check_os) =~ suse|sles ]]; then
-            sed -i "s/%prep/%debug_package\n\n\n%prep/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+            sed -i "/%prep/i %debug_package\n\n" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         fi
+    else
+        sed -i "s/<MAKE_BUILD>/%make_build/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        sed -i "s/<DEBUG_PACKAGE>/%define debug_package %{nil}/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     fi
 
     if [ ! -f "$RPM_SPECS_DIR/$CAS_NAME.spec" ]; then
@@ -341,11 +349,22 @@ deb_control_files_prepare() {
         sed -i "s/<CAS_NAME>/$CAS_NAME/g" "$file"
         sed -i "s/<CAS_VERSION>/$CAS_VERSION/g" "$file"
         sed -i "s/<CAS_LICENSE_NAME>/$CAS_LICENSE_NAME/g" "$file"
+        sed -i "s|<CAS_MODULES_DIR>|$CAS_MODULES_DIR|g" "$file"
         sed -i "s/<CAS_HOMEPAGE>/${CAS_HOMEPAGE//\//\\/}/g" "$file"
         sed -i "s/<CAS_GIT>/${CAS_GIT//\//\\/}/g" "$file"
         sed -i "s/<PACKAGE_MAINTAINER>/$PACKAGE_MAINTAINER/g" "$file"
         sed -i "s/<PACKAGE_DATE>/$PACKAGE_DATE/g" "$file"
     done
+
+    if [ "$DEBUG" ]; then
+        echo "---   Debug info will be included and debug packages created as well"
+
+        sed -i "s/<MAKE_BUILD>/make -C casadm DEBUG_PACKAGE=1/g" "$DEB_SOURCES_DIR/debian/rules"
+        sed -i "s/<DEBUG_PACKAGE>/dh_strip --ddebs/g" "$DEB_SOURCES_DIR/debian/rules"
+    else
+        sed -i "s/<MAKE_BUILD>/make -C casadm/g" "$DEB_SOURCES_DIR/debian/rules"
+        sed -i "s/<DEBUG_PACKAGE>/dh_strip --no-ddebs/g" "$DEB_SOURCES_DIR/debian/rules"
+    fi
 }
 
 generate_rpm() {
