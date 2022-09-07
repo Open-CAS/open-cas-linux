@@ -20,7 +20,10 @@ jobs:
           files_ignore: '.github/**'
       - name: List all changed files
         run: |
-          for FILE in ${{ steps.changed-files.outputs.all_changed_files }}; do
+          files_to_check=(${{ steps.changed-files.outputs.added_files }})
+          files_to_check+=(${{ steps.changed-files.outputs.modified_files }})
+
+          for FILE in ${files_to_check[@]}; do
             REGEX=".*\.(.*)"
             if [[  "$FILE" =~ $REGEX ]]
             then
