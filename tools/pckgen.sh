@@ -354,6 +354,7 @@ deb_control_files_prepare() {
         sed -i "s/<CAS_GIT>/${CAS_GIT//\//\\/}/g" "$file"
         sed -i "s/<PACKAGE_MAINTAINER>/$PACKAGE_MAINTAINER/g" "$file"
         sed -i "s/<PACKAGE_DATE>/$PACKAGE_DATE/g" "$file"
+        sed -i "s/<YEAR>/$(date +%Y)/g" "$file"
     done
 
     if [ "$DEBUG" ]; then
@@ -545,7 +546,7 @@ DEB_BUILD_DIR="$TEMP_DIR/debuild"
 # Version file location:
 VERSION_FILE="$SOURCES_DIR/.metadata/cas_version"
 # CAS version generator location:
-CAS_VERSION_GEN="$SOURCES_DIR/tools/cas_version_gen"
+CAS_VERSION_GEN="$SOURCES_DIR/tools/cas_version_gen.sh"
 
 check_version
 

@@ -2,7 +2,7 @@
 ./modules/* usr/src/<CAS_NAME>-modules-<CAS_VERSION>/modules/
 ./ocf/* usr/src/<CAS_NAME>-modules-<CAS_VERSION>/ocf/
 ./utils/* usr/src/<CAS_NAME>-modules-<CAS_VERSION>/utils/
-./tools/cas_version_gen usr/src/<CAS_NAME>-modules-<CAS_VERSION>/tools/
+./tools/cas_version_gen.sh usr/src/<CAS_NAME>-modules-<CAS_VERSION>/tools/
 ./tools/helpers.mk usr/src/<CAS_NAME>-modules-<CAS_VERSION>/tools/
 ./configure.d/* usr/src/<CAS_NAME>-modules-<CAS_VERSION>/configure.d/
 ./configure usr/src/<CAS_NAME>-modules-<CAS_VERSION>/

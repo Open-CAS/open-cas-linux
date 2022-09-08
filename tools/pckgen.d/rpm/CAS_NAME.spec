@@ -137,7 +137,7 @@ fi
 /etc/dracut.conf.d/opencas.conf
 /var/lib/opencas/cas_version
 /lib/opencas/casctl
-/lib/opencas/open-cas-loader
+/lib/opencas/open-cas-loader.py
 /lib/opencas/opencas.py
 /lib/udev/rules.d/60-persistent-storage-cas-load.rules
 /lib/udev/rules.d/60-persistent-storage-cas.rules

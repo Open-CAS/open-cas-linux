@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2012-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -79,7 +79,7 @@ fi
 
 # Run version generator with 'build' flag to
 # indicate that we are in the build process
-(cd tools && ./cas_version_gen build)
+(cd tools && ./cas_version_gen.sh build)
 if [ $? -ne 0 ]; then
 	echo "Error: failed to obtain CAS version" >&2
 	exit 1
