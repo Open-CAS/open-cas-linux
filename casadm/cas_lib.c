@@ -35,7 +35,6 @@
 #include "safeclib/safe_str_lib.h"
 #include "safeclib/safe_lib.h"
 #include <cas_ioctl_codes.h>
-#include "psort.h"
 #include <libgen.h>
 #include <regex.h>
 #include <math.h>
