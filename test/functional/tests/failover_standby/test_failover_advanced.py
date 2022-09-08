@@ -128,9 +128,6 @@ def test_failover_during_background_cleaning(cache_mode, cls, cleaning_policy, n
       - Verify that the two checksums are equal
       - Power on the main DUT
     """
-    # TODO: use @pytest.mark.skip(reason="...") once it's fixed
-    pytest.skip("sporadic failures due to power cycle taking too long")
-
     with TestRun.step("Make sure DRBD is installed on both nodes"):
         check_drbd_installed(TestRun.duts)
 
@@ -387,9 +384,6 @@ def test_failover_during_dirty_flush(cache_mode, cls, num_iterations):
       - Verify that the two checksums are equal
       - Power on the main DUT
     """
-    # TODO: use @pytest.mark.skip(reason="...") once it's fixed
-    pytest.skip("sporadic failures due to power cycle taking too long")
-
     with TestRun.step("Make sure DRBD is installed on both nodes"):
         check_drbd_installed(TestRun.duts)
 
