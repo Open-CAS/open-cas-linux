@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #ifndef __CASDISK_DEBUG_H__
@@ -9,20 +9,20 @@
 
 #ifdef CASDSK_DEBUG
 #define CASDSK_DEBUG_TRACE()						\
-	printk(CASDSK_KERN_INFO "%s\n", __func__)
+	printk(KERN_INFO "%s\n", __func__)
 
 #define CASDSK_DEBUG_DISK_TRACE(dsk)					\
-	printk(CASDSK_KERN_INFO "[%u] %s\n", dsk->id,  __func__)
+	printk(KERN_INFO "[%u] %s\n", dsk->id,  __func__)
 
 #define CASDSK_DEBUG_MSG(msg)						\
-	printk(CASDSK_KERN_INFO "%s - %s\n", __func__, msg)
+	printk(KERN_INFO "%s - %s\n", __func__, msg)
 
 #define CASDSK_DEBUG_PARAM(format, ...)					\
-	printk(CASDSK_KERN_INFO "%s - "format"\n",			\
+	printk(KERN_INFO "%s - "format"\n",			\
 	       __func__, ##__VA_ARGS__)
 
 #define CASDSK_DEBUG_DISK(dsk, format, ...)				\
-	printk(CASDSK_KERN_INFO "[%u] %s - "format"\n",			\
+	printk(KERN_INFO "[%u] %s - "format"\n",			\
 	       dsk->id,							\
 	       __func__, ##__VA_ARGS__)
 

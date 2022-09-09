@@ -40,14 +40,6 @@ void casdsk_deinit_exp_objs(void);
 
 void casdsk_exp_obj_free(struct casdsk_disk *dsk);
 
-int casdsk_exp_obj_detach(struct casdsk_disk *dsk);
-int casdsk_exp_obj_attach(struct casdsk_disk *dsk, struct module *owner,
-			struct casdsk_exp_obj_ops *ops);
-void casdsk_exp_obj_prepare_pt(struct casdsk_disk *dsk);
-void casdsk_exp_obj_prepare_attached(struct casdsk_disk *dsk);
-
-void casdsk_exp_obj_prepare_shutdown(struct casdsk_disk *dsk);
-
 static inline struct casdsk_exp_obj *casdsk_kobj_to_exp_obj(struct kobject *kobj)
 {
 	return container_of(kobj, struct casdsk_exp_obj, kobj);

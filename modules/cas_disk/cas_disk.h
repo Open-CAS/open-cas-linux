@@ -1,7 +1,7 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
-* SPDX-License-Identifier: BSD-3-Clause
-*/
+ * Copyright(c) 2012-2022 Intel Corporation
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 #ifndef __CASDISK_H__
 #define __CASDISK_H__
 
@@ -83,44 +83,6 @@ struct request_queue *casdsk_disk_get_queue(struct casdsk_disk *dsk);
 struct gendisk *casdsk_disk_get_gendisk(struct casdsk_disk *dsk);
 
 /**
- * @brief Prepare cas_disk device to switch to pass-through mode
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
- * @return 0 if success, errno if failure
- */
-int casdsk_disk_set_pt(struct casdsk_disk *dsk);
-
-/**
- * @brief Prepare cas_disk device to switch to attached mode
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
- * @return 0 if success, errno if failure
- */
-int casdsk_disk_set_attached(struct casdsk_disk *dsk);
-
-/**
- * @brief Revert cas_disk device back to attached mode
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
- * @return 0 if success, errno if failure
- */
-int casdsk_disk_clear_pt(struct casdsk_disk *dsk);
-
-/**
- * @brief Detach cas from cas_disk device
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
- * @return 0 if success, errno if failure
- */
-int casdsk_disk_detach(struct casdsk_disk *dsk);
-
-/**
- * @brief Attach cas to cas_disk device
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
- * @param owner Pointer to cas module
- * @param ops Pointer to structure with callback functions
- * @return 0 if success, errno if failure
- */
-int casdsk_disk_attach(struct casdsk_disk *dsk, struct module *owner,
-		     struct casdsk_exp_obj_ops *ops);
-
-/**
  * @brief Create exported object (top device)
  * @param dsk Pointer to casdsk_disk structure related to cas_disk device
  * @param dev_name Name of exported object (top device)
@@ -152,13 +114,6 @@ struct gendisk *casdsk_exp_obj_get_gendisk(struct casdsk_disk *dsk);
  * @return 0 if success, errno if failure
  */
 int casdsk_exp_obj_activate(struct casdsk_disk *dsk);
-
-/**
- * @brief Check if exported object is active
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
- * @return true if exported object is active
- */
-bool casdsk_exp_obj_activated(struct casdsk_disk *dsk);
 
 /**
  * @brief Lock exported object

@@ -10,17 +10,20 @@
 #include "cas_cache.h"
 #include "disk.h"
 #include "exp_obj.h"
-#include "sysfs.h"
 
 #define CASDSK_DISK_OPEN_FMODE (FMODE_READ | FMODE_WRITE)
 
-static const char * const _casdsk_disk_modes[] = {
-	[CASDSK_MODE_UNKNOWN] = "unknown",
-	[CASDSK_MODE_PT] = "pass-through",
-	[CASDSK_MODE_ATTACHED] = "attached",
-	[CASDSK_MODE_TRANS_TO_PT] = "attached -> pass-through",
-	[CASDSK_MODE_TRANS_TO_ATTACHED] = "pass-through -> attached"
-};
+static inline struct block_device *open_bdev_exclusive(const char *path,
+						       fmode_t mode,
+						       void *holder)
+{
+	return blkdev_get_by_path(path, mode | FMODE_EXCL, holder);
+}
+
+static inline void close_bdev_exclusive(struct block_device *bdev, fmode_t mode)
+{
+	blkdev_put(bdev, mode | FMODE_EXCL);
+}
 
 static void _casdsk_disk_release(struct kobject *kobj)
 {
@@ -38,28 +41,8 @@ static void _casdsk_disk_release(struct kobject *kobj)
 	kmem_cache_free(casdsk_module->disk_cache, dsk);
 }
 
-static ssize_t _casdsk_disk_mode_show(struct kobject *kobj, char *page)
-{
-	struct casdsk_disk *dsk = casdsk_kobj_to_disk(kobj);
-
-	CASDSK_DEBUG_DISK_TRACE(dsk);
-
-	return scnprintf(page, PAGE_SIZE, "%s",
-			 _casdsk_disk_modes[atomic_read(&dsk->mode)]);
-}
-
-static struct casdsk_attribute _casdsk_disk_mode_attr =
-	__ATTR(mode, S_IRUGO, _casdsk_disk_mode_show, NULL);
-
-static struct attribute *_casdsk_disk_attrs[] = {
-	&_casdsk_disk_mode_attr.attr,
-	NULL
-};
-
 static struct kobj_type casdsk_disk_ktype = {
 	.release = _casdsk_disk_release,
-	.sysfs_ops = &casdsk_sysfs_ops,
-	.default_attrs = _casdsk_disk_attrs
 };
 
 int __init casdsk_init_disks(void)
@@ -133,8 +116,6 @@ struct casdsk_disk *casdsk_disk_open(const char *path, void *private)
 		result = -ENOMEM;
 		goto error_kstrdup;
 	}
-
-	atomic_set(&dsk->mode, CASDSK_MODE_UNKNOWN);
 
 	dsk->bd = open_bdev_exclusive(path, CASDSK_DISK_OPEN_FMODE, dsk);
 	if (IS_ERR(dsk->bd)) {
@@ -225,45 +206,6 @@ void casdsk_disk_close(struct casdsk_disk *dsk)
 }
 EXPORT_SYMBOL(casdsk_disk_close);
 
-void __exit casdsk_disk_shutdown_all(void)
-{
-	struct list_head *item, *n;
-	struct casdsk_disk *dsk;
-
-	CASDSK_DEBUG_TRACE();
-
-	mutex_lock(&casdsk_module->lock);
-
-	list_for_each_safe(item, n, &casdsk_module->disk_list) {
-		dsk = list_entry(item, struct casdsk_disk, list);
-
-		list_del(item);
-
-		casdsk_disk_lock(dsk);
-
-		BUG_ON(!casdsk_disk_is_pt(dsk) && !casdsk_disk_is_unknown(dsk));
-
-		if (casdsk_disk_is_pt(dsk)) {
-			atomic_set(&dsk->mode, CASDSK_MODE_TRANS_TO_SHUTDOWN);
-			casdsk_exp_obj_prepare_shutdown(dsk);
-		}
-
-		atomic_set(&dsk->mode, CASDSK_MODE_SHUTDOWN);
-
-		if (dsk->exp_obj) {
-			casdsk_exp_obj_lock(dsk);
-			casdsk_exp_obj_destroy(dsk);
-			casdsk_exp_obj_unlock(dsk);
-		}
-
-		casdsk_disk_unlock(dsk);
-		__casdsk_disk_close(dsk);
-
-	}
-
-	mutex_unlock(&casdsk_module->lock);
-}
-
 struct block_device *casdsk_disk_get_blkdev(struct casdsk_disk *dsk)
 {
 	BUG_ON(!dsk);
@@ -277,7 +219,6 @@ struct gendisk *casdsk_disk_get_gendisk(struct casdsk_disk *dsk)
 	BUG_ON(!dsk->bd);
 	return dsk->bd->bd_disk;
 }
-EXPORT_SYMBOL(casdsk_disk_get_gendisk);
 
 struct request_queue *casdsk_disk_get_queue(struct casdsk_disk *dsk)
 {
@@ -300,153 +241,3 @@ int casdsk_disk_allocate_minors(int count)
 
 	return minor;
 }
-
-static inline int __casdsk_disk_set_pt(struct casdsk_disk *dsk)
-{
-	BUG_ON(!dsk);
-	atomic_set(&dsk->mode, CASDSK_MODE_TRANS_TO_PT);
-	casdsk_exp_obj_prepare_pt(dsk);
-	return 0;
-}
-
-int casdsk_disk_set_pt(struct casdsk_disk *dsk)
-{
-	int result;
-
-	CASDSK_DEBUG_DISK_TRACE(dsk);
-
-	if (!dsk->exp_obj)
-		return 0;
-
-	casdsk_disk_lock(dsk);
-	result = __casdsk_disk_set_pt(dsk);
-	casdsk_disk_unlock(dsk);
-
-	return result;
-}
-EXPORT_SYMBOL(casdsk_disk_set_pt);
-
-static inline int __casdsk_disk_set_attached(struct casdsk_disk *dsk)
-{
-	atomic_set(&dsk->mode, CASDSK_MODE_TRANS_TO_ATTACHED);
-	casdsk_exp_obj_prepare_attached(dsk);
-
-	return 0;
-}
-
-int casdsk_disk_set_attached(struct casdsk_disk *dsk)
-{
-	int result;
-
-	BUG_ON(!dsk);
-	CASDSK_DEBUG_DISK_TRACE(dsk);
-
-	if (!dsk->exp_obj)
-		return 0;
-
-	casdsk_disk_lock(dsk);
-	result = __casdsk_disk_set_attached(dsk);
-	casdsk_disk_unlock(dsk);
-
-	return result;
-}
-EXPORT_SYMBOL(casdsk_disk_set_attached);
-
-static inline int __casdsk_disk_clear_pt(struct casdsk_disk *dsk)
-{
-	BUG_ON(atomic_read(&dsk->mode) != CASDSK_MODE_TRANS_TO_PT);
-	atomic_set(&dsk->mode, CASDSK_MODE_ATTACHED);
-	return 0;
-}
-
-int casdsk_disk_clear_pt(struct casdsk_disk *dsk)
-{
-	int result;
-
-	BUG_ON(!dsk);
-	CASDSK_DEBUG_DISK_TRACE(dsk);
-
-	if (!dsk->exp_obj)
-		return 0;
-
-	casdsk_disk_lock(dsk);
-	result = __casdsk_disk_clear_pt(dsk);
-	casdsk_disk_unlock(dsk);
-
-	return result;
-}
-EXPORT_SYMBOL(casdsk_disk_clear_pt);
-
-static inline int __casdsk_disk_detach(struct casdsk_disk *dsk)
-{
-	int result;
-
-	BUG_ON(atomic_read(&dsk->mode) != CASDSK_MODE_TRANS_TO_PT);
-
-	atomic_set(&dsk->mode, CASDSK_MODE_PT);
-
-	result = casdsk_exp_obj_detach(dsk);
-	if (result) {
-		atomic_set(&dsk->mode, CASDSK_MODE_ATTACHED);
-		return result;
-	}
-
-	return 0;
-}
-
-int casdsk_disk_detach(struct casdsk_disk *dsk)
-{
-	int result;
-
-	BUG_ON(!dsk);
-	CASDSK_DEBUG_DISK_TRACE(dsk);
-
-	if (!dsk->exp_obj)
-		return 0;
-
-	casdsk_disk_lock(dsk);
-	result = __casdsk_disk_detach(dsk);
-	casdsk_disk_unlock(dsk);
-
-	return result;
-
-}
-EXPORT_SYMBOL(casdsk_disk_detach);
-
-static inline int __casdsk_disk_attach(struct casdsk_disk *dsk,
-		struct module *owner, struct casdsk_exp_obj_ops *ops)
-{
-	int result;
-
-	BUG_ON(!ops);
-	BUG_ON(atomic_read(&dsk->mode) != CASDSK_MODE_TRANS_TO_ATTACHED);
-
-	result = casdsk_exp_obj_attach(dsk, owner, ops);
-	if (result) {
-		atomic_set(&dsk->mode, CASDSK_MODE_PT);
-		return result;
-	}
-
-	atomic_set(&dsk->mode, CASDSK_MODE_ATTACHED);
-
-	return 0;
-}
-
-int casdsk_disk_attach(struct casdsk_disk *dsk, struct module *owner,
-		     struct casdsk_exp_obj_ops *ops)
-{
-	int result;
-
-	CASDSK_DEBUG_DISK_TRACE(dsk);
-
-	if (!dsk->exp_obj)
-		return 0;
-
-	casdsk_disk_lock(dsk);
-	result = __casdsk_disk_attach(dsk, owner, ops);
-	casdsk_disk_unlock(dsk);
-
-	return result;
-
-}
-EXPORT_SYMBOL(casdsk_disk_attach);
