@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -7,7 +7,7 @@
 
 #define __SERVICE_UI_IOCTL_H__
 
-struct casdsk_disk;
+struct cas_disk;
 
 long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		unsigned long arg);

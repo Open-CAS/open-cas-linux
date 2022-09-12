@@ -50,7 +50,7 @@ enum {
 /** \endcond */
 };
 
-struct casdsk_module {
+struct cas_module {
 	struct list_head disk_list;
 	uint32_t next_disk_id;
 	int disk_major;
@@ -62,7 +62,7 @@ struct casdsk_module {
 	struct kobject kobj;
 };
 
-extern struct casdsk_module *casdsk_module;
+extern struct cas_module cas_module;
 
 struct cas_classifier;
 

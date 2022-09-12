@@ -11,11 +11,11 @@
 #include "exp_obj.h"
 #include "debug.h"
 
-#define CASDSK_DISK_OPEN_FMODE (FMODE_READ | FMODE_WRITE)
+#define CAS_DISK_OPEN_FMODE (FMODE_READ | FMODE_WRITE)
 
-static inline struct casdsk_disk *casdsk_kobj_to_disk(struct kobject *kobj)
+static inline struct cas_disk *cas_kobj_to_disk(struct kobject *kobj)
 {
-	return container_of(kobj, struct casdsk_disk, kobj);
+	return container_of(kobj, struct cas_disk, kobj);
 }
 
 static inline struct block_device *open_bdev_exclusive(const char *path,
@@ -30,85 +30,85 @@ static inline void close_bdev_exclusive(struct block_device *bdev, fmode_t mode)
 	blkdev_put(bdev, mode | FMODE_EXCL);
 }
 
-static void _casdsk_disk_release(struct kobject *kobj)
+static void _cas_disk_release(struct kobject *kobj)
 {
-	struct casdsk_disk *dsk;
+	struct cas_disk *dsk;
 
 	BUG_ON(!kobj);
 
-	dsk = casdsk_kobj_to_disk(kobj);
+	dsk = cas_kobj_to_disk(kobj);
 	BUG_ON(!dsk);
 
-	CASDSK_DEBUG_DISK_TRACE(dsk);
+	CAS_DEBUG_DISK_TRACE(dsk);
 
 	kfree(dsk->path);
 
-	kmem_cache_free(casdsk_module->disk_cache, dsk);
+	kmem_cache_free(cas_module.disk_cache, dsk);
 }
 
-static struct kobj_type casdsk_disk_ktype = {
-	.release = _casdsk_disk_release,
+static struct kobj_type cas_disk_ktype = {
+	.release = _cas_disk_release,
 };
 
-int __init casdsk_init_disks(void)
+int __init cas_init_disks(void)
 {
-	CASDSK_DEBUG_TRACE();
+	CAS_DEBUG_TRACE();
 
-	casdsk_module->next_disk_id = 1;
-	INIT_LIST_HEAD(&casdsk_module->disk_list);
+	cas_module.next_disk_id = 1;
+	INIT_LIST_HEAD(&cas_module.disk_list);
 
-	casdsk_module->disk_major = register_blkdev(casdsk_module->disk_major,
+	cas_module.disk_major = register_blkdev(cas_module.disk_major,
 						  "cas");
-	if (casdsk_module->disk_major <= 0) {
-		CASDSK_DEBUG_ERROR("Cannot allocate major number");
+	if (cas_module.disk_major <= 0) {
+		CAS_DEBUG_ERROR("Cannot allocate major number");
 		return -EINVAL;
 	}
-	CASDSK_DEBUG_PARAM("Allocated major number: %d", casdsk_module->disk_major);
+	CAS_DEBUG_PARAM("Allocated major number: %d", cas_module.disk_major);
 
-	casdsk_module->disk_cache =
-		kmem_cache_create("casdsk_disk", sizeof(struct casdsk_disk),
+	cas_module.disk_cache =
+		kmem_cache_create("cas_disk", sizeof(struct cas_disk),
 				  0, 0, NULL);
-	if (!casdsk_module->disk_cache) {
-		unregister_blkdev(casdsk_module->disk_major, "cas");
+	if (!cas_module.disk_cache) {
+		unregister_blkdev(cas_module.disk_major, "cas");
 		return -ENOMEM;
 	}
 
 	return 0;
 }
 
-void casdsk_deinit_disks(void)
+void cas_deinit_disks(void)
 {
-	CASDSK_DEBUG_TRACE();
+	CAS_DEBUG_TRACE();
 
-	kmem_cache_destroy(casdsk_module->disk_cache);
-	unregister_blkdev(casdsk_module->disk_major, "cas");
+	kmem_cache_destroy(cas_module.disk_cache);
+	unregister_blkdev(cas_module.disk_major, "cas");
 }
 
-static int _casdsk_disk_init_kobject(struct casdsk_disk *dsk)
+static int _cas_disk_init_kobject(struct cas_disk *dsk)
 {
 	int result = 0;
 
-	kobject_init(&dsk->kobj, &casdsk_disk_ktype);
+	kobject_init(&dsk->kobj, &cas_disk_ktype);
 	result = kobject_add(&dsk->kobj, &disk_to_dev(dsk->bd->bd_disk)->kobj,
 			     "cas%d", dsk->id);
 	if (result)
-		CASDSK_DEBUG_DISK_ERROR(dsk, "Cannot register kobject");
+		CAS_DEBUG_DISK_ERROR(dsk, "Cannot register kobject");
 
 	return result;
 }
 
-struct casdsk_disk *casdsk_disk_open(const char *path, void *private)
+struct cas_disk *cas_disk_open(const char *path, void *private)
 {
-	struct casdsk_disk *dsk;
+	struct cas_disk *dsk;
 	int result = 0;
 
 	BUG_ON(!path);
 
-	CASDSK_DEBUG_TRACE();
+	CAS_DEBUG_TRACE();
 
-	dsk = kmem_cache_zalloc(casdsk_module->disk_cache, GFP_KERNEL);
+	dsk = kmem_cache_zalloc(cas_module.disk_cache, GFP_KERNEL);
 	if (!dsk) {
-		CASDSK_DEBUG_ERROR("Cannot allocate memory");
+		CAS_DEBUG_ERROR("Cannot allocate memory");
 		result = -ENOMEM;
 		goto error_kmem;
 	}
@@ -121,106 +121,106 @@ struct casdsk_disk *casdsk_disk_open(const char *path, void *private)
 		goto error_kstrdup;
 	}
 
-	dsk->bd = open_bdev_exclusive(path, CASDSK_DISK_OPEN_FMODE, dsk);
+	dsk->bd = open_bdev_exclusive(path, CAS_DISK_OPEN_FMODE, dsk);
 	if (IS_ERR(dsk->bd)) {
-		CASDSK_DEBUG_ERROR("Cannot open exclusive");
+		CAS_DEBUG_ERROR("Cannot open exclusive");
 		result = PTR_ERR(dsk->bd);
 		goto error_open_bdev;
 	}
 
 	dsk->private = private;
 
-	dsk->id = casdsk_module->next_disk_id++;
-	list_add(&dsk->list, &casdsk_module->disk_list);
+	dsk->id = cas_module.next_disk_id++;
+	list_add(&dsk->list, &cas_module.disk_list);
 
-	result = _casdsk_disk_init_kobject(dsk);
+	result = _cas_disk_init_kobject(dsk);
 	if (result)
 		goto error_kobject;
 
-	CASDSK_DEBUG_DISK(dsk, "Created (%p)", dsk);
+	CAS_DEBUG_DISK(dsk, "Created (%p)", dsk);
 
 	return dsk;
 
 error_kobject:
 	list_del(&dsk->list);
-	close_bdev_exclusive(dsk->bd, CASDSK_DISK_OPEN_FMODE);
+	close_bdev_exclusive(dsk->bd, CAS_DISK_OPEN_FMODE);
 error_open_bdev:
 	kfree(dsk->path);
 error_kstrdup:
-	kmem_cache_free(casdsk_module->disk_cache, dsk);
+	kmem_cache_free(cas_module.disk_cache, dsk);
 error_kmem:
 	return ERR_PTR(result);
 }
 
-static void _casdsk_disk_claim(struct casdsk_disk *dsk, void *private)
+static void _cas_disk_claim(struct cas_disk *dsk, void *private)
 {
 	dsk->private = private;
 }
 
-struct casdsk_disk *casdsk_disk_claim(const char *path, void *private)
+struct cas_disk *cas_disk_claim(const char *path, void *private)
 {
 	struct list_head *item;
-	struct casdsk_disk *dsk = NULL;
+	struct cas_disk *dsk = NULL;
 
 	BUG_ON(!path);
 
-	list_for_each(item, &casdsk_module->disk_list) {
-		dsk = list_entry(item, struct casdsk_disk, list);
+	list_for_each(item, &cas_module.disk_list) {
+		dsk = list_entry(item, struct cas_disk, list);
 		if (strncmp(path, dsk->path, PATH_MAX) == 0) {
-			_casdsk_disk_claim(dsk, private);
+			_cas_disk_claim(dsk, private);
 			return dsk;
 		}
 	}
 	return NULL;
 }
 
-static void __casdsk_disk_close(struct casdsk_disk *dsk)
+static void __cas_disk_close(struct cas_disk *dsk)
 {
-	close_bdev_exclusive(dsk->bd, CASDSK_DISK_OPEN_FMODE);
+	close_bdev_exclusive(dsk->bd, CAS_DISK_OPEN_FMODE);
 
-	casdsk_exp_obj_free(dsk);
+	cas_exp_obj_free(dsk);
 	kobject_put(&dsk->kobj);
 }
 
-void casdsk_disk_close(struct casdsk_disk *dsk)
+void cas_disk_close(struct cas_disk *dsk)
 {
 	BUG_ON(!dsk);
 	BUG_ON(!dsk->bd);
 
-	CASDSK_DEBUG_DISK(dsk, "Destroying (%p)", dsk);
+	CAS_DEBUG_DISK(dsk, "Destroying (%p)", dsk);
 
 	list_del(&dsk->list);
 
-	__casdsk_disk_close(dsk);
+	__cas_disk_close(dsk);
 }
 
-struct block_device *casdsk_disk_get_blkdev(struct casdsk_disk *dsk)
+struct block_device *cas_disk_get_blkdev(struct cas_disk *dsk)
 {
 	BUG_ON(!dsk);
 	return dsk->bd;
 }
 
-struct gendisk *casdsk_disk_get_gendisk(struct casdsk_disk *dsk)
+struct gendisk *cas_disk_get_gendisk(struct cas_disk *dsk)
 {
 	BUG_ON(!dsk);
 	BUG_ON(!dsk->bd);
 	return dsk->bd->bd_disk;
 }
 
-struct request_queue *casdsk_disk_get_queue(struct casdsk_disk *dsk)
+struct request_queue *cas_disk_get_queue(struct cas_disk *dsk)
 {
 	BUG_ON(!dsk);
 	BUG_ON(!dsk->bd);
 	return cas_bdev_whole(dsk->bd)->bd_disk->queue;
 }
 
-int casdsk_disk_allocate_minors(int count)
+int cas_disk_allocate_minors(int count)
 {
 	int minor = -1;
 
-	if (casdsk_module->next_minor + count <= (1 << MINORBITS)) {
-		minor = casdsk_module->next_minor;
-		casdsk_module->next_minor += count;
+	if (cas_module.next_minor + count <= (1 << MINORBITS)) {
+		minor = cas_module.next_minor;
+		cas_module.next_minor += count;
 	}
 
 	return minor;

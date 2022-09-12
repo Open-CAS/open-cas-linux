@@ -28,14 +28,14 @@ int block_dev_open_object(ocf_volume_t vol, void *volume_params)
 {
 	struct bd_object *bdobj = bd_object(vol);
 	const struct ocf_volume_uuid *uuid = ocf_volume_get_uuid(vol);
-	struct casdsk_disk *dsk;
+	struct cas_disk *dsk;
 
 	if (bdobj->opened_by_bdev) {
 		/* Bdev has been set manually, so there is nothing to do. */
 		return 0;
 	}
 
-	dsk = casdsk_disk_open(uuid->data, NULL);
+	dsk = cas_disk_open(uuid->data, NULL);
 	if (IS_ERR_OR_NULL(dsk)) {
 		int error = PTR_ERR(dsk) ?: -EINVAL;
 
@@ -46,7 +46,7 @@ int block_dev_open_object(ocf_volume_t vol, void *volume_params)
 	}
 
 	bdobj->dsk = dsk;
-	bdobj->btm_bd = casdsk_disk_get_blkdev(dsk);
+	bdobj->btm_bd = cas_disk_get_blkdev(dsk);
 
 	return 0;
 }
@@ -58,7 +58,7 @@ void block_dev_close_object(ocf_volume_t vol)
 	if (bdobj->opened_by_bdev)
 		return;
 
-	casdsk_disk_close(bdobj->dsk);
+	cas_disk_close(bdobj->dsk);
 }
 
 unsigned int block_dev_get_max_io_size(ocf_volume_t vol)

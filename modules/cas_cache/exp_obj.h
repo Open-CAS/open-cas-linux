@@ -8,25 +8,24 @@
 #include <linux/kobject.h>
 #include <linux/fs.h>
 
-struct casdsk_disk;
+struct cas_disk;
 
-struct casdsk_exp_obj_ops {
+struct cas_exp_obj_ops {
 	/**
 	 * @brief Set geometry of exported object (top) block device.
 	 *	Could be NULL.
 	 */
-	int (*set_geometry)(struct casdsk_disk *dsk, void *private);
+	int (*set_geometry)(struct cas_disk *dsk, void *private);
 
 	/**
 	 * @brief submit_bio of exported object (top) block device.
-	 * Called by cas_disk when cas_disk device is in attached mode.
 	 *
 	 */
-	void (*submit_bio)(struct casdsk_disk *dsk,
+	void (*submit_bio)(struct cas_disk *dsk,
 			       struct bio *bio, void *private);
 };
 
-struct casdsk_exp_obj {
+struct cas_exp_obj {
 
 	struct gendisk *gd;
 	struct request_queue *queue;
@@ -37,7 +36,7 @@ struct casdsk_exp_obj {
 
 	bool activated;
 
-	struct casdsk_exp_obj_ops *ops;
+	struct cas_exp_obj_ops *ops;
 
 	const char *dev_name;
 	struct kobject kobj;
@@ -46,63 +45,63 @@ struct casdsk_exp_obj {
 	atomic_t *pending_rqs;
 };
 
-int __init casdsk_init_exp_objs(void);
-void casdsk_deinit_exp_objs(void);
+int __init cas_init_exp_objs(void);
+void cas_deinit_exp_objs(void);
 
-void casdsk_exp_obj_free(struct casdsk_disk *dsk);
+void cas_exp_obj_free(struct cas_disk *dsk);
 
 /**
  * @brief Create exported object (top device)
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
+ * @param dsk Pointer to cas_disk structure representing a block device
  * @param dev_name Name of exported object (top device)
  * @param owner Pointer to cas module
  * @param ops Pointer to structure with callback functions
  * @return 0 if success, errno if failure
  */
-int casdsk_exp_obj_create(struct casdsk_disk *dsk, const char *dev_name,
-			struct module *owner, struct casdsk_exp_obj_ops *ops);
+int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
+			struct module *owner, struct cas_exp_obj_ops *ops);
 
 /**
  * @brief Get request queue of exported object (top) block device
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
+ * @param dsk Pointer to cas_disk structure representing a block device
  * @return Pointer to reqest_queue structure of top block device
  */
-struct request_queue *casdsk_exp_obj_get_queue(struct casdsk_disk *dsk);
+struct request_queue *cas_exp_obj_get_queue(struct cas_disk *dsk);
 
 /**
  * @brief Get gendisk structure of exported object (top) block device
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
+ * @param dsk Pointer to cas_disk structure representing a block device
  * @return Pointer to gendisk structure of top block device
  */
-struct gendisk *casdsk_exp_obj_get_gendisk(struct casdsk_disk *dsk);
+struct gendisk *cas_exp_obj_get_gendisk(struct cas_disk *dsk);
 
 /**
  * @brief Activate exported object (make it visible to OS
  *	and allow I/O handling)
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
+ * @param dsk Pointer to cas_disk structure representing a block device
  * @return 0 if success, errno if failure
  */
-int casdsk_exp_obj_activate(struct casdsk_disk *dsk);
+int cas_exp_obj_activate(struct cas_disk *dsk);
 
 /**
  * @brief Lock exported object
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
+ * @param dsk Pointer to cas_disk structure representing a block device
  * @return 0 if success, errno if failure
  */
-int casdsk_exp_obj_lock(struct casdsk_disk *dsk);
+int cas_exp_obj_lock(struct cas_disk *dsk);
 
 /**
  * @brief Unlock exported object
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
+ * @param dsk Pointer to cas_disk structure representing a block device
  * @return 0 if success, errno if failure
  */
-int casdsk_exp_obj_unlock(struct casdsk_disk *dsk);
+int cas_exp_obj_unlock(struct cas_disk *dsk);
 
 /**
  * @brief Destroy exported object
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
+ * @param dsk Pointer to cas_disk structure representing a block device
  * @return 0 if success, errno if failure
  */
-int casdsk_exp_obj_destroy(struct casdsk_disk *dsk);
+int cas_exp_obj_destroy(struct cas_disk *dsk);
 
 #endif

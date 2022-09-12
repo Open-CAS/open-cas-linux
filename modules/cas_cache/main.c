@@ -40,8 +40,7 @@ MODULE_PARM_DESC(seq_cut_off_mb,
 
 /* globals */
 ocf_ctx_t cas_ctx;
-struct casdsk_module cas_module;
-struct casdsk_module *casdsk_module;
+struct cas_module cas_module;
 
 static int __init cas_init_module(void)
 {
@@ -72,13 +71,11 @@ static int __init cas_init_module(void)
 		return -EINVAL;
 	}
 
-	casdsk_module = &cas_module;
-
-	result = casdsk_init_exp_objs();
+	result = cas_init_exp_objs();
 	if (result)
 		return result;
 
-	result = casdsk_init_disks();
+	result = cas_init_disks();
 	if (result)
 		goto error_init_disks;
 
@@ -104,9 +101,9 @@ static int __init cas_init_module(void)
 error_init_device:
 	cas_cleanup_context();
 error_init_context:
-	casdsk_deinit_disks();
+	cas_deinit_disks();
 error_init_disks:
-	casdsk_deinit_exp_objs();
+	cas_deinit_exp_objs();
 
 	return result;
 }
@@ -117,8 +114,8 @@ static void __exit cas_exit_module(void)
 {
 	cas_ctrl_device_deinit();
 	cas_cleanup_context();
-	casdsk_deinit_disks();
-	casdsk_deinit_exp_objs();
+	cas_deinit_disks();
+	cas_deinit_exp_objs();
 }
 
 module_exit(cas_exit_module);

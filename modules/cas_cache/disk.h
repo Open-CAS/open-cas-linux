@@ -12,9 +12,9 @@
 #include <linux/blk-mq.h>
 #include "cas_cache.h"
 
-struct casdsk_exp_obj;
+struct cas_exp_obj;
 
-struct casdsk_disk {
+struct cas_disk {
 	uint32_t id;
 	char *path;
 
@@ -28,7 +28,7 @@ struct casdsk_disk {
 	int gd_minors;
 
 	struct blk_mq_tag_set tag_set;
-	struct casdsk_exp_obj *exp_obj;
+	struct cas_exp_obj *exp_obj;
 
 	struct kobject kobj;
 	struct list_head list;
@@ -36,54 +36,54 @@ struct casdsk_disk {
 	void *private;
 };
 
-int __init casdsk_init_disks(void);
-void casdsk_deinit_disks(void);
+int __init cas_init_disks(void);
+void cas_deinit_disks(void);
 
-int casdsk_disk_allocate_minors(int count);
+int cas_disk_allocate_minors(int count);
 
 /**
  * @brief Open block device
  * @param path Path to block device
  * @param private Private data
- * @return Pointer to casdsk_disk related to opened block device
+ * @return Pointer to cas_disk related to opened block device
  */
-struct casdsk_disk *casdsk_disk_open(const char *path, void *private);
+struct cas_disk *cas_disk_open(const char *path, void *private);
 
 /**
- * @brief Claim previously opened block device (holded by cas_disk)
+ * @brief Claim previously opened block device
  * @param path Path to block device
  * @param private Private data
- * @return Pointer to casdsk_disk structure related to block device, or NULL
- *	if device is not opened by cas_disk.
+ * @return Pointer to cas_disk structure related to block device, or NULL
+ *	if device is not opened.
  */
-struct casdsk_disk *casdsk_disk_claim(const char *path, void *private);
+struct cas_disk *cas_disk_claim(const char *path, void *private);
 
 /**
- * @brief Close block device and remove from cas_disk
- * @param dsk Pointer to casdsk_disk structure related to block device
+ * @brief Close block device and remove from cas
+ * @param dsk Pointer to cas_disk structure related to block device
  *	which should be closed.
  */
-void casdsk_disk_close(struct casdsk_disk *dsk);
+void cas_disk_close(struct cas_disk *dsk);
 
 /**
  * @brief Get block_device structure of bottom block device
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
+ * @param dsk Pointer to cas_disk structure representing a block device
  * @return Pointer to block_device structure of bottom block device
  */
-struct block_device *casdsk_disk_get_blkdev(struct casdsk_disk *dsk);
+struct block_device *cas_disk_get_blkdev(struct cas_disk *dsk);
 
 /**
  * @brief Get request queue of bottom block device
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
+ * @param dsk Pointer to cas_disk structure representing a block device
  * @return Pointer to reqest_queue structure of bottom block device
  */
-struct request_queue *casdsk_disk_get_queue(struct casdsk_disk *dsk);
+struct request_queue *cas_disk_get_queue(struct cas_disk *dsk);
 
 /**
  * @brief Get gendisk structure of bottom block device
- * @param dsk Pointer to casdsk_disk structure related to cas_disk device
+ * @param dsk Pointer to cas_disk structure representing a block device
  * @return Pointer to gendisk structure of bottom block device
  */
-struct gendisk *casdsk_disk_get_gendisk(struct casdsk_disk *dsk);
+struct gendisk *cas_disk_get_gendisk(struct cas_disk *dsk);
 
 #endif
