@@ -234,6 +234,90 @@ def test_one_core_fail():
         core_dev1.plug()
 
 
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core1", DiskTypeLowerThan("cache"))
+@pytest.mark.require_disk("core2", DiskTypeLowerThan("cache"))
+def test_one_core_fail_dirty():
+    """
+        title: Test if OpenCAS correctly handles failure of one of multiple core devices.
+        description: |
+          When one core device fails in a single cache instance and all cachelines are dirty and
+          mapped to the core device, other cores due to that are unable to insert any data and
+          are serviced in pass-through.
+        pass_criteria:
+          - No system crash.
+          - Second core is able to use OpenCAS.
+    """
+    with TestRun.step("Prepare one cache and two core devices."):
+        cache_dev = TestRun.disks["cache"]
+        cache_dev.create_partitions([Size(1, Unit.GibiByte)] * 2)
+        cache_part = cache_dev.partitions[0]
+        core_dev1 = TestRun.disks["core1"]  # This device would be unplugged.
+        core_dev1.create_partitions([Size(2, Unit.GibiByte)])
+        core_part1 = core_dev1.partitions[0]
+        core_dev2 = TestRun.disks["core2"]
+        core_dev2.create_partitions([Size(2, Unit.GibiByte)])
+        core_part2 = core_dev2.partitions[0]
+        Udev.disable()
+
+    with TestRun.step("Start cache"):
+        cache_mode = CacheMode.WB
+        cache = casadm.start_cache(cache_part, cache_mode=cache_mode, force=True)
+
+    with TestRun.step("Add both core devices to cache."):
+        core1 = cache.add_core(core_part1)
+        core2 = cache.add_core(core_part2)
+
+    with TestRun.step("Change sequential cutoff policy."):
+        cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+
+    with TestRun.step("Fill cache with pages from the first core."):
+        blocks = int(cache.size / block_size.value)
+        dd = (
+            Dd()
+            .block_size(block_size)
+            .count(blocks)
+            .input("/dev/urandom")
+            .output(core1.path)
+            .oflag("direct")
+        ).run()
+        cache_occupancy_before = cache.get_statistics(percentage_val=True).usage_stats.occupancy
+        cache_dirty_blocks_before = cache.get_dirty_blocks()
+        if cache_occupancy_before != 100:
+            TestRun.fail("Failed to fully fill cache. Cache occupancy has to be 100%.")
+
+    with TestRun.step("Unplug the first core device."):
+        core_dev1.unplug()
+
+    with TestRun.step("Check if core device is really out of cache."):
+        output = str(casadm.list_caches().stdout.splitlines())
+        if core_part1.path in output:
+            TestRun.exception("The first core device should be unplugged!")
+
+    with TestRun.step("Verify that I/O to the remaining cores does not insert to cache"):
+        dd_builder(cache_mode, core2, Size(100, Unit.MebiByte)).run()
+        if float(core2.get_occupancy().get_value()) != 0:
+            TestRun.LOGGER.error("Cache occupancy increased despite dirty data form first core!")
+        else:
+            TestRun.LOGGER.info("The remaining core is not able to use cache.")
+
+    with TestRun.step("Check if occupancy from the first core is not removed from cache."):
+        cache_occupancy_after = cache.get_statistics(percentage_val=True).usage_stats.occupancy
+        if cache_occupancy_after != 100:
+            TestRun.fail("Cache occupancy has changed.")
+
+    with TestRun.step("Check if Dirty blocks count before and after unplug stays the same."):
+        cache_dirty_blocks_after = cache.get_dirty_blocks()
+        if cache_dirty_blocks_before != cache_dirty_blocks_after:
+            TestRun.fail("Dirty block count after unplug should stay the same.")
+
+    with TestRun.step("Stop cache."):
+        casadm.stop_all_caches()
+
+    with TestRun.step("Plug back the first core."):
+        core_dev1.plug()
+
+
 def dd_builder(cache_mode: CacheMode, dev: Core, size: Size):
     blocks = int(size.value / block_size.value)
     dd = Dd().block_size(block_size).count(blocks)
