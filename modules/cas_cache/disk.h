@@ -19,8 +19,6 @@ struct cas_disk {
 	struct block_device *bd;
 
 	struct cas_exp_obj *exp_obj;
-
-	void *private;
 };
 
 int __init cas_init_disks(void);

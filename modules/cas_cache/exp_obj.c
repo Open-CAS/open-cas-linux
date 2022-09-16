@@ -64,11 +64,13 @@ void cas_deinit_exp_objs(void)
 static MAKE_RQ_RET_TYPE _cas_exp_obj_submit_bio(struct bio *bio)
 {
 	struct cas_disk *dsk;
+	struct cas_exp_obj *exp_obj;
 
 	BUG_ON(!bio);
 	dsk = CAS_BIO_GET_GENDISK(bio)->private_data;
+	exp_obj = dsk->exp_obj;
 
-	dsk->exp_obj->ops->submit_bio(dsk, bio, dsk->private);
+	exp_obj->ops->submit_bio(dsk, bio, exp_obj->private);
 
 	KRETURN(0);
 }
@@ -410,7 +412,7 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	queue->queuedata = dsk;
 	exp_obj->queue = queue;
 
-	dsk->private = priv;
+	exp_obj->private = priv;
 
 	_cas_init_queues(dsk);
 
@@ -421,7 +423,7 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	cas_blk_queue_make_request(queue, _cas_exp_obj_make_rq_fn);
 
 	if (exp_obj->ops->set_geometry) {
-		result = exp_obj->ops->set_geometry(dsk, dsk->private);
+		result = exp_obj->ops->set_geometry(dsk, exp_obj->private);
 		if (result)
 			goto error_set_geometry;
 	}
@@ -429,7 +431,7 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	return 0;
 
 error_set_geometry:
-	dsk->private = NULL;
+	exp_obj->private = NULL;
 	_cas_exp_obj_clear_dev_t(dsk);
 error_exp_obj_set_dev_t:
 	cas_cleanup_mq_disk(exp_obj);

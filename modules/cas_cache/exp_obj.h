@@ -50,6 +50,8 @@ struct cas_exp_obj {
 
 	atomic_t pt_ios;
 	atomic_t *pending_rqs;
+
+	void *private;
 };
 
 int __init cas_init_exp_objs(void);
