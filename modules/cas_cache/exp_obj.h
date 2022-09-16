@@ -43,6 +43,11 @@ struct cas_exp_obj {
 	unsigned int openers;
 	bool claimed;
 
+	int gd_flags;
+	int gd_minors;
+
+	struct blk_mq_tag_set tag_set;
+
 	atomic_t pt_ios;
 	atomic_t *pending_rqs;
 };

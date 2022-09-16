@@ -18,10 +18,6 @@ struct cas_disk {
 
 	struct block_device *bd;
 
-	int gd_flags;
-	int gd_minors;
-
-	struct blk_mq_tag_set tag_set;
 	struct cas_exp_obj *exp_obj;
 
 	void *private;

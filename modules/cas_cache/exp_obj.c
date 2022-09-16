@@ -156,6 +156,7 @@ static int _cas_flags = GENHD_FL_EXT_DEVT;
 
 static int _cas_exp_obj_hide_parts(struct cas_disk *dsk)
 {
+	struct cas_exp_obj *exp_obj = dsk->exp_obj;
 	struct block_device *bd = cas_disk_get_blkdev(dsk);
 	struct gendisk *gdsk = cas_disk_get_gendisk(dsk);
 
@@ -175,8 +176,8 @@ static int _cas_exp_obj_hide_parts(struct cas_disk *dsk)
 	}
 
 	/* Save original flags and minors */
-	dsk->gd_flags = gdsk->flags & _cas_flags;
-	dsk->gd_minors = gdsk->minors;
+	exp_obj->gd_flags = gdsk->flags & _cas_flags;
+	exp_obj->gd_minors = gdsk->minors;
 
 	/* Setup disk of bottom device as not partitioned device */
 	gdsk->flags &= ~_cas_flags;
@@ -189,6 +190,7 @@ static int _cas_exp_obj_hide_parts(struct cas_disk *dsk)
 
 static int _cas_exp_obj_set_dev_t(struct cas_disk *dsk, struct gendisk *gd)
 {
+	struct cas_exp_obj *exp_obj = dsk->exp_obj;
 	int flags;
 	int minors = disk_max_parts(cas_disk_get_gendisk(dsk));
 	struct block_device *bdev;
@@ -202,7 +204,7 @@ static int _cas_exp_obj_set_dev_t(struct cas_disk *dsk, struct gendisk *gd)
 	} else {
 		if (_cas_exp_obj_hide_parts(dsk))
 			return -EINVAL;
-		flags = dsk->gd_flags;
+		flags = exp_obj->gd_flags;
 	}
 
 	gd->first_minor = cas_disk_allocate_minors(minors);
@@ -220,13 +222,14 @@ static int _cas_exp_obj_set_dev_t(struct cas_disk *dsk, struct gendisk *gd)
 
 static void _cas_exp_obj_clear_dev_t(struct cas_disk *dsk)
 {
+	struct cas_exp_obj *exp_obj = dsk->exp_obj;
 	struct block_device *bdev = cas_disk_get_blkdev(dsk);
 	struct gendisk *gdsk = cas_disk_get_gendisk(dsk);
 
 	if (cas_bdev_whole(bdev) == bdev) {
 		/* Restore previous configuration of bottom disk */
-		gdsk->minors = dsk->gd_minors;
-		gdsk->flags |= dsk->gd_flags;
+		gdsk->minors = exp_obj->gd_minors;
+		gdsk->flags |= exp_obj->gd_flags;
 		cas_reread_partitions(bdev);
 	}
 }
@@ -387,12 +390,12 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	exp_obj->owner = owner;
 	exp_obj->ops = ops;
 
-	result = _cas_init_tag_set(dsk, &dsk->tag_set);
+	result = _cas_init_tag_set(dsk, &exp_obj->tag_set);
 	if (result) {
 		goto error_init_tag_set;
 	}
 
-	result = cas_alloc_mq_disk(&gd, &queue, &dsk->tag_set);
+	result = cas_alloc_mq_disk(&gd, &queue, &exp_obj->tag_set);
 	if (result) {
 		goto error_alloc_mq_disk;
 	}
@@ -432,7 +435,7 @@ error_exp_obj_set_dev_t:
 	cas_cleanup_mq_disk(exp_obj);
 	dsk->exp_obj->gd = NULL;
 error_alloc_mq_disk:
-	blk_mq_free_tag_set(&dsk->tag_set);
+	blk_mq_free_tag_set(&exp_obj->tag_set);
 error_init_tag_set:
 	module_put(owner);
 	dsk->exp_obj->owner = NULL;
@@ -526,7 +529,7 @@ int cas_exp_obj_destroy(struct cas_disk *dsk)
 	if (exp_obj->queue)
 		blk_cleanup_queue(exp_obj->queue);
 
-	blk_mq_free_tag_set(&dsk->tag_set);
+	blk_mq_free_tag_set(&exp_obj->tag_set);
 
 	put_disk(exp_obj->gd);
 
