@@ -43,10 +43,9 @@ int cas_disk_allocate_minors(int count);
 /**
  * @brief Open block device
  * @param path Path to block device
- * @param private Private data
  * @return Pointer to cas_disk related to opened block device
  */
-struct cas_disk *cas_disk_open(const char *path, void *private);
+struct cas_disk *cas_disk_open(const char *path);
 
 /**
  * @brief Close block device and remove from cas

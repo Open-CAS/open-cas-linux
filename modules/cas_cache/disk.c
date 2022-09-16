@@ -96,7 +96,7 @@ static int _cas_disk_init_kobject(struct cas_disk *dsk)
 	return result;
 }
 
-struct cas_disk *cas_disk_open(const char *path, void *private)
+struct cas_disk *cas_disk_open(const char *path)
 {
 	struct cas_disk *dsk;
 	int result = 0;
@@ -126,8 +126,6 @@ struct cas_disk *cas_disk_open(const char *path, void *private)
 		result = PTR_ERR(dsk->bd);
 		goto error_open_bdev;
 	}
-
-	dsk->private = private;
 
 	dsk->id = cas_module.next_disk_id++;
 

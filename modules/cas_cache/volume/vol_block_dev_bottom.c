@@ -35,7 +35,7 @@ int block_dev_open_object(ocf_volume_t vol, void *volume_params)
 		return 0;
 	}
 
-	dsk = cas_disk_open(uuid->data, NULL);
+	dsk = cas_disk_open(uuid->data);
 	if (IS_ERR_OR_NULL(dsk)) {
 		int error = PTR_ERR(dsk) ?: -EINVAL;
 
