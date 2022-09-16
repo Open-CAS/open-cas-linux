@@ -39,6 +39,10 @@ struct cas_exp_obj {
 
 	const char *dev_name;
 
+	struct mutex openers_lock;
+	unsigned int openers;
+	bool claimed;
+
 	atomic_t pt_ios;
 	atomic_t *pending_rqs;
 };

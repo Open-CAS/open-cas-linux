@@ -234,32 +234,34 @@ static void _cas_exp_obj_clear_dev_t(struct cas_disk *dsk)
 static int _cas_exp_obj_open(struct block_device *bdev, fmode_t mode)
 {
 	struct cas_disk *dsk = bdev->bd_disk->private_data;
+	struct cas_exp_obj *exp_obj = dsk->exp_obj;
 	int result = -ENAVAIL;
 
-	mutex_lock(&dsk->openers_lock);
+	mutex_lock(&exp_obj->openers_lock);
 
-	if (!dsk->claimed) {
-		if (unlikely(dsk->openers == UINT_MAX)) {
+	if (!exp_obj->claimed) {
+		if (unlikely(exp_obj->openers == UINT_MAX)) {
 			result = -EBUSY;
 		} else {
-			dsk->openers++;
+			exp_obj->openers++;
 			result = 0;
 		}
 	}
 
-	mutex_unlock(&dsk->openers_lock);
+	mutex_unlock(&dsk->exp_obj->openers_lock);
 	return result;
 }
 
 static void _cas_exp_obj_close(struct gendisk *gd, fmode_t mode)
 {
 	struct cas_disk *dsk = gd->private_data;
+	struct cas_exp_obj *exp_obj = dsk->exp_obj;
 
-	BUG_ON(dsk->openers == 0);
+	BUG_ON(exp_obj->openers == 0);
 
-	mutex_lock(&dsk->openers_lock);
-	dsk->openers--;
-	mutex_unlock(&dsk->openers_lock);
+	mutex_lock(&exp_obj->openers_lock);
+	exp_obj->openers--;
+	mutex_unlock(&exp_obj->openers_lock);
 
 }
 
@@ -368,6 +370,8 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 		goto error_exp_obj_alloc;
 
 	exp_obj = dsk->exp_obj;
+
+	mutex_init(&exp_obj->openers_lock);
 
 	exp_obj->dev_name = kstrdup(dev_name, GFP_KERNEL);
 	if (!exp_obj->dev_name) {
@@ -562,25 +566,29 @@ int cas_exp_obj_lock(struct cas_disk *dsk)
 
 	exp_obj = dsk->exp_obj;
 
-	mutex_lock(&dsk->openers_lock);
+	mutex_lock(&exp_obj->openers_lock);
 
-	if (dsk->openers == 0) {
-		dsk->claimed = true;
+	if (exp_obj->openers == 0) {
+		exp_obj->claimed = true;
 		result = 0;
 	}
 
-	mutex_unlock(&dsk->openers_lock);
+	mutex_unlock(&exp_obj->openers_lock);
 	return result;
 }
 
 int cas_exp_obj_unlock(struct cas_disk *dsk)
 {
+	struct cas_exp_obj *exp_obj;
+
 	BUG_ON(!dsk);
 	CAS_DEBUG_DISK_TRACE(dsk);
 
-	mutex_lock(&dsk->openers_lock);
-	dsk->claimed = false;
-	mutex_unlock(&dsk->openers_lock);
+	exp_obj = dsk->exp_obj;
+
+	mutex_lock(&exp_obj->openers_lock);
+	exp_obj->claimed = false;
+	mutex_unlock(&exp_obj->openers_lock);
 
 	return 0;
 }

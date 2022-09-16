@@ -72,8 +72,6 @@ struct cas_disk *cas_disk_open(const char *path)
 		goto error_kmem;
 	}
 
-	mutex_init(&dsk->openers_lock);
-
 	dsk->path = kstrdup(path, GFP_KERNEL);
 	if (!dsk->path) {
 		result = -ENOMEM;

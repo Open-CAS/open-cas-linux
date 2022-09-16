@@ -16,10 +16,6 @@ struct cas_exp_obj;
 struct cas_disk {
 	char *path;
 
-	struct mutex openers_lock;
-	unsigned int openers;
-	bool claimed;
-
 	struct block_device *bd;
 
 	int gd_flags;
