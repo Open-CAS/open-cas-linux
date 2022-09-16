@@ -66,12 +66,6 @@ void cas_deinit_exp_objs(void)
 	kmem_cache_destroy(cas_module.exp_obj_cache);
 }
 
-static inline void _cas_exp_obj_handle_bio(struct cas_disk *dsk,
-					    struct bio *bio)
-{
-	dsk->exp_obj->ops->submit_bio(dsk, bio, dsk->private);
-}
-
 static MAKE_RQ_RET_TYPE _cas_exp_obj_submit_bio(struct bio *bio)
 {
 	struct cas_disk *dsk;
@@ -79,7 +73,7 @@ static MAKE_RQ_RET_TYPE _cas_exp_obj_submit_bio(struct bio *bio)
 	BUG_ON(!bio);
 	dsk = CAS_BIO_GET_GENDISK(bio)->private_data;
 
-	_cas_exp_obj_handle_bio(dsk, bio);
+	dsk->exp_obj->ops->submit_bio(dsk, bio, dsk->private);
 
 	KRETURN(0);
 }
@@ -320,7 +314,6 @@ static void __cas_exp_obj_release(struct cas_exp_obj *exp_obj)
 {
 	kmem_cache_free(cas_module.exp_obj_cache, exp_obj);
 }
-
 static void _cas_exp_obj_release(struct kobject *kobj)
 {
 	struct cas_exp_obj *exp_obj;
@@ -593,12 +586,6 @@ error_bd_claim:
 	return result;
 }
 
-bool cas_exp_obj_activated(struct cas_disk *dsk)
-{
-	BUG_ON(!dsk);
-	return dsk->exp_obj->activated;
-}
-
 int cas_exp_obj_lock(struct cas_disk *dsk)
 {
 	struct cas_exp_obj *exp_obj;
@@ -647,7 +634,7 @@ int cas_exp_obj_destroy(struct cas_disk *dsk)
 
 	exp_obj = dsk->exp_obj;
 
-	if (cas_exp_obj_activated(dsk)) {
+	if (dsk->exp_obj->activated) {
 		sysfs_remove_link(&exp_obj->kobj, "blockdev");
 		bd_release_from_disk(dsk->bd, exp_obj->gd);
 		_cas_exp_obj_clear_dev_t(dsk);
