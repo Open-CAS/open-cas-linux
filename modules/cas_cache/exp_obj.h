@@ -33,8 +33,6 @@ struct cas_exp_obj {
 
 	struct module *owner;
 
-	bool activated;
-
 	struct cas_exp_obj_ops *ops;
 
 	const char *dev_name;
@@ -84,14 +82,6 @@ struct request_queue *cas_exp_obj_get_queue(struct cas_disk *dsk);
  * @return Pointer to gendisk structure of top block device
  */
 struct gendisk *cas_exp_obj_get_gendisk(struct cas_disk *dsk);
-
-/**
- * @brief Activate exported object (make it visible to OS
- *	and allow I/O handling)
- * @param dsk Pointer to cas_disk structure representing a block device
- * @return 0 if success, errno if failure
- */
-int cas_exp_obj_activate(struct cas_disk *dsk);
 
 /**
  * @brief Lock exported object

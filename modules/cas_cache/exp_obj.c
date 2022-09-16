@@ -375,6 +375,36 @@ static int _cas_init_tag_set(struct cas_disk *dsk, struct blk_mq_tag_set *set)
 	return blk_mq_alloc_tag_set(set);
 }
 
+static int _cas_exp_obj_check_path(const char *dev_name)
+{
+	struct file *exported;
+	char *path;
+	int result;
+
+	path = kmalloc(PATH_MAX, GFP_KERNEL);
+	if (!path)
+		return -ENOMEM;
+
+	snprintf(path, PATH_MAX, "/dev/%s", dev_name);
+
+	exported = filp_open(path, O_RDONLY, 0);
+
+	if (!IS_ERR_OR_NULL(exported)) {
+		filp_close(exported, NULL);
+		result = -EEXIST;
+
+	} else {
+		/* failed to open file - it is safe to assume,
+		 * it does not exist
+		 */
+		result = 0;
+	}
+
+	kfree(path);
+
+	return result;
+}
+
 int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 		struct module *owner, struct cas_exp_obj_ops *ops, void *priv)
 {
@@ -393,9 +423,18 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	if (strlen(dev_name) >= DISK_NAME_LEN)
 		return -EINVAL;
 
+	result = _cas_exp_obj_check_path(dev_name);
+	if (result == -EEXIST) {
+		printk(KERN_ERR "Could not activate exported object, "
+				"because file /dev/%s exists.\n", dev_name);
+	}
+
+	if (result)
+		return result;
+
 	result = cas_exp_obj_alloc(dsk);
 	if (result)
-		goto error_exp_obj_alloc;
+		return result;
 
 	exp_obj = dsk->exp_obj;
 
@@ -451,8 +490,16 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 			goto error_set_geometry;
 	}
 
+	add_disk(gd);
+
+	result = bd_claim_by_disk(dsk->bd, dsk, gd);
+	if (result)
+		goto error_bd_claim;
+
 	return 0;
 
+error_bd_claim:
+	del_gendisk(dsk->exp_obj->gd);
 error_set_geometry:
 	exp_obj->private = NULL;
 	_cas_exp_obj_clear_dev_t(dsk);
@@ -468,68 +515,8 @@ error_module_get:
 	kfree(exp_obj->dev_name);
 error_kstrdup:
 	cas_exp_obj_free(dsk);
-error_exp_obj_alloc:
 	return result;
 
-}
-
-static bool _cas_exp_obj_exists(const char *path)
-{
-	struct file *exported;
-
-	exported = filp_open(path, O_RDONLY, 0);
-
-	if (!exported || IS_ERR(exported)) {
-		/*failed to open file - it is safe to assume,
-		 * it does not exist
-		 */
-		return false;
-	}
-
-	filp_close(exported, NULL);
-	return true;
-}
-
-int cas_exp_obj_activate(struct cas_disk *dsk)
-{
-	char *path;
-	int result;
-
-	BUG_ON(!dsk);
-	BUG_ON(!dsk->exp_obj);
-	BUG_ON(!dsk->exp_obj->gd);
-	BUG_ON(dsk->exp_obj->activated);
-
-	CAS_DEBUG_DISK_TRACE(dsk);
-
-	path = kmalloc(PATH_MAX, GFP_KERNEL);
-	if (!path)
-		return -ENOMEM;
-
-	snprintf(path, PATH_MAX, "/dev/%s", dsk->exp_obj->dev_name);
-	if (_cas_exp_obj_exists(path)) {
-		printk(KERN_ERR "Could not activate exported object, "
-				"because file %s exists.\n", path);
-		kfree(path);
-		return -EEXIST;
-	}
-	kfree(path);
-
-	dsk->exp_obj->activated = true;
-	add_disk(dsk->exp_obj->gd);
-
-	result = bd_claim_by_disk(dsk->bd, dsk, dsk->exp_obj->gd);
-	if (result)
-		goto error_bd_claim;
-
-	CAS_DEBUG_DISK(dsk, "Activated exp object %s", dsk->exp_obj->dev_name);
-
-	return 0;
-
-error_bd_claim:
-	del_gendisk(dsk->exp_obj->gd);
-	dsk->exp_obj->activated = false;
-	return result;
 }
 
 int cas_exp_obj_destroy(struct cas_disk *dsk)
@@ -545,11 +532,9 @@ int cas_exp_obj_destroy(struct cas_disk *dsk)
 
 	exp_obj = dsk->exp_obj;
 
-	if (dsk->exp_obj->activated) {
-		bd_release_from_disk(dsk->bd, exp_obj->gd);
-		_cas_exp_obj_clear_dev_t(dsk);
-		del_gendisk(exp_obj->gd);
-	}
+	bd_release_from_disk(dsk->bd, exp_obj->gd);
+	_cas_exp_obj_clear_dev_t(dsk);
+	del_gendisk(exp_obj->gd);
 
 	if (exp_obj->queue)
 		blk_cleanup_queue(exp_obj->queue);

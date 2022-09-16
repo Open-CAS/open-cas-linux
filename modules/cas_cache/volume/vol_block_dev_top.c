@@ -601,19 +601,6 @@ err:
 /**
  * @brief this routine actually adds /dev/casM-N inode
  */
-static int kcas_volume_activate_exported_object(ocf_volume_t volume,
-		struct cas_exp_obj_ops *ops)
-{
-	struct bd_object *bvol = bd_object(volume);
-	int result;
-
-	result = cas_exp_obj_activate(bvol->dsk);
-	if (result == -EEXIST)
-		result = -KCAS_ERR_FILE_EXISTS;
-
-	return result;
-}
-
 int kcas_core_create_exported_object(ocf_core_t core)
 {
 	ocf_cache_t cache = ocf_core_get_cache(core);
@@ -638,23 +625,6 @@ int kcas_core_destroy_exported_object(ocf_core_t core)
 	return kcas_volume_destroy_exported_object(volume);
 }
 
-int kcas_core_activate_exported_object(ocf_core_t core)
-{
-	ocf_cache_t cache = ocf_core_get_cache(core);
-	ocf_volume_t volume = ocf_core_get_volume(core);
-	int result;
-
-	result = kcas_volume_activate_exported_object(volume,
-			&kcas_core_exp_obj_ops);
-	if (result) {
-		printk(KERN_ERR "Cannot activate exported object, %s.%s. "
-				"Error code %d\n", ocf_cache_get_name(cache),
-				ocf_core_get_name(core), result);
-	}
-
-	return result;
-}
-
 int kcas_cache_create_exported_object(ocf_cache_t cache)
 {
 	ocf_volume_t volume = ocf_cache_get_volume(cache);
@@ -675,22 +645,6 @@ int kcas_cache_destroy_exported_object(ocf_cache_t cache)
 	ocf_volume_t volume = ocf_cache_get_volume(cache);
 
 	return kcas_volume_destroy_exported_object(volume);
-}
-
-int kcas_cache_activate_exported_object(ocf_cache_t cache)
-{
-	ocf_volume_t volume = ocf_cache_get_volume(cache);
-	int result;
-
-	result = kcas_volume_activate_exported_object(volume,
-			&kcas_cache_exp_obj_ops);
-	if (result) {
-		printk(KERN_ERR "Cannot activate cache %s exported object. "
-				"Error code %d\n", ocf_cache_get_name(cache),
-				result);
-	}
-
-	return result;
 }
 
 static int kcas_core_lock_exported_object(ocf_core_t core, void *cntx)
