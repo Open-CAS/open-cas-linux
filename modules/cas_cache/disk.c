@@ -149,9 +149,10 @@ error_kmem:
 
 static void __cas_disk_close(struct cas_disk *dsk)
 {
+	BUG_ON(dsk->exp_obj);
+
 	close_bdev_exclusive(dsk->bd, CAS_DISK_OPEN_FMODE);
 
-	cas_exp_obj_free(dsk);
 	kobject_put(&dsk->kobj);
 }
 

@@ -582,12 +582,17 @@ static int kcas_volume_destroy_exported_object(ocf_volume_t volume)
 
 	result = cas_exp_obj_destroy(bvol->dsk);
 	if (result)
-		goto out;
+		goto err;
 
 	bvol->expobj_valid = false;
 	destroy_workqueue(bvol->expobj_wq);
 
-out:
+	cas_exp_obj_unlock(bvol->dsk);
+	cas_exp_obj_free(bvol->dsk);
+
+	return 0;
+
+err:
 	cas_exp_obj_unlock(bvol->dsk);
 
 	return result;
