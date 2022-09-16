@@ -24,8 +24,6 @@ struct cas_disk {
 int __init cas_init_disks(void);
 void cas_deinit_disks(void);
 
-int cas_disk_allocate_minors(int count);
-
 /**
  * @brief Open block device
  * @param path Path to block device

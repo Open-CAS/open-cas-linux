@@ -29,21 +29,11 @@ int __init cas_init_disks(void)
 {
 	CAS_DEBUG_TRACE();
 
-	cas_module.disk_major = register_blkdev(cas_module.disk_major,
-						  "cas");
-	if (cas_module.disk_major <= 0) {
-		CAS_DEBUG_ERROR("Cannot allocate major number");
-		return -EINVAL;
-	}
-	CAS_DEBUG_PARAM("Allocated major number: %d", cas_module.disk_major);
-
 	cas_module.disk_cache =
 		kmem_cache_create("cas_disk", sizeof(struct cas_disk),
 				  0, 0, NULL);
-	if (!cas_module.disk_cache) {
-		unregister_blkdev(cas_module.disk_major, "cas");
+	if (!cas_module.disk_cache)
 		return -ENOMEM;
-	}
 
 	return 0;
 }
@@ -53,7 +43,6 @@ void cas_deinit_disks(void)
 	CAS_DEBUG_TRACE();
 
 	kmem_cache_destroy(cas_module.disk_cache);
-	unregister_blkdev(cas_module.disk_major, "cas");
 }
 
 struct cas_disk *cas_disk_open(const char *path)
@@ -128,16 +117,4 @@ struct request_queue *cas_disk_get_queue(struct cas_disk *dsk)
 	BUG_ON(!dsk);
 	BUG_ON(!dsk->bd);
 	return cas_bdev_whole(dsk->bd)->bd_disk->queue;
-}
-
-int cas_disk_allocate_minors(int count)
-{
-	int minor = -1;
-
-	if (cas_module.next_minor + count <= (1 << MINORBITS)) {
-		minor = cas_module.next_minor;
-		cas_module.next_minor += count;
-	}
-
-	return minor;
 }

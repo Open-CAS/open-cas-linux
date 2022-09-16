@@ -46,10 +46,20 @@ int __init cas_init_exp_objs(void)
 {
 	CAS_DEBUG_TRACE();
 
+	cas_module.disk_major = register_blkdev(cas_module.disk_major,
+			"cas");
+	if (cas_module.disk_major <= 0) {
+		CAS_DEBUG_ERROR("Cannot allocate major number");
+		return -EINVAL;
+	}
+	CAS_DEBUG_PARAM("Allocated major number: %d", cas_module.disk_major);
+
 	cas_module.exp_obj_cache = kmem_cache_create("cas_exp_obj",
 			sizeof(struct cas_exp_obj), 0, 0, NULL);
-	if (!cas_module.exp_obj_cache)
+	if (!cas_module.exp_obj_cache) {
+		unregister_blkdev(cas_module.disk_major, "cas");
 		return -ENOMEM;
+	}
 
 	return 0;
 }
@@ -59,6 +69,7 @@ void cas_deinit_exp_objs(void)
 	CAS_DEBUG_TRACE();
 
 	kmem_cache_destroy(cas_module.exp_obj_cache);
+	unregister_blkdev(cas_module.disk_major, "cas");
 }
 
 static MAKE_RQ_RET_TYPE _cas_exp_obj_submit_bio(struct bio *bio)
@@ -190,6 +201,18 @@ static int _cas_exp_obj_hide_parts(struct cas_disk *dsk)
 	return 0;
 }
 
+static int _cas_exp_obj_allocate_minors(int count)
+{
+	int minor = -1;
+
+	if (cas_module.next_minor + count <= (1 << MINORBITS)) {
+		minor = cas_module.next_minor;
+		cas_module.next_minor += count;
+	}
+
+	return minor;
+}
+
 static int _cas_exp_obj_set_dev_t(struct cas_disk *dsk, struct gendisk *gd)
 {
 	struct cas_exp_obj *exp_obj = dsk->exp_obj;
@@ -209,7 +232,7 @@ static int _cas_exp_obj_set_dev_t(struct cas_disk *dsk, struct gendisk *gd)
 		flags = exp_obj->gd_flags;
 	}
 
-	gd->first_minor = cas_disk_allocate_minors(minors);
+	gd->first_minor = _cas_exp_obj_allocate_minors(minors);
 	if (gd->first_minor < 0) {
 		CAS_DEBUG_DISK_ERROR(dsk, "Cannot allocate %d minors", minors);
 		return -EINVAL;
