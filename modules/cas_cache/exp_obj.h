@@ -5,7 +5,6 @@
 #ifndef __CASDISK_EXP_OBJ_H__
 #define __CASDISK_EXP_OBJ_H__
 
-#include <linux/kobject.h>
 #include <linux/fs.h>
 
 struct cas_disk;
@@ -39,7 +38,6 @@ struct cas_exp_obj {
 	struct cas_exp_obj_ops *ops;
 
 	const char *dev_name;
-	struct kobject kobj;
 
 	atomic_t pt_ios;
 	atomic_t *pending_rqs;
@@ -48,7 +46,7 @@ struct cas_exp_obj {
 int __init cas_init_exp_objs(void);
 void cas_deinit_exp_objs(void);
 
-void cas_exp_obj_free(struct cas_disk *dsk);
+void cas_exp_obj_cleanup(struct cas_disk *dsk);
 
 /**
  * @brief Create exported object (top device)

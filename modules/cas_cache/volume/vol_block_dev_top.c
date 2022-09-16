@@ -588,7 +588,7 @@ static int kcas_volume_destroy_exported_object(ocf_volume_t volume)
 	destroy_workqueue(bvol->expobj_wq);
 
 	cas_exp_obj_unlock(bvol->dsk);
-	cas_exp_obj_free(bvol->dsk);
+	cas_exp_obj_cleanup(bvol->dsk);
 
 	return 0;
 
@@ -759,11 +759,11 @@ static int kcas_core_stop_exported_object(ocf_core_t core, void *cntx)
 	return 0;
 }
 
-static int kcas_core_free_exported_object(ocf_core_t core, void *cntx)
+static int kcas_core_cleanup_exported_object(ocf_core_t core, void *cntx)
 {
 	struct bd_object *bvol = bd_object(ocf_core_get_volume(core));
 
-	cas_exp_obj_free(bvol->dsk);
+	cas_exp_obj_cleanup(bvol->dsk);
 
 	return 0;
 }
@@ -783,7 +783,7 @@ int kcas_cache_destroy_all_core_exported_objects(ocf_cache_t cache)
 	}
 
 	ocf_core_visit(cache, kcas_core_stop_exported_object, NULL, true);
-	ocf_core_visit(cache, kcas_core_free_exported_object, NULL, true);
+	ocf_core_visit(cache, kcas_core_cleanup_exported_object, NULL, true);
 
 	return 0;
 }
