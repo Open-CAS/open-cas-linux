@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -149,7 +149,7 @@ def test_partition_create_cas(partition_table, filesystem, cache_mode):
     with TestRun.step("Read partitions on core device."):
         for part in core.partitions:
             part.parent_device = core_dev
-            new_part = Partition(part.parent_device, part.type, part.number)
+            new_part = Partition(part.parent_device, part.type, part.number, part.begin, part.end)
             core_dev.partitions.append(new_part)
 
     with TestRun.step("Mount core devices."):
