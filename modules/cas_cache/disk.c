@@ -13,11 +13,6 @@
 
 #define CAS_DISK_OPEN_FMODE (FMODE_READ | FMODE_WRITE)
 
-static inline struct cas_disk *cas_kobj_to_disk(struct kobject *kobj)
-{
-	return container_of(kobj, struct cas_disk, kobj);
-}
-
 static inline struct block_device *open_bdev_exclusive(const char *path,
 						       fmode_t mode,
 						       void *holder)
@@ -30,31 +25,9 @@ static inline void close_bdev_exclusive(struct block_device *bdev, fmode_t mode)
 	blkdev_put(bdev, mode | FMODE_EXCL);
 }
 
-static void _cas_disk_release(struct kobject *kobj)
-{
-	struct cas_disk *dsk;
-
-	BUG_ON(!kobj);
-
-	dsk = cas_kobj_to_disk(kobj);
-	BUG_ON(!dsk);
-
-	CAS_DEBUG_DISK_TRACE(dsk);
-
-	kfree(dsk->path);
-
-	kmem_cache_free(cas_module.disk_cache, dsk);
-}
-
-static struct kobj_type cas_disk_ktype = {
-	.release = _cas_disk_release,
-};
-
 int __init cas_init_disks(void)
 {
 	CAS_DEBUG_TRACE();
-
-	cas_module.next_disk_id = 1;
 
 	cas_module.disk_major = register_blkdev(cas_module.disk_major,
 						  "cas");
@@ -81,19 +54,6 @@ void cas_deinit_disks(void)
 
 	kmem_cache_destroy(cas_module.disk_cache);
 	unregister_blkdev(cas_module.disk_major, "cas");
-}
-
-static int _cas_disk_init_kobject(struct cas_disk *dsk)
-{
-	int result = 0;
-
-	kobject_init(&dsk->kobj, &cas_disk_ktype);
-	result = kobject_add(&dsk->kobj, &disk_to_dev(dsk->bd->bd_disk)->kobj,
-			     "cas%d", dsk->id);
-	if (result)
-		CAS_DEBUG_DISK_ERROR(dsk, "Cannot register kobject");
-
-	return result;
 }
 
 struct cas_disk *cas_disk_open(const char *path)
@@ -127,33 +87,16 @@ struct cas_disk *cas_disk_open(const char *path)
 		goto error_open_bdev;
 	}
 
-	dsk->id = cas_module.next_disk_id++;
-
-	result = _cas_disk_init_kobject(dsk);
-	if (result)
-		goto error_kobject;
-
 	CAS_DEBUG_DISK(dsk, "Created (%p)", dsk);
 
 	return dsk;
 
-error_kobject:
-	close_bdev_exclusive(dsk->bd, CAS_DISK_OPEN_FMODE);
 error_open_bdev:
 	kfree(dsk->path);
 error_kstrdup:
 	kmem_cache_free(cas_module.disk_cache, dsk);
 error_kmem:
 	return ERR_PTR(result);
-}
-
-static void __cas_disk_close(struct cas_disk *dsk)
-{
-	BUG_ON(dsk->exp_obj);
-
-	close_bdev_exclusive(dsk->bd, CAS_DISK_OPEN_FMODE);
-
-	kobject_put(&dsk->kobj);
 }
 
 void cas_disk_close(struct cas_disk *dsk)
@@ -163,7 +106,10 @@ void cas_disk_close(struct cas_disk *dsk)
 
 	CAS_DEBUG_DISK(dsk, "Destroying (%p)", dsk);
 
-	__cas_disk_close(dsk);
+	close_bdev_exclusive(dsk->bd, CAS_DISK_OPEN_FMODE);
+
+	kfree(dsk->path);
+	kmem_cache_free(cas_module.disk_cache, dsk);
 }
 
 struct block_device *cas_disk_get_blkdev(struct cas_disk *dsk)

@@ -51,14 +51,11 @@ enum {
 };
 
 struct cas_module {
-	uint32_t next_disk_id;
 	int disk_major;
 	int next_minor;
 
 	struct kmem_cache *disk_cache;
 	struct kmem_cache *exp_obj_cache;
-
-	struct kobject kobj;
 };
 
 extern struct cas_module cas_module;

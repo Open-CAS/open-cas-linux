@@ -5,7 +5,6 @@
 #ifndef __CASDISK_DISK_H__
 #define __CASDISK_DISK_H__
 
-#include <linux/kobject.h>
 #include <linux/fs.h>
 #include <linux/blkdev.h>
 #include <linux/mutex.h>
@@ -15,7 +14,6 @@
 struct cas_exp_obj;
 
 struct cas_disk {
-	uint32_t id;
 	char *path;
 
 	struct mutex openers_lock;
@@ -29,8 +27,6 @@ struct cas_disk {
 
 	struct blk_mq_tag_set tag_set;
 	struct cas_exp_obj *exp_obj;
-
-	struct kobject kobj;
 
 	void *private;
 };
