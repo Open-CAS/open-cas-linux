@@ -31,7 +31,6 @@ struct cas_disk {
 	struct cas_exp_obj *exp_obj;
 
 	struct kobject kobj;
-	struct list_head list;
 
 	void *private;
 };
@@ -48,15 +47,6 @@ int cas_disk_allocate_minors(int count);
  * @return Pointer to cas_disk related to opened block device
  */
 struct cas_disk *cas_disk_open(const char *path, void *private);
-
-/**
- * @brief Claim previously opened block device
- * @param path Path to block device
- * @param private Private data
- * @return Pointer to cas_disk structure related to block device, or NULL
- *	if device is not opened.
- */
-struct cas_disk *cas_disk_claim(const char *path, void *private);
 
 /**
  * @brief Close block device and remove from cas

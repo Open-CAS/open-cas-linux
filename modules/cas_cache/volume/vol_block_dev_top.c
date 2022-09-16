@@ -533,16 +533,8 @@ static int kcas_volume_create_exported_object(ocf_volume_t volume,
 		const char *name, void *priv, struct cas_exp_obj_ops *ops)
 {
 	struct bd_object *bvol = bd_object(volume);
-	const struct ocf_volume_uuid *uuid = ocf_volume_get_uuid(volume);
 	char dev_name[DISK_NAME_LEN];
-	struct cas_disk *dsk;
 	int result;
-
-	dsk = cas_disk_claim(uuid->data, priv);
-	if (dsk != bvol->dsk) {
-		result = -KCAS_ERR_SYSTEM;
-		goto end;
-	}
 
 	bvol->expobj_wq = alloc_workqueue("expobj_wq_%s",
 			WQ_MEM_RECLAIM | WQ_HIGHPRI, 0,
@@ -552,8 +544,8 @@ static int kcas_volume_create_exported_object(ocf_volume_t volume,
 		goto end;
 	}
 
-	result = cas_exp_obj_create(dsk, name,
-			THIS_MODULE, ops);
+	result = cas_exp_obj_create(bvol->dsk, name,
+			THIS_MODULE, ops, priv);
 	if (result) {
 		destroy_workqueue(bvol->expobj_wq);
 		goto end;

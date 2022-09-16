@@ -55,7 +55,6 @@ int __init cas_init_disks(void)
 	CAS_DEBUG_TRACE();
 
 	cas_module.next_disk_id = 1;
-	INIT_LIST_HEAD(&cas_module.disk_list);
 
 	cas_module.disk_major = register_blkdev(cas_module.disk_major,
 						  "cas");
@@ -131,7 +130,6 @@ struct cas_disk *cas_disk_open(const char *path, void *private)
 	dsk->private = private;
 
 	dsk->id = cas_module.next_disk_id++;
-	list_add(&dsk->list, &cas_module.disk_list);
 
 	result = _cas_disk_init_kobject(dsk);
 	if (result)
@@ -142,7 +140,6 @@ struct cas_disk *cas_disk_open(const char *path, void *private)
 	return dsk;
 
 error_kobject:
-	list_del(&dsk->list);
 	close_bdev_exclusive(dsk->bd, CAS_DISK_OPEN_FMODE);
 error_open_bdev:
 	kfree(dsk->path);
@@ -150,28 +147,6 @@ error_kstrdup:
 	kmem_cache_free(cas_module.disk_cache, dsk);
 error_kmem:
 	return ERR_PTR(result);
-}
-
-static void _cas_disk_claim(struct cas_disk *dsk, void *private)
-{
-	dsk->private = private;
-}
-
-struct cas_disk *cas_disk_claim(const char *path, void *private)
-{
-	struct list_head *item;
-	struct cas_disk *dsk = NULL;
-
-	BUG_ON(!path);
-
-	list_for_each(item, &cas_module.disk_list) {
-		dsk = list_entry(item, struct cas_disk, list);
-		if (strncmp(path, dsk->path, PATH_MAX) == 0) {
-			_cas_disk_claim(dsk, private);
-			return dsk;
-		}
-	}
-	return NULL;
 }
 
 static void __cas_disk_close(struct cas_disk *dsk)
@@ -188,8 +163,6 @@ void cas_disk_close(struct cas_disk *dsk)
 	BUG_ON(!dsk->bd);
 
 	CAS_DEBUG_DISK(dsk, "Destroying (%p)", dsk);
-
-	list_del(&dsk->list);
 
 	__cas_disk_close(dsk);
 }

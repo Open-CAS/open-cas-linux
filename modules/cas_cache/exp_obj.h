@@ -56,10 +56,11 @@ void cas_exp_obj_free(struct cas_disk *dsk);
  * @param dev_name Name of exported object (top device)
  * @param owner Pointer to cas module
  * @param ops Pointer to structure with callback functions
+ * @param priv Private data
  * @return 0 if success, errno if failure
  */
 int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
-			struct module *owner, struct cas_exp_obj_ops *ops);
+		struct module *owner, struct cas_exp_obj_ops *ops, void *priv);
 
 /**
  * @brief Get request queue of exported object (top) block device

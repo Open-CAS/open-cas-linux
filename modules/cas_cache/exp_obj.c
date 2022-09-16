@@ -407,7 +407,7 @@ static int _cas_init_tag_set(struct cas_disk *dsk, struct blk_mq_tag_set *set)
 }
 
 int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
-			struct module *owner, struct cas_exp_obj_ops *ops)
+		struct module *owner, struct cas_exp_obj_ops *ops, void *priv)
 {
 	struct cas_exp_obj *exp_obj;
 	struct request_queue *queue;
@@ -469,6 +469,8 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	queue->queuedata = dsk;
 	exp_obj->queue = queue;
 
+	dsk->private = priv;
+
 	_cas_init_queues(dsk);
 
 	gd->fops = &_cas_exp_obj_ops;
@@ -486,6 +488,7 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	return 0;
 
 error_set_geometry:
+	dsk->private = NULL;
 	_cas_exp_obj_clear_dev_t(dsk);
 error_exp_obj_set_dev_t:
 	cas_cleanup_mq_disk(exp_obj);

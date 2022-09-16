@@ -51,7 +51,6 @@ enum {
 };
 
 struct cas_module {
-	struct list_head disk_list;
 	uint32_t next_disk_id;
 	int disk_major;
 	int next_minor;
