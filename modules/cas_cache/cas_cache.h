@@ -19,7 +19,8 @@
 #include "classifier.h"
 #include "context.h"
 #include <linux/kallsyms.h>
-#include "../cas_disk/cas_disk.h"
+#include "disk.h"
+#include "exp_obj.h"
 
 #define CAS_KERN_EMERG KERN_EMERG OCF_PREFIX_SHORT
 #define CAS_KERN_ALERT KERN_ALERT OCF_PREFIX_SHORT
@@ -48,6 +49,20 @@ enum {
 	OBJECT_TYPE_MAX,
 /** \endcond */
 };
+
+struct cas_module {
+	struct list_head disk_list;
+	uint32_t next_disk_id;
+	int disk_major;
+	int next_minor;
+
+	struct kmem_cache *disk_cache;
+	struct kmem_cache *exp_obj_cache;
+
+	struct kobject kobj;
+};
+
+extern struct cas_module cas_module;
 
 struct cas_classifier;
 

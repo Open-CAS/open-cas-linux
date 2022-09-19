@@ -55,9 +55,9 @@ void blkdev_set_exported_object_flush_fua(ocf_core_t core)
 	bd_core_vol = bd_object(core_vol);
 	bd_cache_vol = bd_object(cache_vol);
 
-	core_q = casdsk_disk_get_queue(bd_core_vol->dsk);
-	exp_q = casdsk_exp_obj_get_queue(bd_core_vol->dsk);
-	cache_q = casdsk_disk_get_queue(bd_cache_vol->dsk);
+	core_q = cas_disk_get_queue(bd_core_vol->dsk);
+	exp_q = cas_exp_obj_get_queue(bd_core_vol->dsk);
+	cache_q = cas_disk_get_queue(bd_cache_vol->dsk);
 
 	flush = (CAS_CHECK_QUEUE_FLUSH(core_q) || CAS_CHECK_QUEUE_FLUSH(cache_q));
 	fua = (CAS_CHECK_QUEUE_FUA(core_q) || CAS_CHECK_QUEUE_FUA(cache_q));
@@ -96,7 +96,7 @@ static void blkdev_set_discard_properties(ocf_cache_t cache,
  * Map geometry of underlying (core) object geometry (sectors etc.)
  * to geometry of exported object.
  */
-static int blkdev_core_set_geometry(struct casdsk_disk *dsk, void *private)
+static int blkdev_core_set_geometry(struct cas_disk *dsk, void *private)
 {
 	ocf_core_t core;
 	ocf_cache_t cache;
@@ -118,19 +118,19 @@ static int blkdev_core_set_geometry(struct casdsk_disk *dsk, void *private)
 	bd_cache_vol = bd_object(cache_vol);
 	path = ocf_volume_get_uuid(core_vol)->data;
 
-	core_bd = casdsk_disk_get_blkdev(dsk);
+	core_bd = cas_disk_get_blkdev(dsk);
 	BUG_ON(!core_bd);
 
-	cache_bd = casdsk_disk_get_blkdev(bd_cache_vol->dsk);
+	cache_bd = cas_disk_get_blkdev(bd_cache_vol->dsk);
 	BUG_ON(!cache_bd);
 
 	core_q = cas_bdev_whole(core_bd)->bd_disk->queue;
 	cache_q = cache_bd->bd_disk->queue;
-	exp_q = casdsk_exp_obj_get_queue(dsk);
+	exp_q = cas_exp_obj_get_queue(dsk);
 
 	sectors = ocf_volume_get_length(core_vol) >> SECTOR_SHIFT;
 
-	set_capacity(casdsk_exp_obj_get_gendisk(dsk), sectors);
+	set_capacity(cas_exp_obj_get_gendisk(dsk), sectors);
 
 	cas_copy_queue_limits(exp_q, cache_q, core_q);
 
@@ -440,7 +440,7 @@ static void blkdev_submit_bio(struct bd_object *bvol, struct bio *bio)
 		blkdev_handle_bio(bvol, bio);
 }
 
-static void blkdev_core_submit_bio(struct casdsk_disk *dsk,
+static void blkdev_core_submit_bio(struct cas_disk *dsk,
 		struct bio *bio, void *private)
 {
 	ocf_core_t core = private;
@@ -453,12 +453,12 @@ static void blkdev_core_submit_bio(struct casdsk_disk *dsk,
 	blkdev_submit_bio(bvol, bio);
 }
 
-static struct casdsk_exp_obj_ops kcas_core_exp_obj_ops = {
+static struct cas_exp_obj_ops kcas_core_exp_obj_ops = {
 	.set_geometry = blkdev_core_set_geometry,
 	.submit_bio = blkdev_core_submit_bio,
 };
 
-static int blkdev_cache_set_geometry(struct casdsk_disk *dsk, void *private)
+static int blkdev_cache_set_geometry(struct cas_disk *dsk, void *private)
 {
 	ocf_cache_t cache;
 	ocf_volume_t volume;
@@ -473,15 +473,15 @@ static int blkdev_cache_set_geometry(struct casdsk_disk *dsk, void *private)
 
 	bvol = bd_object(volume);
 
-	bd = casdsk_disk_get_blkdev(bvol->dsk);
+	bd = cas_disk_get_blkdev(bvol->dsk);
 	BUG_ON(!bd);
 
 	cache_q = bd->bd_disk->queue;
-	exp_q = casdsk_exp_obj_get_queue(dsk);
+	exp_q = cas_exp_obj_get_queue(dsk);
 
 	sectors = ocf_volume_get_length(volume) >> SECTOR_SHIFT;
 
-	set_capacity(casdsk_exp_obj_get_gendisk(dsk), sectors);
+	set_capacity(cas_exp_obj_get_gendisk(dsk), sectors);
 
 	cas_copy_queue_limits(exp_q, cache_q, cache_q);
 
@@ -496,7 +496,7 @@ static int blkdev_cache_set_geometry(struct casdsk_disk *dsk, void *private)
 	return 0;
 }
 
-static void blkdev_cache_submit_bio(struct casdsk_disk *dsk,
+static void blkdev_cache_submit_bio(struct cas_disk *dsk,
 		struct bio *bio, void *private)
 {
 	ocf_cache_t cache = private;
@@ -509,7 +509,7 @@ static void blkdev_cache_submit_bio(struct casdsk_disk *dsk,
 	blkdev_submit_bio(bvol, bio);
 }
 
-static struct casdsk_exp_obj_ops kcas_cache_exp_obj_ops = {
+static struct cas_exp_obj_ops kcas_cache_exp_obj_ops = {
 	.set_geometry = blkdev_cache_set_geometry,
 	.submit_bio = blkdev_cache_submit_bio,
 };
@@ -530,15 +530,15 @@ static const char *get_core_id_string(ocf_core_t core)
 }
 
 static int kcas_volume_create_exported_object(ocf_volume_t volume,
-		const char *name, void *priv, struct casdsk_exp_obj_ops *ops)
+		const char *name, void *priv, struct cas_exp_obj_ops *ops)
 {
 	struct bd_object *bvol = bd_object(volume);
 	const struct ocf_volume_uuid *uuid = ocf_volume_get_uuid(volume);
 	char dev_name[DISK_NAME_LEN];
-	struct casdsk_disk *dsk;
+	struct cas_disk *dsk;
 	int result;
 
-	dsk = casdsk_disk_claim(uuid->data, priv);
+	dsk = cas_disk_claim(uuid->data, priv);
 	if (dsk != bvol->dsk) {
 		result = -KCAS_ERR_SYSTEM;
 		goto end;
@@ -552,7 +552,7 @@ static int kcas_volume_create_exported_object(ocf_volume_t volume,
 		goto end;
 	}
 
-	result = casdsk_exp_obj_create(dsk, name,
+	result = cas_exp_obj_create(dsk, name,
 			THIS_MODULE, ops);
 	if (result) {
 		destroy_workqueue(bvol->expobj_wq);
@@ -582,13 +582,13 @@ static int kcas_volume_destroy_exported_object(ocf_volume_t volume)
 	if (!bvol->expobj_valid)
 		return 0;
 
-	result = casdsk_exp_obj_lock(bvol->dsk);
+	result = cas_exp_obj_lock(bvol->dsk);
 	if (result == -EBUSY)
 		return -KCAS_ERR_DEV_PENDING;
 	else if (result)
 		return result;
 
-	result = casdsk_exp_obj_destroy(bvol->dsk);
+	result = cas_exp_obj_destroy(bvol->dsk);
 	if (result)
 		goto out;
 
@@ -596,7 +596,7 @@ static int kcas_volume_destroy_exported_object(ocf_volume_t volume)
 	destroy_workqueue(bvol->expobj_wq);
 
 out:
-	casdsk_exp_obj_unlock(bvol->dsk);
+	cas_exp_obj_unlock(bvol->dsk);
 
 	return result;
 }
@@ -605,12 +605,12 @@ out:
  * @brief this routine actually adds /dev/casM-N inode
  */
 static int kcas_volume_activate_exported_object(ocf_volume_t volume,
-		struct casdsk_exp_obj_ops *ops)
+		struct cas_exp_obj_ops *ops)
 {
 	struct bd_object *bvol = bd_object(volume);
 	int result;
 
-	result = casdsk_exp_obj_activate(bvol->dsk);
+	result = cas_exp_obj_activate(bvol->dsk);
 	if (result == -EEXIST)
 		result = -KCAS_ERR_FILE_EXISTS;
 
@@ -705,15 +705,15 @@ static int kcas_core_lock_exported_object(ocf_core_t core, void *cntx)
 	if (!bvol->expobj_valid)
 		return 0;
 
-	result = casdsk_exp_obj_lock(bvol->dsk);
+	result = cas_exp_obj_lock(bvol->dsk);
 
 	if (-EBUSY == result) {
 		printk(KERN_WARNING "Stopping %s failed - device in use\n",
-			casdsk_exp_obj_get_gendisk(bvol->dsk)->disk_name);
+			cas_exp_obj_get_gendisk(bvol->dsk)->disk_name);
 		return -KCAS_ERR_DEV_PENDING;
 	} else if (result) {
 		printk(KERN_WARNING "Stopping %s failed - device unavailable\n",
-			casdsk_exp_obj_get_gendisk(bvol->dsk)->disk_name);
+			cas_exp_obj_get_gendisk(bvol->dsk)->disk_name);
 		return -OCF_ERR_CORE_NOT_AVAIL;
 	}
 
@@ -728,7 +728,7 @@ static int kcas_core_unlock_exported_object(ocf_core_t core, void *cntx)
 	struct bd_object *bvol = bd_object(ocf_core_get_volume(core));
 
 	if (bvol->expobj_locked) {
-		casdsk_exp_obj_unlock(bvol->dsk);
+		cas_exp_obj_unlock(bvol->dsk);
 		bvol->expobj_locked = false;
 	}
 
@@ -745,9 +745,9 @@ static int kcas_core_stop_exported_object(ocf_core_t core, void *cntx)
 		BUG_ON(!bvol->expobj_locked);
 
 		printk(KERN_INFO "Stopping device %s\n",
-			casdsk_exp_obj_get_gendisk(bvol->dsk)->disk_name);
+			cas_exp_obj_get_gendisk(bvol->dsk)->disk_name);
 
-		ret = casdsk_exp_obj_destroy(bvol->dsk);
+		ret = cas_exp_obj_destroy(bvol->dsk);
 		if (!ret) {
 			bvol->expobj_valid = false;
 			destroy_workqueue(bvol->expobj_wq);
@@ -755,7 +755,7 @@ static int kcas_core_stop_exported_object(ocf_core_t core, void *cntx)
 	}
 
 	if (bvol->expobj_locked) {
-		casdsk_exp_obj_unlock(bvol->dsk);
+		cas_exp_obj_unlock(bvol->dsk);
 		bvol->expobj_locked = false;
 	}
 
@@ -766,7 +766,7 @@ static int kcas_core_free_exported_object(ocf_core_t core, void *cntx)
 {
 	struct bd_object *bvol = bd_object(ocf_core_get_volume(core));
 
-	casdsk_exp_obj_free(bvol->dsk);
+	cas_exp_obj_free(bvol->dsk);
 
 	return 0;
 }

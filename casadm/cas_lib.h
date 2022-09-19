@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -279,7 +279,6 @@ int partition_setup(unsigned int cache_id, const char *file);
 int partition_is_name_valid(const char *name);
 
 int cas_module_version(char *buff, int size);
-int disk_module_version(char *buff, int size);
 int list_caches(unsigned int list_format, bool by_id_path);
 int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 		 unsigned int stats_filters, unsigned int stats_format, bool by_id_path);

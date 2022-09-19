@@ -2047,7 +2047,7 @@ static void init_instance_complete(struct _cache_mngt_attach_context *ctx,
 
 	/* Set other back information */
 	name = block_dev_get_elevator_name(
-			casdsk_disk_get_queue(bd_cache_obj->dsk));
+			cas_disk_get_queue(bd_cache_obj->dsk));
 	if (name)
 		strlcpy(ctx->cache_elevator, name, MAX_ELEVATOR_NAME);
 }

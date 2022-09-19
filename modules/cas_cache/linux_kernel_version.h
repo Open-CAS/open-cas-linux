@@ -40,7 +40,7 @@
 #include <linux/mm.h>
 #include <linux/blk-mq.h>
 #include <linux/ktime.h>
-#include "../cas_disk/exp_obj.h"
+#include "exp_obj.h"
 
 #include "generated_defines.h"
 

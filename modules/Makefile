@@ -9,7 +9,6 @@ ifneq ($(M),)
 include $(M)/config.mk
 
 obj-y += cas_cache/
-obj-y += cas_disk/
 
 # Otherwise we were called directly from the command
 # line; invoke the kernel build system.
@@ -28,7 +27,6 @@ KERNEL_VERSION ?= "$(shell uname -r)"
 KERNEL_DIR ?= "/lib/modules/$(KERNEL_VERSION)/build"
 MODULES_DIR=/lib/modules/$(KERNEL_VERSION)/extra/block/opencas
 
-DISK_MODULE = cas_disk
 CACHE_MODULE = cas_cache
 
 DEPMOD:=$(shell which depmod)
@@ -58,16 +56,13 @@ install: install_files
 
 install_files:
 	@echo "Installing Open-CAS modules"
-	@install -m 644 -D cas_disk/$(DISK_MODULE).ko $(DESTDIR)$(MODULES_DIR)/$(DISK_MODULE).ko
 	@install -m 644 -D cas_cache/$(CACHE_MODULE).ko $(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko
 
 uninstall:
 	@echo "Uninstalling Open-CAS modules"
 	$(call remove-module,$(CACHE_MODULE))
-	$(call remove-module,$(DISK_MODULE))
 
 	$(call remove-file,$(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko)
-	$(call remove-file,$(DESTDIR)$(MODULES_DIR)/$(DISK_MODULE).ko)
 	$(call remove-directory,$(DESTDIR)$(MODULES_DIR))
 
 	@$(DEPMOD)

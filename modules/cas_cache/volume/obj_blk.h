@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -9,10 +9,10 @@
 #include "vol_block_dev_bottom.h"
 #include "vol_block_dev_top.h"
 
-struct casdsk_disk;
+struct cas_disk;
 
 struct bd_object {
-	struct casdsk_disk *dsk;
+	struct cas_disk *dsk;
 
 	struct block_device *btm_bd;
 
