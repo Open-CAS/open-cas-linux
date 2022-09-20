@@ -141,10 +141,13 @@ def test_cleaning_policy_config():
                 f"Dirty data before pause: {core_dirty_before}\n"
                 f"Dirty data after pause: {core_dirty_after}"
             )
-        elif core_dirty_before != core_dirty_after + data_to_flush:
+        # Only check whether a minimum amount of data is flushed, as ALRU does not have
+        # a configurable sleep time between active flushing iterations which would allow
+        # to precisely estimate expected amount of data.
+        elif core_dirty_before < core_dirty_after + data_to_flush:
             TestRun.LOGGER.error(
                 f"Number of dirty blocks flushed differs from configured in policy.\n"
-                f"Expected dirty data flushed: {data_to_flush}\n"
+                f"Expected minimum dirty data flushed: {data_to_flush}\n"
                 f"Actual dirty data flushed: "
                 f"{core_dirty_before - core_dirty_after}"
             )
