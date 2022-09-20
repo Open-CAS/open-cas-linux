@@ -373,8 +373,7 @@ static void block_dev_submit_io(struct ocf_io *io)
 		return;
 	}
 
-	CAS_DEBUG_PARAM("Address = %llu, bytes = %u\n", bdio->addr,
-			bdio->bytes);
+	CAS_DEBUG_PARAM("Address = %llu, bytes = %u\n", addr, bytes);
 
 	/* Prevent races of completing IO */
 	atomic_set(&bdio->rq_remaning, 1);
