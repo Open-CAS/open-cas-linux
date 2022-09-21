@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -35,14 +35,12 @@ def test_fault_power_hit_init(cache_mode):
 
         cache = casadm.start_cache(cache_dev, cache_mode, force=True)
         core = cache.add_core(core_dev)
-        cache_device_link = cache_dev.get_device_link("/dev/disk/by-id")
 
     with TestRun.step("Hard reset."):
         power_control = TestRun.plugin_manager.get_plugin('power_control')
         power_control.power_cycle()
 
     with TestRun.step("Start cache with re-initialization."):
-        cache_dev.path = cache_device_link.get_target()
         TestRun.executor.run_expect_success(cli.start_cmd(
             cache_dev=str(cache_dev.path),
             cache_mode=str(cache_mode.name.lower()),
