@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -88,7 +88,7 @@ def test_clean_stop_cache(cache_mode):
             .input(core.path) \
             .block_size(bs) \
             .count(int(test_file_main.size / bs)) \
-            .oflag("direct")
+            .iflag("direct")
         dd.run()
         test_file_1.refresh_item()
         sync()
@@ -103,7 +103,7 @@ def test_clean_stop_cache(cache_mode):
             .input(core_part.path) \
             .block_size(bs) \
             .count(int(test_file_main.size / bs)) \
-            .oflag("direct")
+            .iflag("direct")
         dd.run()
         test_file_2.refresh_item()
         sync()
@@ -136,7 +136,7 @@ def test_clean_stop_cache(cache_mode):
             .input(core_part.path) \
             .block_size(bs) \
             .count(int(test_file_main.size / bs)) \
-            .oflag("direct")
+            .iflag("direct")
         dd.run()
         test_file_3.refresh_item()
         sync()
@@ -219,7 +219,7 @@ def test_clean_remove_core_with_fs(cache_mode, fs):
             .input(test_file_1.full_path) \
             .block_size(bs) \
             .count(int(test_file_1.size / bs)) \
-            .oflag("direct")
+            .iflag("direct")
         dd.run()
         test_file_2.refresh_item()
         sync()
@@ -305,7 +305,7 @@ def test_clean_remove_core_without_fs(cache_mode):
             .input(core.path) \
             .block_size(bs) \
             .count(int(test_file_main.size / bs)) \
-            .oflag("direct")
+            .iflag("direct")
         dd.run()
         test_file_1.refresh_item()
         sync()
@@ -320,7 +320,7 @@ def test_clean_remove_core_without_fs(cache_mode):
             .input(core_part.path) \
             .block_size(bs) \
             .count(int(test_file_main.size / bs)) \
-            .oflag("direct")
+            .iflag("direct")
         dd.run()
         test_file_2.refresh_item()
         sync()
@@ -353,7 +353,7 @@ def test_clean_remove_core_without_fs(cache_mode):
             .input(core_part.path) \
             .block_size(bs) \
             .count(int(test_file_main.size / bs)) \
-            .oflag("direct")
+            .iflag("direct")
         dd.run()
         test_file_3.refresh_item()
         sync()
