@@ -20,7 +20,7 @@ from test_tools.fs_utils import FilesPermissions, find_all_items
 repo_files_perms_exceptions = {
     ".github/verify_header.sh": 755,
     "configure": 755,
-    "doc/reqparse": 755,
+    "doc/reqparse.py": 755,
     "test/smoke_test/basic/01": 755,
     "test/smoke_test/basic/02": 755,
     "test/smoke_test/basic/03": 755,
@@ -59,9 +59,9 @@ repo_files_perms_exceptions = {
     "tools/cas_version_gen.sh": 755,
     "tools/pckgen.sh": 755,
     "tools/pckgen.d/deb/debian/rules": 755,
-    "tools/version2sha": 755,
+    "tools/version2sha.sh": 755,
     "utils/casctl": 755,
-    "utils/open-cas-loader": 755,
+    "utils/open-cas-loader.py": 755,
     "utils/open-cas.shutdown": 755,
     "ocf/.github/verify_header.sh": 755,
     "ocf/tests/functional/utils/configure_random.py": 755,
@@ -77,7 +77,7 @@ build_files_perms_exceptions = {
 
 installed_files_perms_exceptions = {
     "lib/opencas/casctl": 755,
-    "lib/opencas/open-cas-loader": 755,
+    "lib/opencas/open-cas-loader.py": 755,
     "sbin/casadm": 755,
     "sbin/casctl": 755,
     "usr/lib/systemd/system-shutdown/open-cas.shutdown": 755,
