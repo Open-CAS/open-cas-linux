@@ -12,6 +12,7 @@ from core.test_run import TestRun
 from api.cas import casadm
 from api.cas.cache_config import (
     CacheMode,
+    CacheModeTrait,
     CacheLineSize,
     SeqCutOffPolicy,
     CleaningPolicy,
@@ -22,7 +23,7 @@ from test_utils.size import Size, Unit
 
 
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
-@pytest.mark.parametrizex("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_mode", CacheMode.without_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.parametrizex("io_dir", [ReadWrite.randread, ReadWrite.randwrite])
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
