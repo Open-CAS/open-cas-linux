@@ -6,12 +6,12 @@
 import pytest
 
 from api.cas import ioclass_config, casadm
-from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.os_utils import sync, Udev, drop_caches
-from test_utils.size import Unit, Size
 from core.test_run import TestRun
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
+from test_utils.os_utils import sync, Udev, drop_caches
+from test_utils.size import Unit, Size
 from tests.io_class.io_class_common import prepare
 
 
@@ -21,7 +21,7 @@ def test_ioclass_wlth():
     """
     title: Test for `wlth` classification rule
     description: |
-        Test CAS ability to cache IO based on write life time hints.
+        Test CAS ability to cache IO based on 'write-life-time-hints' classification rule.
     pass_criteria:
      - IO with wlth is cached
      - IO without wlth is not cached
@@ -60,7 +60,7 @@ def test_ioclass_wlth():
         cache.reset_counters()
 
     with TestRun.step(f"Trigger IO with a write life time hint"):
-        # Fio adds hints only to direct IO. Even if `write_hint` param isn't proveded, direct IO
+        # Fio adds hints only to direct IO. Even if `write_hint` param isn't provided, direct IO
         # has assigned a hint by default
         io_count = 12345
         io_size = Size(io_count, Unit.Blocks4096)

@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -20,7 +20,6 @@ from test_utils.os_utils import Udev, sync
 from test_utils.os_utils import drop_caches, DropCachesMode
 from test_utils.size import Size, Unit
 
-
 ioclass_config_path = "/etc/opencas/ioclass.conf"
 template_config_path = "/etc/opencas/ioclass-config.csv"
 mountpoint = "/tmp/cas1-1"
@@ -31,9 +30,9 @@ def prepare(
     core_size=Size(40, Unit.GibiByte),
     cache_mode=CacheMode.WB,
     cache_line_size=CacheLineSize.LINE_4KiB,
-    default_allocation="0.00"
+    default_allocation="0.00",
 ):
-    ioclass_config.remove_ioclass_config()
+    ioclass_config.remove_ioclass_config(ioclass_config_path)
     cache_device = TestRun.disks["cache"]
     core_device = TestRun.disks["core"]
 
@@ -60,6 +59,7 @@ def prepare(
     )
     # To make test more precise all workload except of tested ioclass should be
     # put in pass-through mode
+    # Avoid caching anything else than files with specified prefix
     ioclass_config.add_ioclass(
         ioclass_id=ioclass_config.DEFAULT_IO_CLASS_ID,
         eviction_priority=ioclass_config.DEFAULT_IO_CLASS_PRIORITY,
@@ -99,9 +99,9 @@ def generate_and_load_random_io_class_config(cache):
 def compare_io_classes_list(expected, actual):
     if not IoClass.compare_ioclass_lists(expected, actual):
         TestRun.LOGGER.error("IO classes configuration is not as expected.")
-        expected = '\n'.join(str(i) for i in expected)
+        expected = "\n".join(str(i) for i in expected)
         TestRun.LOGGER.error(f"Expected IO classes:\n{expected}")
-        actual = '\n'.join(str(i) for i in actual)
+        actual = "\n".join(str(i) for i in actual)
         TestRun.LOGGER.error(f"Actual IO classes:\n{actual}")
 
 
@@ -131,14 +131,14 @@ def run_io_dir_read(path):
     drop_caches(DropCachesMode.ALL)
 
 
-def run_fio_count(core, blocksize, num_ios):
+def run_fio_count(core, block_size, num_ios):
     (
         Fio()
         .create_command()
         .target(core)
         .io_engine(IoEngine.libaio)
         .read_write(ReadWrite.randread)
-        .block_size(blocksize)
+        .block_size(block_size)
         .direct()
         .file_size(Size(10, Unit.GibiByte))
         .num_ios(num_ios)
