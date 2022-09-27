@@ -61,6 +61,12 @@ class CacheMode(Enum):
         ]
 
     @staticmethod
+    def without_traits(flags: CacheModeTrait):
+        return [
+            m for m in CacheMode if not any(map(lambda t: t in CacheMode.get_traits(m), flags))
+        ]
+
+    @staticmethod
     def with_any_trait(flags: CacheModeTrait):
         return [
             m for m in CacheMode if any(map(lambda t: t in CacheMode.get_traits(m), flags))
