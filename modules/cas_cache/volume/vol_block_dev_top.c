@@ -533,16 +533,8 @@ static int kcas_volume_create_exported_object(ocf_volume_t volume,
 		const char *name, void *priv, struct cas_exp_obj_ops *ops)
 {
 	struct bd_object *bvol = bd_object(volume);
-	const struct ocf_volume_uuid *uuid = ocf_volume_get_uuid(volume);
 	char dev_name[DISK_NAME_LEN];
-	struct cas_disk *dsk;
 	int result;
-
-	dsk = cas_disk_claim(uuid->data, priv);
-	if (dsk != bvol->dsk) {
-		result = -KCAS_ERR_SYSTEM;
-		goto end;
-	}
 
 	bvol->expobj_wq = alloc_workqueue("expobj_wq_%s",
 			WQ_MEM_RECLAIM | WQ_HIGHPRI, 0,
@@ -552,8 +544,8 @@ static int kcas_volume_create_exported_object(ocf_volume_t volume,
 		goto end;
 	}
 
-	result = cas_exp_obj_create(dsk, name,
-			THIS_MODULE, ops);
+	result = cas_exp_obj_create(bvol->dsk, name,
+			THIS_MODULE, ops, priv);
 	if (result) {
 		destroy_workqueue(bvol->expobj_wq);
 		goto end;
@@ -590,12 +582,17 @@ static int kcas_volume_destroy_exported_object(ocf_volume_t volume)
 
 	result = cas_exp_obj_destroy(bvol->dsk);
 	if (result)
-		goto out;
+		goto err;
 
 	bvol->expobj_valid = false;
 	destroy_workqueue(bvol->expobj_wq);
 
-out:
+	cas_exp_obj_unlock(bvol->dsk);
+	cas_exp_obj_cleanup(bvol->dsk);
+
+	return 0;
+
+err:
 	cas_exp_obj_unlock(bvol->dsk);
 
 	return result;
@@ -604,19 +601,6 @@ out:
 /**
  * @brief this routine actually adds /dev/casM-N inode
  */
-static int kcas_volume_activate_exported_object(ocf_volume_t volume,
-		struct cas_exp_obj_ops *ops)
-{
-	struct bd_object *bvol = bd_object(volume);
-	int result;
-
-	result = cas_exp_obj_activate(bvol->dsk);
-	if (result == -EEXIST)
-		result = -KCAS_ERR_FILE_EXISTS;
-
-	return result;
-}
-
 int kcas_core_create_exported_object(ocf_core_t core)
 {
 	ocf_cache_t cache = ocf_core_get_cache(core);
@@ -641,23 +625,6 @@ int kcas_core_destroy_exported_object(ocf_core_t core)
 	return kcas_volume_destroy_exported_object(volume);
 }
 
-int kcas_core_activate_exported_object(ocf_core_t core)
-{
-	ocf_cache_t cache = ocf_core_get_cache(core);
-	ocf_volume_t volume = ocf_core_get_volume(core);
-	int result;
-
-	result = kcas_volume_activate_exported_object(volume,
-			&kcas_core_exp_obj_ops);
-	if (result) {
-		printk(KERN_ERR "Cannot activate exported object, %s.%s. "
-				"Error code %d\n", ocf_cache_get_name(cache),
-				ocf_core_get_name(core), result);
-	}
-
-	return result;
-}
-
 int kcas_cache_create_exported_object(ocf_cache_t cache)
 {
 	ocf_volume_t volume = ocf_cache_get_volume(cache);
@@ -678,22 +645,6 @@ int kcas_cache_destroy_exported_object(ocf_cache_t cache)
 	ocf_volume_t volume = ocf_cache_get_volume(cache);
 
 	return kcas_volume_destroy_exported_object(volume);
-}
-
-int kcas_cache_activate_exported_object(ocf_cache_t cache)
-{
-	ocf_volume_t volume = ocf_cache_get_volume(cache);
-	int result;
-
-	result = kcas_volume_activate_exported_object(volume,
-			&kcas_cache_exp_obj_ops);
-	if (result) {
-		printk(KERN_ERR "Cannot activate cache %s exported object. "
-				"Error code %d\n", ocf_cache_get_name(cache),
-				result);
-	}
-
-	return result;
 }
 
 static int kcas_core_lock_exported_object(ocf_core_t core, void *cntx)
@@ -762,11 +713,11 @@ static int kcas_core_stop_exported_object(ocf_core_t core, void *cntx)
 	return 0;
 }
 
-static int kcas_core_free_exported_object(ocf_core_t core, void *cntx)
+static int kcas_core_cleanup_exported_object(ocf_core_t core, void *cntx)
 {
 	struct bd_object *bvol = bd_object(ocf_core_get_volume(core));
 
-	cas_exp_obj_free(bvol->dsk);
+	cas_exp_obj_cleanup(bvol->dsk);
 
 	return 0;
 }
@@ -786,7 +737,7 @@ int kcas_cache_destroy_all_core_exported_objects(ocf_cache_t cache)
 	}
 
 	ocf_core_visit(cache, kcas_core_stop_exported_object, NULL, true);
-	ocf_core_visit(cache, kcas_core_free_exported_object, NULL, true);
+	ocf_core_visit(cache, kcas_core_cleanup_exported_object, NULL, true);
 
 	return 0;
 }

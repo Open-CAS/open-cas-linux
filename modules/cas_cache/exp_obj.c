@@ -19,11 +19,6 @@
 #define CAS_DEV_MINORS 16
 #define KMEM_CACHE_MIN_SIZE sizeof(void *)
 
-static inline struct cas_exp_obj *cas_kobj_to_exp_obj(struct kobject *kobj)
-{
-	return container_of(kobj, struct cas_exp_obj, kobj);
-}
-
 static inline int bd_claim_by_disk(struct block_device *bdev, void *holder,
 				   struct gendisk *disk)
 {
@@ -51,10 +46,20 @@ int __init cas_init_exp_objs(void)
 {
 	CAS_DEBUG_TRACE();
 
+	cas_module.disk_major = register_blkdev(cas_module.disk_major,
+			"cas");
+	if (cas_module.disk_major <= 0) {
+		CAS_DEBUG_ERROR("Cannot allocate major number");
+		return -EINVAL;
+	}
+	CAS_DEBUG_PARAM("Allocated major number: %d", cas_module.disk_major);
+
 	cas_module.exp_obj_cache = kmem_cache_create("cas_exp_obj",
 			sizeof(struct cas_exp_obj), 0, 0, NULL);
-	if (!cas_module.exp_obj_cache)
+	if (!cas_module.exp_obj_cache) {
+		unregister_blkdev(cas_module.disk_major, "cas");
 		return -ENOMEM;
+	}
 
 	return 0;
 }
@@ -64,22 +69,19 @@ void cas_deinit_exp_objs(void)
 	CAS_DEBUG_TRACE();
 
 	kmem_cache_destroy(cas_module.exp_obj_cache);
-}
-
-static inline void _cas_exp_obj_handle_bio(struct cas_disk *dsk,
-					    struct bio *bio)
-{
-	dsk->exp_obj->ops->submit_bio(dsk, bio, dsk->private);
+	unregister_blkdev(cas_module.disk_major, "cas");
 }
 
 static MAKE_RQ_RET_TYPE _cas_exp_obj_submit_bio(struct bio *bio)
 {
 	struct cas_disk *dsk;
+	struct cas_exp_obj *exp_obj;
 
 	BUG_ON(!bio);
 	dsk = CAS_BIO_GET_GENDISK(bio)->private_data;
+	exp_obj = dsk->exp_obj;
 
-	_cas_exp_obj_handle_bio(dsk, bio);
+	exp_obj->ops->submit_bio(dsk, bio, exp_obj->private);
 
 	KRETURN(0);
 }
@@ -167,6 +169,7 @@ static int _cas_flags = GENHD_FL_EXT_DEVT;
 
 static int _cas_exp_obj_hide_parts(struct cas_disk *dsk)
 {
+	struct cas_exp_obj *exp_obj = dsk->exp_obj;
 	struct block_device *bd = cas_disk_get_blkdev(dsk);
 	struct gendisk *gdsk = cas_disk_get_gendisk(dsk);
 
@@ -186,8 +189,8 @@ static int _cas_exp_obj_hide_parts(struct cas_disk *dsk)
 	}
 
 	/* Save original flags and minors */
-	dsk->gd_flags = gdsk->flags & _cas_flags;
-	dsk->gd_minors = gdsk->minors;
+	exp_obj->gd_flags = gdsk->flags & _cas_flags;
+	exp_obj->gd_minors = gdsk->minors;
 
 	/* Setup disk of bottom device as not partitioned device */
 	gdsk->flags &= ~_cas_flags;
@@ -198,8 +201,21 @@ static int _cas_exp_obj_hide_parts(struct cas_disk *dsk)
 	return 0;
 }
 
+static int _cas_exp_obj_allocate_minors(int count)
+{
+	int minor = -1;
+
+	if (cas_module.next_minor + count <= (1 << MINORBITS)) {
+		minor = cas_module.next_minor;
+		cas_module.next_minor += count;
+	}
+
+	return minor;
+}
+
 static int _cas_exp_obj_set_dev_t(struct cas_disk *dsk, struct gendisk *gd)
 {
+	struct cas_exp_obj *exp_obj = dsk->exp_obj;
 	int flags;
 	int minors = disk_max_parts(cas_disk_get_gendisk(dsk));
 	struct block_device *bdev;
@@ -213,10 +229,10 @@ static int _cas_exp_obj_set_dev_t(struct cas_disk *dsk, struct gendisk *gd)
 	} else {
 		if (_cas_exp_obj_hide_parts(dsk))
 			return -EINVAL;
-		flags = dsk->gd_flags;
+		flags = exp_obj->gd_flags;
 	}
 
-	gd->first_minor = cas_disk_allocate_minors(minors);
+	gd->first_minor = _cas_exp_obj_allocate_minors(minors);
 	if (gd->first_minor < 0) {
 		CAS_DEBUG_DISK_ERROR(dsk, "Cannot allocate %d minors", minors);
 		return -EINVAL;
@@ -231,13 +247,14 @@ static int _cas_exp_obj_set_dev_t(struct cas_disk *dsk, struct gendisk *gd)
 
 static void _cas_exp_obj_clear_dev_t(struct cas_disk *dsk)
 {
+	struct cas_exp_obj *exp_obj = dsk->exp_obj;
 	struct block_device *bdev = cas_disk_get_blkdev(dsk);
 	struct gendisk *gdsk = cas_disk_get_gendisk(dsk);
 
 	if (cas_bdev_whole(bdev) == bdev) {
 		/* Restore previous configuration of bottom disk */
-		gdsk->minors = dsk->gd_minors;
-		gdsk->flags |= dsk->gd_flags;
+		gdsk->minors = exp_obj->gd_minors;
+		gdsk->flags |= exp_obj->gd_flags;
 		cas_reread_partitions(bdev);
 	}
 }
@@ -245,32 +262,34 @@ static void _cas_exp_obj_clear_dev_t(struct cas_disk *dsk)
 static int _cas_exp_obj_open(struct block_device *bdev, fmode_t mode)
 {
 	struct cas_disk *dsk = bdev->bd_disk->private_data;
+	struct cas_exp_obj *exp_obj = dsk->exp_obj;
 	int result = -ENAVAIL;
 
-	mutex_lock(&dsk->openers_lock);
+	mutex_lock(&exp_obj->openers_lock);
 
-	if (!dsk->claimed) {
-		if (unlikely(dsk->openers == UINT_MAX)) {
+	if (!exp_obj->claimed) {
+		if (unlikely(exp_obj->openers == UINT_MAX)) {
 			result = -EBUSY;
 		} else {
-			dsk->openers++;
+			exp_obj->openers++;
 			result = 0;
 		}
 	}
 
-	mutex_unlock(&dsk->openers_lock);
+	mutex_unlock(&dsk->exp_obj->openers_lock);
 	return result;
 }
 
 static void _cas_exp_obj_close(struct gendisk *gd, fmode_t mode)
 {
 	struct cas_disk *dsk = gd->private_data;
+	struct cas_exp_obj *exp_obj = dsk->exp_obj;
 
-	BUG_ON(dsk->openers == 0);
+	BUG_ON(exp_obj->openers == 0);
 
-	mutex_lock(&dsk->openers_lock);
-	dsk->openers--;
-	mutex_unlock(&dsk->openers_lock);
+	mutex_lock(&exp_obj->openers_lock);
+	exp_obj->openers--;
+	mutex_unlock(&exp_obj->openers_lock);
 
 }
 
@@ -301,63 +320,13 @@ static int cas_exp_obj_alloc(struct cas_disk *dsk)
 	return 0;
 }
 
-void cas_exp_obj_free(struct cas_disk *dsk)
+static void cas_exp_obj_free(struct cas_disk *dsk)
 {
-	struct cas_exp_obj *exp_obj;
-
-	CAS_DEBUG_DISK_TRACE(dsk);
-
-	exp_obj = dsk->exp_obj;
-
-	if (!exp_obj)
+	if (!dsk->exp_obj)
 		return;
 
-	kobject_put(&exp_obj->kobj);
+	kmem_cache_free(cas_module.exp_obj_cache, dsk->exp_obj);
 	dsk->exp_obj = NULL;
-}
-
-static void __cas_exp_obj_release(struct cas_exp_obj *exp_obj)
-{
-	kmem_cache_free(cas_module.exp_obj_cache, exp_obj);
-}
-
-static void _cas_exp_obj_release(struct kobject *kobj)
-{
-	struct cas_exp_obj *exp_obj;
-	struct module *owner;
-
-	BUG_ON(!kobj);
-
-	exp_obj = cas_kobj_to_exp_obj(kobj);
-	BUG_ON(!exp_obj);
-
-	CAS_DEBUG_TRACE();
-
-	owner = exp_obj->owner;
-
-	kfree(exp_obj->dev_name);
-	__cas_exp_obj_release(exp_obj);
-
-	if (owner)
-		module_put(owner);
-}
-
-static struct kobj_type cas_exp_obj_ktype = {
-	.release = _cas_exp_obj_release
-};
-
-static int _cas_exp_obj_init_kobject(struct cas_disk *dsk)
-{
-	int result = 0;
-	struct cas_exp_obj *exp_obj = dsk->exp_obj;
-
-	kobject_init(&exp_obj->kobj, &cas_exp_obj_ktype);
-	result = kobject_add(&exp_obj->kobj, &dsk->kobj,
-			     "%s", exp_obj->dev_name);
-	if (result)
-		CAS_DEBUG_DISK_ERROR(dsk, "Cannot register kobject");
-
-	return result;
 }
 
 static CAS_BLK_STATUS_T _cas_exp_obj_queue_rq(struct blk_mq_hw_ctx *hctx,
@@ -406,8 +375,38 @@ static int _cas_init_tag_set(struct cas_disk *dsk, struct blk_mq_tag_set *set)
 	return blk_mq_alloc_tag_set(set);
 }
 
+static int _cas_exp_obj_check_path(const char *dev_name)
+{
+	struct file *exported;
+	char *path;
+	int result;
+
+	path = kmalloc(PATH_MAX, GFP_KERNEL);
+	if (!path)
+		return -ENOMEM;
+
+	snprintf(path, PATH_MAX, "/dev/%s", dev_name);
+
+	exported = filp_open(path, O_RDONLY, 0);
+
+	if (!IS_ERR_OR_NULL(exported)) {
+		filp_close(exported, NULL);
+		result = -EEXIST;
+
+	} else {
+		/* failed to open file - it is safe to assume,
+		 * it does not exist
+		 */
+		result = 0;
+	}
+
+	kfree(path);
+
+	return result;
+}
+
 int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
-			struct module *owner, struct cas_exp_obj_ops *ops)
+		struct module *owner, struct cas_exp_obj_ops *ops, void *priv)
 {
 	struct cas_exp_obj *exp_obj;
 	struct request_queue *queue;
@@ -424,11 +423,22 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	if (strlen(dev_name) >= DISK_NAME_LEN)
 		return -EINVAL;
 
+	result = _cas_exp_obj_check_path(dev_name);
+	if (result == -EEXIST) {
+		printk(KERN_ERR "Could not activate exported object, "
+				"because file /dev/%s exists.\n", dev_name);
+	}
+
+	if (result)
+		return result;
+
 	result = cas_exp_obj_alloc(dsk);
 	if (result)
-		goto error_exp_obj_alloc;
+		return result;
 
 	exp_obj = dsk->exp_obj;
+
+	mutex_init(&exp_obj->openers_lock);
 
 	exp_obj->dev_name = kstrdup(dev_name, GFP_KERNEL);
 	if (!exp_obj->dev_name) {
@@ -444,17 +454,12 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	exp_obj->owner = owner;
 	exp_obj->ops = ops;
 
-	result = _cas_exp_obj_init_kobject(dsk);
-	if (result) {
-		goto error_init_kobject;
-	}
-
-	result = _cas_init_tag_set(dsk, &dsk->tag_set);
+	result = _cas_init_tag_set(dsk, &exp_obj->tag_set);
 	if (result) {
 		goto error_init_tag_set;
 	}
 
-	result = cas_alloc_mq_disk(&gd, &queue, &dsk->tag_set);
+	result = cas_alloc_mq_disk(&gd, &queue, &exp_obj->tag_set);
 	if (result) {
 		goto error_alloc_mq_disk;
 	}
@@ -469,6 +474,8 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	queue->queuedata = dsk;
 	exp_obj->queue = queue;
 
+	exp_obj->private = priv;
+
 	_cas_init_queues(dsk);
 
 	gd->fops = &_cas_exp_obj_ops;
@@ -478,157 +485,38 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	cas_blk_queue_make_request(queue, _cas_exp_obj_make_rq_fn);
 
 	if (exp_obj->ops->set_geometry) {
-		result = exp_obj->ops->set_geometry(dsk, dsk->private);
+		result = exp_obj->ops->set_geometry(dsk, exp_obj->private);
 		if (result)
 			goto error_set_geometry;
 	}
 
+	add_disk(gd);
+
+	result = bd_claim_by_disk(dsk->bd, dsk, gd);
+	if (result)
+		goto error_bd_claim;
+
 	return 0;
 
+error_bd_claim:
+	del_gendisk(dsk->exp_obj->gd);
 error_set_geometry:
+	exp_obj->private = NULL;
 	_cas_exp_obj_clear_dev_t(dsk);
 error_exp_obj_set_dev_t:
 	cas_cleanup_mq_disk(exp_obj);
 	dsk->exp_obj->gd = NULL;
 error_alloc_mq_disk:
-	blk_mq_free_tag_set(&dsk->tag_set);
+	blk_mq_free_tag_set(&exp_obj->tag_set);
 error_init_tag_set:
-	kobject_put(&exp_obj->kobj);
-	/* kobject put does all the cleanup below internally */
-	return result;
-error_init_kobject:
 	module_put(owner);
 	dsk->exp_obj->owner = NULL;
 error_module_get:
 	kfree(exp_obj->dev_name);
 error_kstrdup:
-	__cas_exp_obj_release(exp_obj);
-	dsk->exp_obj = NULL;
-error_exp_obj_alloc:
+	cas_exp_obj_free(dsk);
 	return result;
 
-}
-
-struct request_queue *cas_exp_obj_get_queue(struct cas_disk *dsk)
-{
-	BUG_ON(!dsk);
-	BUG_ON(!dsk->exp_obj);
-	return dsk->exp_obj->queue;
-}
-
-struct gendisk *cas_exp_obj_get_gendisk(struct cas_disk *dsk)
-{
-	BUG_ON(!dsk);
-	BUG_ON(!dsk->exp_obj);
-	return dsk->exp_obj->gd;
-}
-
-static bool _cas_exp_obj_exists(const char *path)
-{
-	struct file *exported;
-
-	exported = filp_open(path, O_RDONLY, 0);
-
-	if (!exported || IS_ERR(exported)) {
-		/*failed to open file - it is safe to assume,
-		 * it does not exist
-		 */
-		return false;
-	}
-
-	filp_close(exported, NULL);
-	return true;
-}
-
-int cas_exp_obj_activate(struct cas_disk *dsk)
-{
-	char *path;
-	int result;
-
-	BUG_ON(!dsk);
-	BUG_ON(!dsk->exp_obj);
-	BUG_ON(!dsk->exp_obj->gd);
-	BUG_ON(dsk->exp_obj->activated);
-
-	CAS_DEBUG_DISK_TRACE(dsk);
-
-	path = kmalloc(PATH_MAX, GFP_KERNEL);
-	if (!path)
-		return -ENOMEM;
-
-	snprintf(path, PATH_MAX, "/dev/%s", dsk->exp_obj->dev_name);
-	if (_cas_exp_obj_exists(path)) {
-		printk(KERN_ERR "Could not activate exported object, "
-				"because file %s exists.\n", path);
-		kfree(path);
-		return -EEXIST;
-	}
-	kfree(path);
-
-	dsk->exp_obj->activated = true;
-	add_disk(dsk->exp_obj->gd);
-
-	result = bd_claim_by_disk(dsk->bd, dsk, dsk->exp_obj->gd);
-	if (result)
-		goto error_bd_claim;
-
-	result = sysfs_create_link(&dsk->exp_obj->kobj,
-				   &disk_to_dev(dsk->exp_obj->gd)->kobj,
-				   "blockdev");
-	if (result)
-		goto error_sysfs_link;
-
-	CAS_DEBUG_DISK(dsk, "Activated exp object %s", dsk->exp_obj->dev_name);
-
-	return 0;
-
-error_sysfs_link:
-	bd_release_from_disk(dsk->bd, dsk->exp_obj->gd);
-error_bd_claim:
-	del_gendisk(dsk->exp_obj->gd);
-	dsk->exp_obj->activated = false;
-	return result;
-}
-
-bool cas_exp_obj_activated(struct cas_disk *dsk)
-{
-	BUG_ON(!dsk);
-	return dsk->exp_obj->activated;
-}
-
-int cas_exp_obj_lock(struct cas_disk *dsk)
-{
-	struct cas_exp_obj *exp_obj;
-	int result = -EBUSY;
-
-	BUG_ON(!dsk);
-	BUG_ON(!dsk->exp_obj);
-
-	CAS_DEBUG_DISK_TRACE(dsk);
-
-	exp_obj = dsk->exp_obj;
-
-	mutex_lock(&dsk->openers_lock);
-
-	if (dsk->openers == 0) {
-		dsk->claimed = true;
-		result = 0;
-	}
-
-	mutex_unlock(&dsk->openers_lock);
-	return result;
-}
-
-int cas_exp_obj_unlock(struct cas_disk *dsk)
-{
-	BUG_ON(!dsk);
-	CAS_DEBUG_DISK_TRACE(dsk);
-
-	mutex_lock(&dsk->openers_lock);
-	dsk->claimed = false;
-	mutex_unlock(&dsk->openers_lock);
-
-	return 0;
 }
 
 int cas_exp_obj_destroy(struct cas_disk *dsk)
@@ -644,20 +532,90 @@ int cas_exp_obj_destroy(struct cas_disk *dsk)
 
 	exp_obj = dsk->exp_obj;
 
-	if (cas_exp_obj_activated(dsk)) {
-		sysfs_remove_link(&exp_obj->kobj, "blockdev");
-		bd_release_from_disk(dsk->bd, exp_obj->gd);
-		_cas_exp_obj_clear_dev_t(dsk);
-		del_gendisk(exp_obj->gd);
-	}
+	bd_release_from_disk(dsk->bd, exp_obj->gd);
+	_cas_exp_obj_clear_dev_t(dsk);
+	del_gendisk(exp_obj->gd);
 
 	if (exp_obj->queue)
 		blk_cleanup_queue(exp_obj->queue);
 
-	blk_mq_free_tag_set(&dsk->tag_set);
+	blk_mq_free_tag_set(&exp_obj->tag_set);
 
 	put_disk(exp_obj->gd);
 
 	return 0;
+}
 
+void cas_exp_obj_cleanup(struct cas_disk *dsk)
+{
+	struct cas_exp_obj *exp_obj;
+	struct module *owner;
+
+	CAS_DEBUG_DISK_TRACE(dsk);
+
+	exp_obj = dsk->exp_obj;
+
+	if (!exp_obj)
+		return;
+
+	owner = exp_obj->owner;
+
+	kfree(exp_obj->dev_name);
+	cas_exp_obj_free(dsk);
+
+	if (owner)
+		module_put(owner);
+}
+
+int cas_exp_obj_lock(struct cas_disk *dsk)
+{
+	struct cas_exp_obj *exp_obj;
+	int result = -EBUSY;
+
+	BUG_ON(!dsk);
+	BUG_ON(!dsk->exp_obj);
+
+	CAS_DEBUG_DISK_TRACE(dsk);
+
+	exp_obj = dsk->exp_obj;
+
+	mutex_lock(&exp_obj->openers_lock);
+
+	if (exp_obj->openers == 0) {
+		exp_obj->claimed = true;
+		result = 0;
+	}
+
+	mutex_unlock(&exp_obj->openers_lock);
+	return result;
+}
+
+int cas_exp_obj_unlock(struct cas_disk *dsk)
+{
+	struct cas_exp_obj *exp_obj;
+
+	BUG_ON(!dsk);
+	CAS_DEBUG_DISK_TRACE(dsk);
+
+	exp_obj = dsk->exp_obj;
+
+	mutex_lock(&exp_obj->openers_lock);
+	exp_obj->claimed = false;
+	mutex_unlock(&exp_obj->openers_lock);
+
+	return 0;
+}
+
+struct request_queue *cas_exp_obj_get_queue(struct cas_disk *dsk)
+{
+	BUG_ON(!dsk);
+	BUG_ON(!dsk->exp_obj);
+	return dsk->exp_obj->queue;
+}
+
+struct gendisk *cas_exp_obj_get_gendisk(struct cas_disk *dsk)
+{
+	BUG_ON(!dsk);
+	BUG_ON(!dsk->exp_obj);
+	return dsk->exp_obj->gd;
 }

@@ -1389,10 +1389,6 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	if (result)
 		goto error_after_add_core;
 
-	result = kcas_core_activate_exported_object(core);
-	if (result)
-		goto error_after_create_exported_object;
-
 	result = core_id_from_name(&core_id, cfg->name);
 	if (result)
 		goto error_after_create_exported_object;
@@ -1768,8 +1764,6 @@ static int _cache_mngt_create_core_exp_obj(ocf_core_t core, void *cntx)
 	if (result)
 		return result;
 
-	result = kcas_core_activate_exported_object(core);
-
 	return result;
 }
 
@@ -1829,12 +1823,6 @@ static int cache_mngt_initialize_cache_exported_object(ocf_cache_t cache)
 	result = kcas_cache_create_exported_object(cache);
 	if (result)
 		return result;
-
-	result = kcas_cache_activate_exported_object(cache);
-	if (result) {
-		cache_mngt_destroy_cache_exp_obj(cache);
-		return result;
-	}
 
 	cache_priv->cache_exp_obj_initialized = true;
 
