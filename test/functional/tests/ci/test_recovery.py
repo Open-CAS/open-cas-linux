@@ -91,6 +91,7 @@ def test_recover_cache_verify_core():
         for core, cache in zip(cores, caches):
             core_mnt_point = f"{mount_point}-{cache.cache_id}-{core.core_id}"
             mount(core.core_device, core_mnt_point)
+            core.mount_point = core_mnt_point
             if not check_if_file_exists(f"{core_mnt_point}/test"):
                 TestRun.LOGGER.error(f"Mounting core device {core_mnt_point} failed.")
 
