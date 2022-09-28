@@ -30,17 +30,6 @@ static void blkdev_set_bio_data(struct blk_data *data, struct bio *bio)
 #endif
 }
 
-static inline int blkdev_can_hndl_bio(struct bio *bio)
-{
-	if (CAS_CHECK_BARRIER(bio)) {
-		CAS_PRINT_RL(KERN_WARNING
-			"special bio was sent, not supported!\n");
-		return -ENOTSUPP;
-	}
-
-	return 0;
-}
-
 void blkdev_set_exported_object_flush_fua(ocf_core_t core)
 {
 	ocf_cache_t cache = ocf_core_get_cache(core);
@@ -428,12 +417,6 @@ static void blkdev_handle_bio(struct bd_object *bvol, struct bio *bio)
 
 static void blkdev_submit_bio(struct bd_object *bvol, struct bio *bio)
 {
-	if (blkdev_can_hndl_bio(bio)) {
-		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio),
-				CAS_ERRNO_TO_BLK_STS(-ENOTSUPP));
-		return;
-	}
-
 	if (in_interrupt())
 		blkdev_defer_bio(bvol, bio, blkdev_handle_bio);
 	else
