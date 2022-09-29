@@ -48,7 +48,7 @@ cleaning. Cleaning may be required if cache is full and eviction (replacement)
 policy needs to remove stale data to make space for incoming blocks. Open CAS
 provides mechanism which automatically cleans dirty data in background. This is
 cleaning (flushing) thread. User can also invoke manual cleaning procedure (see
--E, --flush-cache and -F --flush-core options). Write-Back cache, also known as
+--flush-cache, -F  options). Write-Back cache, also known as
 Write Cache, improves performance of both read and write IO operations.
 
 .TP
@@ -123,9 +123,6 @@ Reset statistics of given cache/core instance.
 .B -F, --flush-cache
 Flush all dirty data from the caching device to core devices.
 
-.TP
-.B -E, --flush-core
-Flush dirty data of a given core from the caching device to this core device.
 
 .TP
 .B -C, --io-class {--load-config|--list}
@@ -554,14 +551,11 @@ is not specified, statistics are reset for all cores within given cache instance
 .B -i, --cache-id <ID>
 Identifier of cache instance <1-16384>.
 
-.SH Options that are valid with --flush-core (-E) are:
-.TP
-.B -i, --cache-id <ID>
-Identifier of cache instance <1-16384>.
-
 .TP
 .B -j, --core-id <ID>
-Identifier of core instance <0-4095> within given cache instance.
+Identifier of core instance <0-4095> within given cache instance. This is an
+optional parameter When provided, it will flush core with provided id
+connected to cache. In other case it will flush cache.   
 
 .SH Options that are valid with --io-class --load-config (-C -C) are:
 .TP
