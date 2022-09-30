@@ -20,8 +20,6 @@ casadm_help = [
     r"-P  --stats                    Print statistics for cache instance",
     r"-Z  --reset-counters           Reset cache statistics for core device within cache instance",
     r"-F  --flush-cache              Flush all dirty data from the caching device to core devices",
-    r"-E  --flush-core               Flush dirty data of a given core from the caching device "
-    r"to this core device",
     r"-C  --io-class                 Manage IO classes",
     r"-V  --version                  Print CAS version",
     r"-H  --help                     Print help",
@@ -61,20 +59,14 @@ ioclass_help = [
     r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}"
 ]
 
-flush_core_help = [
-    r"Usage: casadm --flush-core --cache-id \<ID\> --core-id \<ID\>",
-    r"Flush dirty data of a given core from the caching device to this core device",
-    r"Options that are valid with --flush-core \(-E\) are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \<ID\>                  Identifier of core \<0-4095\> within given cache "
-    r"instance"
-]
-
 flush_cache_help = [
     r"Usage: casadm --flush-cache --cache-id \<ID\>",
     r"Flush all dirty data from the caching device to core devices",
     r"Options that are valid with --flush-cache \(-F\) are:",
     r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>"
+    r"-j  --core-id \<ID\>                  Identifier of core \<0-4095\> within given cache "
+    r"instance. This is an optional parameter When provided, it will flush core with provided"
+    r" id connected to cache. In other case it will flush cache."
 ]
 
 reset_counters_help = [

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2012-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -530,7 +530,7 @@ flush_cache() {
 flush_core() {
     check_options ${FUNCNAME[0]}
 
-    local COMMAND="$CAS --flush-core --cache-id $CACHE_ID_OPTION --core-id $CORE_ID_OPTION"
+    local COMMAND="$CAS --flush-cache --cache-id $CACHE_ID_OPTION --core-id $CORE_ID_OPTION"
 
     run_cmd $COMMAND
     clear_options

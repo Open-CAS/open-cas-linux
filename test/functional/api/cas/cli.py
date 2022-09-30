@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -85,8 +85,8 @@ def flush_cache_cmd(cache_id: str, shortcut: bool = False):
 
 
 def flush_core_cmd(cache_id: str, core_id: str, shortcut: bool = False):
-    command = (f" -E -i {cache_id} -j {core_id}" if shortcut
-               else f" --flush-core --cache-id {cache_id} --core-id {core_id}")
+    command = (f" -F -i {cache_id} -j {core_id}" if shortcut
+               else f" --flush-cache --cache-id {cache_id} --core-id {core_id}")
     return casadm_bin + command
 
 
