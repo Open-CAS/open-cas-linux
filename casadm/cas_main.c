@@ -740,7 +740,7 @@ static struct cas_param cas_cache_params[] = {
 #define CLEANING_POLICY_TYPE_DESC "Cleaning policy type. " \
 	"Available policy types: {nop|alru|acp}"
 
-#define CLEANING_ALRU_WAKE_UP_DESC "Period of time between awakenings of flushing thread <%d-%d>[s] (default: %d s)"
+#define CLEANING_ALRU_WAKE_UP_DESC "Cleaning thread sleep time after an idle wake up <%d-%d>[s] (default: %d s)"
 #define CLEANING_ALRU_STALENESS_TIME_DESC "Time that has to pass from the last write operation before a dirty cache" \
 	 " block can be scheduled to be flushed <%d-%d>[s] (default: %d s)"
 #define CLEANING_ALRU_FLUSH_MAX_BUFFERS_DESC "Number of dirty cache blocks to be flushed in one cleaning cycle" \

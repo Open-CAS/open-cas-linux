@@ -286,7 +286,9 @@ Identifier of cache instance <1-16384>.
 
 .TP
 .B -w, --wake-up <NUMBER>
-Period of time between awakenings of flushing thread [s] (default: 20 s).
+Cleaning thread sleep time after an idle wake up [s] (default: 20 s).
+Idle wake up happens when there is no dirty data or the cleaning thread does not start cleaning
+due to staleness time and/or activity threshold constraints.
 
 .TP
 .B -s, --staleness-time <NUMBER>
