@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2022      David Lee <live4thee@gmail.com>
 * Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
@@ -730,6 +731,9 @@ static struct cas_param cas_cache_params[] = {
 	[cache_param_cleaning_alru_activity_threshold] = {
 		.name = "Activity threshold [ms]" ,
 	},
+	[cache_param_cleaning_alru_max_dirty_ratio] = {
+		.name = "Maximum dirty ratio [percent]",
+	},
 
 	/* Cleaning policy ACP params */
 	[cache_param_cleaning_acp_wake_up_time] = {
@@ -774,6 +778,8 @@ static struct cas_param cas_cache_params[] = {
 	" <%d-%d> (default: %d)"
 #define CLEANING_ALRU_ACTIVITY_THRESHOLD_DESC "Cache idle time before flushing thread can start <%d-%d>[ms]" \
 	" (default: %d ms)"
+#define CLEANING_ALRU_MAX_DIRTY_RATIO_DESC "Maximum dirty ratio of the cache device" \
+	" <%d-%d> (default: %d)"
 
 #define CLEANING_ACP_WAKE_UP_DESC "Time between ACP cleaning thread iterations <%d-%d>[ms] (default: %d ms)"
 #define CLEANING_ACP_MAX_BUFFERS_DESC "Number of cache lines flushed in single ACP cleaning thread iteration" \
@@ -834,6 +840,10 @@ static cli_namespace set_param_namespace = {
 				CLI_OPTION_RANGE_INT | CLI_OPTION_DEFAULT_INT,
 				OCF_ALRU_MIN_ACTIVITY_THRESHOLD, OCF_ALRU_MAX_ACTIVITY_THRESHOLD,
 				OCF_ALRU_DEFAULT_ACTIVITY_THRESHOLD},
+			{'d', "max-dirty-ratio", CLEANING_ALRU_MAX_DIRTY_RATIO_DESC, 1, "NUMBER",
+				CLI_OPTION_RANGE_INT | CLI_OPTION_DEFAULT_INT,
+				OCF_ALRU_MIN_MAX_DIRTY_RATIO, OCF_ALRU_MAX_MAX_DIRTY_RATIO,
+				OCF_ALRU_DEFAULT_MAX_DIRTY_RATIO},
 		CACHE_PARAMS_NS_END()
 
 		CACHE_PARAMS_NS_BEGIN("cleaning-acp", "Cleaning policy ACP parameters")
@@ -944,6 +954,14 @@ int set_param_cleaning_alru_handle_option(char *opt, const char **arg)
 		}
 
 		SET_CACHE_PARAM(cache_param_cleaning_alru_activity_threshold,
+				strtoul(arg[0], NULL, 10));
+	} else if (!strcmp(opt, "max-dirty-ratio")) {
+		if (validate_str_num(arg[0], "max dirty ratio",
+				OCF_ALRU_MIN_MAX_DIRTY_RATIO, OCF_ALRU_MAX_MAX_DIRTY_RATIO)) {
+			return FAILURE;
+		}
+
+		SET_CACHE_PARAM(cache_param_cleaning_alru_max_dirty_ratio,
 				strtoul(arg[0], NULL, 10));
 	} else {
 		return FAILURE;
@@ -1125,6 +1143,7 @@ int get_param_namespace_handle_option(char *namespace, char *opt, const char **a
 		SELECT_CACHE_PARAM(cache_param_cleaning_alru_stale_buffer_time);
 		SELECT_CACHE_PARAM(cache_param_cleaning_alru_flush_max_buffers);
 		SELECT_CACHE_PARAM(cache_param_cleaning_alru_activity_threshold);
+		SELECT_CACHE_PARAM(cache_param_cleaning_alru_max_dirty_ratio);
 		return cache_param_handle_option_generic(opt, arg,
 				get_param_handle_option);
 	} else if (!strcmp(namespace, "cleaning-acp")) {
