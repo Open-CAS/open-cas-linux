@@ -122,10 +122,9 @@ def test_cli_version(shortcut, output_format):
 
 def names_in_output(output):
     return ("CAS Cache Kernel Module" in output
-            and "CAS Disk Kernel Module" in output
             and "CAS CLI Utility" in output)
 
 
 def versions_in_output(output):
     version_pattern = re.compile(r"(\d){2}\.(\d){2}\.(\d)\.(\d){4}.(\S)")
-    return len(version_pattern.findall(output)) == 3
+    return len(version_pattern.findall(output)) == 2
