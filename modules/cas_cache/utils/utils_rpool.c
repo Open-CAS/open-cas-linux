@@ -7,6 +7,7 @@
 #include "utils_rpool.h"
 #include "ocf_env.h"
 #include "../cas_cache.h"
+#include <linux/kmemleak.h>
 
 #define CAS_UTILS_RPOOL_DEBUG 0
 #if 1 == CAS_UTILS_RPOOL_DEBUG
@@ -216,6 +217,8 @@ void *cas_rpool_try_get(struct cas_reserve_pool *rpool_master, int *cpu)
 		entry = RPOOL_ITEM_TO_ENTRY(rpool_master, item);
 		list_del(item);
 		atomic_dec(&current_rpool->count);
+		/* The actuall allocation - kmemleak should start tracking page */
+		kmemleak_alloc(entry, rpool_master->entry_size, 1, GFP_NOIO);
 	}
 
 	spin_unlock_irqrestore(&current_rpool->lock, flags);
@@ -248,6 +251,8 @@ int cas_rpool_try_put(struct cas_reserve_pool *rpool_master, void *entry, int cp
 
 	item = RPOOL_ENTRY_TO_ITEM(rpool_master, entry);
 	list_add_tail(item, &current_rpool->list);
+	/* Freeing memory chunk */
+	kmemleak_free(entry);
 
 	atomic_inc(&current_rpool->count);
 
