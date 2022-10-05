@@ -21,6 +21,7 @@ add_function() {
 }
 
 __compile_module(){
+	INCLUDE=""
 	if [ $# -gt 1 ]
 	then
 		i=2
