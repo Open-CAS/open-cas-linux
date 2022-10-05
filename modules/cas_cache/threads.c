@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -51,7 +51,7 @@ static int _cas_io_queue_thread(void *data)
 	/* If we get here, then thread was signalled to terminate.
 	 * So, let's complete and exit.
 	 */
-	complete_and_exit(&info->compl, 0);
+	CAS_COMPLETE_AND_EXIT(&info->compl, 0);
 
 	return 0;
 }
@@ -110,7 +110,7 @@ static int _cas_cleaner_thread(void *data)
 		}
 	} while (true);
 
-	complete_and_exit(&info->compl, 0);
+	CAS_COMPLETE_AND_EXIT(&info->compl, 0);
 
 	return 0;
 }

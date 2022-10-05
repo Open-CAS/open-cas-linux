@@ -4,7 +4,6 @@
 */
 
 #include <linux/blkdev.h>
-
 #include "cas_cache.h"
 
 #define CAS_DEBUG_IO 0
@@ -82,57 +81,14 @@ uint64_t block_dev_get_byte_length(ocf_volume_t vol)
 	return sector_length << SECTOR_SHIFT;
 }
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(3, 3, 0)
-static const char *__block_dev_get_elevator_name(struct request_queue *q)
-{
-	if (q->elevator->elevator_type == NULL)
-		return NULL;
-
-	if (q->elevator->elevator_type->elevator_name == NULL)
-		return NULL;
-
-	if (q->elevator->elevator_type->elevator_name[0] == 0)
-		return NULL;
-
-	return q->elevator->elevator_type->elevator_name;
-}
-#else
-static const char *__block_dev_get_elevator_name(struct request_queue *q)
-{
-	if (q->elevator->type == NULL)
-		return NULL;
-
-	if (q->elevator->type->elevator_name == NULL)
-		return NULL;
-
-	if (q->elevator->type->elevator_name[0] == 0)
-		return NULL;
-
-	return q->elevator->type->elevator_name;
-}
-#endif
-
 /*
  *
  */
-const char *block_dev_get_elevator_name(struct request_queue *q)
-{
-	if (!q)
-		return NULL;
-
-	if (q->elevator == NULL)
-		return NULL;
-
-	return __block_dev_get_elevator_name(q);
-}
-
-/*
- *
- */
-static inline struct bio *cas_bd_io_alloc_bio(struct blkio *bdio)
+static inline struct bio *cas_bd_io_alloc_bio(struct block_device *bdev, 
+					      struct blkio *bdio)
 {
 	struct bio *bio
-		= bio_alloc(GFP_NOIO, cas_io_iter_size_left(&bdio->iter));
+		= cas_bio_alloc(bdev, GFP_NOIO, cas_io_iter_size_left(&bdio->iter));
 
 	if (bio)
 		return bio;
@@ -145,7 +101,7 @@ static inline struct bio *cas_bd_io_alloc_bio(struct blkio *bdio)
 	}
 
 	/* Retry with smaller */
-	return bio_alloc(GFP_NOIO, MAX_LINES_PER_IO);
+	return cas_bio_alloc(bdev, GFP_NOIO, MAX_LINES_PER_IO);
 }
 
 /*
@@ -221,7 +177,7 @@ static void block_dev_submit_flush(struct ocf_io *io)
 		goto out;
 	}
 
-	bio = bio_alloc(GFP_NOIO, 0);
+	bio = cas_bio_alloc(bdev, GFP_NOIO, 0);
 	if (bio == NULL) {
 		CAS_PRINT_RL(KERN_ERR "Couldn't allocate memory for BIO\n");
 		blkio->error = -ENOMEM;
@@ -281,7 +237,7 @@ void block_dev_submit_discard(struct ocf_io *io)
 	start = io->addr >> SECTOR_SHIFT;
 
 	while (sects) {
-		bio = bio_alloc(GFP_NOIO, 1);
+		bio = cas_bio_alloc(bd, GFP_NOIO, 1);
 		if (!bio) {
 			CAS_PRINT_RL(CAS_KERN_ERR "Couldn't allocate memory for BIO\n");
 			blkio->error = -ENOMEM;
@@ -390,7 +346,7 @@ static void block_dev_submit_io(struct ocf_io *io)
 		/* Still IO vectors to be sent */
 
 		/* Allocate BIO */
-		struct bio *bio = cas_bd_io_alloc_bio(bdio);
+		struct bio *bio = cas_bd_io_alloc_bio(bdobj->btm_bd, bdio);
 
 		if (!bio) {
 			bdio->error = -ENOMEM;

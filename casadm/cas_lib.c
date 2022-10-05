@@ -956,17 +956,6 @@ int check_cache_already_added(const char *cache_device) {
 	return SUCCESS;
 }
 
-static void check_cache_scheduler(const char *cache_device, const char *elv_name)
-{
-	if (strnlen_s(elv_name, MAX_ELEVATOR_NAME) == 3 &&
-	    !strncmp(elv_name, "cfq", 3)) {
-		cas_printf(LOG_INFO,
-			   "I/O scheduler for cache device %s is %s. This could cause performance drop.\n"
-			   "Consider switching I/O scheduler to deadline or noop.\n",
-			   cache_device, elv_name);
-	}
-}
-
 int start_cache(uint16_t cache_id, unsigned int cache_init,
 		const char *cache_device, ocf_cache_mode_t cache_mode,
 		ocf_cache_line_size_t line_size, int force)
@@ -1031,8 +1020,6 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 			return FAILURE;
 		}
 	}
-
-	check_cache_scheduler(cache_device, cmd.cache_elevator);
 
 	check_cache_state_incomplete(cache_id, fd);
 	close(fd);
