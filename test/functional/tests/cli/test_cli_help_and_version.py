@@ -74,10 +74,6 @@ def test_cli_help(shortcut):
                                   + (" -H" if shortcut else " --help"))
     check_stdout_msg(output, flush_cache_help)
 
-    output = TestRun.executor.run("casadm" + (" -E" if shortcut else " --flush-core")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, flush_core_help)
-
     output = TestRun.executor.run("casadm" + (" -C" if shortcut else " --io-class")
                                   + (" -H" if shortcut else " --help"))
     check_stdout_msg(output, ioclass_help)

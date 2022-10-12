@@ -1262,25 +1262,16 @@ int handle_reset_counters()
 			command_args_values.core_id);
 }
 
-static cli_option flush_core_options[] = {
+static cli_option flush_cache_options[] = { 
 	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
-	{'j', "core-id", CORE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
-	{0}
-};
-
-int handle_flush_core()
-{
-	return flush_core(command_args_values.cache_id,
-			command_args_values.core_id);
-}
-
-static cli_option flush_cache_options[] = {
-	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
+	{'j', "core-id", CORE_ID_DESC, 1, "ID", CLI_OPTION_OPTIONAL_ARG},
 	{0}
 };
 
 int handle_flush_cache()
 {
+	if(command_args_values.core_id != OCF_CORE_ID_INVALID)
+		return flush_core(command_args_values.cache_id, command_args_values.core_id);
 	return flush_cache(command_args_values.cache_id);
 }
 
@@ -2339,17 +2330,6 @@ static cli_command cas_commands[] = {
 			.options = flush_cache_options,
 			.command_handle_opts = command_handle_option,
 			.handle = handle_flush_cache,
-			.flags = CLI_SU_REQUIRED,
-			.help = NULL,
-		},
-		{
-			.name = "flush-core",
-			.short_name = 'E',
-			.desc = "Flush dirty data of a given core from the caching device to this core device",
-			.long_desc = NULL,
-			.options = flush_core_options,
-			.command_handle_opts = command_handle_option,
-			.handle = handle_flush_core,
 			.flags = CLI_SU_REQUIRED,
 			.help = NULL,
 		},
