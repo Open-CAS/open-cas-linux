@@ -1,12 +1,11 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
 
 from api.cas import casadm, casadm_parser, cli, cli_messages
-from api.cas.cache_config import CacheMode
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
@@ -17,10 +16,10 @@ mount_point = "/mnt/cas"
 test_file_path = f"{mount_point}/test_file"
 
 
-@pytest.mark.parametrizex("cache_mode", CacheMode)
+
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_load_cache_with_mounted_core(cache_mode):
+def test_load_cache_with_mounted_core():
     """
         title: Fault injection test for adding mounted core on cache load.
         description: |
@@ -37,7 +36,7 @@ def test_load_cache_with_mounted_core(cache_mode):
         core_dev = TestRun.disks['core']
         core_dev.create_partitions([Size(4, Unit.GibiByte)])
         core_part = core_dev.partitions[0]
-        cache = casadm.start_cache(cache_part, cache_mode, force=True)
+        cache = casadm.start_cache(cache_part, force=True)
 
     with TestRun.step("Add core device with xfs filesystem to cache and mount it."):
         core_part.create_filesystem(Filesystem.xfs)
@@ -78,10 +77,9 @@ def test_load_cache_with_mounted_core(cache_mode):
         casadm.stop_all_caches()
 
 
-@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_stop_cache_with_mounted_partition(cache_mode):
+def test_stop_cache_with_mounted_partition():
     """
         title: Fault injection test for removing core and stopping cache with mounted core.
         description: |
@@ -99,7 +97,7 @@ def test_stop_cache_with_mounted_partition(cache_mode):
         core_dev = TestRun.disks['core']
         core_dev.create_partitions([Size(4, Unit.GibiByte)])
         core_part = core_dev.partitions[0]
-        cache = casadm.start_cache(cache_part, cache_mode, force=True)
+        cache = casadm.start_cache(cache_part, force=True)
 
     with TestRun.step("Add core device with xfs filesystem and mount it."):
         core_part.create_filesystem(Filesystem.xfs)
@@ -121,49 +119,3 @@ def test_stop_cache_with_mounted_partition(cache_mode):
     with TestRun.step("Stop cache."):
         casadm.stop_all_caches()
 
-
-@pytest.mark.parametrizex("cache_mode", CacheMode)
-@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_add_cached_core(cache_mode):
-    """
-        title: Fault injection test for adding already used core to a cache.
-        description: |
-          Negative test of the ability to add the core to the cache twice to the same cache
-          and while the core is already used by the another cache instance.
-        pass_criteria:
-          - No system crash.
-          - Adding already used core to another cache instance fails.
-          - The same core device cannot be used twice in one cache instance.
-    """
-    with TestRun.step("Prepare two caches and one core device."):
-        cache_dev = TestRun.disks['cache']
-        cache_dev.create_partitions([Size(2, Unit.GibiByte), Size(2, Unit.GibiByte)])
-        cache_part1 = cache_dev.partitions[0]
-        cache_part2 = cache_dev.partitions[1]
-        core_dev = TestRun.disks['core']
-        core_dev.create_partitions([Size(4, Unit.GibiByte)])
-        core_part = core_dev.partitions[0]
-
-    with TestRun.step("Start the first cache instance"):
-        cache1 = casadm.start_cache(cache_part1, cache_mode, force=True)
-
-    with TestRun.step("Add core device to first cache instance."):
-        core = cache1.add_core(core_part)
-
-    with TestRun.step("Start the second cache instance"):
-        cache2 = casadm.start_cache(cache_part2, cache_mode, force=True)
-
-    with TestRun.step("Try adding the same core device to the second cache instance."):
-        output = TestRun.executor.run_expect_fail(
-            cli.add_core_cmd(cache_id=str(cache2.cache_id), core_dev=str(core_part.path),
-                             core_id=str(core.core_id)))
-        cli_messages.check_stderr_msg(output, cli_messages.add_cached_core)
-
-    with TestRun.step("Try adding the same core device to the same cache for the second time."):
-        output = TestRun.executor.run_expect_fail(
-            cli.add_core_cmd(cache_id=str(cache1.cache_id), core_dev=str(core_part.path)))
-        cli_messages.check_stderr_msg(output, cli_messages.already_cached_core)
-
-    with TestRun.step("Stop caches."):
-        casadm.stop_all_caches()
