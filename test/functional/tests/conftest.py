@@ -19,16 +19,12 @@ from api.cas import installer
 from api.cas import casadm
 from api.cas import git
 from api.cas.cas_service import opencas_drop_in_directory
-from storage_devices.raid import Raid
-from storage_devices.ramdisk import RamDisk
-from test_utils.os_utils import Udev, kill_all_io
-from test_utils.disk_finder import get_disk_serial_number
-from test_tools.disk_utils import PartitionTable, create_partition_table
-from test_tools.device_mapper import DeviceMapper
-from test_tools.mdadm import Mdadm
-from test_tools.fs_utils import remove
-from log.logger import create_log, Log
+from api.cas.init_config import InitConfig
+from log.logger import create_log
 from test_utils.singleton import Singleton
+from test_utils.output import CmdException
+from test_tools.fs_utils import remove
+from storage_devices.drbd import Drbd
 
 
 class Opencas(metaclass=Singleton):
@@ -57,61 +53,81 @@ def pytest_runtest_setup(item):
     #
     # User can also have own test wrapper, which runs test prepare, cleanup, etc.
     # Then it should be placed in plugins package
-
-    test_name = item.name.split('[')[0]
-    TestRun.LOGGER = create_log(item.config.getoption('--log-path'), test_name)
-
-    duts = item.config.getoption('--dut-config')
-    required_duts = next(item.iter_markers(name="multidut"), None)
-    required_duts = required_duts.args[0] if required_duts is not None else 1
-    if required_duts > len(duts):
-        raise Exception(f"Test requires {required_duts} DUTs, only {len(duts)} DUT configs "
-                        f"provided")
-    else:
-        duts = duts[:required_duts]
-
-    TestRun.duts = []
-    for dut in duts:
+    duts = []
+    for dut_file in item.config.getoption("--dut-config"):
         try:
-            with open(dut) as cfg:
-                dut_config = yaml.safe_load(cfg)
+            with open(dut_file) as df:
+                dut_config = yaml.safe_load(df)
         except Exception as ex:
-            raise Exception(f"{ex}\n"
-                            f"You need to specify DUT config. See the example_dut_config.py file")
+            raise Exception(
+                "You need to specify DUT config. See the example_dut_config.py file"
+            ) from ex
 
-        dut_config['plugins_dir'] = os.path.join(os.path.dirname(__file__), "../lib")
-        dut_config['opt_plugins'] = {"test_wrapper": {}, "serial_log": {}, "power_control": {}}
-        dut_config['extra_logs'] = {"cas": "/var/log/opencas.log"}
+        dut_config["extra_logs"] = {"cas": "/var/log/opencas.log"}
+        duts.append(dut_config)
+
+    log_path = item.config.getoption("--log-path")
+    test_name = item.name.split("[")[0]
+    logger = create_log(log_path, test_name)
+
+    TestRun.start(logger, duts, item)
+    for dut in TestRun.use_all_duts():
+        if not installer.check_if_installed():
+            continue
+        TestRun.LOGGER.info(f"CAS cleanup on {dut.ip}")
+        remove(opencas_drop_in_directory, recursive=True, ignore_errors=True)
 
         try:
-            TestRun.prepare(item, dut_config)
-
-            TestRun.presetup()
+            InitConfig.create_default_init_config()
+            unmount_cas_devices()
             try:
-                TestRun.executor.wait_for_connection(timedelta(seconds=20))
-            except paramiko.AuthenticationException:
-                raise
-            except Exception:
-                try:
-                    TestRun.plugin_manager.get_plugin('power_control').power_cycle()
-                    TestRun.executor.wait_for_connection()
-                except Exception:
-                    raise Exception("Failed to connect to DUT.")
-            TestRun.setup()
-        except Exception as ex:
-            raise Exception(f"Exception occurred during test setup:\n"
-                            f"{str(ex)}\n{traceback.format_exc()}")
+                casadm.stop_all_caches()
+            except CmdException:
+                TestRun.LOGGER.warning(
+                    "Failed to stop all caches, will retry after stopping DRBD"
+                )
+            casadm.remove_all_detached_cores()
+        except Exception as e:
+            raise Exception("Exception occured during CAS cleanup:\n"
+                            f"{str(e)}\n{traceback.format_exc()}")
 
-        TestRun.usr = Opencas(
-            repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
-            working_dir=dut_config['working_dir'])
+        if Drbd.is_installed():
+            # TODO: Need proper stacking devices teardown
+            TestRun.LOGGER.workaround("Stopping DRBD")
+            Drbd.down_all()
 
-        TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
-        TestRun.dut.plugin_manager = TestRun.plugin_manager
-        TestRun.dut.executor = TestRun.executor
-        TestRun.duts.append(TestRun.dut)
+        try:
+            casadm.stop_all_caches()
+        except CmdException:
+            TestRun.LOGGER.blocked("Failed to stop all caches")
 
-        base_prepare(item)
+    TestRun.prepare()
+
+    # If some generic device was set-up on top of CAS it failed to stop, try to stop it again
+    if installer.check_if_installed():
+        casadm.stop_all_caches()
+
+    TestRun.usr = Opencas(
+        repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
+        working_dir=TestRun.working_dir)
+
+    cas_version = TestRun.config.get("cas_version") or git.get_current_commit_hash()
+    for i, dut in enumerate(TestRun.use_all_duts()):
+        if get_force_param(item) and not TestRun.usr.already_updated:
+            installer.rsync_opencas_sources()
+            installer.reinstall_opencas(cas_version)
+        elif not installer.check_if_installed(cas_version):
+            installer.rsync_opencas_sources()
+            installer.set_up_opencas(cas_version)
+        TestRun.LOGGER.info(f"DUT-{i} info: {dut}")
+
+    TestRun.usr.already_updated = True
+
+    TestRun.LOGGER.add_build_info(f'Commit hash:')
+    TestRun.LOGGER.add_build_info(f"{git.get_current_commit_hash()}")
+    TestRun.LOGGER.add_build_info(f'Commit message:')
+    TestRun.LOGGER.add_build_info(f'{git.get_current_commit_message()}')
+
     TestRun.LOGGER.write_to_command_log("Test body")
     TestRun.LOGGER.start_group("Test body")
 
@@ -127,46 +143,6 @@ def pytest_runtest_teardown():
     This method is executed always in the end of each test, even if it fails or raises exception in
     prepare stage.
     """
-    TestRun.LOGGER.end_all_groups()
-
-    with TestRun.LOGGER.step("Cleanup after test"):
-        try:
-            if TestRun.executor:
-                if not TestRun.executor.is_active():
-                    TestRun.executor.wait_for_connection()
-                Udev.enable()
-                kill_all_io()
-                unmount_cas_devices()
-
-                if installer.check_if_installed():
-                    casadm.remove_all_detached_cores()
-                    casadm.stop_all_caches()
-                    from api.cas.init_config import InitConfig
-                    InitConfig.create_default_init_config()
-
-                from storage_devices.drbd import Drbd
-                if installer.check_if_installed() and Drbd.is_installed():
-                    try:
-                        casadm.stop_all_caches()
-                    finally:
-                        __drbd_cleanup()
-                elif Drbd.is_installed():
-                    Drbd.down_all()
-
-                DeviceMapper.remove_all()
-                RamDisk.remove_all()
-        except Exception as ex:
-            TestRun.LOGGER.warning(f"Exception occurred during platform cleanup.\n"
-                                   f"{str(ex)}\n{traceback.format_exc()}")
-
-    TestRun.LOGGER.end()
-    for dut in TestRun.duts:
-        with TestRun.use_dut(dut):
-            if TestRun.executor:
-                os.makedirs(os.path.join(TestRun.LOGGER.base_dir, "dut_info", dut.ip),
-                            exist_ok=True)
-                TestRun.LOGGER.get_additional_logs()
-    Log.destroy()
     TestRun.teardown()
 
 
@@ -211,80 +187,3 @@ def unmount_cas_devices():
 def get_force_param(item):
     return item.config.getoption("--force-reinstall")
 
-
-def __drbd_cleanup():
-    from storage_devices.drbd import Drbd
-    Drbd.down_all()
-    # If drbd instance had been configured on top of the CAS, the previos attempt to stop
-    # failed. As drbd has been stopped try to stop CAS one more time.
-    if installer.check_if_installed():
-        casadm.stop_all_caches()
-
-
-def base_prepare(item):
-    with TestRun.LOGGER.step("Cleanup before test"):
-        TestRun.executor.run("pkill --signal=SIGKILL fsck")
-        Udev.enable()
-        kill_all_io()
-        DeviceMapper.remove_all()
-
-        if installer.check_if_installed():
-            try:
-                from api.cas.init_config import InitConfig
-                InitConfig.create_default_init_config()
-                unmount_cas_devices()
-                casadm.stop_all_caches()
-                casadm.remove_all_detached_cores()
-            except Exception:
-                pass  # TODO: Reboot DUT if test is executed remotely
-
-        remove(opencas_drop_in_directory, recursive=True, ignore_errors=True)
-
-        from storage_devices.drbd import Drbd
-        if Drbd.is_installed():
-            __drbd_cleanup()
-
-        raids = Raid.discover()
-        for raid in raids:
-            # stop only those RAIDs, which are comprised of test disks
-            if all(map(lambda device:
-                       any(map(lambda disk_path:
-                               disk_path in device.get_device_id(),
-                               [bd.get_device_id() for bd in TestRun.dut.disks])),
-                       raid.array_devices)):
-                raid.umount_all_partitions()
-                raid.remove_partitions()
-                raid.stop()
-                for device in raid.array_devices:
-                    Mdadm.zero_superblock(os.path.join('/dev', device.get_device_id()))
-                    Udev.settle()
-
-        RamDisk.remove_all()
-
-        for disk in TestRun.dut.disks:
-            disk_serial = get_disk_serial_number(disk.path)
-            if disk.serial_number != disk_serial:
-                raise Exception(
-                    f"Serial for {disk.path} doesn't match the one from the config."
-                    f"Serial from config {disk.serial_number}, actual serial {disk_serial}"
-                )
-
-            disk.umount_all_partitions()
-            Mdadm.zero_superblock(os.path.join('/dev', disk.get_device_id()))
-            TestRun.executor.run_expect_success("udevadm settle")
-            disk.remove_partitions()
-            create_partition_table(disk, PartitionTable.gpt)
-
-        cas_version = TestRun.config.get("cas_version") or git.get_current_commit_hash()
-        if get_force_param(item) and not TestRun.usr.already_updated:
-            installer.rsync_opencas_sources()
-            installer.reinstall_opencas(cas_version)
-        elif not installer.check_if_installed(cas_version):
-            installer.rsync_opencas_sources()
-            installer.set_up_opencas(cas_version)
-
-        TestRun.usr.already_updated = True
-        TestRun.LOGGER.add_build_info(f'Commit hash:')
-        TestRun.LOGGER.add_build_info(f"{git.get_current_commit_hash()}")
-        TestRun.LOGGER.add_build_info(f'Commit message:')
-        TestRun.LOGGER.add_build_info(f'{git.get_current_commit_message()}')
