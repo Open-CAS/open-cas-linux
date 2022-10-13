@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -7,6 +7,7 @@ import pytest
 
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
+from .common import compare_md5sums, create_files_with_md5sums
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from storage_devices.raid import Raid, RaidConfiguration, MetadataVariant, Level
@@ -29,31 +30,30 @@ number_of_files = 100
 @pytest.mark.require_disk("cache2", DiskTypeSet([DiskType.sata, DiskType.hdd]))
 def test_raid_as_cache(cache_mode):
     """
-        title: Test if SW RAID1 can be a cache device.
-        description: |
-          Test if SW RAID1 can be a cache for CAS device.
-        pass_criteria:
-          - Successful creation of RAID and building CAS device with it.
-          - Files copied successfully, the md5sum match the origin one.
+    title: Test if SW RAID1 can be a cache device.
+    description: |
+      Test if SW RAID1 can be a cache for CAS device.
+    pass_criteria:
+      - Successful creation of RAID and building CAS device with it.
+      - Files copied successfully, the md5sum match the origin one.
     """
     with TestRun.step("Create RAID1."):
-        raid_disk = TestRun.disks['cache1']
+        raid_disk = TestRun.disks["cache1"]
         raid_disk.create_partitions([Size(2, Unit.GibiByte)])
         raid_disk_1 = raid_disk.partitions[0]
-        raid_disk2 = TestRun.disks['cache2']
+        raid_disk2 = TestRun.disks["cache2"]
         raid_disk2.create_partitions([Size(2, Unit.GibiByte)])
         raid_disk_2 = raid_disk2.partitions[0]
 
         config = RaidConfiguration(
-            level=Level.Raid1,
-            metadata=MetadataVariant.Legacy,
-            number_of_devices=2)
+            level=Level.Raid1, metadata=MetadataVariant.Legacy, number_of_devices=2
+        )
 
         raid_volume = Raid.create(config, [raid_disk_1, raid_disk_2])
         TestRun.LOGGER.info(f"RAID created successfully.")
 
     with TestRun.step("Prepare core device."):
-        core_disk = TestRun.disks['core']
+        core_disk = TestRun.disks["core"]
         core_disk.create_partitions([Size(2, Unit.GibiByte)])
         core_dev = core_disk.partitions[0]
 
@@ -85,21 +85,21 @@ def test_raid_as_cache(cache_mode):
 @pytest.mark.require_disk("core2", DiskTypeLowerThan("cache1"))
 def test_many_cores_raid_as_cache(cache_mode):
     """
-        title: Test if CAS is working with many core devices using RAID0 as cache device.
-        description: |
-          Test if CAS is working properly with many core devices using RAID0 as cache device
-           and verification of data integrity of files copied to cores.
-        pass_criteria:
-          - No system crash.
-          - Successful creation of RAID0 and using it as cache for CAS device
-          - Successful addition of first and second core to CAS device
-          - Successful creation and copy files to each core and verification of theirs md5sum.
+    title: Test if CAS is working with many core devices using RAID0 as cache device.
+    description: |
+      Test if CAS is working properly with many core devices using RAID0 as cache device
+       and verification of data integrity of files copied to cores.
+    pass_criteria:
+      - No system crash.
+      - Successful creation of RAID0 and using it as cache for CAS device
+      - Successful addition of first and second core to CAS device
+      - Successful creation and copy files to each core and verification of theirs md5sum.
     """
     with TestRun.step("Create cache with RAID0 as caching device."):
-        raid_disk = TestRun.disks['cache1']
+        raid_disk = TestRun.disks["cache1"]
         raid_disk.create_partitions([Size(2, Unit.GibiByte)])
         raid_disk_1 = raid_disk.partitions[0]
-        raid_disk2 = TestRun.disks['cache2']
+        raid_disk2 = TestRun.disks["cache2"]
         raid_disk2.create_partitions([Size(2, Unit.GibiByte)])
         raid_disk_2 = raid_disk2.partitions[0]
 
@@ -107,7 +107,8 @@ def test_many_cores_raid_as_cache(cache_mode):
             level=Level.Raid0,
             metadata=MetadataVariant.Legacy,
             number_of_devices=2,
-            size=Size(1, Unit.GiB))
+            size=Size(1, Unit.GiB),
+        )
 
         raid_volume = Raid.create(config, [raid_disk_1, raid_disk_2])
         TestRun.LOGGER.info(f"RAID created successfully.")
@@ -115,7 +116,7 @@ def test_many_cores_raid_as_cache(cache_mode):
         cache = casadm.start_cache(raid_volume, cache_mode, force=True)
 
     with TestRun.step("Add core device to cache, create filesystem and mount it."):
-        core_disk1 = TestRun.disks['core1']
+        core_disk1 = TestRun.disks["core1"]
         core_disk1.create_partitions([Size(2, Unit.GibiByte)])
         core_dev1 = core_disk1.partitions[0]
 
@@ -124,7 +125,7 @@ def test_many_cores_raid_as_cache(cache_mode):
         core1.mount(mount_point)
 
     with TestRun.step("Add second core device to cache, create filesystem and mount it."):
-        core_disk2 = TestRun.disks['core2']
+        core_disk2 = TestRun.disks["core2"]
         core_disk2.create_partitions([Size(2, Unit.GibiByte)])
         core_dev2 = core_disk2.partitions[0]
 
@@ -143,31 +144,3 @@ def test_many_cores_raid_as_cache(cache_mode):
 
     with TestRun.step("Compare checksum on second core."):
         compare_md5sums(core2_md5sums, mount_point2)
-
-
-def create_files_with_md5sums(destination_path, files_count):
-    md5sums = list()
-    for i in range(0, files_count):
-        temp_file = f"/tmp/file{i}"
-        destination_file = f"{destination_path}/file{i}"
-
-        test_file = fs_utils.create_random_test_file(temp_file, test_file_size)
-        test_file.copy(destination_file, force=True)
-
-        md5sums.append(test_file.md5sum())
-
-    TestRun.LOGGER.info(f"Files created and copied to core successfully.")
-    return md5sums
-
-
-def compare_md5sums(md5_sums_source, files_to_check_path):
-    md5_sums_elements = len(md5_sums_source)
-
-    for i in range(md5_sums_elements):
-        file_to_check_path = f"{files_to_check_path}/file{i}"
-        file_to_check = fs_utils.parse_ls_output(fs_utils.ls_item(file_to_check_path))[0]
-
-        if md5_sums_source[i] != file_to_check.md5sum():
-            TestRun.fail(f"Source and target files {file_to_check_path} checksums are different.")
-
-    TestRun.LOGGER.info(f"Successful verification, md5sums match.")
