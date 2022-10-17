@@ -3,6 +3,7 @@ on:
   pull_request:
     branches:
       - master
+      - v*
 
 env:
   EXTENSIONS: "c h cpp py go sh mk spec service"
