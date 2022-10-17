@@ -29,6 +29,7 @@ from test_tools.mdadm import Mdadm
 from test_tools.fs_utils import remove
 from log.logger import create_log, Log
 from test_utils.singleton import Singleton
+from storage_devices.lvm import Lvm, LvmConfiguration
 
 
 class Opencas(metaclass=Singleton):
@@ -243,6 +244,11 @@ def base_prepare(item):
         from storage_devices.drbd import Drbd
         if Drbd.is_installed():
             __drbd_cleanup()
+
+        lvms = Lvm.discover()
+        if lvms:
+            Lvm.remove_all()
+            LvmConfiguration.remove_filters_from_config()
 
         raids = Raid.discover()
         for raid in raids:
