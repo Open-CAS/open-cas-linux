@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -43,6 +43,7 @@ def unload_modules():
     os_utils.mount_debugfs()
 
 
+@pytest.mark.skip(reason="kedr not supported")
 @pytest.mark.parametrize("module", cas_module.CasModule)
 def test_kedr_memleak_load_cas_module(module, unload_modules, install_kedr):
     """
@@ -70,6 +71,7 @@ def test_kedr_memleak_load_cas_module(module, unload_modules, install_kedr):
         Kedr.stop()
 
 
+@pytest.mark.skip(reason="kedr not supported")
 @pytest.mark.parametrize("module", cas_module.CasModule)
 def test_kedr_fsim_load_cas_module(module, unload_modules, install_kedr):
     """
@@ -95,6 +97,7 @@ def test_kedr_fsim_load_cas_module(module, unload_modules, install_kedr):
         Kedr.stop()
 
 
+@pytest.mark.skip(reason="kedr not supported")
 @pytest.mark.parametrize("module", cas_module.CasModule)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
@@ -149,6 +152,7 @@ def test_kedr_start_cache(module, unload_modules, install_kedr):
         Kedr.stop()
 
 
+@pytest.mark.skip(reason="kedr not supported")
 @pytest.mark.os_dependent
 @pytest.mark.parametrize("module", cas_module.CasModule)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -214,6 +218,7 @@ def test_kedr_basic_io_raw(module, unload_modules, install_kedr):
         Kedr.stop()
 
 
+@pytest.mark.skip(reason="kedr not supported")
 @pytest.mark.os_dependent
 @pytest.mark.parametrize("module", cas_module.CasModule)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

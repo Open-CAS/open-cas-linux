@@ -7,6 +7,8 @@
 import os
 import re
 
+import pytest
+
 from api.cas.installer import clean_opencas_repo, rsync_opencas_sources
 from core.test_run import TestRun
 from test_tools.fs_utils import (
@@ -22,6 +24,7 @@ modules_links_dir = "/lib/modules/$(uname -r)/weak-updates/block/opencas"
 modules_names = ["cas_cache.ko"]
 
 
+@pytest.mark.os_dependent
 def test_weak_modules():
     """
     title: Test for weak-modules symlinks handling.

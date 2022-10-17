@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2020-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 import os
@@ -23,6 +23,7 @@ random_thresholds = random.sample(range(1028, 1024 ** 2, 4), 3)
 random_stream_numbers = random.sample(range(2, 128), 3)
 
 
+@pytest.mark.os_dependent
 @pytest.mark.parametrizex("streams_number", [1, 128] + random_stream_numbers)
 @pytest.mark.parametrizex("threshold",
                           [Size(1, Unit.MebiByte), Size(1, Unit.GibiByte)]
@@ -130,6 +131,7 @@ def run_dd(target_path, count, seek):
     TestRun.LOGGER.info(f"dd command:\n{dd}")
 
 
+@pytest.mark.os_dependent
 @pytest.mark.parametrizex("streams_seq_rand", [(64, 64), (64, 192)])
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
@@ -185,6 +187,7 @@ def test_multistream_seq_cutoff_stress_raw(streams_seq_rand):
             TestRun.LOGGER.info(f"{core.get_statistics()}")
 
 
+@pytest.mark.os_dependent
 @pytest.mark.parametrizex("streams_seq_rand", [(64, 64), (64, 192)])
 @pytest.mark.parametrizex("filesystem", Filesystem)
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))

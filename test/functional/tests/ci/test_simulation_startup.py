@@ -16,6 +16,7 @@ from test_utils.size import Size, Unit
 
 
 @pytest.mark.CI
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_simulation_startup_from_config():

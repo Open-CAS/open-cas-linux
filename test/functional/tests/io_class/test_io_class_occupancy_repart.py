@@ -27,6 +27,7 @@ from tests.io_class.io_class_common import (
 )
 
 
+@pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("io_class_size_multiplication", [0.5, 1])
