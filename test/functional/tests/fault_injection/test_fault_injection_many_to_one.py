@@ -155,7 +155,7 @@ def test_one_core_release(cache_mode):
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core1", DiskTypeLowerThan("cache"))
 @pytest.mark.require_disk("core2", DiskTypeLowerThan("cache"))
-def test_one_core_fail():
+def test_one_core_fail(cache_mode):
     """
         title: Test if OpenCAS correctly handles failure of one of multiple core devices.
         description: |
@@ -178,7 +178,6 @@ def test_one_core_fail():
         Udev.disable()
 
     with TestRun.step("Start cache"):
-        cache_mode = CacheMode.WT
         cache = casadm.start_cache(cache_part, cache_mode=cache_mode, force=True)
         caches_count = len(casadm_parser.get_caches())
         if caches_count != 1:
