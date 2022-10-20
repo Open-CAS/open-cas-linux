@@ -63,10 +63,8 @@ flush_cache_help = [
     r"Usage: casadm --flush-cache --cache-id \<ID\>",
     r"Flush all dirty data from the caching device to core devices",
     r"Options that are valid with --flush-cache \(-F\) are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>"
-    r"-j  --core-id \<ID\>                  Identifier of core \<0-4095\> within given cache "
-    r"instance. This is an optional parameter When provided, it will flush core with provided"
-    r" id connected to cache. In other case it will flush cache."
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-j  --core-id \[\<ID\>\]                Identifier of core <0-4095> within given cache instance"
 ]
 
 reset_counters_help = [
