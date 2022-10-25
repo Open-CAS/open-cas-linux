@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -22,7 +22,7 @@
 
 static inline uint64_t env_get_free_memory(void)
 {
-	return cas_global_zone_page_state(NR_FREE_PAGES) << PAGE_SHIFT;
+	return cas_get_free_memory();
 }
 
 static inline void *env_malloc(size_t size, int flags)
