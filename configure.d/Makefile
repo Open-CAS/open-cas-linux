@@ -1,8 +1,8 @@
-#!/bin/bash
 #
-# Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2012-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
+
 
 obj-m += test_mod.o
 
@@ -13,9 +13,9 @@ check_cflag=$(shell echo "" | \
 	if [ $$? -eq 0 ]; then echo 1; else echo 0; fi; )
 
 ifeq ($(call check_cflag,-Werror=int-conversion), 1)
-EXTRA_CFLAGS += -Werror=int-conversion
+EXTRA_CFLAGS += -Werror=int-conversion 
 endif
-
+KBUILD_CFLAGS += -Wno-error
 all:
 	make -C $(KERNEL_DIR) M=$(MAKE_DIR) modules
 clean:

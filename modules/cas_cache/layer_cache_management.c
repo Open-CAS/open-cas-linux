@@ -601,12 +601,11 @@ static int exit_instance_finish(void *data)
 	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
 		kfree(ctx);
 
-	module_put_and_exit(0);
+	CAS_MODULE_PUT_AND_EXIT(0);
 }
 
 struct _cache_mngt_attach_context {
 	struct _cache_mngt_async_context async;
-	char cache_elevator[MAX_ELEVATOR_NAME];
 	uint64_t min_free_ram;
 	struct ocf_mngt_cache_device_config device_cfg;
 	char cache_path[MAX_STR_LEN];
@@ -649,7 +648,7 @@ static int cache_start_rollback(void *data)
 	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
 		kfree(ctx);
 
-	module_put_and_exit(0);
+	CAS_MODULE_PUT_AND_EXIT(0);
 
 	return 0;
 }
@@ -2021,7 +2020,7 @@ static void init_instance_complete(struct _cache_mngt_attach_context *ctx,
 	ocf_volume_t cache_obj;
 	struct bd_object *bd_cache_obj;
 	struct block_device *bdev;
-	const char *name;
+	//const char *name;
 
 	cache_obj = ocf_cache_get_volume(cache);
 	BUG_ON(!cache_obj);
@@ -2033,11 +2032,6 @@ static void init_instance_complete(struct _cache_mngt_attach_context *ctx,
 	if (cas_bdev_whole(bdev) == bdev)
 		cas_reread_partitions(bdev);
 
-	/* Set other back information */
-	name = block_dev_get_elevator_name(
-			cas_disk_get_queue(bd_cache_obj->dsk));
-	if (name)
-		strlcpy(ctx->cache_elevator, name, MAX_ELEVATOR_NAME);
 }
 
 static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv, int error)
@@ -2571,9 +2565,6 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 
 	if (result)
 		goto err;
-
-	strlcpy(cmd->cache_elevator, context->cache_elevator,
-			MAX_ELEVATOR_NAME);
 
 	result = _cache_start_finalize(cache, cmd->init_cache, false);
 	if (result)

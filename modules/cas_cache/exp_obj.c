@@ -7,7 +7,6 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/blkpg.h>
-#include <linux/elevator.h>
 #include <linux/blk-mq.h>
 
 #include "disk.h"
@@ -31,7 +30,10 @@ static inline void bd_release_from_disk(struct block_device *bdev,
 	return bd_unlink_disk_holder(bdev, disk);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
+	#define KRETURN(x) 	return
+	#define MAKE_RQ_RET_TYPE void
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	#define KRETURN(x)	({ return (x); })
 	#define MAKE_RQ_RET_TYPE blk_qc_t
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0)
@@ -161,12 +163,6 @@ out_map_bpart:
 	return result;
 }
 
-#ifdef GENHD_FL_NO_PART_SCAN
-static int _cas_flags = GENHD_FL_NO_PART_SCAN | GENHD_FL_EXT_DEVT;
-#else
-static int _cas_flags = GENHD_FL_EXT_DEVT;
-#endif
-
 static int _cas_exp_obj_hide_parts(struct cas_disk *dsk)
 {
 	struct cas_exp_obj *exp_obj = dsk->exp_obj;
@@ -177,7 +173,7 @@ static int _cas_exp_obj_hide_parts(struct cas_disk *dsk)
 		/* It is partition, no more job required */
 		return 0;
 
-	if (disk_max_parts(dsk->bd->bd_disk) > 1) {
+	if (GET_DISK_MAX_PARTS(dsk->bd->bd_disk) > 1) {
 		if (_cas_del_partitions(dsk)) {
 			printk(KERN_ERR "Error deleting a partition on thedevice %s\n",
 				gdsk->disk_name);
@@ -189,11 +185,11 @@ static int _cas_exp_obj_hide_parts(struct cas_disk *dsk)
 	}
 
 	/* Save original flags and minors */
-	exp_obj->gd_flags = gdsk->flags & _cas_flags;
+	exp_obj->gd_flags = gdsk->flags & _CAS_GENHD_FLAGS;
 	exp_obj->gd_minors = gdsk->minors;
 
 	/* Setup disk of bottom device as not partitioned device */
-	gdsk->flags &= ~_cas_flags;
+	gdsk->flags &= ~_CAS_GENHD_FLAGS;
 	gdsk->minors = 1;
 	/* Rescan partitions */
 	cas_reread_partitions(bd);
@@ -217,7 +213,7 @@ static int _cas_exp_obj_set_dev_t(struct cas_disk *dsk, struct gendisk *gd)
 {
 	struct cas_exp_obj *exp_obj = dsk->exp_obj;
 	int flags;
-	int minors = disk_max_parts(cas_disk_get_gendisk(dsk));
+	int minors = GET_DISK_MAX_PARTS(cas_disk_get_gendisk(dsk));
 	struct block_device *bdev;
 
 	bdev = cas_disk_get_blkdev(dsk);
@@ -346,7 +342,7 @@ static void _cas_init_queues(struct cas_disk *dsk)
 {
 	struct request_queue *q = dsk->exp_obj->queue;
 	struct blk_mq_hw_ctx *hctx;
-	int i;
+	unsigned long i;
 
 	queue_for_each_hw_ctx(q, hctx, i) {
 		if (!hctx->nr_ctx || !hctx->tags)
@@ -365,7 +361,7 @@ static int _cas_init_tag_set(struct cas_disk *dsk, struct blk_mq_tag_set *set)
 	set->nr_hw_queues = num_online_cpus();
 	set->numa_node = NUMA_NO_NODE;
 	/*TODO: Should we inherit qd from core device? */
-	set->queue_depth = BLKDEV_MAX_RQ;
+	set->queue_depth = CAS_BLKDEV_DEFAULT_RQ;
 
 	set->cmd_size = 0;
 	set->flags = BLK_MQ_F_SHOULD_MERGE | CAS_BLK_MQ_F_STACKING | CAS_BLK_MQ_F_BLOCKING;
@@ -490,7 +486,8 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 			goto error_set_geometry;
 	}
 
-	add_disk(gd);
+	if (cas_add_disk(gd))
+		goto error_add_disk;
 
 	result = bd_claim_by_disk(dsk->bd, dsk, gd);
 	if (result)
@@ -500,6 +497,7 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 
 error_bd_claim:
 	del_gendisk(dsk->exp_obj->gd);
+error_add_disk:
 error_set_geometry:
 	exp_obj->private = NULL;
 	_cas_exp_obj_clear_dev_t(dsk);

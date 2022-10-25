@@ -20,7 +20,6 @@
 #include <linux/bio.h>
 #include <linux/fs.h>
 #include <linux/stat.h>
-#include <linux/genhd.h>
 #include <linux/blkdev.h>
 #include <linux/version.h>
 #include <linux/workqueue.h>

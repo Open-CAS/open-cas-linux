@@ -23,11 +23,6 @@
  */
 #define MAX_STR_LEN PATH_MAX
 
-/**
- * Max size of elevator name (including null terminator)
- */
-#define MAX_ELEVATOR_NAME 16
-
 /** \cond SKIP_IN_DOC */
 #define CACHE_LIST_ID_LIMIT 20
 
@@ -75,8 +70,6 @@ struct kcas_start_cache {
 	uint8_t force; /**< should force option be used? */
 
 	uint64_t min_free_ram; /**< Minimum free RAM memory for cache metadata */
-
-	char cache_elevator[MAX_ELEVATOR_NAME];
 
 	int ext_err_code;
 };
@@ -391,7 +384,7 @@ struct kcas_standby_activate
  *    18    *    KCAS_IOCTL_GET_CAPABILITIES                *    DEPRECATED    *
  *    19    *    KCAS_IOCTL_UPGRADE                         *    DEPRACATED    *
  *    20    *    KCAS_IOCTL_NVME_FORMAT                     *    DEPRECATED    *
- *    21    *    KCAS_IOCTL_START_CACHE                     *    OK            *
+ *    21    *    KCAS_IOCTL_START_CACHE                     *    DEPRECATED    *
  *    22    *    KCAS_IOCTL_INSERT_CORE                     *    OK            *
  *    23    *    KCAS_IOCTL_REMOVE_CORE                     *    OK            *
  *    24    *    KCAS_IOCTL_CACHE_INFO                      *    OK            *
@@ -411,6 +404,7 @@ struct kcas_standby_activate
  *    38    *    KCAS_IOCTL_STANDBY_DETACH                  *    OK            *
  *    39    *    KCAS_IOCTL_STANDBY_ACTIVATE                *    OK            *
  *    40    *    KCAS_IOCTL_CORE_INFO                       *    OK            *
+ *    41    *    KCAS_IOCTL_START_CACHE                     *    OK            *
  *******************************************************************************
  */
 
@@ -449,9 +443,6 @@ struct kcas_standby_activate
 
 /** List valid cache ids within Open CAS module */
 #define KCAS_IOCTL_LIST_CACHE _IOWR(KCAS_IOCTL_MAGIC, 17, struct kcas_cache_list)
-
-/** Start new cache instance, load cache or recover cache */
-#define KCAS_IOCTL_START_CACHE _IOWR(KCAS_IOCTL_MAGIC, 21, struct kcas_start_cache)
 
 /** Add core object to an running cache instance */
 #define KCAS_IOCTL_INSERT_CORE _IOWR(KCAS_IOCTL_MAGIC, 22, struct kcas_insert_core)
@@ -508,6 +499,9 @@ struct kcas_standby_activate
 
 /** Rretrieve statisting of a given core object */
 #define KCAS_IOCTL_CORE_INFO _IOWR(KCAS_IOCTL_MAGIC, 40, struct kcas_core_info)
+
+/** Start new cache instance, load cache or recover cache */
+#define KCAS_IOCTL_START_CACHE _IOWR(KCAS_IOCTL_MAGIC, 41, struct kcas_start_cache)
 
 /**
  * Extended kernel CAS error codes
