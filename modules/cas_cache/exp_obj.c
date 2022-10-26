@@ -535,7 +535,7 @@ int cas_exp_obj_destroy(struct cas_disk *dsk)
 	del_gendisk(exp_obj->gd);
 
 	if (exp_obj->queue)
-		blk_cleanup_queue(exp_obj->queue);
+		cas_cleanup_queue(exp_obj->queue);
 
 	blk_mq_free_tag_set(&exp_obj->tag_set);
 

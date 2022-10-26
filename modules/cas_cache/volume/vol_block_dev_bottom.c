@@ -218,7 +218,7 @@ void block_dev_submit_discard(struct ocf_io *io)
 		goto out;
 	}
 
-	if (!blk_queue_discard(q)) {
+	if (!cas_has_discard_support(bd)) {
 		/* Discard is not supported by bottom device, send completion
 		 * to caller
 		 */
