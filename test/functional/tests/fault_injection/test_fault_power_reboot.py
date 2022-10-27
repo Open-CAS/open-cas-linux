@@ -57,9 +57,9 @@ def test_fault_power_reboot():
         output = TestRun.executor.run_expect_fail(cli.start_cmd(
             cache_dev=str(cache_dev.path),
             force=False, load=False))
-        if cli_messages.check_stderr_msg(output, cli_messages.error_inserting_cache) and \
-                cli_messages.check_stderr_msg(output,
-                                              cli_messages.reinitialize_with_force_or_recovery):
+        if cli_messages.check_string_msg_all(output.stderr, cli_messages.error_inserting_cache) and \
+                cli_messages.check_string_msg_all(output.stderr,
+                                                  cli_messages.reinitialize_with_force_or_recovery):
             TestRun.LOGGER.info(f"Found expected exception: {cli_messages.error_inserting_cache}"
                                 f" and {cli_messages.reinitialize_with_force_or_recovery}")
 
@@ -86,7 +86,7 @@ def check_log(last_read_line, expected_message):
     cmd = f"tail -qn +{last_read_line} {log_path}"
     log = TestRun.executor.run(cmd)
 
-    if cli_messages.check_stdout_msg(log, expected_message):
+    if cli_messages.check_string_msg_all(log.stdout, expected_message):
         TestRun.LOGGER.info(f"Found expected message in log: {expected_message}")
         return True
     else:

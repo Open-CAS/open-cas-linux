@@ -252,23 +252,30 @@ unexpected_cls_option = [
     r"Option '--cache-line-size \(-x\)' is not allowed"
 ]
 
-def check_stderr_msg(output: Output, expected_messages, negate=False):
-    return __check_string_msg(output.stderr, expected_messages, negate)
+mdadm_partition_not_suitable_for_array = [
+    r"\S+ is not suitable for this array"
+]
+
+mdadm_device_or_resource_busy = [
+    r"mdadm: cannot open \S+: Device or resource busy"
+]
 
 
-def check_stdout_msg(output: Output, expected_messages, negate=False):
-    return __check_string_msg(output.stdout, expected_messages, negate)
+def check_string_msg_all(text: str, expected_messages):
+    if all([re.search(msg, text) for msg in expected_messages]):
+        return True
+    TestRun.LOGGER.error(
+        f"Message is incorrect, expected all of messages: {expected_messages}\n "
+        f'Got: "{text}" '
+        f"At least one expected message not found"
+    )
+    return False
 
 
-def __check_string_msg(text: str, expected_messages, negate=False):
-    msg_ok = True
-    for msg in expected_messages:
-        matches = re.search(msg, text)
-        if not matches and not negate:
-            TestRun.LOGGER.error(f"Message is incorrect, expected: {msg}\n actual: {text}.")
-            msg_ok = False
-        elif matches and negate:
-            TestRun.LOGGER.error(f"Message is incorrect, expected to not find: {msg}\n "
-                                 f"actual: {text}.")
-            msg_ok = False
-    return msg_ok
+def check_string_msg_any(text: str, expected_messages):
+    if any([re.search(m, text) for m in expected_messages]):
+        return True
+    TestRun.LOGGER.error(
+        f"Message is incorrect, expected one of: {expected_messages}\n " f'Got: "{text}"'
+    )
+    return False

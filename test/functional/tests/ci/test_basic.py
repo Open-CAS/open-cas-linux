@@ -9,7 +9,7 @@ from api.cas.cache_config import CacheMode, CacheLineSize
 from core.test_run import TestRun
 from api.cas import cli, casadm
 from api.cas.cli_messages import (
-    check_stderr_msg,
+    check_string_msg_all,
     start_cache_on_already_used_dev,
     start_cache_with_existing_id
 )
@@ -72,14 +72,14 @@ def test_negative_start_cache():
         output = TestRun.executor.run_expect_fail(
             cli.start_cmd(cache_dev_1.path, cache_id="2", force=True)
         )
-        if not check_stderr_msg(output, start_cache_on_already_used_dev):
+        if not check_string_msg_all(output.stderr, start_cache_on_already_used_dev):
             TestRun.fail(f"Received unexpected error message: {output.stderr}")
 
     with TestRun.step("Start cache with the same ID on another cache device"):
         output = TestRun.executor.run_expect_fail(
             cli.start_cmd(cache_dev_2.path, cache_id="1", force=True)
         )
-        if not check_stderr_msg(output, start_cache_with_existing_id):
+        if not check_string_msg_all(output.stderr, start_cache_with_existing_id):
             TestRun.fail(f"Received unexpected error message: {output.stderr}")
 
 

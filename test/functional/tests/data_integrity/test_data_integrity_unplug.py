@@ -126,7 +126,7 @@ async def test_data_integrity_unplug(cache_mode):
                 try:
                     cache.stop(no_data_flush=True)
                 except CmdException as e:
-                    if not cli_messages.check_stderr_msg(e.output, cli_messages.stop_cache_errors):
+                    if not cli_messages.check_string_msg_all(e.output.stderr, cli_messages.stop_cache_errors):
                         raise
 
             with TestRun.step("Plug back the cache device"):

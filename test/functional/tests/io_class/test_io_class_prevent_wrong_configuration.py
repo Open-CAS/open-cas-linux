@@ -150,7 +150,7 @@ def try_load_malformed_config(cache, config_io_classes, expected_err_msg):
         create_and_load_default_io_class_config(cache)
     except CmdException as e:
         TestRun.LOGGER.info(f"Open CAS did not load malformed config file as expected.")
-        cli_messages.check_stderr_msg(e.output, expected_err_msg)
+        cli_messages.check_string_msg_all(e.output.stderr, expected_err_msg)
         output_io_classes = cache.list_io_classes()
         if not IoClass.compare_ioclass_lists(output_io_classes, config_io_classes):
             output_str = "\n".join(str(i) for i in output_io_classes)
