@@ -200,7 +200,7 @@ set_params_help = [
     r"is active \<0-100\>\[\%\] \(default: 80\%\)",
     r"Options that are valid with --set-param \(-X\) --name \(-n\) cleaning-alru are:",
     r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-w  --wake-up \<NUMBER\>              Period of time between awakenings of flushing thread "
+    r"-w  --wake-up \<NUMBER\>              Cleaning thread sleep time after an idle wake up "
     r"\<0-3600\>\[s\] \(default: 20 s\)",
     r"-s  --staleness-time \<NUMBER\>       Time that has to pass from the last write operation "
     r"before a dirty cache block can be scheduled to be flushed \<1-3600\>\[s\] \(default: 120 s\)",
