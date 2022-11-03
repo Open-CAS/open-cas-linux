@@ -1,0 +1,11 @@
+- name: String
+  attributes:
+    name: Uint
+    value: '0'
+    size: '32'
+    mutable: 'true'
+  children:
+   - name: Hint
+     attributes:
+       name: NumericalString
+       value: 'true'
