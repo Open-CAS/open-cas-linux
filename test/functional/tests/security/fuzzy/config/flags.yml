@@ -1,0 +1,10 @@
+- name: String
+  attributes:
+    name: Flags
+    value: '--load'
+    mutable: 'true'
+  children:
+   - name: Hint
+     attributes:
+       name: ValidValues
+       value: '-l;-f;--force;-n;--no-data-flush;-b;--by-id-path'

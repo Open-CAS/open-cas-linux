@@ -1,0 +1,10 @@
+- name: String
+  attributes:
+    name: ModeValue
+    value: 'wt'
+    mutable: 'true'
+  children:
+   - name: Hint
+     attributes:
+       name: ValidValues
+       value: 'pt;wa;wb;wo'

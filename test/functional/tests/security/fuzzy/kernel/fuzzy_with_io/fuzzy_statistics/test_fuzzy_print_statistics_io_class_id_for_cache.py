@@ -17,7 +17,6 @@ from tests.security.fuzzy.kernel.common.common import get_fuzz_config, prepare_c
 from tests.security.fuzzy.kernel.fuzzy_with_io.common.common import get_basic_workload
 
 mount_point = "/mnt/test"
-iterations_count = 1000
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -55,20 +54,20 @@ def test_fuzzy_print_statistics_io_class_id_for_cache(cache_mode, cache_line_siz
         PeachFuzzer.generate_config(get_fuzz_config('io_class_id.yml'))
         base_cmd = print_statistics_cmd(cache_id=str(core.cache_id), per_io_class=True,
                                         io_class_id="{param}", by_id_path=False).encode('ascii')
-        commands = PeachFuzzer.get_fuzzed_command(base_cmd, iterations_count)
+        commands = PeachFuzzer.get_fuzzed_command(base_cmd, TestRun.usr.fuzzy_iter_count)
 
-    for index, cmd in TestRun.iteration(enumerate(commands), f"Run command {iterations_count} "
-                                                             f"times"):
+    for index, cmd in TestRun.iteration(enumerate(commands),
+                                        f"Run command {TestRun.usr.fuzzy_iter_count} times"):
         with TestRun.step(f"Iteration {index + 1}"):
-            run_cmd_and_validate(cmd, "Io_class_id", valid_values,
-                                 post_process_param_func=__strip_value)
+            run_cmd_and_validate(cmd, "Io_class_id",
+                                 __is_valid_io_class_id(cmd.param, valid_values))
 
     with TestRun.step("Stop 'fio'"):
         TestRun.executor.kill_process(fio_pid)
 
 
-def __strip_value(param):
+def __is_valid_io_class_id(param, valid_values):
     param = param.rstrip(b'\x00\x20\n\t')
     param = b'0' if not len(param.rstrip(b'0')) else param  # treat '00' as '0'
 
-    return param
+    return param in valid_values
