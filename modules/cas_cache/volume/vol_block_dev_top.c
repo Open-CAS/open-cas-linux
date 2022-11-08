@@ -516,7 +516,6 @@ static int kcas_volume_create_exported_object(ocf_volume_t volume,
 		const char *name, void *priv, struct cas_exp_obj_ops *ops)
 {
 	struct bd_object *bvol = bd_object(volume);
-	char dev_name[DISK_NAME_LEN];
 	int result;
 
 	bvol->expobj_wq = alloc_workqueue("expobj_wq_%s",
@@ -539,7 +538,7 @@ static int kcas_volume_create_exported_object(ocf_volume_t volume,
 end:
 	if (result) {
 		printk(KERN_ERR "Cannot create exported object %s. Error code %d\n",
-				dev_name, result);
+				name, result);
 	}
 	return result;
 }
