@@ -1085,6 +1085,8 @@ int get_cache_mode(int ctrl_fd, unsigned int cache_id, int *mode)
 
 	if (ioctl(ctrl_fd, KCAS_IOCTL_CACHE_INFO, &cmd_info) < 0)
 	{
+		if (cmd_info.ext_err_code == OCF_ERR_CACHE_NOT_EXIST)
+			print_err(cmd_info.ext_err_code);
 		if (cmd_info.ext_err_code == OCF_ERR_CACHE_STANDBY)
 			print_err(cmd_info.ext_err_code);
 		return FAILURE;
