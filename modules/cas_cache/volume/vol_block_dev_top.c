@@ -534,7 +534,6 @@ static int kcas_volume_create_exported_object(ocf_volume_t volume,
 {
 	struct bd_object *bvol = bd_object(volume);
 	const struct ocf_volume_uuid *uuid = ocf_volume_get_uuid(volume);
-	char dev_name[DISK_NAME_LEN];
 	struct casdsk_disk *dsk;
 	int result;
 
@@ -564,7 +563,7 @@ static int kcas_volume_create_exported_object(ocf_volume_t volume,
 end:
 	if (result) {
 		printk(KERN_ERR "Cannot create exported object %s. Error code %d\n",
-				dev_name, result);
+				name, result);
 	}
 	return result;
 }
