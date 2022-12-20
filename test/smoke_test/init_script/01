@@ -53,6 +53,8 @@ check_no_cache_running
 
 run_cmd "casctl start"
 
+run_cmd "udevadm settle"
+
 CACHE_ID_OPTION="1" DEMANDED_STATE_OPTION="Running" check_cache_state
 CACHE_ID_OPTION="1" CORE_ID_OPTION="1" DEMANDED_STATE_OPTION="Active" check_core_state
 CACHE_ID_OPTION="1" CORE_ID_OPTION="2" DEMANDED_STATE_OPTION="Active" check_core_state
