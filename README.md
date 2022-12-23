@@ -104,7 +104,7 @@ The complete documentation for Open CAS Linux is available in the
 Before running tests make sure you have a platform with at least 2 disks (one for cache and one for core). Be careful as these devices will be most likely overwritten with random data during tests. Tests can be either executed locally or on a remote platform (via ssh) specified in the dut_config.
 
 1. Go to test directory `cd test/functional`.
-1. Install dependencies with command `pip3 install -r test-framework/requirements.txt`.
+1. Install dependencies with command `pip3 install -r requirements.txt`.
 1. Create DUT config. See example [here](test/functional/config/example_dut_config.yml).
     a) Set disks params. You need at least two disks, of which at least one is an SSD drive.
     b) For remote execution uncomment and set the `ip`, `user` and `password` fields.
