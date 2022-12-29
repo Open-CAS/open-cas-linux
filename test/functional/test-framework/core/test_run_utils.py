@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -183,6 +183,9 @@ TestRun.setup = __setup
 
 @classmethod
 def __makereport(cls, item, call, res):
+    if cls.LOGGER is None:
+        return None
+
     cls.outcome = res.outcome
     step_info = {
         'result': res.outcome,
