@@ -211,7 +211,7 @@ def __makereport(cls, item, call, res):
     if res.outcome == "skipped":
         cls.LOGGER.skip("Test skipped.")
 
-    if res.when == "call" and cls.LOGGER.get_result() == BaseLogResult.FAILED:
+    if res.when in ["call", "setup"] and cls.LOGGER.get_result() >= BaseLogResult.FAILED:
         res.outcome = "failed"
         # To print additional message in final test report, assign it to res.longrepr
 
