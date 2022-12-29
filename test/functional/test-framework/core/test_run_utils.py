@@ -183,6 +183,9 @@ TestRun.setup = __setup
 
 @classmethod
 def __makereport(cls, item, call, res):
+    if cls.LOGGER is None:
+        return None
+
     cls.outcome = res.outcome
     step_info = {
         'result': res.outcome,
