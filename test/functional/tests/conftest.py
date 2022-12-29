@@ -161,12 +161,11 @@ def pytest_runtest_teardown():
                                    f"{str(ex)}\n{traceback.format_exc()}")
 
     TestRun.LOGGER.end()
-    for dut in TestRun.duts:
-        with TestRun.use_dut(dut):
-            if TestRun.executor:
-                os.makedirs(os.path.join(TestRun.LOGGER.base_dir, "dut_info", dut.ip),
-                            exist_ok=True)
-                TestRun.LOGGER.get_additional_logs()
+    for dut in TestRun.use_all_duts():
+        if TestRun.executor:
+            os.makedirs(os.path.join(TestRun.LOGGER.base_dir, "dut_info", dut.ip),
+                        exist_ok=True)
+            TestRun.LOGGER.get_additional_logs()
     Log.destroy()
     TestRun.teardown()
 
