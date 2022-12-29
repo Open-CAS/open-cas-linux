@@ -184,7 +184,7 @@ def pytest_addoption(parser):
     parser.addoption("--dut-config", action="append", type=str)
     parser.addoption("--log-path", action="store",
                      default=f"{os.path.join(os.path.dirname(__file__), '../results')}")
-    parser.addoption("--force-reinstall", action="store_true", default=False)
+    parser.addoption("--force-no-reinstall", action="store_true", default=False)
 
 
 def unmount_cas_devices():
@@ -210,7 +210,7 @@ def unmount_cas_devices():
 
 
 def get_force_param(item):
-    return item.config.getoption("--force-reinstall")
+    return item.config.getoption("--force-no-reinstall")
 
 
 def __drbd_cleanup():
@@ -282,12 +282,13 @@ def base_prepare(item):
             create_partition_table(disk, PartitionTable.gpt)
 
         cas_version = TestRun.config.get("cas_version") or git.get_current_commit_hash()
-        if get_force_param(item) and not TestRun.usr.already_updated:
-            installer.rsync_opencas_sources()
-            installer.reinstall_opencas(cas_version)
-        elif not installer.check_if_installed(cas_version):
-            installer.rsync_opencas_sources()
-            installer.set_up_opencas(cas_version)
+        if not get_force_param(item):
+            if not TestRun.usr.already_updated:
+                installer.rsync_opencas_sources()
+                installer.reinstall_opencas(cas_version)
+            elif not installer.check_if_installed(cas_version):
+                installer.rsync_opencas_sources()
+                installer.set_up_opencas(cas_version)
 
         TestRun.usr.already_updated = True
         TestRun.LOGGER.add_build_info(f'Commit hash:')
