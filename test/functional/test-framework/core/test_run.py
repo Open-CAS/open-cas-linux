@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -22,6 +22,7 @@ class TestRun:
     plugin_manager = None
     duts = None
     disks = None
+    reboot_cbs = []
 
     @classmethod
     @contextmanager
@@ -37,6 +38,48 @@ class TestRun:
         cls.executor = None
         # setting cls.config to None omitted (causes problems in the teardown stage of execution)
         cls.dut = None
+
+    @classmethod
+    def cache_until_reboot(cls, f):
+        class RebootSensitiveProperty:
+            def __init__(self, f):
+                self.f = f
+                self.objs = []
+                cls.register_reboot_callback(self.clear)
+
+            def __set_name__(self, obj, name):
+                self._name = f"_{name}_cache_"
+
+            def __get__(self, obj, objtype=None):
+                if obj is None:
+                    return self
+
+                self.objs.append(obj)
+
+                if getattr(obj, self._name, None) is None:
+                    setattr(obj, self._name, self.f(obj))
+
+                return getattr(obj, self._name)
+
+            def clear(self):
+                for obj in self.objs:
+                    if hasattr(obj, self._name):
+                        delattr(obj, self._name)
+
+        return RebootSensitiveProperty(f)
+
+    @classmethod
+    def register_reboot_callback(cls, cb):
+        cls.reboot_cbs.append(cb)
+
+    @classmethod
+    def rebooting_command(cls, fcn):
+        def inner(*args, **kwargs):
+            ret = fcn(*args, **kwargs)
+            [callback() for callback in cls.reboot_cbs]
+            return ret
+
+        return inner
 
     @classmethod
     def step(cls, message):
