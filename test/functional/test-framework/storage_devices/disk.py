@@ -206,8 +206,10 @@ class NvmeDisk(Disk):
 
 
 class SataDisk(Disk):
-    plug_all_command = "for i in $(find -H /sys/devices/ -path '*/scsi_host/*/scan' -type f); " \
-                       "do echo '- - -' > $i; done;"
+    plug_all_command = (
+        "find -H /sys/devices/ -path '*/scsi_host/*/scan' -type f |"
+        " xargs -P20 -I % sh -c \"echo '- - -' | tee %\""
+    )
 
     def __init__(self, path, disk_type, serial_number, block_size):
         Disk.__init__(self, path, disk_type, serial_number, block_size)
