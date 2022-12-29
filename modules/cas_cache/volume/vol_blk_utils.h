@@ -1,5 +1,5 @@
 /*
-* Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2012-2022 Intel Corporation
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -90,7 +90,7 @@ static inline uint32_t cas_io_iter_size_done(struct bio_vec_iter *iter)
 static inline uint32_t cas_io_iter_size_left(struct bio_vec_iter *iter)
 {
 	if (iter->idx < iter->vec_size)
-		return min(iter->vec_size - iter->idx, BIO_MAX_VECS);
+		return min(iter->vec_size - iter->idx, CAS_BIO_MAX_VECS);
 	return 0;
 	/* TODO UNITTEST */
 }
