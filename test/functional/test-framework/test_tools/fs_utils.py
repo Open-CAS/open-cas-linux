@@ -266,7 +266,7 @@ def uncompress_archive(file, destination=None):
 def ls(path, options=''):
     default_options = "-lA --time-style=+'%Y-%m-%d %H:%M:%S'"
     output = TestRun.executor.run(
-        f"ls {default_options} {options} \"{path}\"")
+        f"ls {default_options} {options} {path}")
     return output.stdout
 
 
