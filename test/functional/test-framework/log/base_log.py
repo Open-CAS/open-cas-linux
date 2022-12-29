@@ -1,13 +1,13 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-from enum import Enum
+from enum import IntEnum
 from re import sub
 
 
-class BaseLogResult(Enum):
+class BaseLogResult(IntEnum):
     DEBUG = 10
     PASSED = 11
     WORKAROUND = 12
