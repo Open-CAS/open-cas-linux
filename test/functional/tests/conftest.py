@@ -250,36 +250,37 @@ def base_prepare(item):
             Lvm.remove_all()
             LvmConfiguration.remove_filters_from_config()
 
-        raids = Raid.discover()
-        for raid in raids:
-            # stop only those RAIDs, which are comprised of test disks
-            if all(map(lambda device:
-                       any(map(lambda disk_path:
-                               disk_path in device.get_device_id(),
-                               [bd.get_device_id() for bd in TestRun.dut.disks])),
-                       raid.array_devices)):
-                raid.umount_all_partitions()
-                raid.remove_partitions()
-                raid.stop()
-                for device in raid.array_devices:
-                    Mdadm.zero_superblock(os.path.join('/dev', device.get_device_id()))
-                    Udev.settle()
+        if len(TestRun.disks):
+            raids = Raid.discover()
+            for raid in raids:
+                # stop only those RAIDs, which are comprised of test disks
+                if all(map(lambda device:
+                           any(map(lambda disk_path:
+                                   disk_path in device.get_device_id(),
+                                   [bd.get_device_id() for bd in TestRun.dut.disks])),
+                           raid.array_devices)):
+                    raid.umount_all_partitions()
+                    raid.remove_partitions()
+                    raid.stop()
+                    for device in raid.array_devices:
+                        Mdadm.zero_superblock(os.path.join('/dev', device.get_device_id()))
+                        Udev.settle()
 
-        RamDisk.remove_all()
+            RamDisk.remove_all()
 
-        for disk in TestRun.dut.disks:
-            disk_serial = get_disk_serial_number(disk.path)
-            if disk.serial_number != disk_serial:
-                raise Exception(
-                    f"Serial for {disk.path} doesn't match the one from the config."
-                    f"Serial from config {disk.serial_number}, actual serial {disk_serial}"
-                )
+            for disk in TestRun.dut.disks:
+                disk_serial = get_disk_serial_number(disk.path)
+                if disk.serial_number != disk_serial:
+                    raise Exception(
+                        f"Serial for {disk.path} doesn't match the one from the config."
+                        f"Serial from config {disk.serial_number}, actual serial {disk_serial}"
+                    )
 
-            disk.umount_all_partitions()
-            Mdadm.zero_superblock(os.path.join('/dev', disk.get_device_id()))
-            TestRun.executor.run_expect_success("udevadm settle")
-            disk.remove_partitions()
-            create_partition_table(disk, PartitionTable.gpt)
+                disk.umount_all_partitions()
+                Mdadm.zero_superblock(os.path.join('/dev', disk.get_device_id()))
+                TestRun.executor.run_expect_success("udevadm settle")
+                disk.remove_partitions()
+                create_partition_table(disk, PartitionTable.gpt)
 
         cas_version = TestRun.config.get("cas_version") or git.get_current_commit_hash()
         if not get_force_param(item):
