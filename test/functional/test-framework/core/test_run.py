@@ -22,22 +22,30 @@ class TestRun:
     plugin_manager = None
     duts = None
     disks = None
+    config = None
     reboot_cbs = []
+
+    @classmethod
+    def switch_dut(cls, dut):
+        cls.dut = dut
+        cls.executor = dut.executor
+        cls.plugin_manager = dut.plugin_manager
+        cls.disks = dut.req_disks
+        cls.config = dut.config
 
     @classmethod
     @contextmanager
     def use_dut(cls, dut):
-        cls.dut = dut
-        cls.config = cls.dut.config
-        cls.executor = cls.dut.executor
-        cls.plugin_manager = cls.dut.plugin_manager
-        cls.disks = cls.dut.req_disks
+        previous_dut = cls.dut
+        cls.switch_dut(dut)
         yield cls.executor
-        cls.disks = None
-        cls.plugin_manager = None
-        cls.executor = None
-        # setting cls.config to None omitted (causes problems in the teardown stage of execution)
-        cls.dut = None
+        cls.switch_dut(previous_dut)
+
+    @classmethod
+    def use_all_duts(cls):
+        for dut in cls.duts:
+            with cls.use_dut(dut):
+                yield dut
 
     @classmethod
     def cache_until_reboot(cls, f):
