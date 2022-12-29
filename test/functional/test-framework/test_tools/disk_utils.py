@@ -147,7 +147,7 @@ def create_partition(
 
 
 def available_disk_size(device):
-    dev = f"/dev/{device.get_device_id()}"
+    dev = f"/dev/{device.device_id}"
     # get number of device's sectors
     disk_sectors = int(TestRun.executor.run(f"fdisk -l {dev} | grep {dev} | grep sectors "
                                             f"| awk '{{print $7 }}' ").stdout)
@@ -273,7 +273,7 @@ def remove_partitions(device):
         unmount(partition)
 
     TestRun.LOGGER.info(f"Removing partitions from device: {device.path} "
-                        f"({device.get_device_id()}).")
+                        f"({device.device_id}).")
     device.wipe_filesystem()
     Udev.trigger()
     Udev.settle()
@@ -287,7 +287,7 @@ def remove_partitions(device):
 def mount(device, mount_point, options: [str] = None):
     if not fs_utils.check_if_directory_exists(mount_point):
         fs_utils.create_directory(mount_point, True)
-    TestRun.LOGGER.info(f"Mounting device {device.path} ({device.get_device_id()}) "
+    TestRun.LOGGER.info(f"Mounting device {device.path} ({device.device_id}) "
                         f"to {mount_point}.")
     cmd = f"mount {device.path} {mount_point}"
     if options:
@@ -299,7 +299,7 @@ def mount(device, mount_point, options: [str] = None):
 
 
 def unmount(device):
-    TestRun.LOGGER.info(f"Unmounting device {device.path} ({device.get_device_id()}).")
+    TestRun.LOGGER.info(f"Unmounting device {device.path} ({device.device_id}).")
     if device.mount_point is not None:
         output = TestRun.executor.run(f"umount {device.mount_point}")
         if output.exit_code != 0:
@@ -338,7 +338,7 @@ def wipe_filesystem(device, force=True):
 
 
 def check_if_device_supports_trim(device):
-    if device.get_device_id().startswith("nvme"):
+    if device.device_id.startswith("nvme"):
         return True
     command_output = TestRun.executor.run(
         f'hdparm -I {device.path} | grep "TRIM supported"')

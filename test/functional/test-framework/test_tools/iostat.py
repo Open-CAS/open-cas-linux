@@ -163,7 +163,7 @@ def _get_iostat_list(
     if not since_boot:
         iostat_cmd += f"-y {interval} 1 "
 
-    iostat_cmd += " ".join([name.get_device_id() for name in devices_list])
+    iostat_cmd += " ".join([name.device_id for name in devices_list])
 
     sed_cmd = "sed -n '/^$/d;s/\s\+/,/g;/^Device/,$p'"
 

@@ -185,9 +185,9 @@ class NvmeDisk(Disk):
     def __init__(self, path, disk_type, serial_number, block_size):
         Disk.__init__(self, path, disk_type, serial_number, block_size)
         self.plug_command = NvmeDisk.plug_all_command
-        self.unplug_command = f"echo 1 > /sys/block/{self.get_device_id()}/device/remove || " \
-                              f"echo 1 > /sys/block/{self.get_device_id()}/device/device/remove"
-        self.pci_address = get_pci_address(self.get_device_id())
+        self.unplug_command = f"echo 1 > /sys/block/{self.device_id}/device/remove || " \
+                              f"echo 1 > /sys/block/{self.device_id}/device/device/remove"
+        self.pci_address = get_pci_address(self.device_id)
 
     def __str__(self):
         disk_str = super().__str__()
@@ -213,7 +213,7 @@ class SataDisk(Disk):
         Disk.__init__(self, path, disk_type, serial_number, block_size)
         self.plug_command = SataDisk.plug_all_command
         self.unplug_command = \
-            f"echo 1 > {self.get_sysfs_properties(self.get_device_id()).full_path}/device/delete"
+            f"echo 1 > {self.get_sysfs_properties(self.device_id).full_path}/device/delete"
 
     def get_sysfs_properties(self, device_id):
         ls_command = f"$(find -H /sys/devices/ -name {device_id} -type d)"

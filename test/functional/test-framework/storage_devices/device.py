@@ -15,8 +15,8 @@ class Device:
     def __init__(self, path):
         disk_utils.validate_dev_path(path)
         self.path = path
-        self.size = Size(disk_utils.get_size(self.get_device_id()), Unit.Byte)
-        self.filesystem = get_device_filesystem_type(self.get_device_id())
+        self.size = Size(disk_utils.get_size(self.device_id), Unit.Byte)
+        self.filesystem = get_device_filesystem_type(self.device_id)
         self.mount_point = None
 
     def create_filesystem(self, fs_type: disk_utils.Filesystem, force=True, blocksize=None):
@@ -54,7 +54,8 @@ class Device:
         items = self.get_all_device_links(directory)
         return next(i for i in items if i.full_path.startswith(directory))
 
-    def get_device_id(self):
+    @TestRun.cache_until_reboot
+    def device_id(self):
         return fs_utils.readlink(self.path).split('/')[-1]
 
     def get_all_device_links(self, directory: str):
@@ -63,17 +64,17 @@ class Device:
         return fs_utils.parse_ls_output(output, self.path)
 
     def get_io_stats(self):
-        return IoStats.get_io_stats(self.get_device_id())
+        return IoStats.get_io_stats(self.device_id)
 
     def get_sysfs_property(self, property_name):
-        path = posixpath.join(disk_utils.get_sysfs_path(self.get_device_id()),
+        path = posixpath.join(disk_utils.get_sysfs_path(self.device_id),
                               "queue", property_name)
         return TestRun.executor.run_expect_success(f"cat {path}").stdout
 
     def set_sysfs_property(self, property_name, value):
         TestRun.LOGGER.info(
-            f"Setting {property_name} for device {self.get_device_id()} to {value}.")
-        path = posixpath.join(disk_utils.get_sysfs_path(self.get_device_id()), "queue",
+            f"Setting {property_name} for device {self.device_id} to {value}.")
+        path = posixpath.join(disk_utils.get_sysfs_path(self.device_id), "queue",
                             property_name)
         fs_utils.write_file(path, str(value))
 
@@ -102,8 +103,8 @@ class Device:
 
     def __str__(self):
         return (
-            f'system path: {self.path}, short link: /dev/{self.get_device_id()},'
-            f' filesystem: {self.filesystem}, mount point: {self.mount_point}, size: {self.size}'
+            f'system path: {self.path}, short link: /dev/{self.device_id},'
+            f' filesystem: {self.filesystem}, mount point: {self.device_id}, size: {self.size}'
         )
 
     def __repr__(self):
