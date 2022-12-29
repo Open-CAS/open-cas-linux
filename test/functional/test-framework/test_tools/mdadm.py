@@ -6,6 +6,7 @@ import re
 
 from core.test_run import TestRun
 from test_utils.size import Unit
+from test_utils.os_utils import Udev
 
 
 class Mdadm:
@@ -33,7 +34,12 @@ class Mdadm:
         if conf.size:
             cmd += f"--size={int(conf.size.get_value(Unit.KibiByte))} "
         cmd += device_paths
-        return TestRun.executor.run_expect_success(cmd)
+        ret = TestRun.executor.run_expect_success(cmd)
+
+        Udev.trigger()
+        Udev.settle()
+
+        return ret
 
     @staticmethod
     def detail(raid_device_paths: str):
@@ -76,8 +82,6 @@ class Mdadm:
         raids = []
 
         uuid_path_prefix = "/dev/disk/by-id/md-uuid-"
-        # sometimes links for RAIDs are not properly created, force udev to create them
-        TestRun.executor.run("udevadm trigger && udevadm settle")
 
         for line in output.stdout.splitlines():
             split_line = line.split()
