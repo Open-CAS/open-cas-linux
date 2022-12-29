@@ -271,7 +271,10 @@ def base_prepare(item):
                 disk.umount_all_partitions()
                 Mdadm.zero_superblock(os.path.join('/dev', disk.device_id))
                 Udev.settle()
-                disk.remove_partitions()
+                if not disk.remove_partitions():
+                    TestRun.LOGGER.warning(
+                        f"Failed to remove partitions from {disk.path}. Prepare failed"
+                )
                 create_partition_table(disk, PartitionTable.gpt)
 
         cas_version = TestRun.config.get("cas_version") or git.get_current_commit_hash()
