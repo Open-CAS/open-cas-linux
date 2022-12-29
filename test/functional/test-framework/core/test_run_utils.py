@@ -266,10 +266,9 @@ TestRun.addoption = __addoption
 
 @classmethod
 def __teardown(cls):
-    for dut in cls.duts:
-        with cls.use_dut(dut):
-            if cls.plugin_manager:
-                cls.plugin_manager.hook_teardown()
+    for _ in cls.use_all_duts():
+        if cls.plugin_manager:
+            cls.plugin_manager.hook_teardown()
 
 
 TestRun.teardown = __teardown
