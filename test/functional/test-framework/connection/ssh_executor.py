@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -104,6 +104,7 @@ class SshExecutor(BaseExecutor):
         if self.reboot_timeout < 0:
             raise ValueError("Reboot timeout cannot be negative.")
 
+    @TestRun.rebooting_command
     def reboot(self):
         self.run("reboot")
         self.wait_for_connection_loss()
