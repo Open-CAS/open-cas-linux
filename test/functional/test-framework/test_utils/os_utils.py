@@ -379,12 +379,13 @@ def get_udev_service_path(unit_name):
     return path
 
 
-def kill_all_io():
-    # TERM signal should be used in preference to the KILL signal, since a
-    # process may install a handler for the TERM signal in order to perform
-    # clean-up steps before terminating in an orderly fashion.
-    TestRun.executor.run("killall -q --signal TERM dd fio blktrace")
-    time.sleep(3)
+def kill_all_io(graceful=True):
+    if graceful:
+        # TERM signal should be used in preference to the KILL signal, since a
+        # process may install a handler for the TERM signal in order to perform
+        # clean-up steps before terminating in an orderly fashion.
+        TestRun.executor.run("killall -q --signal TERM dd fio blktrace")
+        time.sleep(3)
     TestRun.executor.run("killall -q --signal KILL dd fio blktrace")
     TestRun.executor.run("kill -9 `ps aux | grep -i vdbench.* | awk '{ print $2 }'`")
 
