@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -183,6 +183,9 @@ TestRun.setup = __setup
 
 @classmethod
 def __makereport(cls, item, call, res):
+    if cls.LOGGER is None:
+        return None
+
     cls.outcome = res.outcome
     step_info = {
         'result': res.outcome,
@@ -208,7 +211,7 @@ def __makereport(cls, item, call, res):
     if res.outcome == "skipped":
         cls.LOGGER.skip("Test skipped.")
 
-    if res.when == "call" and cls.LOGGER.get_result() == BaseLogResult.FAILED:
+    if res.when in ["call", "setup"] and cls.LOGGER.get_result() >= BaseLogResult.FAILED:
         res.outcome = "failed"
         # To print additional message in final test report, assign it to res.longrepr
 
@@ -263,10 +266,9 @@ TestRun.addoption = __addoption
 
 @classmethod
 def __teardown(cls):
-    for dut in cls.duts:
-        with cls.use_dut(dut):
-            if cls.plugin_manager:
-                cls.plugin_manager.hook_teardown()
+    for _ in cls.use_all_duts():
+        if cls.plugin_manager:
+            cls.plugin_manager.hook_teardown()
 
 
 TestRun.teardown = __teardown

@@ -379,12 +379,13 @@ def get_udev_service_path(unit_name):
     return path
 
 
-def kill_all_io():
-    # TERM signal should be used in preference to the KILL signal, since a
-    # process may install a handler for the TERM signal in order to perform
-    # clean-up steps before terminating in an orderly fashion.
-    TestRun.executor.run("killall -q --signal TERM dd fio blktrace")
-    time.sleep(3)
+def kill_all_io(graceful=True):
+    if graceful:
+        # TERM signal should be used in preference to the KILL signal, since a
+        # process may install a handler for the TERM signal in order to perform
+        # clean-up steps before terminating in an orderly fashion.
+        TestRun.executor.run("killall -q --signal TERM dd fio blktrace")
+        time.sleep(3)
     TestRun.executor.run("killall -q --signal KILL dd fio blktrace")
     TestRun.executor.run("kill -9 `ps aux | grep -i vdbench.* | awk '{ print $2 }'`")
 
@@ -441,7 +442,7 @@ def set_wbt_lat(device: Device, value: int):
         raise ValueError("Write back latency can't be negative number")
 
     wbt_lat_config_path = posixpath.join(
-        get_sysfs_path(device.get_device_id()), "queue/wbt_lat_usec"
+        get_sysfs_path(device.device_id), "queue/wbt_lat_usec"
     )
 
     return TestRun.executor.run_expect_success(f"echo {value} > {wbt_lat_config_path}")
@@ -449,7 +450,7 @@ def set_wbt_lat(device: Device, value: int):
 
 def get_wbt_lat(device: Device):
     wbt_lat_config_path = posixpath.join(
-        get_sysfs_path(device.get_device_id()), "queue/wbt_lat_usec"
+        get_sysfs_path(device.device_id), "queue/wbt_lat_usec"
     )
 
     return int(TestRun.executor.run_expect_success(f"cat {wbt_lat_config_path}").stdout)

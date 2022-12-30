@@ -136,7 +136,7 @@ def pytest_runtest_teardown():
                 if not TestRun.executor.is_active():
                     TestRun.executor.wait_for_connection()
                 Udev.enable()
-                kill_all_io()
+                kill_all_io(graceful=False)
                 unmount_cas_devices()
 
                 if installer.check_if_installed():
@@ -161,12 +161,11 @@ def pytest_runtest_teardown():
                                    f"{str(ex)}\n{traceback.format_exc()}")
 
     TestRun.LOGGER.end()
-    for dut in TestRun.duts:
-        with TestRun.use_dut(dut):
-            if TestRun.executor:
-                os.makedirs(os.path.join(TestRun.LOGGER.base_dir, "dut_info", dut.ip),
-                            exist_ok=True)
-                TestRun.LOGGER.get_additional_logs()
+    for dut in TestRun.use_all_duts():
+        if TestRun.executor:
+            os.makedirs(os.path.join(TestRun.LOGGER.base_dir, "dut_info", dut.ip),
+                        exist_ok=True)
+            TestRun.LOGGER.get_additional_logs()
     Log.destroy()
     TestRun.teardown()
 
@@ -184,7 +183,7 @@ def pytest_addoption(parser):
     parser.addoption("--dut-config", action="append", type=str)
     parser.addoption("--log-path", action="store",
                      default=f"{os.path.join(os.path.dirname(__file__), '../results')}")
-    parser.addoption("--force-reinstall", action="store_true", default=False)
+    parser.addoption("--force-no-reinstall", action="store_true", default=False)
 
 
 def unmount_cas_devices():
@@ -210,7 +209,7 @@ def unmount_cas_devices():
 
 
 def get_force_param(item):
-    return item.config.getoption("--force-reinstall")
+    return item.config.getoption("--force-no-reinstall")
 
 
 def __drbd_cleanup():
@@ -226,7 +225,7 @@ def base_prepare(item):
     with TestRun.LOGGER.step("Cleanup before test"):
         TestRun.executor.run("pkill --signal=SIGKILL fsck")
         Udev.enable()
-        kill_all_io()
+        kill_all_io(graceful=False)
         DeviceMapper.remove_all()
 
         if installer.check_if_installed():
@@ -250,44 +249,42 @@ def base_prepare(item):
             Lvm.remove_all()
             LvmConfiguration.remove_filters_from_config()
 
-        raids = Raid.discover()
-        for raid in raids:
-            # stop only those RAIDs, which are comprised of test disks
-            if all(map(lambda device:
-                       any(map(lambda disk_path:
-                               disk_path in device.get_device_id(),
-                               [bd.get_device_id() for bd in TestRun.dut.disks])),
-                       raid.array_devices)):
-                raid.umount_all_partitions()
-                raid.remove_partitions()
-                raid.stop()
-                for device in raid.array_devices:
-                    Mdadm.zero_superblock(os.path.join('/dev', device.get_device_id()))
-                    Udev.settle()
+        if len(TestRun.disks):
+            raids = Raid.discover()
+            for raid in raids:
+                test_run_disk_ids = {dev.device_id for dev in TestRun.disks.values()}
+                if filter(lambda dev: dev.device_id in test_run_disk_ids, raid.array_devices):
+                    raid.umount_all_partitions()
+                    raid.remove_partitions()
+                    raid.stop()
+                    for device in raid.array_devices:
+                        Mdadm.zero_superblock(os.path.join('/dev', device.device_id))
+                        Udev.settle()
 
-        RamDisk.remove_all()
+            RamDisk.remove_all()
 
-        for disk in TestRun.dut.disks:
-            disk_serial = get_disk_serial_number(disk.path)
-            if disk.serial_number != disk_serial:
-                raise Exception(
-                    f"Serial for {disk.path} doesn't match the one from the config."
-                    f"Serial from config {disk.serial_number}, actual serial {disk_serial}"
+            for disk in TestRun.disks.values():
+                disk_serial = get_disk_serial_number(disk.path)
+                if disk.serial_number != disk_serial:
+                    disk.serial_number = disk_serial
+
+                disk.umount_all_partitions()
+                Mdadm.zero_superblock(os.path.join('/dev', disk.device_id))
+                Udev.settle()
+                if not disk.remove_partitions():
+                    TestRun.LOGGER.warning(
+                        f"Failed to remove partitions from {disk.path}. Prepare failed"
                 )
-
-            disk.umount_all_partitions()
-            Mdadm.zero_superblock(os.path.join('/dev', disk.get_device_id()))
-            TestRun.executor.run_expect_success("udevadm settle")
-            disk.remove_partitions()
-            create_partition_table(disk, PartitionTable.gpt)
+                create_partition_table(disk, PartitionTable.gpt)
 
         cas_version = TestRun.config.get("cas_version") or git.get_current_commit_hash()
-        if get_force_param(item) and not TestRun.usr.already_updated:
-            installer.rsync_opencas_sources()
-            installer.reinstall_opencas(cas_version)
-        elif not installer.check_if_installed(cas_version):
-            installer.rsync_opencas_sources()
-            installer.set_up_opencas(cas_version)
+        if not get_force_param(item):
+            if not TestRun.usr.already_updated:
+                installer.rsync_opencas_sources()
+                installer.reinstall_opencas(cas_version)
+            elif not installer.check_if_installed(cas_version):
+                installer.rsync_opencas_sources()
+                installer.set_up_opencas(cas_version)
 
         TestRun.usr.already_updated = True
         TestRun.LOGGER.add_build_info(f'Commit hash:')

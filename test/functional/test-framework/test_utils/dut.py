@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -13,7 +13,7 @@ class Dut:
         for disk_info in dut_info.get('disks', []):
             self.disks.append(Disk.create_disk(disk_info['path'],
                                                DiskType[disk_info['type']],
-                                               disk_info['serial'],
+                                               disk_info.get('serial', None),
                                                disk_info['blocksize']))
         self.disks.sort(key=lambda disk: disk.disk_type, reverse=True)
 
