@@ -608,6 +608,7 @@ error_alloc_mq_disk:
 	blk_mq_free_tag_set(&dsk->tag_set);
 error_init_tag_set:
 	kobject_put(&exp_obj->kobj);
+	dsk->exp_obj = NULL;
 	/* kobject put does all the cleanup below internally */
 	return result;
 error_init_kobject:
