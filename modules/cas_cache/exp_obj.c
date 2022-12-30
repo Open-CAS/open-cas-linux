@@ -502,8 +502,8 @@ error_set_geometry:
 	exp_obj->private = NULL;
 	_cas_exp_obj_clear_dev_t(dsk);
 error_exp_obj_set_dev_t:
-	cas_cleanup_mq_disk(exp_obj);
-	dsk->exp_obj->gd = NULL;
+	cas_cleanup_mq_disk(gd);
+	exp_obj->gd = NULL;
 error_alloc_mq_disk:
 	blk_mq_free_tag_set(&exp_obj->tag_set);
 error_init_tag_set:
