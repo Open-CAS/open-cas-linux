@@ -16,9 +16,6 @@ from test_tools.peach_fuzzer.peach_fuzzer import PeachFuzzer
 from tests.security.fuzzy.kernel.common.common import get_fuzz_config, prepare_cas_instance, \
     run_cmd_and_validate
 
-mount_point = "/mnt/test"
-iterations_count = 1000
-
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
@@ -51,9 +48,9 @@ def test_fuzzy_io_class_list_output_format(cache_mode, cache_line_size, cleaning
         valid_values = [e.name.encode('ascii') for e in list(OutputFormat)]
         PeachFuzzer.generate_config(get_fuzz_config("output_format.yml"))
         base_cmd = list_io_classes_cmd(str(core.cache_id), "{param}").encode('ascii')
-        commands = PeachFuzzer.get_fuzzed_command(base_cmd, iterations_count)
+        commands = PeachFuzzer.get_fuzzed_command(base_cmd, TestRun.usr.fuzzy_iter_count)
 
-    for index, cmd in TestRun.iteration(enumerate(commands), f"Run command {iterations_count} "
-                                                             f"times"):
+    for index, cmd in TestRun.iteration(enumerate(commands),
+                                        f"Run command {TestRun.usr.fuzzy_iter_count} times"):
         with TestRun.step(f"Iteration {index + 1}"):
-            run_cmd_and_validate(cmd, "Output_format", valid_values)
+            run_cmd_and_validate(cmd, "Output_format", cmd.param in valid_values)

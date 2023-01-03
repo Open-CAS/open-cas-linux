@@ -1,0 +1,15 @@
+- name: String
+  attributes:
+    name: Cls
+    value: '4'
+    size: '6'
+    mutable: 'true'
+  children:
+   - name: Hint
+     attributes:
+       name: NumericalString
+       value: 'true'
+   - name: Hint
+     attributes:
+       name: ValidValues
+       value: '8;16;32;64'

@@ -1,0 +1,14 @@
+- name: String
+  attributes:
+    name: IoClassAllocation
+    value: '1'
+    mutable: 'true'
+  children:
+   - name: Hint
+     attributes:
+       name: NumericalString
+       value: 'true'
+   - name: Hint
+     attributes:
+       name: ValidValues
+       value: '0;0.;0.00;0.5;0.55;1.;1.0;1.00'

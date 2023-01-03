@@ -37,6 +37,7 @@ class Opencas(metaclass=Singleton):
         self.repo_dir = repo_dir
         self.working_dir = working_dir
         self.already_updated = False
+        self.fuzzy_iter_count = 1000
 
 
 def pytest_collection_modifyitems(config, items):
@@ -106,6 +107,8 @@ def pytest_runtest_setup(item):
         TestRun.usr = Opencas(
             repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
             working_dir=dut_config['working_dir'])
+        if item.config.getoption('--fuzzy-iter-count'):
+            TestRun.usr.fuzzy_iter_count = int(item.config.getoption('--fuzzy-iter-count'))
 
         TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
         TestRun.dut.plugin_manager = TestRun.plugin_manager
@@ -185,6 +188,7 @@ def pytest_addoption(parser):
     parser.addoption("--log-path", action="store",
                      default=f"{os.path.join(os.path.dirname(__file__), '../results')}")
     parser.addoption("--force-reinstall", action="store_true", default=False)
+    parser.addoption("--fuzzy-iter-count", action="store")
 
 
 def unmount_cas_devices():

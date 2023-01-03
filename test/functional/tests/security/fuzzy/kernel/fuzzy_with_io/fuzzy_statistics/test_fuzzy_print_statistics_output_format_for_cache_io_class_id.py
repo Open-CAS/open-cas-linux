@@ -18,7 +18,6 @@ from tests.security.fuzzy.kernel.common.common import get_fuzz_config, prepare_c
 from tests.security.fuzzy.kernel.fuzzy_with_io.common.common import get_basic_workload
 
 mount_point = "/mnt/test"
-iterations_count = 1000
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -58,12 +57,12 @@ def test_fuzzy_print_statistics_output_format_for_cache_io_class_id(cache_mode, 
         base_cmd = print_statistics_cmd(cache_id=str(core.cache_id), io_class_id="0",
                                         per_io_class=True, output_format="{param}",
                                         by_id_path=False).encode('ascii')
-        commands = PeachFuzzer.get_fuzzed_command(base_cmd, iterations_count)
+        commands = PeachFuzzer.get_fuzzed_command(base_cmd, TestRun.usr.fuzzy_iter_count)
 
-    for index, cmd in TestRun.iteration(enumerate(commands), f"Run command {iterations_count} "
-                                                             f"times"):
+    for index, cmd in TestRun.iteration(enumerate(commands),
+                                        f"Run command {TestRun.usr.fuzzy_iter_count} times"):
         with TestRun.step(f"Iteration {index + 1}"):
-            run_cmd_and_validate(cmd, "Output_format", valid_values)
+            run_cmd_and_validate(cmd, "Output_format", cmd.param in valid_values)
 
     with TestRun.step("Stop 'fio'"):
         TestRun.executor.kill_process(fio_pid)

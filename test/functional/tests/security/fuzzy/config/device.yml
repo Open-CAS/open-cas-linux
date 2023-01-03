@@ -1,0 +1,10 @@
+- name: String
+  attributes:
+    name: Device
+    value: '<DEV>'
+    mutable: 'true'
+  children:
+   - name: Hint
+     attributes:
+       name: type
+       value: 'path'
