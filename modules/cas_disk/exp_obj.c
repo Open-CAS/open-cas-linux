@@ -774,13 +774,12 @@ int casdsk_exp_obj_destroy(struct casdsk_disk *dsk)
 		del_gendisk(exp_obj->gd);
 	}
 
-	if (exp_obj->queue)
-		blk_cleanup_queue(exp_obj->queue);
-
-	blk_mq_free_tag_set(&dsk->tag_set);
 
 	atomic_set(&dsk->mode, CASDSK_MODE_UNKNOWN);
-	put_disk(exp_obj->gd);
+
+	cas_cleanup_mq_disk(exp_obj->gd);
+
+	blk_mq_free_tag_set(&dsk->tag_set);
 
 	return 0;
 
