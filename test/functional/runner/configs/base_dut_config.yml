@@ -1,0 +1,11 @@
+type: "ssh"
+
+allow_disk_autoselect: False
+working_dir: "/tmp/open-cas-linux/"
+
+plugins:
+  example_plugin:
+    provided_by: "internal_plugins.example_plugin"
+    config:
+      property1: "value1"
+      property2: "value2"

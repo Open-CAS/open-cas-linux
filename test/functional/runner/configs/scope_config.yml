@@ -1,0 +1,13 @@
+scope:
+  tag: "EXAMPLE_TEST_SCOPE"
+
+global_pytest_options:
+  example_option: "abc"
+
+tests_path: "/home/user/open-cas-linux/test/functional"
+tests:
+  - path: tests/cache_ops/test_seq_cutoff.py
+  - path: tests/cli/test_cli_help_and_version.py::test_cli_version
+    pytest_options:
+      example_option: "ABC" # Takes precedence
+  - path: tests/cli/test_cli_help_and_version.py::test_cli_help[True]

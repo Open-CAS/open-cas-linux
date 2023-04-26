@@ -1,0 +1,370 @@
+#!/usr/bin/env python3
+#
+# Copyright(c) 2023 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+from common import ConfigFile, JournalFile, StatusFile, TestCase, TestEvent, JournalParser
+
+from pathlib import Path
+from queue import Queue
+from setproctitle import setproctitle
+from subprocess import Popen, PIPE
+from tempfile import NamedTemporaryFile
+from threading import Thread, Lock, Event
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import argparse
+import contextlib
+import random
+import daemon
+import filelock
+import json
+import logging
+import os
+import sys
+import time
+
+
+logging.basicConfig(
+    filename="runnerd.log",
+    level=logging.ERROR,
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S')
+log = logging.getLogger("runnerd")
+
+scriptdir = os.path.dirname(__file__)
+
+
+class EventHandler(FileSystemEventHandler):
+    def __init__(self, callback):
+        self.callback = callback
+    def on_modified(self, event):
+        self.callback()
+
+
+class PytestRunner:
+    def __init__(self, test_dir=None, log_dir=None, stdout_path=None):
+        self.test_dir = test_dir
+        self.log_dir = log_dir
+        self.stdout_path = stdout_path
+
+    def run(self, dut_config_path, test_case):
+        cmd = ""
+        if self.test_dir:
+            cmd += f"cd {self.test_dir}; "
+        cmd += f"pytest "
+        cmd += f"--dut-config={dut_config_path} "
+        if self.log_dir:
+            cmd += f"--log-path={self.log_dir} "
+        cmd += f"--random-seed={test_case['seed']} "
+        if test_case['pytest-options'] is not None:
+            for option, value in test_case['pytest-options'].items():
+                cmd += f"--{option}={value} "
+        cmd += f"\"{test_case}\""
+
+        out = open(self.stdout_path, "w") if self.stdout_path else PIPE
+        process = Popen(cmd, shell=True, stdout=out, stderr=out)
+        process.wait()
+        if self.stdout_path:
+            out.close()
+
+    def collect(self, test_path, seed):
+        cmd = ""
+        if self.test_dir:
+            cmd += f"cd {self.test_dir}; "
+        cmd += f"pytest --collect-only --random-seed={seed} -q \"{test_path}\""
+        process = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+        process.wait()
+        stdout = process.stdout.read().decode('ascii')
+        return stdout.splitlines()[:-2]
+
+
+class Dut:
+    def __init__(self, config):
+        self.config = config
+        self.ip = config['ip']
+        log_path = Path('results').joinpath(self.ip)
+        log_path.mkdir(parents=True, exist_ok=True)
+        self.log_path = log_path.absolute()
+        stdout_path = log_path.joinpath("stdout")
+        stdout_path.touch()
+        self.stdout_path = stdout_path.absolute()
+
+    def run_test(self, test_event, on_complete):
+        def run_in_thread(self, test_event, on_complete):
+            self.config['meta'] = {
+                **test_event,
+                'test-case' : {**test_event['test-case']}
+            }
+            tmp_conf_file = NamedTemporaryFile(prefix="dut_config_", suffix=".yml")
+            ConfigFile(tmp_conf_file.name).save(self.config)
+            log_path = Path('results').joinpath(self.ip)
+            log_path.mkdir(parents=True, exist_ok=True)
+            test_case = test_event['test-case']
+            log.info(f"Start {test_case} @ {self.ip}")
+            runner = PytestRunner(
+                test_dir = test_case['dir'],
+                log_dir = self.log_path,
+                stdout_path = self.stdout_path
+            )
+            runner.run(tmp_conf_file.name, test_case)
+            log.info(f"Complete {test_case} @ {self.ip}")
+            on_complete(self, test_event)
+
+        thread = Thread(target=run_in_thread, args=(self, test_event, on_complete))
+        thread.start()
+        return thread
+
+
+class DutsManager:
+    base_dut_config_path = "configs/base_dut_config.yml"
+
+    def __init__(self, duts_config_file):
+        self.duts_config_file = duts_config_file
+        self.base_dut_config = ConfigFile(self.base_dut_config_path).load()
+        self.duts_queue = Queue()
+        self.duts = []
+
+    def collect_duts(self):
+        if not self.duts_config_file.need_reload():
+            return
+
+        self.duts_config = self.duts_config_file.load()
+        self.duts = []
+        for config in self.duts_config['duts']:
+            dut = Dut({**self.base_dut_config, **config})
+            self.duts.append(dut)
+            self.duts_queue.put(dut)
+
+    def get_free_dut(self, dut_filter=None):
+        filtered_duts = []
+        found = False
+        for _ in self.duts:
+            dut = self.duts_queue.get()
+            if not dut_filter or dut_filter(dut):
+                found = True
+                break
+            filtered_duts.append(dut)
+        map(self.duts_queue.put, filtered_duts)
+        if not found:
+            raise Exception("No DUT matching to filter!")
+        return dut
+
+    def mark_free(self, dut):
+        self.duts_queue.put(dut)
+
+
+class TestManager:
+    def __init__(self):
+        self.lock = Lock()
+        self.test_events_todo = []
+        self.test_events_in_progress = []
+        self.test_events_complete = []
+        self.progress_file = StatusFile("meta/progress.json")
+        self.__load_progress()
+        self.journal_file = JournalFile("meta/journal.json")
+        self.journal_file.create()
+        self.journal_event = Event()
+        self.journal_observer = Observer()
+        self.journal_observer.schedule(EventHandler(self.__collect_tests),
+                                       self.journal_file.path, recursive=True)
+        self.journal_observer.start()
+        self.__collect_tests()
+
+    def __load_progress(self):
+        self.test_events_complete.clear()
+        with self.progress_file.edit() as progress:
+            if not 'test-events' in progress:
+                return
+            progress['test-events'] = list(filter(
+                lambda entry: entry['status'] == "complete",
+                progress['test-events']
+            ))
+            for entry in progress['test-events']:
+                self.test_events_complete.append(TestEvent(entry))
+
+    def __append_progress(self, test_event):
+        with self.progress_file.edit() as progress:
+            progress.setdefault('test-events', []).append(test_event)
+
+    def __load_journal(self):
+        self.test_events_todo.clear()
+        self.test_events_todo = JournalParser(self.journal_file).parse()
+
+    def __collect_tests(self):
+        if not self.journal_file.need_reload():
+            return
+        log.debug("Collecting tests")
+        with self.lock:
+            self.__load_journal()
+            test_events = []
+            for test_event in self.test_events_todo:
+                if test_event in self.test_events_complete:
+                    continue
+                if test_event in self.test_events_in_progress:
+                    continue
+                test_events.append(test_event)
+            self.test_events_todo = test_events
+            if self.test_events_todo:
+                self.journal_event.set()
+
+    def get_next_test(self):
+        self.journal_event.clear()
+        if not self.test_events_todo:
+            self.__collect_tests()
+            self.journal_event.wait()
+        with self.lock:
+            return self.test_events_todo.pop(0)
+
+    def mark_started(self, test_event):
+        with self.lock:
+            test_event['status'] = "started"
+            self.test_events_in_progress.append(test_event)
+            self.__append_progress(test_event)
+
+    def mark_complete(self, test_event):
+        with self.lock:
+            test_event['status'] = "complete"
+            self.__append_progress(test_event)
+            self.test_events_complete.append(test_event)
+            self.test_events_in_progress.remove(test_event)
+
+
+class ResultsCollector:
+    def __init__(self):
+        self.results_file = StatusFile("meta/results.json")
+
+    def collect(self):
+        result_list = []
+        for root, _, files in os.walk("results/"):
+            if not (root.count(os.sep) == 3 and 'info.json' in files):
+                continue
+            with open(os.path.join(root, 'info.json')) as info_file:
+                info = json.load(info_file)
+                result_list.append(TestEvent({
+                    **info['meta'],
+                    'logs': root,
+                    'result': info['status']
+                }))
+
+        result_list.sort(key=lambda e: e['start-timestamp'])
+        with self.results_file.edit() as results:
+            results['results'] = result_list
+
+
+class MasterRunner:
+    duts_config_path = "configs/duts_config.yml"
+
+    def __init__(self):
+        if not os.path.isfile(self.duts_config_path):
+            raise FileNotFoundError(self.duts_config_path)
+        self.duts_manager = DutsManager(ConfigFile(self.duts_config_path))
+        self.test_manager = TestManager()
+        self.results_collector = ResultsCollector()
+        self.results_collector.collect()
+
+    def run(self):
+        def test_run_complete(dut, test_event):
+            self.duts_manager.mark_free(dut)
+            test_event['end-timestamp'] = time.time()
+            self.test_manager.mark_complete(test_event)
+            self.results_collector.collect()
+        while True:
+            self.duts_manager.collect_duts()
+            log.debug("Looking for free DUT... ")
+            dut = self.duts_manager.get_free_dut()
+            log.debug(f"Found DUT {dut.ip}")
+            log.debug("Looking for next test... ")
+            test_event = self.test_manager.get_next_test()
+            log.debug(f"Found test {test_event}")
+            test_event['ip'] = dut.ip
+            test_event['start-timestamp'] = time.time()
+            self.test_manager.mark_started(test_event)
+            dut.run_test(test_event, test_run_complete)
+
+
+class ScopeParser:
+    scope_config_path = "configs/scope_config.yml"
+
+    def __init__(self):
+        self.scope_config_file = ConfigFile(self.scope_config_path)
+        self.scope_file = StatusFile("meta/scope.json")
+
+    def __parse_config(self):
+        log.debug("Reloading scope config")
+        scope_config = self.scope_config_file.load()
+        scope = self.scope_file.load()
+        pytest_runner = PytestRunner(test_dir=scope_config['tests_path'])
+        if 'seed' in scope_config:
+            seed = scope_config['seed']
+        else:
+            seed = scope.get('seed', random.randrange(sys.maxsize))
+
+        global_pytest_options = scope_config.get('global_pytest_options') or {}
+
+        test_cases = []
+        for test_info in scope_config['tests']:
+            items = pytest_runner.collect(test_info['path'], seed)
+            local_pytest_options = test_info.get('pytest_options') or {}
+            pytest_options = (global_pytest_options | local_pytest_options) or None
+
+            for item in items:
+                test_cases.append(TestCase.from_canonical_name(
+                    scope_config['tests_path'],
+                    item,
+                    seed,
+                    pytest_options
+                ))
+        test_cases = list(dict.fromkeys(test_cases))
+
+        with self.scope_file.edit() as scope:
+            scope['scope'] = scope_config['scope']
+            scope['seed'] = seed
+            scope['tests'] = test_cases
+
+    def start(self):
+        self.__parse_config()
+        self.observer = Observer()
+        self.observer.schedule(EventHandler(self.__parse_config),
+                               self.scope_config_path, recursive=True)
+        self.observer.start()
+
+    def stop(self):
+        self.observer.join()
+
+def daemonize(enabled):
+    if enabled:
+        print("Starting daemon")
+        logger_files = [handler.stream.fileno() for handler in logging.root.handlers]
+        return daemon.DaemonContext(working_directory=os.getcwd(), files_preserve=logger_files)
+    else:
+        print("Starting in non-daemon mode")
+        return contextlib.suppress()
+
+if __name__ == '__main__':
+    setproctitle('runnerd')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--no-daemon', action='store_true')
+    parser.add_argument('--version', action='version', version='Superrunner4000 v0.2')
+    args = parser.parse_args()
+
+    log.setLevel((logging.INFO, logging.DEBUG)[args.debug])
+
+    if not os.path.isdir("meta"):
+        print("Scope is not initialized in this directory!")
+        exit(1)
+
+    try:
+        lock = filelock.FileLock("meta/daemon.lock").acquire(timeout=0.01)
+    except filelock.Timeout:
+        print("Another instance of 'runnerd' demon is active!")
+        exit(1)
+
+    print("Preparing scope")
+    scope_parser = ScopeParser()
+    scope_parser.start()
+    with daemonize(not args.no_daemon):
+        runner = MasterRunner()
+        runner.run()

@@ -1,0 +1,722 @@
+#!/usr/bin/env python3
+#
+# Copyright(c) 2023 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+from common import ConfigFile, JournalFile, StatusFile, TestCase, TestEvent, JournalParser
+
+from datetime import datetime
+from functools import reduce
+from tabulate import tabulate
+from tempfile import NamedTemporaryFile
+import argparse
+import daemon
+import hashlib
+import json
+import os
+import shutil
+import sys
+import webbrowser
+
+
+def error(*args, **kwargs):
+    print(*args, *kwargs, file=sys.stderr)
+
+
+class Printer:
+    @staticmethod
+    def red(string):
+        return "\033[0;31m"+string+"\033[0m"
+
+    @staticmethod
+    def green(string):
+        return "\033[0;32m"+string+"\033[0m"
+
+    @staticmethod
+    def yellow(string):
+        return "\033[0;33m"+string+"\033[0m"
+
+    @staticmethod
+    def blue(string):
+        return "\033[0;34m"+string+"\033[0m"
+
+
+class DataPrinter:
+    def __init__(self, output_format='table'):
+        if output_format not in ['table', 'json']:
+            raise ValueError(f"Invalid output format '{output_format}'")
+        self.output_format = output_format
+        self.caption = None
+        self.data = None
+
+    def setCaptions(self, captions):
+        self.captions = captions
+
+    def setData(self, data):
+        self.data = data
+
+    def print_json(self):
+        print(json.dumps(self.data, indent=2))
+
+    def print_table(self):
+        data = [[caption, self.data[field]] for caption, field in self.captions]
+        print(tabulate(data))
+
+    def print(self):
+        if self.output_format == 'json':
+            self.print_json()
+        else:
+            self.print_table()
+
+
+class ListPrinter:
+    def __init__(self, output_format='table'):
+        if output_format not in ['table', 'json']:
+            raise ValueError(f"Invalid output format '{output_format}'")
+        self.output_format = output_format
+        self.header = None
+        self.entries = []
+
+    def setHeader(self, header):
+        self.header = header
+
+    def addEntry(self, entry):
+        self.entries.append(entry)
+
+    def print_json(self):
+        print(json.dumps(self.entries, indent=2))
+
+    def print_table(self):
+        headers = [title for title, _ in self.header]
+        data = []
+        for entry in self.entries:
+            data.append([entry[field] for _, field in self.header])
+        print(tabulate(data, headers))
+
+    def print(self):
+        if self.output_format == 'json':
+            self.print_json()
+        else:
+            self.print_table()
+
+
+class ScopeHandler:
+    def __init__(self):
+        self.journal_file = JournalFile("meta/journal.json")
+        self.progress_file = StatusFile("meta/progress.json")
+        self.scope_file = StatusFile("meta/scope.json")
+        self.results_file = StatusFile("meta/results.json")
+
+    @staticmethod
+    def test2canon(test):
+        return f"{test['path']}::{test['name']}[{test['params']}]"
+
+    @staticmethod
+    def event2canon(event):
+        return f"{event['path']}::{event['name']}[{event['params']}]"
+
+    @staticmethod
+    def result2canon(result):
+        return f"{result['module']}::{result['function']}"
+
+    def __get_results(self):
+        results = self.results_file.load().get('results', [])
+        test_events = []
+        for res in results:
+            test_event = TestEvent(res)
+            test_event['logs'] = os.path.abspath(test_event['logs'])
+            test_events.append(test_event)
+        return test_events
+
+    def __get_scope(self):
+        return self.scope_file.load()
+
+    def __get_journal(self):
+        return JournalParser(self.journal_file).parse()
+
+    def __get_queue(self):
+        journal = self.__get_journal()
+        progress = []
+        for entry in self.progress_file.load().get('test-events', []):
+            progress.append(TestEvent(entry))
+        progress_dict = {}
+        for test_event in progress:
+            progress_dict[test_event['sha']] = test_event
+        for test_event in journal:
+            test_event.update(progress_dict.get(test_event['sha'], {}))
+        return journal
+
+    def __get_tests(self, full=False, collapsed=False):
+        scope = self.__get_scope()
+        tests_dict = {}
+        for entry in scope.get("tests", []):
+            test_case = TestCase(entry)
+            del entry['sha']
+            entry['params'] = None
+            collapsed_test_case = TestCase(entry)
+            collapsed_test_case['children'] = []
+            if (full or collapsed) and test_case == collapsed_test_case:
+                tests_dict[test_case['sha']] = test_case
+                continue
+            if full:
+                tests_dict[test_case['sha']] = test_case
+            if collapsed:
+                tests_dict.setdefault(
+                    collapsed_test_case['sha'],
+                    collapsed_test_case
+                )['children'].append(test_case)
+        return list(tests_dict.values())
+
+    def __tests_by_sha(self, sha):
+        test_cases = self.__get_tests(full=True, collapsed=True)
+        entry = next(
+            filter(
+                lambda test_case: test_case['sha'].startswith(sha),
+                test_cases
+            )
+        )
+        return entry.get('children', [entry])
+
+    def scope(self):
+        return self.__get_scope()
+
+    def tests(self, req):
+        return self.__get_tests(
+            full=req.get('full', False),
+            collapsed=req.get('collapsed', False)
+        )
+
+    def run(self, req):
+        tests = reduce(lambda acc, sha: acc+self.__tests_by_sha(sha), req, [])
+        test_events = []
+        with self.journal_file.record() as journal:
+            for test_case in tests:
+                test_event = TestEvent.new(test_case, {'status': "queued"})
+                test_events.append(test_event)
+                journal.append({
+                    'type': "add",
+                    'test-event': test_event
+                })
+        return test_events
+
+    def delete(self, req):
+        test_event = req['test-event']
+        if test_event['status'] == "complete":
+            return None
+        with self.journal_file.record() as journal:
+            journal.append({
+                'type': "delete",
+                'test-event': test_event
+            })
+        return test_event
+
+    def queue(self):
+        results = self.__get_results()
+        queue = self.__get_queue()
+
+        results_dict = {}
+        for res in results:
+            results_dict[res['sha']] = res
+
+        for test_event in filter(lambda te: te['status'] == "complete", queue):
+            try:
+                result_event = results_dict[test_event['sha']]
+                del result_event['status']
+                test_event.update(result_event)
+            except:
+                test_event['status'] = "error"
+
+        return queue
+
+    def status(self):
+        results = self.__get_results()
+        tests = self.__get_tests(full=True)
+        queue = self.queue()
+
+        results_dict = {}
+        for res in results:
+            results_dict[res['sha']] = res
+
+        scope_status = []
+        for test_case in tests:
+            queued_events = filter(
+                lambda e: e['test-case'] == test_case,
+                reversed(queue)
+            )
+            last_event = next(queued_events, {})
+            if last_event.get('status') in ['complete', 'error']:
+                completed_event = last_event
+            else:
+                completed_event = {}
+                for test_event in queued_events:
+                    if test_event['status'] in ['complete', 'error']:
+                        completed_event = test_event
+                        break
+
+            test_case['queued-event'] = last_event
+            test_case['last-event'] = completed_event
+
+        return tests
+
+    def results(self, req):
+        def in_tests(result, tests):
+            return any([result['test-case'] == test_case for test_case in tests])
+
+        results = [ev for ev in self.queue() if ev['status'] == "complete"]
+        result_dict = {}
+        for test_event in results:
+            test_case = test_event['test-case']
+            result_dict[test_case] = test_event
+
+        if req.get('filter', {}).get('last'):
+            results = result_dict.values()
+
+        if req.get('filter', {}).get('passed'):
+            results = [res for res in results if res['result'] == "PASSED"]
+
+        if req.get('filter', {}).get('failed'):
+            results = [res for res in results if res['result'] == "FAILED"]
+
+        if req.get('filter', {}).get('test-sha'):
+            tests = self.__tests_by_sha(req['filter']['test-sha'])
+            results = [res for res in results if in_tests(res, tests)]
+
+        return results
+
+    def result_by_sha(self, req):
+        results = self.results({})
+        return next(
+            filter(
+                lambda res: res['sha'].startswith(req['sha']),
+                results),
+            None
+        )
+
+    def test_event_by_sha(self, req):
+        test_events = self.queue()
+        return next(
+            filter(
+                lambda te: te['sha'].startswith(req['sha']),
+                test_events),
+            None
+        )
+
+
+
+class TestSelector:
+    def __init__(self, tests):
+        self.tests = tests
+
+    def select(self):
+        with NamedTemporaryFile(mode="r+") as tmpf:
+            data = []
+            for test_case in self.tests:
+                data.append([
+                    test_case['sha'][:16],
+                    test_case.function(),
+                    test_case.get('last-event', {}).get('result', "")
+                ])
+            tmpf.write(tabulate(data, tablefmt="plain"))
+            tmpf.flush()
+
+            os.system(f"vim {tmpf.name}")
+
+            tmpf.seek(0)
+            return [line.split()[0] for line in tmpf.readlines()]
+
+usage = """%(prog)s command [args]
+
+Supported commands:
+  init        Initialize new test scope
+  tests       Print list of test cases
+  run         Run specified tests or select them interactively
+  delete      Delete test event from the queue
+  queue       Print test event queue
+  status      Print scope status
+  results     Print list of test results
+  show        Print details of test result
+  log         Open log(s) for given test case in default browser
+  test-log    Open log for given test event in default browser
+  stdout      Show pytest standard output on selected DUT
+"""
+
+
+class SuperRunnerCli:
+    def __init__(self, argv):
+        parser = argparse.ArgumentParser(description="Super Runner CLI", usage=usage)
+        parser.add_argument('command')
+        args = parser.parse_args(argv[0:1])
+        command = args.command.replace("-", "_")
+        if not hasattr(self, command):
+            error(f"Unrecognized command '{args.command}'")
+            parser.print_help()
+            exit(1)
+        self.scope_handler = ScopeHandler()
+        getattr(self, command)(f"{parser.prog} {args.command}", argv[1:])
+
+    def __color_result(self, string):
+        return {
+            'PASSED': Printer.green,
+            'FAILED': Printer.red,
+        }.get(string, Printer.yellow)(string)
+
+    def __print_test_events(self, args, test_events):
+        p = ListPrinter(args.format)
+        id_field = ('id', 'sha')[args.long]
+        test_field = ('function', 'test')[args.long]
+        test_event_field = ('event-id', 'event-sha')[args.long]
+        p.setHeader([
+            ('Id', id_field),
+            ('Test', test_field),
+            ('Event', test_event_field),
+        ])
+        for test_event in test_events:
+            test_case = test_event['test-case']
+            p.addEntry({
+                'id': test_case['sha'][:16],
+                'sha': test_case['sha'],
+                'function': test_case.function(),
+                'test': test_case.test(),
+                'event-id': test_event['sha'][:16],
+                'event-sha': test_event['sha'],
+            })
+        p.print()
+
+    def init(self, prog, argv):
+        parser = argparse.ArgumentParser(
+            prog=prog,
+            description="Initialize new test scope"
+        )
+        args = parser.parse_args(argv)
+
+        runner_path = os.getenv('RUNNER_PATH')
+        if not runner_path:
+            error("Enrvironment variable 'RUNNER_PATH' is not set!")
+            exit(1)
+        if os.path.isdir("meta"):
+            error("Existing runner scope found in this directory!")
+            exit(1)
+        os.mkdir("meta")
+        os.mkdir("results")
+        shutil.copytree(os.path.join(runner_path, "configs"), "configs")
+
+    def tests(self, prog, argv):
+        parser = argparse.ArgumentParser(
+            prog=prog,
+            description="Print list of test cases"
+        )
+        parser.add_argument('--long', action='store_true')
+        parser.add_argument('--collapse', action='store_true')
+        parser.add_argument('--format', choices=['table', 'json'], default='table')
+        args = parser.parse_args(argv)
+
+        tests = self.scope_handler.tests({
+            'full': not args.collapse,
+            'collapsed': args.collapse
+        })
+
+        p = ListPrinter(args.format)
+        id_field = ('id', 'sha')[args.long]
+        test_field = ('function', 'test')[args.long]
+        p.setHeader([('Id', id_field), ('Test', test_field)])
+        for test_case in tests:
+            p.addEntry({
+                'id': test_case['sha'][:16],
+                'sha': test_case['sha'],
+                'function': test_case.function(),
+                'test': test_case.test()
+        })
+        p.print()
+
+    def run(self, prog, argv):
+        parser = argparse.ArgumentParser(
+            prog=prog,
+            description="Run specified tests or select them interactively"
+        )
+        parser.add_argument('ids', nargs='*')
+        parser.add_argument('--failed', action='store_true')
+        parser.add_argument('--not-passed', action='store_true')
+        parser.add_argument('--missing', action='store_true')
+        parser.add_argument('--include-queued', action='store_true')
+        parser.add_argument('--long', action='store_true')
+        parser.add_argument('--format', choices=['table', 'json'], default='table')
+        args = parser.parse_args(argv)
+
+        if args.ids:
+            test_events = self.scope_handler.run(args.ids)
+            self.__print_test_events(args, test_events)
+            return
+
+        test_cases = self.scope_handler.status()
+
+        run_all = not any((args.failed, args.not_passed, args.missing))
+
+        if not args.include_queued and not run_all:
+            test_cases = list(filter(
+                lambda tc: tc.get('queued-event', {}).get('status') == "complete",
+                test_cases
+            ))
+
+        if args.failed:
+            test_cases = list(filter(
+                lambda tc: tc.get('last-event', {}).get('result') == "FAILED",
+                test_cases
+            ))
+
+        if args.not_passed:
+            test_cases = list(filter(
+                lambda tc: tc.get('last-event', {}).get('result') not in [None, "PASSED"],
+                test_cases
+            ))
+
+        if args.missing:
+            test_cases = [tc for tc in test_cases if not tc.get('queued-event')]
+
+        to_run = TestSelector(test_cases).select()
+
+        test_events = self.scope_handler.run(to_run)
+        self.__print_test_events(args, test_events)
+
+    def delete(self, prog, argv):
+        parser = argparse.ArgumentParser(
+            prog=prog,
+            description="Delete test event from the queue"
+        )
+        parser.add_argument('id')
+        args = parser.parse_args(argv)
+
+        test_event = self.scope_handler.test_event_by_sha({'sha': args.id})
+        deleted_event = self.scope_handler.delete({'test-event': test_event})
+
+    def queue(self, prog, argv):
+        parser = argparse.ArgumentParser(
+            prog=prog,
+            description="Print test event queue"
+        )
+        parser.add_argument('--all', action='store_true')
+        parser.add_argument('--long', action='store_true')
+        parser.add_argument('--format', choices=['table', 'json'], default='table')
+        args = parser.parse_args(argv)
+
+        queue = self.scope_handler.queue()
+
+        p = ListPrinter(args.format)
+        id_field = ('id', 'sha')[args.long]
+        test_field = ('function', 'test')[args.long]
+        p.setHeader([
+            ('Id', id_field),
+            ('Test', test_field),
+            ('Status', 'status'),
+            ('DUT', 'dut'),
+            ('Duration', 'duration')
+        ])
+        for test_event in queue:
+            if not args.all and test_event['status'] in ["complete", "error"]:
+                continue
+            test_case = test_event['test-case']
+            p.addEntry({
+                'id': test_event['sha'][:16],
+                'sha': test_event['sha'],
+                'function': test_case.function(),
+                'test': test_case.test(),
+                'status': test_event['status'],
+                'dut': test_event.get('ip', ""),
+                'duration': test_event.duration()
+            })
+        p.print()
+
+    def status(self, prog, argv):
+        parser = argparse.ArgumentParser(
+            prog=prog,
+            description="Print scope status"
+        )
+        parser.add_argument('--long', action='store_true')
+        parser.add_argument('--format', choices=['table', 'json'], default='table')
+        args = parser.parse_args(argv)
+
+        status = self.scope_handler.status()
+
+        p = ListPrinter(args.format)
+        id_field = ('id', 'sha')[args.long]
+        result_id_field = ('last-result-id', 'last-result-sha')[args.long]
+        test_field = ('function', 'test')[args.long]
+        p.setHeader([
+            ('Id', id_field),
+            ('Test', test_field),
+            ('Status', 'status'),
+            ('Last result id', result_id_field),
+            ('Last result', 'last-result'),
+            ('Last result date', 'last-result-date'),
+        ])
+        for test_case in status:
+            last_event = test_case.get('last-event', {})
+            queued_event = test_case.get('queued-event', {})
+            try:
+                last_event_result = self.__color_result(last_event['result'])
+                last_event_id = last_event['sha'][:16]
+                last_event_sha = last_event['sha']
+                last_event_date = datetime.fromtimestamp(last_event['end-timestamp']) \
+                                          .strftime("%Y-%m-%d %H:%M:%S")
+            except:
+                last_event_result = last_event_id = last_event_sha = last_event_date = ""
+            p.addEntry({
+                'id': test_case['sha'][:16],
+                'sha': test_case['sha'],
+                'function': test_case.function(),
+                'test': test_case.test(),
+                'status': queued_event.get('status', "none"),
+                'dut': queued_event.get('ip', ""),
+                'last-result': last_event_result,
+                'last-result-id': last_event_id,
+                'last-result-sha': last_event_sha,
+                'last-result-date': last_event_date
+        })
+        p.print()
+
+    def results(self, prog, argv):
+        parser = argparse.ArgumentParser(
+            prog=prog,
+            description="Print list of test results"
+        )
+        parser.add_argument('id', nargs='?')
+        parser.add_argument('--last', action='store_true')
+        parser.add_argument('--passed', action='store_true')
+        parser.add_argument('--failed', action='store_true')
+        parser.add_argument('--long', action='store_true')
+        parser.add_argument('--format', choices=['table', 'json'], default='table')
+        args = parser.parse_args(argv)
+
+        if args.passed and args.failed:
+            error("Options --passed and --failed cannot be used together!")
+            exit(1)
+
+        results = self.scope_handler.results({
+            'filter': {
+                'last': args.last,
+                'passed': args.passed,
+                'failed': args.failed,
+                'test-sha': args.id
+            }
+        })
+
+        p = ListPrinter(args.format)
+        id_field = ('id', 'sha')[args.long]
+        test_field = ('function', 'test')[args.long]
+        p.setHeader([
+            ('Id', id_field),
+            ('Test', test_field),
+            ('Result', 'result'),
+            ('DUT', 'dut'),
+            ('Duration', 'duration')
+        ])
+        for test_event in results:
+            test_case = test_event['test-case']
+            p.addEntry({
+                'id': test_event['sha'][:16],
+                'sha': test_event['sha'],
+                'dut': test_event['ip'],
+                'function': test_case.function(),
+                'test': test_case.test(),
+                'result': self.__color_result(test_event['result']),
+                'duration': test_event.duration()
+        })
+        p.print()
+
+    def show(self, prog, argv):
+        parser = argparse.ArgumentParser(
+            prog=prog,
+            description="Print details of test result"
+        )
+        parser.add_argument('sha')
+        parser.add_argument('--format', choices=['table', 'json'], default='table')
+        args = parser.parse_args(argv)
+
+        test_event = self.scope_handler.result_by_sha({'sha': args.sha})
+        if not test_event:
+            error(f"Result with id '{args.sha}' not found")
+            exit(1)
+
+        test_case = test_event['test-case']
+
+        p = DataPrinter(args.format)
+        p.setCaptions([
+            ('SHA', 'sha'),
+            ('Test', 'test'),
+            ('DUT', 'dut'),
+            ('Logs', 'logs'),
+            ('Result', 'result'),
+            ('Duration', 'duration')
+        ])
+        p.setData({
+            'sha': test_event['sha'],
+            'test': f"{test_case}",
+            'dut': test_event['ip'],
+            'logs': test_event['logs'],
+            'result': self.__color_result(test_event['result']),
+            'duration': test_event.duration()
+        })
+        p.print()
+
+    def log(self, prog, argv):
+        parser = argparse.ArgumentParser(
+            prog=prog,
+            description="Open log for given test event in default browser"
+        )
+        parser.add_argument('sha')
+        args = parser.parse_args(argv)
+
+        res = self.scope_handler.result_by_sha({'sha': args.sha})
+        if not res:
+            error(f"Result with id '{args.sha}' not found")
+            exit(1)
+
+        with daemon.DaemonContext():
+            webbrowser.open_new_tab(os.path.join(res['logs'], "main.html"))
+        self.scope_handler.log(prog, argv)
+
+    def test_log(self, prog, argv):
+        parser = argparse.ArgumentParser(
+            prog=prog,
+            description="Open log(s) for given test case in default browser"
+        )
+        parser.add_argument('id')
+        parser.add_argument('--passed', action='store_true')
+        parser.add_argument('--failed', action='store_true')
+        args = parser.parse_args(argv)
+
+        results = self.scope_handler.results({
+            'filter': {
+                'last': True,
+                'passed': args.passed,
+                'failed': args.failed,
+                'test-sha': args.id
+            }
+        })
+        if not results:
+            error(f"Result with id '{args.sha}' not found")
+            exit(1)
+
+        for test_case in results:
+            with daemon.DaemonContext():
+                webbrowser.open_new_tab(os.path.join(test_case['logs'], "main.html"))
+
+    def stdout(self, prog, argv):
+        parser = argparse.ArgumentParser(
+            prog=prog,
+            description="Show pytest standard output on selected DUT"
+        )
+        parser.add_argument('ip')
+        args = parser.parse_args(argv)
+
+        stdout_path = os.path.join("results", args.ip, "stdout")
+
+        if not os.path.isfile(stdout_path):
+            error(f"DUT with ip address '{args.ip}' not found")
+            exit(1)
+
+        os.system(f"tail -f results/{args.ip}/stdout")
+
+
+if __name__ == '__main__':
+    SuperRunnerCli(sys.argv[1:])

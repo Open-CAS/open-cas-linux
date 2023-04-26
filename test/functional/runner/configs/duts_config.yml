@@ -1,0 +1,41 @@
+duts:
+  - ip: "192.168.0.15"
+    user: "root"
+    password: "PasswordInPlainText!SomeonePleaseCallThePolice!"
+    disks:
+      - path: "/dev/nvme0n1"
+        serial: "000000000001"
+        type: "optane"
+        blocksize: 512
+      - path: "/dev/nvme1n1"
+        serial: "000000000002"
+        type: "optane"
+        blocksize: 512
+      - path: "/dev/sda"
+        serial: "420420420"
+        type: "hdd"
+        blocksize: 512
+      - path: "/dev/sdb"
+        serial: "123456789"
+        type: "hdd"
+        blocksize: 512
+  - ip: "192.168.0.42"
+    user: "root"
+    password: "AnotherPasswordInPlainText!DontTellMyMom!"
+    disks:
+      - path: "/dev/nvme0n1"
+        serial: "0000000000f1"
+        type: "optane"
+        blocksize: 512
+      - path: "/dev/nvme1n1"
+        serial: "00000000000f2"
+        type: "optane"
+        blocksize: 512
+      - path: "/dev/sda"
+        serial: "420420421"
+        type: "hdd"
+        blocksize: 512
+      - path: "/dev/sdb"
+        serial: "12345678a"
+        type: "hdd"
+        blocksize: 512

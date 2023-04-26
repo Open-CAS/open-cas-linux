@@ -1,0 +1,5 @@
+filelock>=3.0.12
+python-daemon>=2.2.4
+setproctitle>=1.1.10
+tabulate>=0.8.7
+watchdog>=0.10.3
