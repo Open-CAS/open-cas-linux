@@ -111,7 +111,9 @@ Before running tests make sure you have a platform with at least 2 disks (one fo
     c) For local execution just leave these fields commented.
 1. Run tests using command `pytest-3 --dut-config=<CONFIG>` where `<CONFIG>` is path to your config file, for example `pytest-3 --dut-config="config/dut_config.yml"`.
 
-## Security
+## Contributing
 
-To report a potential security vulnerability please follow the instructions
-[here](https://open-cas.github.io/contributing.html#reporting-a-potential-security-vulnerability).
+Feel like making Open CAS Linux better? Don't hesitate to submit a pull request!
+You can find more information about our contribution process
+[here](https://open-cas.github.io/contributing.html).
+In case of any questions feel free to contact [maintainer](mailto:baldyga.r@gmail.com).
