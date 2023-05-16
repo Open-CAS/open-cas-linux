@@ -21,6 +21,8 @@ ifneq ($(MAKECMDGOALS),srpm)
 ifneq ($(MAKECMDGOALS),deb)
 ifneq ($(MAKECMDGOALS),dsc)
 	cd $@ && $(MAKE) $(MAKECMDGOALS)
+casadm: modules
+	cd $@ && $(MAKE) $(MAKECMDGOALS)
 endif
 endif
 endif
