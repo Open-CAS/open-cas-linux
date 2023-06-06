@@ -1075,6 +1075,9 @@ int cache_mngt_core_pool_get_paths(struct kcas_core_pool_path *cmd_info)
 	struct get_paths_ctx visitor_ctx = {0};
 	int result;
 
+	if (visitor_ctx->core_path_name_tab == NULL)
+		return -EINVAL;
+
 	visitor_ctx.core_path_name_tab = cmd_info->core_path_tab;
 	visitor_ctx.max_count = cmd_info->core_pool_count;
 
