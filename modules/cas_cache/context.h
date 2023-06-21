@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -69,7 +70,6 @@ struct blk_data *cas_alloc_blk_data(uint32_t size, gfp_t flags);
 void cas_free_blk_data(struct blk_data *data);
 
 ctx_data_t *cas_ctx_data_alloc(uint32_t pages);
-ctx_data_t *cas_ctx_data_zalloc(uint32_t pages);
 void cas_ctx_data_free(ctx_data_t *ctx_data);
 void cas_ctx_data_secure_erase(ctx_data_t *ctx_data);
 
