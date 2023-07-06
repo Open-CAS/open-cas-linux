@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #include <stdlib.h>
@@ -124,6 +125,8 @@ int table_set(struct table *t, int y, int x, char *c)
 	int len = strnlen(c, MAX_STR_LEN);
 	if (len >= MAX_STR_LEN) {
 		return 1;
+	} else if (len == 0) {
+		return 0;
 	}
 
 	/* step 1: ensure that space for row y is allocated */
