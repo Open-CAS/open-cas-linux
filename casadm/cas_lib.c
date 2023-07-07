@@ -45,20 +45,8 @@
 
 #define CORE_ADD_MAX_TIMEOUT 30
 
-#define CHECK_IF_CACHE_IS_MOUNTED -1
-
-/**
- * @brief Routine verifies if filesystem is currently mounted for given cache/core
- *
- *        If FAILURE is returned, reason for failure is printed onto
- *        standard error.
- * @param cache_id cache id of filesystem (to verify if it is mounted)
- * @param core_id core id of filesystem (to verify if it is mounted); if this
- *        parameter is set to negative value, it is only checked if any core belonging
- *        to given cache is mounted;
- * @return SUCCESS if is not mounted; FAILURE if filesystem is mounted
- */
-int check_if_mounted(int cache_id, int core_id);
+int is_cache_mounted(int cache_id);
+int is_core_mounted(int cache_id, int core_id);
 
 /* KCAS_IOCTL_CACHE_CHECK_DEVICE  wrapper */
 int _check_cache_device(const char *device_path,
@@ -1029,40 +1017,52 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 int stop_cache(uint16_t cache_id, int flush)
 {
 	int fd = 0;
-	struct kcas_stop_cache cmd;
+	struct kcas_stop_cache cmd = {};
+	int ioctl_code = KCAS_IOCTL_STOP_CACHE;
+	int status;
 
-	/* don't even attempt ioctl if filesystem is mounted */
-	if (check_if_mounted(cache_id, CHECK_IF_CACHE_IS_MOUNTED) == FAILURE) {
+	/* Don't stop instance with mounted filesystem */
+	if (is_cache_mounted(cache_id) == FAILURE)
 		return FAILURE;
-	}
 
 	fd = open_ctrl_device();
 	if (fd == -1)
 		return FAILURE;
 
-	memset(&cmd, 0, sizeof(cmd));
 	cmd.cache_id = cache_id;
 	cmd.flush_data = flush;
 
-	if(run_ioctl_interruptible_retry(fd, KCAS_IOCTL_STOP_CACHE, &cmd, "Stopping cache",
-			cache_id, OCF_CORE_ID_INVALID) < 0) {
-		close(fd);
+	status = run_ioctl_interruptible_retry(
+			fd,
+			ioctl_code,
+			&cmd,
+			"Stopping cache",
+			cache_id,
+			OCF_CORE_ID_INVALID);
+	close(fd);
+
+	if (status < 0) {
+
 		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
-			cas_printf(LOG_ERR, "You have interrupted stopping of cache. CAS continues\n"
-				"to operate normally. If you want to stop cache without fully\n"
-				"flushing dirty data, use '-n' option.\n");
+			cas_printf(LOG_ERR,
+				"You have interrupted stopping of cache %d. "
+				"CAS continues\nto operate normally. The cache"
+				" can be stopped without\nflushing dirty data "
+				"by using '-n' option.\n", cache_id);
 			return INTERRUPTED;
-		} else if (cmd.ext_err_code == OCF_ERR_WRITE_CACHE){
-			cas_printf(LOG_ERR, "Removed cache %d with errors\n", cache_id);
+		} else if (OCF_ERR_WRITE_CACHE == cmd.ext_err_code){
+			cas_printf(LOG_ERR, "Stopped cache %d with errors\n", cache_id);
 			print_err(cmd.ext_err_code);
 			return FAILURE;
 		} else {
-			cas_printf(LOG_ERR, "Error while removing cache %d\n", cache_id);
+			cas_printf(LOG_ERR, "Error while stopping cache %d\n", cache_id);
 			print_err(cmd.ext_err_code);
 			return FAILURE;
 		}
 	}
-	close(fd);
+
+	cas_printf(LOG_INFO, "Successfully stopped cache %hu\n", cache_id);
+
 	return SUCCESS;
 }
 
@@ -1707,7 +1707,7 @@ int add_core(unsigned int cache_id, unsigned int core_id, const char *core_devic
 	return SUCCESS;
 }
 
-int check_if_mounted(int cache_id, int core_id)
+int _check_if_mounted(int cache_id, int core_id)
 {
 	FILE *mtab;
 	struct mntent *mstruct;
@@ -1751,6 +1751,14 @@ int check_if_mounted(int cache_id, int core_id)
 
 }
 
+int is_cache_mounted(int cache_id) {
+	return _check_if_mounted(cache_id, -1);
+}
+
+int is_core_mounted(int cache_id, int core_id) {
+	return _check_if_mounted(cache_id, core_id);
+}
+
 int remove_core(unsigned int cache_id, unsigned int core_id,
 		bool detach, bool force_no_flush)
 {
@@ -1758,7 +1766,7 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
 	struct kcas_remove_core cmd;
 
 	/* don't even attempt ioctl if filesystem is mounted */
-	if (SUCCESS != check_if_mounted(cache_id, core_id)) {
+	if (SUCCESS != is_core_mounted(cache_id, core_id)) {
 		return FAILURE;
 	}
 
@@ -1824,7 +1832,7 @@ int remove_inactive_core(unsigned int cache_id, unsigned int core_id,
 	struct kcas_remove_inactive cmd;
 
 	/* don't even attempt ioctl if filesystem is mounted */
-	if (SUCCESS != check_if_mounted(cache_id, core_id)) {
+	if (SUCCESS != is_core_mounted(cache_id, core_id)) {
 		return FAILURE;
 	}
 
