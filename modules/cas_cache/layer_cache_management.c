@@ -2037,27 +2037,45 @@ static void init_instance_complete(struct _cache_mngt_attach_context *ctx,
 
 }
 
+
+static void calculate_min_ram_size(ocf_cache_t cache,
+		struct _cache_mngt_attach_context *ctx)
+{
+	uint64_t volume_size;
+	int result;
+
+	ctx->min_free_ram = 0;
+
+	result = cache_mngt_create_cache_device_cfg(&ctx->device_cfg,
+			ctx->cache_path);
+	if (result)
+			goto end;
+
+	result = ocf_volume_open(ctx->device_cfg.volume,
+			ctx->device_cfg.volume_params);
+	if (result)
+		goto destroy_config;
+
+	volume_size = ocf_volume_get_length(ctx->device_cfg.volume);
+	ctx->min_free_ram = ocf_mngt_get_ram_needed(cache, volume_size);
+	ocf_volume_close(ctx->device_cfg.volume);
+
+destroy_config:
+	cache_mngt_destroy_cache_device_cfg(&ctx->device_cfg);
+end:
+	if (result)
+		printk(KERN_WARNING "Cannot calculate amount of DRAM needed\n");
+}
+
 static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv, int error)
 {
 	struct _cache_mngt_attach_context *ctx = priv;
 	int caller_status;
-	int result;
 
 	cache_mngt_destroy_cache_device_cfg(&ctx->device_cfg);
 
-	if (error == -OCF_ERR_NO_FREE_RAM) {
-		result = cache_mngt_create_cache_device_cfg(&ctx->device_cfg,
-				ctx->cache_path);
-		if (result) {
-			printk(KERN_WARNING "Cannot calculate amount of DRAM "
-					"needed\n");
-			ctx->min_free_ram = 0;
-		} else {
-			ocf_mngt_get_ram_needed(cache, &ctx->device_cfg,
-					&ctx->min_free_ram);
-			cache_mngt_destroy_cache_device_cfg(&ctx->device_cfg);
-		}
-	}
+	if (error == -OCF_ERR_NO_FREE_RAM)
+		calculate_min_ram_size(cache, ctx);
 
 	caller_status =_cache_mngt_async_callee_set_result(&ctx->async, error);
 	if (caller_status == -KCAS_ERR_WAITING_INTERRUPTED) {
