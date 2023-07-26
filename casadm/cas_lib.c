@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -66,7 +67,7 @@ int _check_cache_device(const char *device_path,
 static const char *cache_states_name[ocf_cache_state_max + 1] = {
 		[ocf_cache_state_running] = "Running",
 		[ocf_cache_state_stopping] = "Stopping",
-		[ocf_cache_state_initializing] = "Initializing",
+		[ocf_cache_state_detached] = "Detached",
 		[ocf_cache_state_incomplete] = "Incomplete",
 		[ocf_cache_state_standby] = "Standby",
 		[ocf_cache_state_max] = "Unknown",
