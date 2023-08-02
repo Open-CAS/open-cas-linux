@@ -808,10 +808,6 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 	cache->promotion_policy = info->info.promotion_policy;
 	cache->size = info->info.cache_line_size;
 
-	if ((info->info.state & (1 << ocf_cache_state_running)) == 0) {
-		return cache;
-	}
-
 	for (cache->core_count = 0; cache->core_count < info->info.core_count; ++cache->core_count) {
 		core_id = info->core_id[cache->core_count];
 
