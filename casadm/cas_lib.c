@@ -2688,6 +2688,7 @@ int list_caches(unsigned int list_format, bool by_id_path)
 		char cache_ctrl_dev[MAX_STR_LEN] = "-";
 		float cache_flush_prog;
 		float core_flush_prog;
+		bool cache_device_detached;
 
 		if (!by_id_path && !curr_cache->standby_detached) {
 			if (get_dev_path(curr_cache->device, curr_cache->device,
@@ -2719,11 +2720,16 @@ int list_caches(unsigned int list_format, bool by_id_path)
 			}
 		}
 
+		cache_device_detached =
+			((curr_cache->state & (1 << ocf_cache_state_standby)) |
+			(curr_cache->state & (1 << ocf_cache_state_detached)))
+			;
+
 		fprintf(intermediate_file[1], TAG(TREE_BRANCH)
 			"%s,%u,%s,%s,%s,%s\n",
 			"cache", /* type */
 			curr_cache->id, /* id */
-			curr_cache->standby_detached ? "-" : curr_cache->device, /* device path */
+			cache_device_detached ? "-" : curr_cache->device, /* device path */
 			tmp_status, /* cache status */
 			mode_string, /* write policy */
 			cache_ctrl_dev  /* device */);
