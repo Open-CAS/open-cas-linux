@@ -941,16 +941,13 @@ int check_cache_already_added(const char *cache_device) {
 	return SUCCESS;
 }
 
-int start_cache(uint16_t cache_id, unsigned int cache_init,
-		const char *cache_device, ocf_cache_mode_t cache_mode,
-		ocf_cache_line_size_t line_size, int force)
+static int _verify_and_parse_volume_path(char *tgt_buf,
+		size_t tgt_buf_size, const char *cache_device,
+		size_t paths_size)
 {
 	int fd = 0;
-	struct kcas_start_cache cmd;
-	int status;
-	double min_free_ram_gb;
 
-	/* check if cache device given exists */
+	/* check if cache device exists */
 	fd = open(cache_device, 0);
 	if (fd < 0) {
 		cas_printf(LOG_ERR, "Device %s not found.\n", cache_device);
@@ -958,25 +955,49 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	}
 	close(fd);
 
+	if (set_device_path(tgt_buf, tgt_buf_size, cache_device, paths_size) != SUCCESS) {
+		return FAILURE;
+	}
+
+	return SUCCESS;
+}
+
+static int _start_cache(uint16_t cache_id, unsigned int cache_init,
+		const char *cache_device, ocf_cache_mode_t cache_mode,
+		ocf_cache_line_size_t line_size, int force, bool start)
+{
+	int fd = 0;
+	struct kcas_start_cache cmd = {};
+	int status;
+	double min_free_ram_gb;
+
 	fd = open_ctrl_device();
 	if (fd == -1)
 		return FAILURE;
 
-	memset(&cmd, 0, sizeof(cmd));
-
-	cmd.cache_id = cache_id;
-	cmd.init_cache = cache_init;
-	if (set_device_path(cmd.cache_path_name, sizeof(cmd.cache_path_name),
-			    cache_device, MAX_STR_LEN) != SUCCESS) {
+	status = _verify_and_parse_volume_path(
+			cmd.cache_path_name,
+			sizeof(cmd.cache_path_name),
+			cache_device,
+			MAX_STR_LEN);
+	if (status != SUCCESS) {
 		close(fd);
 		return FAILURE;
 	}
+
+	cmd.cache_id = cache_id;
 	cmd.caching_mode = cache_mode;
 	cmd.line_size = line_size;
 	cmd.force = (uint8_t)force;
+	cmd.init_cache = cache_init;
 
-	status = run_ioctl_interruptible_retry(fd, KCAS_IOCTL_START_CACHE, &cmd,
-			"Starting cache", cache_id, OCF_CORE_ID_INVALID);
+	status = run_ioctl_interruptible_retry(
+			fd,
+			KCAS_IOCTL_START_CACHE,
+			&cmd,
+			"Starting cache",
+			cache_id,
+			OCF_CORE_ID_INVALID);
 	cache_id = cmd.cache_id;
 	if (status < 0) {
 		close(fd);
@@ -1012,6 +1033,14 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	cas_printf(LOG_INFO, "Successfully added cache instance %u\n", cache_id);
 
 	return SUCCESS;
+}
+
+int start_cache(uint16_t cache_id, unsigned int cache_init,
+		const char *cache_device, ocf_cache_mode_t cache_mode,
+		ocf_cache_line_size_t line_size, int force)
+{
+	return _start_cache(cache_id, cache_init, cache_device, cache_mode,
+			line_size, force, true);
 }
 
 int stop_cache(uint16_t cache_id, int flush)
