@@ -78,6 +78,27 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
 
+	case KCAS_IOCTL_ATTACH_CACHE: {
+		struct kcas_start_cache *cmd_info;
+		struct ocf_mngt_cache_config cfg;
+		struct ocf_mngt_cache_attach_config attach_cfg;
+		char cache_name[OCF_CACHE_NAME_SIZE];
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		cache_name_from_id(cache_name, cmd_info->cache_id);
+
+		retval = cache_mngt_attach_cache_cfg(cache_name, OCF_CACHE_NAME_SIZE,
+				&cfg, &attach_cfg, cmd_info);
+		if (retval)
+			RETURN_CMD_RESULT(cmd_info, arg, retval);
+
+		retval = cache_mngt_attach_device(cache_name, OCF_CACHE_NAME_SIZE,
+				cmd_info->cache_path_name, &attach_cfg);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+
 	case KCAS_IOCTL_SET_CACHE_STATE: {
 		struct kcas_set_cache_state *cmd_info;
 		char cache_name[OCF_CACHE_NAME_SIZE];
