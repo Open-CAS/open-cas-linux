@@ -406,6 +406,7 @@ struct kcas_standby_activate
  *    39    *    KCAS_IOCTL_STANDBY_ACTIVATE                *    OK            *
  *    40    *    KCAS_IOCTL_CORE_INFO                       *    OK            *
  *    41    *    KCAS_IOCTL_START_CACHE                     *    OK            *
+ *    43    *    KCAS_IOCTL_ATTACH_CACHE                    *    OK            *
  *******************************************************************************
  */
 
@@ -503,6 +504,9 @@ struct kcas_standby_activate
 
 /** Start new cache instance, load cache or recover cache */
 #define KCAS_IOCTL_START_CACHE _IOWR(KCAS_IOCTL_MAGIC, 41, struct kcas_start_cache)
+
+/** Attach cache device */
+#define KCAS_IOCTL_ATTACH_CACHE _IOWR(KCAS_IOCTL_MAGIC, 43, struct kcas_start_cache)
 
 /**
  * Extended kernel CAS error codes
