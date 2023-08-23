@@ -969,6 +969,7 @@ static int _start_cache(uint16_t cache_id, unsigned int cache_init,
 	int fd = 0;
 	struct kcas_start_cache cmd = {};
 	int status;
+	int ioctl = start ? KCAS_IOCTL_START_CACHE : KCAS_IOCTL_ATTACH_CACHE;
 	double min_free_ram_gb;
 
 	fd = open_ctrl_device();
@@ -993,9 +994,9 @@ static int _start_cache(uint16_t cache_id, unsigned int cache_init,
 
 	status = run_ioctl_interruptible_retry(
 			fd,
-			KCAS_IOCTL_START_CACHE,
+			ioctl,
 			&cmd,
-			"Starting cache",
+			start ? "Starting cache" : "Attaching device to cache",
 			cache_id,
 			OCF_CORE_ID_INVALID);
 	cache_id = cmd.cache_id;
@@ -1007,9 +1008,11 @@ static int _start_cache(uint16_t cache_id, unsigned int cache_init,
 			min_free_ram_gb /= GiB;
 
 			cas_printf(LOG_ERR, "Not enough free RAM.\n"
-					"You need at least %0.2fGB to start cache"
+					"You need at least %0.2fGB to %s cache"
 					" with cache line size equal %llukB.\n",
-					min_free_ram_gb, line_size / KiB);
+					min_free_ram_gb,
+					start ? "start" : "attach a device to",
+					line_size / KiB);
 
 			if (64 * KiB > line_size)
 				cas_printf(LOG_ERR, "Try with greater cache line size.\n");
@@ -1030,7 +1033,9 @@ static int _start_cache(uint16_t cache_id, unsigned int cache_init,
 	check_cache_state_incomplete(cache_id, fd);
 	close(fd);
 
-	cas_printf(LOG_INFO, "Successfully added cache instance %u\n", cache_id);
+	cas_printf(LOG_INFO, "Successfully %s %u\n",
+			start ? "added cache instance" : "attached device to cache",
+			cache_id);
 
 	return SUCCESS;
 }
@@ -1041,6 +1046,12 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 {
 	return _start_cache(cache_id, cache_init, cache_device, cache_mode,
 			line_size, force, true);
+}
+
+int attach_cache(uint16_t cache_id, const char *cache_device, int force)
+{
+	return _start_cache(cache_id, CACHE_INIT_NEW, cache_device,
+			ocf_cache_mode_none, ocf_cache_line_size_none, force, false);
 }
 
 int stop_cache(uint16_t cache_id, int flush)
