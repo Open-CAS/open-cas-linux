@@ -2509,6 +2509,22 @@ int cache_mngt_create_cache_standby_activate_cfg(
 	return 0;
 }
 
+static void _cache_mngt_detach_cache_complete(ocf_cache_t cache, void *priv,
+		int error)
+{
+	struct _cache_mngt_async_context *context = priv;
+	int result;
+
+	result = _cache_mngt_async_callee_set_result(context, error);
+
+	if (result != -KCAS_ERR_WAITING_INTERRUPTED)
+		return;
+
+	kfree(context);
+	ocf_mngt_cache_unlock(cache);
+	kfree(context);
+}
+
 int cache_mngt_attach_device(const char *cache_name, size_t name_len,
 		const char *device, struct ocf_mngt_cache_attach_config *attach_cfg)
 {
@@ -3111,6 +3127,53 @@ unlock:
 put:
 	ocf_mngt_cache_put(cache);
 	return result;
+}
+
+int cache_mngt_detach_cache(const char *cache_name, size_t name_len)
+{
+	ocf_cache_t cache;
+	int status = 0;
+	struct _cache_mngt_async_context *context;
+
+	context = kmalloc(sizeof(*context), GFP_KERNEL);
+	if (!context)
+		return -ENOMEM;
+
+	_cache_mngt_async_context_init(context);
+
+	status = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+					name_len, &cache);
+	if (status)
+		goto err_get_cache;
+
+	if (ocf_cache_is_running(cache))
+		status = _cache_flush_with_lock(cache);
+	if (status)
+		goto err_flush;
+
+	status = _cache_mngt_lock_sync(cache);
+	if (status)
+		goto err_lock;
+
+	ocf_mngt_cache_detach(cache, _cache_mngt_detach_cache_complete, context);
+
+	status = wait_for_completion_interruptible(&context->cmpl);
+	status = _cache_mngt_async_caller_set_result(context, status);
+
+	if (status == -KCAS_ERR_WAITING_INTERRUPTED) {
+		printk(KERN_WARNING "Waiting for cache detach interrupted. "
+				"The operation will finish asynchronously.\n");
+		goto err_int;
+	}
+
+	ocf_mngt_cache_unlock(cache);
+err_lock:
+err_flush:
+	ocf_mngt_cache_put(cache);
+err_get_cache:
+	kfree(context);
+err_int:
+	return status;
 }
 
 /**

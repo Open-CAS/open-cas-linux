@@ -421,6 +421,11 @@ int handle_cache_attach(void)
 			);
 }
 
+int handle_cache_detach(void)
+{
+	return detach_cache(command_args_values.cache_id);
+}
+
 int handle_start()
 {
 	int status;
@@ -540,6 +545,11 @@ int handle_stats()
 static cli_option stop_options[] = {
 	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
 	{'n', "no-data-flush", "Do not flush dirty data (may be dangerous)"},
+	{0}
+};
+
+static cli_option detach_options[] = {
+	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
 	{0}
 };
 
@@ -2227,6 +2237,16 @@ static cli_command cas_commands[] = {
 			.options = attach_cache_options,
 			.command_handle_opts = start_cache_command_handle_option,
 			.handle = handle_cache_attach,
+			.flags = CLI_SU_REQUIRED,
+			.help = NULL,
+		},
+		{
+			.name = "detach-cache",
+			.desc = "Detach cache device",
+			.long_desc = NULL,
+			.options = detach_options,
+			.command_handle_opts = command_handle_option,
+			.handle = handle_cache_detach,
 			.flags = CLI_SU_REQUIRED,
 			.help = NULL,
 		},

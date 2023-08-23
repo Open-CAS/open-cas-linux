@@ -117,6 +117,7 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 		ocf_cache_line_size_t line_size, int force);
 int stop_cache(uint16_t cache_id, int flush);
 
+int detach_cache(uint16_t cache_id);
 int attach_cache(uint16_t cache_id, const char *cache_device, int force);
 
 #ifdef WI_AVAILABLE

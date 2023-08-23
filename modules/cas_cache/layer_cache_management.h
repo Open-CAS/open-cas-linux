@@ -43,6 +43,8 @@ int cache_mngt_reset_stats(const char *cache_name, size_t cache_name_len,
 int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 		struct kcas_io_classes *cfg);
 
+int cache_mngt_detach_cache(const char *cache_name, size_t name_len);
+
 int cache_mngt_attach_device(const char *cache_name, size_t name_len,
 		const char *device, struct ocf_mngt_cache_attach_config *attach_cfg);
 
