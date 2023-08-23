@@ -1054,6 +1054,63 @@ int attach_cache(uint16_t cache_id, const char *cache_device, int force)
 			ocf_cache_mode_none, ocf_cache_line_size_none, force, false);
 }
 
+int detach_cache(uint16_t cache_id)
+{
+	int fd = 0;
+	struct kcas_stop_cache cmd = {};
+	int ioctl_code = KCAS_IOCTL_DETACH_CACHE;
+	int status;
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	cmd.cache_id = cache_id;
+	cmd.flush_data = true;
+
+	status = run_ioctl_interruptible_retry(
+			fd,
+			ioctl_code,
+			&cmd,
+			"Detaching the device from cache",
+			cache_id,
+			OCF_CORE_ID_INVALID);
+	close(fd);
+
+	if (status < 0) {
+		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
+			cas_printf(LOG_ERR,
+				"You have interrupted detaching the device "
+				"from cache %d. CAS continues to operate "
+				"normally.\n",
+				cache_id
+				);
+			return INTERRUPTED;
+		} else if (OCF_ERR_WRITE_CACHE == cmd.ext_err_code){
+			cas_printf(LOG_ERR,
+					"Detached the device from cache %d "
+					"with errors\n",
+					cache_id
+					);
+			print_err(cmd.ext_err_code);
+			return FAILURE;
+		} else {
+			cas_printf(LOG_ERR,
+					"Error while detaching the device from"
+					" cache %d\n",
+					cache_id
+					);
+			print_err(cmd.ext_err_code);
+			return FAILURE;
+		}
+	}
+
+	cas_printf(LOG_INFO, "Successfully detached device from cache %hu\n",
+			cache_id);
+
+	return SUCCESS;
+}
+
 int stop_cache(uint16_t cache_id, int flush)
 {
 	int fd = 0;
@@ -1082,7 +1139,6 @@ int stop_cache(uint16_t cache_id, int flush)
 	close(fd);
 
 	if (status < 0) {
-
 		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
 			cas_printf(LOG_ERR,
 				"You have interrupted stopping of cache %d. "
