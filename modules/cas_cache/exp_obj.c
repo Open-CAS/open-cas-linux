@@ -37,12 +37,9 @@ static inline void bd_release_from_disk(struct block_device *bdev,
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
        #define KRETURN(x)      ({ return (x); })
        #define MAKE_RQ_RET_TYPE blk_qc_t
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0)
+#else
        #define KRETURN(x)      return
        #define MAKE_RQ_RET_TYPE void
-#else
-       #define KRETURN(x)      ({ return (x); })
-       #define MAKE_RQ_RET_TYPE int
 #endif
 
 /* For RHEL 9.x we assume backport from kernel 5.18+ */
