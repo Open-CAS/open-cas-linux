@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -405,6 +405,11 @@ static inline void env_atomic64_dec(env_atomic64 *a)
 static inline u64 env_atomic64_inc_return(env_atomic64 *a)
 {
 	return atomic64_inc_return(a);
+}
+
+static inline u64 env_atomic64_dec_return(env_atomic64 *a)
+{
+	return atomic64_dec_return(a);
 }
 
 static inline u64 env_atomic64_cmpxchg(atomic64_t *a, u64 old, u64 new)
