@@ -407,6 +407,11 @@ static inline u64 env_atomic64_inc_return(env_atomic64 *a)
 	return atomic64_inc_return(a);
 }
 
+static inline u64 env_atomic64_dec_return(env_atomic64 *a)
+{
+	return atomic64_dec_return(a);
+}
+
 static inline u64 env_atomic64_cmpxchg(atomic64_t *a, u64 old, u64 new)
 {
 	return atomic64_cmpxchg(a, old, new);
