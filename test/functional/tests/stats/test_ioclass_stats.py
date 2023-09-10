@@ -52,6 +52,8 @@ usage_stats_ioclass = [
 request_stats = [
     "Read hits [Requests]",
     "Read hits [%]",
+    "Read deferred [Requests]",
+    "Read deferred [%]",
     "Read partial misses [Requests]",
     "Read partial misses [%]",
     "Read full misses [Requests]",
@@ -60,6 +62,8 @@ request_stats = [
     "Read total [%]",
     "Write hits [Requests]",
     "Write hits [%]",
+    "Write deferred [Requests]",
+    "Write deferred [%]",
     "Write partial misses [Requests]",
     "Write partial misses [%]",
     "Write full misses [Requests]",

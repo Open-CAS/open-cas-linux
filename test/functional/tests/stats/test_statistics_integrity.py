@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -364,6 +365,16 @@ def validate_request_stats(stats, stats_perc, cache_mode, fail_message):
             f"{fail_message} 'Read hits' percentage is "
             f"{stats_perc.request_stats.read.hits}, "
             f"should equal 0\n")
+    if stats.request_stats.read.deferred != 0:
+        TestRun.LOGGER.error(
+            f"{fail_message} 'Read deferred' is "
+            f"{stats.request_stats.read.deferred}, "
+            f"should equal 0\n")
+    if stats_perc.request_stats.read.deferred != 0:
+        TestRun.LOGGER.error(
+            f"{fail_message} 'Read deferred' percentage is "
+            f"{stats_perc.request_stats.read.deferred}, "
+            f"should equal 0\n")
     if stats.request_stats.read.part_misses != 0:
         TestRun.LOGGER.error(
             f"{fail_message} 'Read partial misses' is "
@@ -403,6 +414,16 @@ def validate_request_stats(stats, stats_perc, cache_mode, fail_message):
         TestRun.LOGGER.error(
             f"{fail_message} 'Write hits' percentage is "
             f"{stats_perc.request_stats.write.hits}, "
+            f"should equal 0\n")
+    if stats.request_stats.write.deferred != 0:
+        TestRun.LOGGER.error(
+            f"{fail_message} 'Write deferred' is "
+            f"{stats.request_stats.write.deferred}, "
+            f"should equal 0\n")
+    if stats_perc.request_stats.write.deferred != 0:
+        TestRun.LOGGER.error(
+            f"{fail_message} 'Write deferred' percentage is "
+            f"{stats_perc.request_stats.write.deferred}, "
             f"should equal 0\n")
     if stats.request_stats.write.part_misses != 0:
         TestRun.LOGGER.error(

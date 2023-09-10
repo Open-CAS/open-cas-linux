@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -809,11 +810,13 @@ def test_failover_during_io_with_eviction(cache_mode, cls, cleaning_policy, num_
             read_misses_before = (
                 stats_before.request_stats.read.full_misses
                 + stats_before.request_stats.read.part_misses
+                + stats_before.request_stats.read.deferred
             )
 
             read_misses_after = (
                 stats_after.request_stats.read.full_misses
                 + stats_after.request_stats.read.part_misses
+                + stats_after.request_stats.read.deferred
             )
 
             TestRun.LOGGER.info(f"Read miss change: {read_misses_before} -> {read_misses_after}")
