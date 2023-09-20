@@ -3199,10 +3199,6 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	if (status)
 		return status;
 
-	cache_priv = ocf_cache_get_priv(cache);
-	mngt_queue = cache_priv->mngt_queue;
-	context = cache_priv->stop_context;
-
 	/*
 	 * Flush cache. Flushing may take a long time, so we allow user
 	 * to interrupt this operation. Hence we do first flush before
@@ -3220,6 +3216,10 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	status = _cache_mngt_lock_sync(cache);
 	if (status)
 		goto put;
+
+	cache_priv = ocf_cache_get_priv(cache);
+	mngt_queue = cache_priv->mngt_queue;
+	context = cache_priv->stop_context;
 
 	context->finish_thread = cas_lazy_thread_create(exit_instance_finish,
 			context, "cas_%s_stop", cache_name);
