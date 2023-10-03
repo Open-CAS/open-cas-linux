@@ -2061,6 +2061,7 @@ static int _cache_mngt_start_queues(ocf_cache_t cache)
 			cache_priv->mngt_queue, CAS_CPUS_ALL);
 	if (result) {
 		ocf_queue_put(cache_priv->mngt_queue);
+		cache_priv->mngt_queue = NULL;
 		goto err;
 	}
 
