@@ -2701,17 +2701,21 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	switch (cmd->init_cache) {
 		case CACHE_INIT_STANDBY_NEW:
 		case CACHE_INIT_STANDBY_LOAD:
+			ocf_volume_destroy(attach_cfg->device.volume);
 			printk(KERN_ERR "Standby mode is not supported!\n");
 			return -ENOTSUP;
 		default:
 			break;
 	}
 
-	if (!try_module_get(THIS_MODULE))
+	if (!try_module_get(THIS_MODULE)) {
+		ocf_volume_destroy(attach_cfg->device.volume);
 		return -KCAS_ERR_SYSTEM;
+	}
 
 	result = cache_mngt_check_bdev(&attach_cfg->device, attach_cfg->force, false, NULL);
 	if (result) {
+		ocf_volume_destroy(attach_cfg->device.volume);
 		module_put(THIS_MODULE);
 		return result;
 	}
@@ -2723,6 +2727,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 				cache_name_meta, &cache_mode_meta,
 				&cache_line_size_meta);
 		if (result) {
+			ocf_volume_destroy(attach_cfg->device.volume);
 			module_put(THIS_MODULE);
 			return result;
 		}
@@ -2733,6 +2738,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 			printk(KERN_ERR "Improper cache name format on %s.\n",
 					cmd->cache_path_name);
 
+			ocf_volume_destroy(attach_cfg->device.volume);
 			module_put(THIS_MODULE);
 			return -OCF_ERR_START_CACHE_FAIL;
 		}
@@ -2745,6 +2751,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 					"already exists.\n", cache_name_meta);
 
 			ocf_mngt_cache_put(tmp_cache);
+			ocf_volume_destroy(attach_cfg->device.volume);
 			module_put(THIS_MODULE);
 			return -OCF_ERR_CACHE_EXIST;
 		}
@@ -2759,6 +2766,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 
 	context = kzalloc(sizeof(*context), GFP_KERNEL);
 	if (!context) {
+		ocf_volume_destroy(attach_cfg->device.volume);
 		module_put(THIS_MODULE);
 		return -ENOMEM;
 	}
@@ -2768,6 +2776,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	if (IS_ERR(context->rollback_thread)) {
 		result = PTR_ERR(context->rollback_thread);
 		kfree(context);
+		ocf_volume_destroy(attach_cfg->device.volume);
 		module_put(THIS_MODULE);
 		return result;
 	}
@@ -2783,6 +2792,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	if (result) {
 		cas_lazy_thread_stop(context->rollback_thread);
 		kfree(context);
+		ocf_volume_destroy(attach_cfg->device.volume);
 		module_put(THIS_MODULE);
 		return result;
 	}
@@ -2790,12 +2800,12 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 
 	result = _cache_mngt_cache_priv_init(cache);
 	if (result)
-		goto err;
+		goto err_deinit_config;
 	context->priv_inited = true;
 
 	result = _cache_mngt_start_queues(cache);
 	if (result)
-		goto err;
+		goto err_deinit_config;
 
 	cache_priv = ocf_cache_get_priv(cache);
 	cache_priv->attach_context = context;
@@ -2842,6 +2852,9 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	ocf_mngt_cache_unlock(cache);
 
 	return result;
+
+err_deinit_config:
+	ocf_volume_destroy(attach_cfg->device.volume);
 err:
 	cmd->min_free_ram = context->min_free_ram;
 
