@@ -1271,7 +1271,10 @@ static int cache_mngt_update_core_uuid(ocf_cache_t cache, const char *core_name,
 	if (result)
 		return result;
 
-	return _cache_mngt_save_sync(cache);
+	if (ocf_cache_is_device_attached(cache))
+		result = _cache_mngt_save_sync(cache);
+
+	return result;
 }
 
 static void _cache_mngt_log_core_device_path(ocf_core_t core)
@@ -1717,7 +1720,12 @@ int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 
 	if (ocf_cache_is_standby(cache)) {
 		result = -OCF_ERR_CACHE_STANDBY;
-		goto out_standby;
+		goto out_not_running;
+	}
+
+	if (!ocf_cache_is_device_attached(cache)) {
+		result = -OCF_ERR_CACHE_DETACHED;
+		goto out_not_running;
 	}
 
 	for (class_id = 0; class_id < OCF_USER_IO_CLASS_MAX; class_id++) {
@@ -1752,7 +1760,7 @@ out_cls:
 		while (class_id--)
 			cas_cls_rule_destroy(cache, cls_rule[class_id]);
 	}
-out_standby:
+out_not_running:
 	ocf_mngt_cache_put(cache);
 out_get:
 	kfree(io_class_cfg);
@@ -2944,6 +2952,11 @@ int cache_mngt_set_cache_mode(const char *cache_name, size_t name_len,
 
 	if (ocf_cache_is_standby(cache)) {
 		result = -OCF_ERR_CACHE_STANDBY;
+		goto put;
+	}
+
+	if (!ocf_cache_is_device_attached(cache)) {
+		result = -OCF_ERR_CACHE_DETACHED;
 		goto put;
 	}
 
