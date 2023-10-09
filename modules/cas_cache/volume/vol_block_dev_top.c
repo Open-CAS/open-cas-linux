@@ -470,6 +470,7 @@ static int blkdev_cache_set_geometry(struct cas_disk *dsk, void *private)
 	set_capacity(cas_exp_obj_get_gendisk(dsk), sectors);
 
 	cas_copy_queue_limits(exp_q, cache_q, cache_q);
+	cas_cache_set_no_merges_flag(cache_q);
 
 	blk_stack_limits(&exp_q->limits, &cache_q->limits, 0);
 
