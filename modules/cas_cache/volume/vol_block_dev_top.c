@@ -122,7 +122,7 @@ static int blkdev_core_set_geometry(struct cas_disk *dsk, void *private)
 
 	set_capacity(cas_exp_obj_get_gendisk(dsk), sectors);
 
-	cas_copy_queue_limits(exp_q, cache_q, core_q);
+	cas_copy_queue_limits(exp_q, &cache_q->limits, core_q);
 
 	if (exp_q->limits.logical_block_size >
 		core_q->limits.logical_block_size) {
@@ -469,7 +469,7 @@ static int blkdev_cache_set_geometry(struct cas_disk *dsk, void *private)
 
 	set_capacity(cas_exp_obj_get_gendisk(dsk), sectors);
 
-	cas_copy_queue_limits(exp_q, cache_q, cache_q);
+	cas_copy_queue_limits(exp_q, &cache_q->limits, cache_q);
 	cas_cache_set_no_merges_flag(cache_q);
 
 	blk_stack_limits(&exp_q->limits, &cache_q->limits, 0);
