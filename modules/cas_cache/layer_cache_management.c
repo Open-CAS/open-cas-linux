@@ -2191,6 +2191,24 @@ out_bdev:
 	return result;
 }
 
+static void volume_set_no_merges_flag_helper(ocf_cache_t cache) {
+	struct request_queue *cache_q;
+	struct bd_object *bvol;
+	struct block_device *bd;
+	ocf_volume_t volume;
+
+	volume = ocf_cache_get_volume(cache);
+	if (!volume)
+		return;
+
+	bvol = bd_object(volume);
+	bd = cas_disk_get_blkdev(bvol->dsk);
+	cache_q = bd->bd_disk->queue;
+
+	cas_cache_set_no_merges_flag(cache_q);
+}
+
+
 static int _cache_start_finalize(ocf_cache_t cache, int init_mode,
 		bool activate)
 {
@@ -2208,6 +2226,8 @@ static int _cache_start_finalize(ocf_cache_t cache, int init_mode,
 			return result;
 		}
 		ctx->cls_inited = true;
+
+		volume_set_no_merges_flag_helper(cache);
 	}
 
 	if (activate)
