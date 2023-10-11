@@ -35,35 +35,29 @@ static void blkdev_set_exported_object_flush_fua(ocf_core_t core)
 {
 	ocf_cache_t cache = ocf_core_get_cache(core);
 	ocf_volume_t core_vol = ocf_core_get_volume(core);
-	ocf_volume_t cache_vol = ocf_cache_get_volume(cache);
-	struct bd_object *bd_core_vol, *bd_cache_vol;
-	struct request_queue *core_q, *exp_q, *cache_q;
+	struct bd_object *bd_core_vol;
+	struct request_queue *core_q, *exp_q;
 	bool flush, fua;
-
-	BUG_ON(!cache_vol);
-
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	bd_core_vol = bd_object(core_vol);
-	bd_cache_vol = bd_object(cache_vol);
 
 	core_q = cas_disk_get_queue(bd_core_vol->dsk);
 	exp_q = cas_exp_obj_get_queue(bd_core_vol->dsk);
-	cache_q = cas_disk_get_queue(bd_cache_vol->dsk);
 
-	flush = (CAS_CHECK_QUEUE_FLUSH(core_q) || CAS_CHECK_QUEUE_FLUSH(cache_q));
-	fua = (CAS_CHECK_QUEUE_FUA(core_q) || CAS_CHECK_QUEUE_FUA(cache_q));
+	flush = (CAS_CHECK_QUEUE_FLUSH(core_q) ||
+			cache_priv->device_properties.flush);
+	fua = (CAS_CHECK_QUEUE_FUA(core_q) || cache_priv->device_properties.fua);
 
 	cas_set_queue_flush_fua(exp_q, flush, fua);
 }
 
 static void blkdev_set_discard_properties(ocf_cache_t cache,
-		struct request_queue *exp_q, struct block_device *cache_bd,
-		struct block_device *core_bd, sector_t core_sectors)
+		struct request_queue *exp_q, struct block_device *core_bd,
+		sector_t core_sectors)
 {
 	struct request_queue *core_q;
-	struct request_queue *cache_q;
 
 	core_q = bdev_get_queue(core_bd);
-	cache_q = bdev_get_queue(cache_bd);
 
 	cas_set_discard_flag(exp_q);
 
@@ -91,38 +85,32 @@ static int blkdev_core_set_geometry(struct cas_disk *dsk, void *private)
 	ocf_core_t core;
 	ocf_cache_t cache;
 	ocf_volume_t core_vol;
-	ocf_volume_t cache_vol;
-	struct bd_object *bd_cache_vol;
-	struct request_queue *core_q, *cache_q, *exp_q;
-	struct block_device *core_bd, *cache_bd;
+	struct request_queue *core_q, *exp_q;
+	struct block_device *core_bd;
 	sector_t sectors;
 	const char *path;
+	struct cache_priv *cache_priv;
 
 	BUG_ON(!private);
 	core = private;
 	cache = ocf_core_get_cache(core);
 	core_vol = ocf_core_get_volume(core);
-	cache_vol = ocf_cache_get_volume(cache);
-	BUG_ON(!cache_vol);
+	cache_priv = ocf_cache_get_priv(cache);
 
-	bd_cache_vol = bd_object(cache_vol);
 	path = ocf_volume_get_uuid(core_vol)->data;
 
 	core_bd = cas_disk_get_blkdev(dsk);
 	BUG_ON(!core_bd);
 
-	cache_bd = cas_disk_get_blkdev(bd_cache_vol->dsk);
-	BUG_ON(!cache_bd);
-
 	core_q = cas_bdev_whole(core_bd)->bd_disk->queue;
-	cache_q = cache_bd->bd_disk->queue;
 	exp_q = cas_exp_obj_get_queue(dsk);
 
 	sectors = ocf_volume_get_length(core_vol) >> SECTOR_SHIFT;
 
 	set_capacity(cas_exp_obj_get_gendisk(dsk), sectors);
 
-	cas_copy_queue_limits(exp_q, &cache_q->limits, core_q);
+	cas_copy_queue_limits(exp_q, &cache_priv->device_properties.queue_limits,
+			core_q);
 
 	if (exp_q->limits.logical_block_size >
 		core_q->limits.logical_block_size) {
@@ -139,8 +127,7 @@ static int blkdev_core_set_geometry(struct cas_disk *dsk, void *private)
 
 	blkdev_set_exported_object_flush_fua(core);
 
-	blkdev_set_discard_properties(cache, exp_q, cache_bd, core_bd,
-			sectors);
+	blkdev_set_discard_properties(cache, exp_q, core_bd, sectors);
 
 	exp_q->queue_flags |= (1 << QUEUE_FLAG_NONROT);
 
