@@ -2191,6 +2191,23 @@ static void volume_set_no_merges_flag_helper(ocf_cache_t cache) {
 	cas_cache_set_no_merges_flag(cache_q);
 }
 
+static void _cache_save_device_properties(ocf_cache_t cache)
+{
+	struct block_device *bd;
+	struct bd_object *bvol;
+	struct request_queue *cache_q;
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+
+	bvol = bd_object(ocf_cache_get_volume(cache));
+	bd = cas_disk_get_blkdev(bvol->dsk);
+	cache_q = bd->bd_disk->queue;
+
+	cache_priv->device_properties.queue_limits = cache_q->limits;
+	cache_priv->device_properties.flush =
+				CAS_CHECK_QUEUE_FLUSH(cache_q);
+	cache_priv->device_properties.fua =
+				CAS_CHECK_QUEUE_FUA(cache_q);
+}
 
 static int _cache_start_finalize(ocf_cache_t cache, int init_mode,
 		bool activate)
@@ -2211,6 +2228,8 @@ static int _cache_start_finalize(ocf_cache_t cache, int init_mode,
 		ctx->cls_inited = true;
 
 		volume_set_no_merges_flag_helper(cache);
+
+		_cache_save_device_properties(cache);
 	}
 
 	if (activate)
@@ -2250,14 +2269,21 @@ static int _cache_start_finalize(ocf_cache_t cache, int init_mode,
 }
 
 static int cache_mngt_check_bdev(struct ocf_mngt_cache_device_config *cfg,
-		bool force)
+		bool force, bool reattach, ocf_cache_t cache)
 {
 	char holder[] = "CAS START\n";
 	cas_bdev_handle_t bdev_handle;
 	struct block_device *bdev;
 	int part_count;
 	bool is_part;
+	bool reattach_properties_diff = false;
+	struct cache_priv *cache_priv;
 	const struct ocf_volume_uuid *uuid = ocf_volume_get_uuid(cfg->volume);
+	/* The only reason to use blk_stack_limits() is checking compatibility of
+	 * the new device with the original cache. But since the functions modifies
+	 * content of queue_limits, we use copy of the original struct.
+	 */
+	struct queue_limits tmp_limits;
 
 	bdev_handle = cas_bdev_open_by_path(uuid->data,
 			(CAS_BLK_MODE_EXCL | CAS_BLK_MODE_READ), holder);
@@ -2270,11 +2296,47 @@ static int cache_mngt_check_bdev(struct ocf_mngt_cache_device_config *cfg,
 
 	is_part = (cas_bdev_whole(bdev) != bdev);
 	part_count = cas_blk_get_part_count(bdev);
+
+	if (reattach) {
+		ENV_BUG_ON(!cache);
+
+		cache_priv = ocf_cache_get_priv(cache);
+		tmp_limits = cache_priv->device_properties.queue_limits;
+
+		if (blk_stack_limits(&tmp_limits, &bdev->bd_disk->queue->limits, 0)) {
+			reattach_properties_diff = true;
+			printk(KERN_WARNING "New cache device block properties "
+					"differ from the previous one.\n");
+		}
+		if (tmp_limits.misaligned) {
+			reattach_properties_diff = true;
+			printk(KERN_WARNING "New cache device block interval "
+					"doesn't line up with the previous one.\n");
+		}
+		if (CAS_CHECK_QUEUE_FLUSH(bdev->bd_disk->queue) !=
+				cache_priv->device_properties.flush) {
+			reattach_properties_diff = true;
+			printk(KERN_WARNING "New cache device %s support flush "
+					"in contrary to the previous cache device.\n",
+					cache_priv->device_properties.flush ? "doesn't" : "does");
+		}
+		if (CAS_CHECK_QUEUE_FUA(bdev->bd_disk->queue) !=
+				cache_priv->device_properties.fua) {
+			reattach_properties_diff = true;
+			printk(KERN_WARNING "New cache device %s support fua "
+					"in contrary to the previous cache device.\n",
+					cache_priv->device_properties.fua ? "doesn't" : "does");
+		}
+	}
+
 	cas_bdev_release(bdev_handle,
 			(CAS_BLK_MODE_EXCL | CAS_BLK_MODE_READ), holder);
 
 	if (!is_part && part_count > 1 && !force)
 		return -KCAS_ERR_CONTAINS_PART;
+
+	if (reattach_properties_diff)
+		return -KCAS_ERR_DEVICE_PROPERTIES_MISMATCH;
 
 	return 0;
 }
@@ -2388,7 +2450,7 @@ int cache_mngt_activate(struct ocf_mngt_cache_standby_activate_config *cfg,
 	 * to compare data on drive and in DRAM to provide more specific
 	 * error code.
 	 */
-	result = cache_mngt_check_bdev(&cfg->device, true);
+	result = cache_mngt_check_bdev(&cfg->device, true, false, NULL);
 	if (result)
 		goto out_cache_unlock;
 
@@ -2476,7 +2538,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	if (!try_module_get(THIS_MODULE))
 		return -KCAS_ERR_SYSTEM;
 
-	result = cache_mngt_check_bdev(&attach_cfg->device, attach_cfg->force);
+	result = cache_mngt_check_bdev(&attach_cfg->device, attach_cfg->force, false, NULL);
 	if (result) {
 		module_put(THIS_MODULE);
 		return result;
