@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -179,6 +180,10 @@ struct {
 		"Cache line size mismatch"
 	},
 	{
+		OCF_ERR_CACHE_DETACHED,
+		"The operation is not permited while the cache is detached"
+	},
+	{
 		OCF_ERR_CACHE_STANDBY,
 		"The operation is not permited while the cache is in the standby mode"
 	},
@@ -238,6 +243,11 @@ struct {
 		KCAS_ERR_CONTAINS_PART,
 		"Device contains partitions.\nIf you want to continue, "
 		"please use --force option.\nWarning: all data will be lost!"
+	},
+	{
+		KCAS_ERR_DEVICE_PROPERTIES_MISMATCH,
+		"The new device's properties doesn't match the original cache device's"
+		" properties"
 	},
 	{
 		KCAS_ERR_A_PART,

@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -544,6 +545,11 @@ enum kcas_error {
 
 	/** Device contains partitions */
 	KCAS_ERR_CONTAINS_PART,
+
+	/** The new device's properties doesn't match the original cache's
+	 *  properties
+	 */
+	KCAS_ERR_DEVICE_PROPERTIES_MISMATCH,
 
 	/** Given device is a partition */
 	KCAS_ERR_A_PART,
