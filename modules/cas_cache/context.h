@@ -38,7 +38,7 @@ struct blk_data {
 	/**
 	 * @brief CAS IO with which data is associated
 	 */
-	struct ocf_io *io;
+	ocf_io_t io;
 
 	/**
 	 * @brief Timestamp of start processing request

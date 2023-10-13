@@ -149,9 +149,9 @@ static void block_dev_forward_io(ocf_volume_t volume,
 		ocf_forward_token_t token, int dir, uint64_t addr,
 		uint64_t bytes, uint64_t offset)
 {
-	struct ocf_io *io = ocf_forward_get_io(token);
 	struct bd_object *bdobj = bd_object(volume);
-	struct blk_data *data = ocf_io_get_data(io);
+	struct blk_data *data = ocf_forward_get_data(token);
+	uint64_t flags = ocf_forward_get_flags(token);
 	int bio_dir = (dir == OCF_READ) ? READ : WRITE;
 	struct bio_vec_iter iter;
 	struct blk_plug plug;
@@ -182,7 +182,7 @@ static void block_dev_forward_io(ocf_volume_t volume,
 		CAS_BIO_BISECTOR(bio) = addr / SECTOR_SIZE;
 		bio->bi_next = NULL;
 		bio->bi_private = (void *)token;
-		CAS_BIO_OP_FLAGS(bio) |= filter_req_flags(bio_dir, io->flags);
+		CAS_BIO_OP_FLAGS(bio) |= filter_req_flags(bio_dir, flags);
 		bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_bd_forward_end);
 
 		/* Add pages */
@@ -248,10 +248,8 @@ static void block_dev_forward_io(ocf_volume_t volume,
 static void block_dev_forward_flush(ocf_volume_t volume,
 		ocf_forward_token_t token)
 {
-	struct ocf_io *io = ocf_forward_get_io(token);
 	struct bd_object *bdobj = bd_object(volume);
 	struct request_queue *q = bdev_get_queue(bdobj->btm_bd);
-	int bio_dir = (io->dir == OCF_READ) ? READ : WRITE;
 	struct bio *bio;
 
 	if (!q) {
@@ -277,7 +275,7 @@ static void block_dev_forward_flush(ocf_volume_t volume,
 	bio->bi_private = (void *)token;
 	bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_bd_forward_end);
 
-	cas_submit_bio(CAS_SET_FLUSH(bio_dir), bio);
+	cas_submit_bio(CAS_SET_FLUSH(0), bio);
 
 }
 

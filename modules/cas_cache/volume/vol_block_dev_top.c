@@ -189,10 +189,11 @@ static void blkdev_complete_data_master(struct blk_data *master, int error)
 	cas_free_blk_data(master);
 }
 
-static void blkdev_complete_data(struct ocf_io *io, int error)
+static void blkdev_complete_data(ocf_io_t io, void *priv1, void *priv2,
+		int error)
 {
-	struct bio *bio = io->priv1;
-	struct blk_data *master = io->priv2;
+	struct bio *bio = priv1;
+	struct blk_data *master = priv2;
 	struct blk_data *data = ocf_io_get_data(io);
 
 	ocf_io_put(io);
@@ -217,7 +218,7 @@ static int blkdev_handle_data_single(struct bd_object *bvol, struct bio *bio,
 	ocf_cache_t cache = ocf_volume_get_cache(bvol->front_volume);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	ocf_queue_t queue = cache_priv->io_queues[smp_processor_id()];
-	struct ocf_io *io;
+	ocf_io_t io;
 	struct blk_data *data;
 	uint64_t flags = CAS_BIO_OP_FLAGS(bio);
 	int ret;
@@ -317,9 +318,10 @@ err:
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(error));
 }
 
-static void blkdev_complete_discard(struct ocf_io *io, int error)
+static void blkdev_complete_discard(ocf_io_t io, void *priv1, void *priv2,
+		int error)
 {
-	struct bio *bio = io->priv1;
+	struct bio *bio = priv1;
 	int result = map_cas_err_to_generic(error);
 
 	CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(result));
@@ -331,7 +333,7 @@ static void blkdev_handle_discard(struct bd_object *bvol, struct bio *bio)
 	ocf_cache_t cache = ocf_volume_get_cache(bvol->front_volume);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	ocf_queue_t queue = cache_priv->io_queues[smp_processor_id()];
-	struct ocf_io *io;
+	ocf_io_t io;
 
 	io = ocf_volume_new_io(bvol->front_volume, queue,
 			CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
@@ -356,10 +358,11 @@ static void blkdev_handle_bio_noflush(struct bd_object *bvol, struct bio *bio)
 		blkdev_handle_data(bvol, bio);
 }
 
-static void blkdev_complete_flush(struct ocf_io *io, int error)
+static void blkdev_complete_flush(ocf_io_t io, void *priv1, void *priv2,
+		int error)
 {
-	struct bio *bio = io->priv1;
-	struct bd_object *bvol = io->priv2;
+	struct bio *bio = priv1;
+	struct bd_object *bvol = priv2;
 	int result = map_cas_err_to_generic(error);
 
 	ocf_io_put(io);
@@ -378,7 +381,7 @@ static void blkdev_handle_flush(struct bd_object *bvol, struct bio *bio)
 	ocf_cache_t cache = ocf_volume_get_cache(bvol->front_volume);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	ocf_queue_t queue = cache_priv->io_queues[smp_processor_id()];
-	struct ocf_io *io;
+	ocf_io_t io;
 
 	io = ocf_volume_new_io(bvol->front_volume, queue, 0, 0, OCF_WRITE, 0,
 			CAS_SET_FLUSH(0));
