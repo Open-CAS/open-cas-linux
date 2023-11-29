@@ -66,7 +66,37 @@ OBJS += safeclib/safe_str_constraint.o
 OBJS += safeclib/ignore_handler_s.o
 OBJS += safeclib/safe_mem_constraint.o
 OBJS += safeclib/mem_primitives_lib.o
+OBJS += safeclib/strcat_s.o
+OBJS += safeclib/strcmpfld_s.o
+OBJS += safeclib/strcpy_s.o
+OBJS += safeclib/strcpyfld_s.o
+OBJS += safeclib/strcpyfldin_s.o
+OBJS += safeclib/strcpyfldout_s.o
+OBJS += safeclib/strcspn_s.o
+OBJS += safeclib/strfirstchar_s.o
+OBJS += safeclib/strfirstdiff_s.o
+OBJS += safeclib/strfirstsame_s.o
+OBJS += safeclib/strisalphanumeric_s.o
+OBJS += safeclib/strisascii_s.o
+OBJS += safeclib/strisdigit_s.o
+OBJS += safeclib/strishex_s.o
+OBJS += safeclib/strislowercase_s.o
+OBJS += safeclib/strismixedcase_s.o
+OBJS += safeclib/strispassword_s.o
+OBJS += safeclib/strisuppercase_s.o
+OBJS += safeclib/strlastchar_s.o
+OBJS += safeclib/strlastdiff_s.o
+OBJS += safeclib/strlastsame_s.o
+OBJS += safeclib/strljustify_s.o
+OBJS += safeclib/strncat_s.o
 OBJS += safeclib/strnlen_s.o
+OBJS += safeclib/strnterminate_s.o
+OBJS += safeclib/strpbrk_s.o
+OBJS += safeclib/strprefix_s.o
+OBJS += safeclib/strremovews_s.o
+OBJS += safeclib/strspn_s.o
+OBJS += safeclib/strstr_s.o
+OBJS += safeclib/strzero_s.o
 
 #
 # Flags for C compilation
