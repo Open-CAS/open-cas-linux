@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -140,6 +141,8 @@ static int blkdev_core_set_geometry(struct cas_disk *dsk, void *private)
 
 	blkdev_set_discard_properties(cache, exp_q, cache_bd, core_bd,
 			sectors);
+
+	exp_q->queue_flags |= (1 << QUEUE_FLAG_NONROT);
 
 	return 0;
 }
