@@ -3504,22 +3504,6 @@ put:
 	return result;
 }
 
-static int cache_mngt_wait_for_rq_finish_visitor(ocf_core_t core, void *cntx)
-{
-	ocf_volume_t obj = ocf_core_get_volume(core);
-	struct bd_object *bdobj = bd_object(obj);
-
-	while (atomic64_read(&bdobj->pending_rqs))
-		io_schedule();
-
-	return 0;
-}
-
-void cache_mngt_wait_for_rq_finish(ocf_cache_t cache)
-{
-	ocf_core_visit(cache, cache_mngt_wait_for_rq_finish_visitor, NULL, true);
-}
-
 int cache_mngt_set_core_params(struct kcas_set_core_param *info)
 {
 	ocf_cache_t cache;
