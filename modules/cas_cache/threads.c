@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -175,10 +176,9 @@ static void _cas_stop_thread(struct cas_thread_info *info)
 	kfree(info);
 }
 
-int cas_create_queue_thread(ocf_queue_t q, int cpu)
+int cas_create_queue_thread(ocf_cache_t cache, ocf_queue_t q, int cpu)
 {
 	struct cas_thread_info *info;
-	ocf_cache_t cache = ocf_queue_get_cache(q);
 	const char *cache_num = ocf_cache_get_name(cache) + 5;
 	int result;
 

@@ -2000,7 +2000,8 @@ static int _cache_mngt_start_queues(ocf_cache_t cache)
 		if (result)
 			goto err;
 
-		result = cas_create_queue_thread(cache_priv->io_queues[i], i);
+		result = cas_create_queue_thread(cache,
+				cache_priv->io_queues[i], i);
 		if (result) {
 			ocf_queue_put(cache_priv->io_queues[i]);
 			goto err;
@@ -2012,7 +2013,8 @@ static int _cache_mngt_start_queues(ocf_cache_t cache)
 	if (result)
 		goto err;
 
-	result = cas_create_queue_thread(cache_priv->mngt_queue, CAS_CPUS_ALL);
+	result = cas_create_queue_thread(cache,
+			cache_priv->mngt_queue, CAS_CPUS_ALL);
 	if (result) {
 		ocf_queue_put(cache_priv->mngt_queue);
 		goto err;
