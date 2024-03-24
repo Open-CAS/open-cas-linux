@@ -292,7 +292,7 @@ class cas_config(object):
                 )
 
         def check_cache_mode_valid(self, cache_mode):
-            if cache_mode not in ['wt', 'pt', 'wa', 'wb', 'wo']:
+            if cache_mode not in ['wt', 'pt', 'wa', 'wb', 'wo', 'wi']:
                 raise ValueError(f'Invalid cache mode {cache_mode}')
 
         def check_cleaning_policy_valid(self, cleaning_policy):
