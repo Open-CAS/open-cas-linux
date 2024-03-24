@@ -3,30 +3,30 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-import random
 import datetime
 import itertools
+import random
 
 import pytest
 
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
 from core.test_run import TestRun
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
-from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.filesystem.file import File
 from test_utils.os_utils import sync
 from test_utils.size import Unit, Size
-
 
 start_size = Size(512, Unit.Byte).get_value()
 stop_size = Size(128, Unit.KibiByte).get_value()
 file_min_size = Size(4, Unit.KibiByte).get_value()
 file_max_size = Size(2, Unit.GibiByte).get_value()
-runtime = datetime.timedelta(days=5)
+runtime = datetime.timedelta(days=2)
+runtime_timeout = runtime + datetime.timedelta(hours=2)
 
 
 def shuffled_fs_list(n):
@@ -40,13 +40,13 @@ def shuffled_fs_list(n):
 @pytest.mark.require_disk("core3", DiskTypeLowerThan("cache"))
 @pytest.mark.require_disk("core4", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("filesystems", [shuffled_fs_list(4)])
-def test_data_integrity_5d_dss(filesystems):
+def test_data_integrity_long_with_io_classification(filesystems):
     """
         title: |
           Data integrity test on three cas instances with different
-          file systems with duration time equal to 5 days
+          file systems. Testing IO classification by file size.
         description: |
-          Create 3 cache instances on caches equal to 50GB and cores equal to 150GB
+          Create cache instances on caches equal to 50GB and cores equal to 150GB
           with different file systems, and run workload with data verification.
         pass_criteria:
             - System does not crash.
@@ -82,12 +82,12 @@ def test_data_integrity_5d_dss(filesystems):
             sync()
 
     with TestRun.step("Run test workloads on filesystems with verification"):
-        fio_run = Fio().create_command()
+        fio = Fio()
+        fio_run = fio.create_command()
+        fio.base_cmd_parameters.set_param('alloc-size', Unit.MebiByte.value)
         fio_run.io_engine(IoEngine.libaio)
         fio_run.direct()
         fio_run.time_based()
-        fio_run.nr_files(4096)
-        fio_run.file_size_range([(file_min_size, file_max_size)])
         fio_run.do_verify()
         fio_run.verify(VerifyMethod.md5)
         fio_run.verify_dump()
@@ -96,17 +96,30 @@ def test_data_integrity_5d_dss(filesystems):
         fio_run.io_depth(128)
         fio_run.blocksize_range([(start_size, stop_size)])
         for core in cores:
-            fio_job = fio_run.add_job()
-            fio_job.directory(core.mount_point)
-            fio_job.size(core.size)
-        fio_run.run()
+            start = 512
+            file_section_size = Size(14, Unit.GibiByte).value   # 14 GiB per IO class
+            while start < Size(2, Unit.GibiByte).value:
+                end = 4 * start
+                if end < Size(4, Unit.KibiByte).value:
+                    end = Size(4, Unit.KibiByte).value
+                elif end > Size(2, Unit.GibiByte).value:
+                    end = Size(2, Unit.GibiByte).value
+                # 10000 limit of files for reasonable time of preparation ~2hours
+                nr_files = min(10000, int(file_section_size * 0.9 / end))
+                fio_job = fio_run.add_job()
+                fio_job.directory(core.mount_point)
+                fio_job.nr_files(nr_files)
+                fio_job.file_size_range([(start, end)])
+                start = end
+
+        fio_run.run(fio_timeout=runtime_timeout)
 
     with TestRun.step("Unmount cores"):
         for core in cores:
             core.unmount()
 
     with TestRun.step("Calculate md5 for each core"):
-        core_md5s = [File(core.full_path).md5sum() for core in cores]
+        core_md5s = [File(core.path).md5sum() for core in cores]
 
     with TestRun.step("Stop caches"):
         for cache in caches:
@@ -128,13 +141,13 @@ def test_data_integrity_5d_dss(filesystems):
 @pytest.mark.require_disk("core2", DiskTypeLowerThan("cache"))
 @pytest.mark.require_disk("core3", DiskTypeLowerThan("cache"))
 @pytest.mark.require_disk("core4", DiskTypeLowerThan("cache"))
-def test_data_integrity_5d():
+def test_data_integrity_long():
     """
         title: |
-          Data integrity test on three cas instances with different
-          cache modes with duration time equal to 5 days
+          Data integrity test on three CAS instances with different
+          cache modes.
         description: |
-          Create 3 cache instances with different cache modes on caches equal to 50GB
+          Create cache instances with different cache modes on caches equal to 50GB
           and cores equal to 150GB, and run workload with data verification.
         pass_criteria:
             - System does not crash.
@@ -171,7 +184,7 @@ def test_data_integrity_5d():
         fio_run.run()
 
     with TestRun.step("Calculate md5 for each core"):
-        core_md5s = [File(core.full_path).md5sum() for core in cores]
+        core_md5s = [File(core.path).md5sum() for core in cores]
 
     with TestRun.step("Stop caches"):
         for cache in caches:
