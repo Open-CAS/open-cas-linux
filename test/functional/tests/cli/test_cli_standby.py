@@ -18,7 +18,7 @@ from test_utils.os_utils import sync
 from test_utils.output import CmdException
 from test_utils.size import Size, Unit
 from api.cas.cli_messages import (
-    check_stderr_msg,
+    check_string_msg_all,
     missing_param,
     disallowed_param,
     operation_forbiden_in_standby,
@@ -72,7 +72,7 @@ def test_standby_neg_cli_params():
                 TestRun.LOGGER.error(
                     f'"{tested_cmd}" command succeeded despite missing required "{name}" parameter!'
                 )
-            if not check_stderr_msg(output, missing_param) or name not in output.stderr:
+            if not check_string_msg_all(output.stderr, missing_param) or name not in output.stderr:
                 TestRun.LOGGER.error(
                     f'Expected error message in format "{missing_param[0]}" with "{name}" '
                     f'(the missing param). Got "{output.stderr}" instead.'
@@ -98,7 +98,7 @@ def test_standby_neg_cli_params():
                 TestRun.LOGGER.error(
                     f'"{tested_cmd}" command succeeded despite disallowed "{name}" parameter!'
                 )
-            if not check_stderr_msg(output, disallowed_param):
+            if not check_string_msg_all(output.stderr, disallowed_param):
                 TestRun.LOGGER.error(
                     f'Expected error message in format "{disallowed_param[0]}" '
                     f'Got "{output.stderr}" instead.'
@@ -153,7 +153,7 @@ def test_activate_neg_cli_params():
                         f'"{tested_cmd}" command succeeded despite missing obligatory'
                         f' "{name}" parameter!'
                     )
-                if not check_stderr_msg(output, missing_param) or name not in output.stderr:
+                if not check_string_msg_all(ououtput.stderrtput, missing_param) or name not in output.stderr:
                     TestRun.LOGGER.error(
                         f'Expected error message in format "{missing_param[0]}" with "{name}" '
                         f'(the missing param). Got "{output.stderr}" instead.'
@@ -178,7 +178,7 @@ def test_activate_neg_cli_params():
                 TestRun.LOGGER.error(
                     f'"{tested_cmd}" command succeeded despite disallowed "{name}" parameter!'
                 )
-            if not check_stderr_msg(output, expected_error_message):
+            if not check_string_msg_all(output.stderr, expected_error_message):
                 TestRun.LOGGER.error(
                     f'Expected error message in format "{expected_error_message[0]}" '
                     f'Got "{output.stderr}" instead.'
@@ -250,7 +250,7 @@ def test_standby_neg_cli_management():
 
             TestRun.LOGGER.info(f"Verify {cmd}")
             output = TestRun.executor.run_expect_fail(cmd)
-            if not check_stderr_msg(output, operation_forbiden_in_standby):
+            if not check_string_msg_all(output.stderr, operation_forbiden_in_standby):
                 TestRun.LOGGER.error(
                     f'Expected the following error message "{operation_forbiden_in_standby[0]}" '
                     f'Got "{output.stderr}" instead.'
@@ -289,7 +289,7 @@ def test_start_neg_cli_flags():
         mutually_exclusive_cmd_init = f"{casadm_bin} --standby --init --load" \
                                       f" {init_required_params}"
         output = TestRun.executor.run_expect_fail(mutually_exclusive_cmd_init)
-        if not check_stderr_msg(output, mutually_exclusive_params_init):
+        if not check_string_msg_all(output.stderr, mutually_exclusive_params_init):
             TestRun.LOGGER.error(
                 f'Expected error message in format '
                 f'"{mutually_exclusive_params_init[0]}"'
@@ -307,7 +307,7 @@ def test_start_neg_cli_flags():
 
         for cmd in mutually_exclusive_cmd_load:
             output = TestRun.executor.run_expect_fail(cmd)
-            if not check_stderr_msg(output, mutually_exclusive_params_load):
+            if not check_string_msg_all(output.stderr, mutually_exclusive_params_load):
                 TestRun.LOGGER.error(
                     f'Expected error message in format '
                     f'"{mutually_exclusive_params_load[0]}"'
@@ -353,7 +353,7 @@ def test_activate_without_detach():
         cmd = f"{casadm_bin} --standby --activate --cache-id {cache_id} --cache-device " \
               f"{cache_dev.path}"
         output = TestRun.executor.run(cmd)
-        if not check_stderr_msg(output, activate_without_detach):
+        if not check_string_msg_all(output.stderr, activate_without_detach):
             TestRun.LOGGER.error(
                 f'Expected error message in format '
                 f'"{activate_without_detach[0]}"'
@@ -452,7 +452,7 @@ def test_activate_neg_cache_line_size():
         with TestRun.step("Try to activate cache instance"):
             with pytest.raises(CmdException) as cmdExc:
                 output = standby_cache.standby_activate(standby_cache_dev)
-                if not check_stderr_msg(output, cache_line_size_mismatch):
+                if not check_string_msg_all(output.stderr, cache_line_size_mismatch):
                     TestRun.LOGGER.error(
                         f'Expected error message in format '
                         f'"{cache_line_size_mismatch[0]}"'
@@ -507,7 +507,7 @@ def test_standby_init_with_preexisting_metadata():
                 cache_line_size=str(int(cls.value.value / Unit.KibiByte.value)),
             )
         )
-        if not check_stderr_msg(output, start_cache_with_existing_metadata):
+        if not check_string_msg_all(output.stderr, start_cache_with_existing_metadata):
             TestRun.LOGGER.error(
                 f"Invalid error message. Expected {start_cache_with_existing_metadata}."
                 f"Got {output.stderr}"
@@ -558,7 +558,7 @@ def test_standby_init_with_preexisting_filesystem(filesystem):
                 cache_line_size=str(int(cls.value.value / Unit.KibiByte.value)),
             )
         )
-        if not check_stderr_msg(output, standby_init_with_existing_filesystem):
+        if not check_string_msg_all(output.stderr, standby_init_with_existing_filesystem):
             TestRun.LOGGER.error(
                 f"Invalid error message. Expected {standby_init_with_existing_filesystem}."
                 f"Got {output.stderr}"

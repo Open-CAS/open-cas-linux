@@ -69,7 +69,7 @@ def test_stop_no_flush_load_cache(cache_mode):
         output = TestRun.executor.run_expect_fail(cli.start_cmd(
             cache_dev=str(cache_part.path), cache_mode=str(cache_mode.name.lower()),
             force=False, load=False))
-        cli_messages.check_stderr_msg(output, cli_messages.start_cache_with_existing_metadata)
+        cli_messages.check_string_msg_all(output.stderr, cli_messages.start_cache_with_existing_metadata)
 
     with TestRun.step("Load cache."):
         cache = casadm.load_cache(cache.cache_device)
