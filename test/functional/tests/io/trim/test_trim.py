@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 import os
-import re
 import time
 
 import pytest
@@ -19,9 +18,11 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_utils import os_utils
 from test_utils.size import Size, Unit
+from api.cas.dmesg import get_metadata_size_on_device
 
 
-@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand]))
+@pytest.mark.os_dependent
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 def test_trim_start_discard():
     """
     title: Check discarding cache device at cache start
@@ -37,7 +38,7 @@ def test_trim_start_discard():
         TestRun.executor.run_expect_success("dmesg -C")
 
     with TestRun.step("Preparing cache device"):
-        dev = TestRun.disks['cache']
+        dev = TestRun.disks["cache"]
         dev.create_partitions([Size(500, Unit.MebiByte), Size(500, Unit.MebiByte)])
         cas_part = dev.partitions[0]
         non_cas_part = dev.partitions[1]
@@ -46,6 +47,7 @@ def test_trim_start_discard():
         cas_fio = write_pattern(cas_part.path)
         non_cas_fio = write_pattern(non_cas_part.path)
         non_cas_fio.verification_with_pattern("0xdeadbeef")
+        cas_fio.verification_with_pattern("0x00")
         cas_fio.run()
         non_cas_fio.run()
 
@@ -56,7 +58,9 @@ def test_trim_start_discard():
 
     with TestRun.step("Starting cache"):
         cache = casadm.start_cache(cas_part, force=True)
-        metadata_size = get_metadata_size_from_dmesg()
+        dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
+
+        metadata_size = get_metadata_size_on_device(dmesg_out)
 
     with TestRun.step("Stop blktrace and check if discard requests were issued"):
         cache_reqs = blktrace.stop_monitoring()
@@ -70,11 +74,15 @@ def test_trim_start_discard():
         non_meta_size = (cas_part.size - metadata_size).get_value(Unit.Byte)
         for req in cache_reqs:
             if req.sector_number != non_meta_sector:
-                TestRun.fail(f"Discard request issued to wrong sector: {req.sector_number}, "
-                             f"expected: {non_meta_sector}")
+                TestRun.fail(
+                    f"Discard request issued to wrong sector: {req.sector_number}, "
+                    f"expected: {non_meta_sector}"
+                )
             if req.byte_count != non_meta_size:
-                TestRun.fail(f"Discard request issued with wrong bytes count: {req.byte_count}, "
-                             f"expected: {non_meta_size} bytes")
+                TestRun.fail(
+                    f"Discard request issued with wrong bytes count: {req.byte_count}, "
+                    f"expected: {non_meta_size} bytes"
+                )
 
     with TestRun.step("Check if data on the second part hasn't changed"):
         non_cas_fio.read_write(ReadWrite.read)
@@ -179,18 +187,19 @@ def test_trim_propagation():
 @pytest.mark.require_disk("ssd1", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("ssd2", DiskTypeSet([DiskType.optane, DiskType.nand]))
 def test_trim_device_discard_support(
-        trim_support_cache_core, cache_mode, filesystem, cleaning_policy):
+    trim_support_cache_core, cache_mode, filesystem, cleaning_policy
+):
     """
-        title: Trim requests supported on various cache and core devices.
-        description: |
-          Handling trim requests support when various combination of SSD and HDD are used as
-          cache and core.
-        pass_criteria:
-          - No system crash.
-          - Discards detected on CAS.
-          - Discards detected on SSD device when it is used as core.
-          - Discards not detected on HDD device used as cache or core.
-          - Discards not detected on cache device.
+    title: Trim requests supported on various cache and core devices.
+    description: |
+      Handling trim requests support when various combination of SSD and HDD are used as
+      cache and core.
+    pass_criteria:
+      - No system crash.
+      - Discards detected on CAS.
+      - Discards detected on SSD device when it is used as core.
+      - Discards not detected on HDD device used as cache or core.
+      - Discards not detected on cache device.
     """
 
     mount_point = "/mnt"
@@ -225,8 +234,9 @@ def test_trim_device_discard_support(
         core.mount(mount_point, ["discard"])
 
     with TestRun.step("Create random file."):
-        test_file = fs_utils.create_random_test_file(os.path.join(mount_point, "test_file"),
-                                                     core_dev.size * 0.2)
+        test_file = fs_utils.create_random_test_file(
+            os.path.join(mount_point, "test_file"), core_dev.size * 0.2
+        )
         occupancy_before = core.get_occupancy()
         TestRun.LOGGER.info(str(core.get_statistics()))
 
@@ -239,11 +249,11 @@ def test_trim_device_discard_support(
         os_utils.drop_caches()
         time.sleep(5)
 
-    with TestRun.step(
-            "Ensure that discards were detected by blktrace on proper devices."):
+    with TestRun.step("Ensure that discards were detected by blktrace on proper devices."):
         discard_expected = {"core": trim_support_cache_core[1], "cache": False, "cas": True}
-        TestRun.LOGGER.info(f"Discards expected: core - {trim_support_cache_core[1]}, "
-                            f"cache - False, cas - True")
+        TestRun.LOGGER.info(
+            f"Discards expected: core - {trim_support_cache_core[1]}, " f"cache - False, cas - True"
+        )
         stop_monitoring_and_check_discards(blktraces, discard_expected)
 
     with TestRun.step("Ensure occupancy reduced."):
@@ -256,36 +266,50 @@ def test_trim_device_discard_support(
             TestRun.LOGGER.info("Occupancy on core after removing test file smaller than before.")
 
     with TestRun.step("Check CAS sysfs properties values."):
-        check_sysfs_properties(cache, cache_dev, core, core_dev.parent_device,
-                               core_supporting_discards=trim_support_cache_core[1])
+        check_sysfs_properties(
+            cache,
+            cache_dev,
+            core,
+            core_dev.parent_device,
+            core_supporting_discards=trim_support_cache_core[1],
+        )
 
 
 def check_sysfs_properties(cache, cache_dev, core, core_disk, core_supporting_discards):
-    expected_discard_max_bytes = int(core_disk.get_discard_max_bytes()) \
-        if core_supporting_discards else int(cache_dev.size.get_value())
+    expected_discard_max_bytes = (
+        int(core_disk.get_discard_max_bytes())
+        if core_supporting_discards
+        else int(cache_dev.size.get_value())
+    )
     cas_discard_max_bytes = int(core.get_discard_max_bytes())
     compare_properties(cas_discard_max_bytes, expected_discard_max_bytes, "discard_max_bytes")
 
-    expected_discard_granularity = int(core_disk.get_discard_granularity()) \
-        if core_supporting_discards else int(cache.get_cache_line_size())
+    expected_discard_granularity = (
+        int(core_disk.get_discard_granularity())
+        if core_supporting_discards
+        else int(cache.get_cache_line_size())
+    )
     cas_discard_granularity = int(core.get_discard_granularity())
-    compare_properties(
-        cas_discard_granularity, expected_discard_granularity, "discard_granularity")
+    compare_properties(cas_discard_granularity, expected_discard_granularity, "discard_granularity")
 
     cas_discard_zeroes_data = int(core.get_discard_zeroes_data())
     if cas_discard_zeroes_data == 0:
         TestRun.LOGGER.info("CAS discard_zeroes_data value equals 0 as expected.")
     else:
-        TestRun.LOGGER.error(f"CAS discard_zeroes_data value equals {cas_discard_zeroes_data}. "
-                             "Expected value for this property is 0.")
+        TestRun.LOGGER.error(
+            f"CAS discard_zeroes_data value equals {cas_discard_zeroes_data}. "
+            "Expected value for this property is 0."
+        )
 
 
 def compare_properties(value, expected_value, property_name):
     if expected_value == value:
         TestRun.LOGGER.info(f"CAS {property_name} value is correct.")
         return
-    TestRun.LOGGER.error(f"CAS property {property_name} value equals {value} and differs "
-                         f"from expected value: {expected_value}.")
+    TestRun.LOGGER.error(
+        f"CAS property {property_name} value equals {value} and differs "
+        f"from expected value: {expected_value}."
+    )
 
 
 def stop_monitoring_and_check_discards(blktraces, discard_support):
@@ -304,14 +328,12 @@ def stop_monitoring_and_check_discards(blktraces, discard_support):
 def check_discards(discards_count, device, discards_expected):
     if discards_expected:
         if discards_count > 0:
-            TestRun.LOGGER.info(
-                f"{discards_count} TRIM instructions generated for {device.path}")
+            TestRun.LOGGER.info(f"{discards_count} TRIM instructions generated for {device.path}")
         else:
             TestRun.LOGGER.error(f"No TRIM instructions found in requests to {device.path}")
     else:
         if discards_count > 0:
-            TestRun.LOGGER.error(
-                f"{discards_count} TRIM instructions generated for {device.path}")
+            TestRun.LOGGER.error(f"{discards_count} TRIM instructions generated for {device.path}")
         else:
             TestRun.LOGGER.info(f"No TRIM instructions found in requests to {device.path}")
 
@@ -329,24 +351,12 @@ def start_monitoring(core_dev, cache_dev, cas_dev):
 
 
 def write_pattern(device):
-    return (Fio().create_command()
-            .io_engine(IoEngine.libaio)
-            .read_write(ReadWrite.write)
-            .target(device)
-            .direct()
-            .verification_with_pattern()
-            )
-
-
-def get_metadata_size_from_dmesg():
-    dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
-    for s in dmesg_out.split("\n"):
-        if "Hash offset" in s:
-            offset = re.search("[0-9]* kiB", s).group()
-            offset = Size(int(re.search("[0-9]*", offset).group()), Unit.KibiByte)
-        if "Hash size" in s:
-            size = re.search("[0-9]* kiB", s).group()
-            size = Size(int(re.search("[0-9]*", size).group()), Unit.KibiByte)
-
-    # Metadata is 128KiB aligned
-    return (offset + size).align_up(128 * Unit.KibiByte.value)
+    return (
+        Fio()
+        .create_command()
+        .io_engine(IoEngine.libaio)
+        .read_write(ReadWrite.write)
+        .target(device)
+        .direct()
+        .verification_with_pattern()
+    )
