@@ -1,0 +1,8 @@
+{
+  "command": "opencas.cache.info.get",
+  "params": {
+    "cache id": 1
+  }
+}
+
+
