@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #include <linux/module.h>
@@ -11,18 +12,19 @@
 #include "exp_obj.h"
 #include "debug.h"
 
-#define CAS_DISK_OPEN_FMODE (FMODE_READ | FMODE_WRITE)
+#define CAS_DISK_OPEN_MODE (CAS_BLK_MODE_READ | CAS_BLK_MODE_WRITE)
 
 static inline struct block_device *open_bdev_exclusive(const char *path,
-						       fmode_t mode,
-						       void *holder)
+		CAS_BLK_MODE mode, void *holder)
 {
-	return blkdev_get_by_path(path, mode | FMODE_EXCL, holder);
+	return cas_blkdev_get_by_path(path, mode | CAS_BLK_MODE_EXCL,
+			 holder);
 }
 
-static inline void close_bdev_exclusive(struct block_device *bdev, fmode_t mode)
+static inline void close_bdev_exclusive(struct block_device *bdev,
+		CAS_BLK_MODE mode)
 {
-	blkdev_put(bdev, mode | FMODE_EXCL);
+	cas_blkdev_put(bdev, mode | CAS_BLK_MODE_EXCL, NULL);
 }
 
 int __init cas_init_disks(void)
@@ -67,7 +69,7 @@ struct cas_disk *cas_disk_open(const char *path)
 		goto error_kstrdup;
 	}
 
-	dsk->bd = open_bdev_exclusive(path, CAS_DISK_OPEN_FMODE, dsk);
+	dsk->bd = open_bdev_exclusive(path, CAS_DISK_OPEN_MODE, dsk);
 	if (IS_ERR(dsk->bd)) {
 		CAS_DEBUG_ERROR("Cannot open exclusive");
 		result = PTR_ERR(dsk->bd);
@@ -93,7 +95,7 @@ void cas_disk_close(struct cas_disk *dsk)
 
 	CAS_DEBUG_DISK(dsk, "Destroying (%p)", dsk);
 
-	close_bdev_exclusive(dsk->bd, CAS_DISK_OPEN_FMODE);
+	close_bdev_exclusive(dsk->bd, CAS_DISK_OPEN_MODE);
 
 	kfree(dsk->path);
 	kmem_cache_free(cas_module.disk_cache, dsk);

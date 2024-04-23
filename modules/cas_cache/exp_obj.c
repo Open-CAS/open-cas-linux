@@ -256,9 +256,9 @@ static void _cas_exp_obj_clear_dev_t(struct cas_disk *dsk)
 	}
 }
 
-static int _cas_exp_obj_open(struct block_device *bdev, fmode_t mode)
+CAS_BDEV_OPEN(_cas_exp_obj_open, struct gendisk *gd)
 {
-	struct cas_disk *dsk = bdev->bd_disk->private_data;
+	struct cas_disk *dsk = gd->private_data;
 	struct cas_exp_obj *exp_obj = dsk->exp_obj;
 	int result = -ENAVAIL;
 
@@ -277,7 +277,7 @@ static int _cas_exp_obj_open(struct block_device *bdev, fmode_t mode)
 	return result;
 }
 
-static void _cas_exp_obj_close(struct gendisk *gd, fmode_t mode)
+CAS_BDEV_CLOSE(_cas_exp_obj_close, struct gendisk *gd)
 {
 	struct cas_disk *dsk = gd->private_data;
 	struct cas_exp_obj *exp_obj = dsk->exp_obj;
@@ -292,8 +292,8 @@ static void _cas_exp_obj_close(struct gendisk *gd, fmode_t mode)
 
 static const struct block_device_operations _cas_exp_obj_ops = {
 	.owner = THIS_MODULE,
-	.open = _cas_exp_obj_open,
-	.release = _cas_exp_obj_close,
+	.open = CAS_REFER_BDEV_OPEN_CALLBACK(_cas_exp_obj_open),
+	.release = CAS_REFER_BDEV_CLOSE_CALLBACK(_cas_exp_obj_close),
 	CAS_SET_SUBMIT_BIO(_cas_exp_obj_submit_bio)
 };
 

@@ -1143,8 +1143,8 @@ int cache_mngt_cache_check_device(struct kcas_cache_check_device *cmd_info)
 	char holder[] = "CAS CHECK CACHE DEVICE\n";
 	int result;
 
-	bdev = blkdev_get_by_path(cmd_info->path_name, (FMODE_EXCL|FMODE_READ),
-			holder);
+	bdev = cas_blkdev_get_by_path(cmd_info->path_name,
+			(CAS_BLK_MODE_EXCL | CAS_BLK_MODE_READ), holder);
 	if (IS_ERR(bdev)) {
 		return (PTR_ERR(bdev) == -EBUSY) ?
 				-OCF_ERR_NOT_OPEN_EXC :
@@ -1165,7 +1165,7 @@ int cache_mngt_cache_check_device(struct kcas_cache_check_device *cmd_info)
 
 	cas_blk_close_volume(volume);
 out_bdev:
-	blkdev_put(bdev, (FMODE_EXCL|FMODE_READ));
+	cas_blkdev_put(bdev, (CAS_BLK_MODE_EXCL | CAS_BLK_MODE_READ), holder);
 	return result;
 }
 
@@ -2140,8 +2140,8 @@ static int _cache_mngt_probe_metadata(char *cache_path_name,
 	char holder[] = "CAS CHECK METADATA\n";
 	int result;
 
-	bdev = blkdev_get_by_path(cache_path_name, (FMODE_EXCL|FMODE_READ),
-			holder);
+	bdev = cas_blkdev_get_by_path(cache_path_name,
+			(CAS_BLK_MODE_EXCL | CAS_BLK_MODE_READ), holder);
 	if (IS_ERR(bdev)) {
 		return (PTR_ERR(bdev) == -EBUSY) ?
 			-OCF_ERR_NOT_OPEN_EXC :
@@ -2164,7 +2164,7 @@ static int _cache_mngt_probe_metadata(char *cache_path_name,
 
 	cas_blk_close_volume(volume);
 out_bdev:
-	blkdev_put(bdev, (FMODE_EXCL|FMODE_READ));
+	cas_blkdev_put(bdev, (CAS_BLK_MODE_EXCL | CAS_BLK_MODE_READ), holder);
 	return result;
 }
 
@@ -2230,10 +2230,10 @@ static int cache_mngt_check_bdev(struct ocf_mngt_cache_device_config *cfg,
 	struct block_device *bdev;
 	int part_count;
 	bool is_part;
-	const struct ocf_volume_uuid *uuid = ocf_volume_get_uuid(device_cfg->volume);
+	const struct ocf_volume_uuid *uuid = ocf_volume_get_uuid(cfg->volume);
 
-	bdev = blkdev_get_by_path(uuid->data,
-			(FMODE_EXCL|FMODE_READ), holder);
+	bdev = cas_blkdev_get_by_path(uuid->data,
+			(CAS_BLK_MODE_EXCL | CAS_BLK_MODE_READ), holder);
 	if (IS_ERR(bdev)) {
 		return (PTR_ERR(bdev) == -EBUSY) ?
 				-OCF_ERR_NOT_OPEN_EXC :
@@ -2242,7 +2242,7 @@ static int cache_mngt_check_bdev(struct ocf_mngt_cache_device_config *cfg,
 
 	is_part = (cas_bdev_whole(bdev) != bdev);
 	part_count = cas_blk_get_part_count(bdev);
-	blkdev_put(bdev, (FMODE_EXCL|FMODE_READ));
+	cas_blkdev_put(bdev, (CAS_BLK_MODE_EXCL | CAS_BLK_MODE_READ), holder);
 
 	if (!is_part && part_count > 1 && !force)
 		return -KCAS_ERR_CONTAINS_PART;
