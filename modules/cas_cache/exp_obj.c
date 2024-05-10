@@ -174,7 +174,7 @@ static int _cas_exp_obj_hide_parts(struct cas_disk *dsk)
 		/* It is partition, no more job required */
 		return 0;
 
-	if (GET_DISK_MAX_PARTS(dsk->bd->bd_disk) > 1) {
+	if (GET_DISK_MAX_PARTS(cas_disk_get_gendisk(dsk)) > 1) {
 		if (_cas_del_partitions(dsk)) {
 			printk(KERN_ERR "Error deleting a partition on thedevice %s\n",
 				gdsk->disk_name);
@@ -490,7 +490,7 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	if (cas_add_disk(gd))
 		goto error_add_disk;
 
-	result = bd_claim_by_disk(dsk->bd, dsk, gd);
+	result = bd_claim_by_disk(cas_disk_get_blkdev(dsk), dsk, gd);
 	if (result)
 		goto error_bd_claim;
 
@@ -531,7 +531,7 @@ int cas_exp_obj_destroy(struct cas_disk *dsk)
 
 	exp_obj = dsk->exp_obj;
 
-	bd_release_from_disk(dsk->bd, exp_obj->gd);
+	bd_release_from_disk(cas_disk_get_blkdev(dsk), exp_obj->gd);
 	_cas_exp_obj_clear_dev_t(dsk);
 	del_gendisk(exp_obj->gd);
 

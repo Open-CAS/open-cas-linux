@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #ifndef __CASDISK_DISK_H__
@@ -16,7 +17,7 @@ struct cas_exp_obj;
 struct cas_disk {
 	char *path;
 
-	struct block_device *bd;
+	cas_bdev_handle_t bdev_handle;
 
 	struct cas_exp_obj *exp_obj;
 };

@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # Copyright(c) 2012-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -18,6 +19,10 @@ add_define() {
 
 add_function() {
 	printf "%s\n" $1 >> $DEFINE_FILE
+}
+
+add_typedef() {
+	printf "typedef %s\n" $1 >> $DEFINE_FILE
 }
 
 __compile_module(){
