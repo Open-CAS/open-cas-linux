@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -455,17 +456,5 @@ int block_dev_init(void)
 	if (ret < 0)
 		return ret;
 
-	return 0;
-}
-
-int block_dev_try_get_io_class(struct bio *bio, int *io_class)
-{
-	struct ocf_io *io;
-
-	if (bio->bi_end_io != CAS_REFER_BLOCK_CALLBACK(cas_bd_io_end))
-		return -1;
-
-	io = bio->bi_private;
-	*io_class = io->io_class;
 	return 0;
 }
