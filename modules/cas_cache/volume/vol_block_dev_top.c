@@ -31,7 +31,7 @@ static void blkdev_set_bio_data(struct blk_data *data, struct bio *bio)
 #endif
 }
 
-void blkdev_set_exported_object_flush_fua(ocf_core_t core)
+static void blkdev_set_exported_object_flush_fua(ocf_core_t core)
 {
 	ocf_cache_t cache = ocf_core_get_cache(core);
 	ocf_volume_t core_vol = ocf_core_get_volume(core);

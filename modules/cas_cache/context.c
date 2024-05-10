@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -52,7 +53,7 @@ static void _cas_page_set_cpu(struct page *page, int cpu)
 	page->private = cpu;
 }
 
-void *_cas_alloc_page_rpool(void *allocator_ctx, int cpu)
+static void *_cas_alloc_page_rpool(void *allocator_ctx, int cpu)
 {
 	struct page *page;
 
@@ -81,7 +82,7 @@ static int _cas_page_get_cpu(struct page *page)
 /*
  *
  */
-ctx_data_t *__cas_ctx_data_alloc(uint32_t pages, bool zalloc)
+static ctx_data_t *__cas_ctx_data_alloc(uint32_t pages, bool zalloc)
 {
 	struct blk_data *data;
 	uint32_t i;

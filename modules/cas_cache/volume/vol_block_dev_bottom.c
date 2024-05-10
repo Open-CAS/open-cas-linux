@@ -24,7 +24,7 @@
 #define CAS_DEBUG_PARAM(format, ...)
 #endif
 
-int block_dev_open_object(ocf_volume_t vol, void *volume_params)
+static int block_dev_open_object(ocf_volume_t vol, void *volume_params)
 {
 	struct bd_object *bdobj = bd_object(vol);
 	const struct ocf_volume_uuid *uuid = ocf_volume_get_uuid(vol);
@@ -51,7 +51,7 @@ int block_dev_open_object(ocf_volume_t vol, void *volume_params)
 	return 0;
 }
 
-void block_dev_close_object(ocf_volume_t vol)
+static void block_dev_close_object(ocf_volume_t vol)
 {
 	struct bd_object *bdobj = bd_object(vol);
 
@@ -61,7 +61,7 @@ void block_dev_close_object(ocf_volume_t vol)
 	cas_disk_close(bdobj->dsk);
 }
 
-unsigned int block_dev_get_max_io_size(ocf_volume_t vol)
+static unsigned int block_dev_get_max_io_size(ocf_volume_t vol)
 {
 	struct bd_object *bdobj = bd_object(vol);
 	struct block_device *bd = bdobj->btm_bd;
@@ -69,7 +69,7 @@ unsigned int block_dev_get_max_io_size(ocf_volume_t vol)
 	return queue_max_sectors(bd->bd_disk->queue) << SECTOR_SHIFT;
 }
 
-uint64_t block_dev_get_byte_length(ocf_volume_t vol)
+static uint64_t block_dev_get_byte_length(ocf_volume_t vol)
 {
 	struct bd_object *bdobj = bd_object(vol);
 	struct block_device *bd = bdobj->btm_bd;
@@ -198,7 +198,7 @@ out:
 	cas_bd_io_end(io, blkio->error);
 }
 
-void block_dev_submit_discard(struct ocf_io *io)
+static void block_dev_submit_discard(struct ocf_io *io)
 {
 	struct blkio *blkio = cas_io_to_blkio(io);
 	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));

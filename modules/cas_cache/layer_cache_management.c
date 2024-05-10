@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -1051,7 +1052,7 @@ struct get_paths_ctx {
 	int position;
 };
 
-int _cache_mngt_core_pool_get_paths_visitor(ocf_uuid_t uuid, void *ctx)
+static int _cache_mngt_core_pool_get_paths_visitor(ocf_uuid_t uuid, void *ctx)
 {
 	struct get_paths_ctx *visitor_ctx = ctx;
 
@@ -2222,7 +2223,7 @@ static int _cache_start_finalize(ocf_cache_t cache, int init_mode,
 	return 0;
 }
 
-int cache_mngt_check_bdev(struct ocf_mngt_cache_device_config *device_cfg,
+static int cache_mngt_check_bdev(struct ocf_mngt_cache_device_config *cfg,
 		bool force)
 {
 	char holder[] = "CAS START\n";
@@ -2675,7 +2676,7 @@ out:
  * nonzero exit code means failure
  */
 
-int cache_mngt_set_seq_cutoff_promotion_count(ocf_cache_t cache,
+static int cache_mngt_set_seq_cutoff_promotion_count(ocf_cache_t cache,
 		ocf_core_t core, uint32_t count)
 {
 	int result;
@@ -2757,7 +2758,7 @@ int cache_mngt_get_seq_cutoff_policy(ocf_core_t core,
  * nonzero exit code means failure
  */
 
-int cache_mngt_get_seq_cutoff_promotion_count(ocf_core_t core,
+static int cache_mngt_get_seq_cutoff_promotion_count(ocf_core_t core,
 		uint32_t *count)
 {
 	ocf_cache_t cache = ocf_core_get_cache(core);
