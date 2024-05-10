@@ -2122,7 +2122,7 @@ static void cache_mngt_probe_metadata_end(void *priv, int error,
 		goto err;
 	}
 
-	strlcpy(context->cache_name_meta, status->cache_name,
+	strscpy(context->cache_name_meta, status->cache_name,
 			OCF_CACHE_NAME_SIZE);
 	*(context->cache_mode_meta) = status->cache_mode;
 	*(context->cache_line_size_meta) = status->cache_line_size;
@@ -2487,7 +2487,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 		}
 
 		result = 0;
-		strlcpy(cfg->name, cache_name_meta, OCF_CACHE_NAME_SIZE);
+		strscpy(cfg->name, cache_name_meta, OCF_CACHE_NAME_SIZE);
 		cfg->cache_mode = cache_mode_meta;
 		cfg->cache_line_size = cache_line_size_meta;
 	default:
@@ -3096,7 +3096,7 @@ int cache_mngt_get_info(struct kcas_cache_info *info)
 	if (info->info.attached && !info->info.standby_detached) {
 		uuid = ocf_cache_get_uuid(cache);
 		BUG_ON(!uuid);
-		strlcpy(info->cache_path_name, uuid->data,
+		strscpy(info->cache_path_name, uuid->data,
 				min(sizeof(info->cache_path_name), uuid->size));
 	} else {
 		memset(info->cache_path_name, 0, sizeof(info->cache_path_name));
@@ -3176,7 +3176,7 @@ int cache_mngt_get_core_info(struct kcas_core_info *info)
 	uuid = ocf_core_get_uuid(core);
 
 	if (uuid->data) {
-		strlcpy(info->core_path_name, uuid->data,
+		strscpy(info->core_path_name, uuid->data,
 				min(sizeof(info->core_path_name), uuid->size));
 	}
 

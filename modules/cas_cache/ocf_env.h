@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -597,7 +598,7 @@ static inline int env_bit_test(int nr, const void *addr)
 #define env_strncmp(s1, slen1, s2, slen2) strncmp(s1, s2, \
 					min_t(size_t, slen1, slen2))
 #define env_strncpy(dest, dmax, src, slen) ({ \
-		strlcpy(dest, src, min_t(int, dmax, slen)); \
+		strscpy(dest, src, min_t(int, dmax, slen)); \
 		0; \
 	})
 

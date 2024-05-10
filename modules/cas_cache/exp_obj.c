@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #include <linux/module.h>
@@ -476,7 +477,7 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 
 	gd->fops = &_cas_exp_obj_ops;
 	gd->private_data = dsk;
-	strlcpy(gd->disk_name, exp_obj->dev_name, sizeof(gd->disk_name));
+	strscpy(gd->disk_name, exp_obj->dev_name, sizeof(gd->disk_name));
 
 	cas_blk_queue_make_request(queue, _cas_exp_obj_make_rq_fn);
 
