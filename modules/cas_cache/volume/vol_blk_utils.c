@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -256,7 +257,7 @@ void cas_blk_close_volume(ocf_volume_t vol)
 	env_free(vol);
 }
 
-int _cas_blk_identify_type(const char *path, uint8_t *type)
+static int _cas_blk_identify_type(const char *path, uint8_t *type)
 {
 	struct file *file;
 	int result = 0;

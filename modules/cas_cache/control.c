@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #include <linux/cdev.h>
@@ -42,7 +43,7 @@ int __init cas_ctrl_device_init(void)
 		goto error_cdev_add;
 	}
 
-	ctrl->class = class_create(THIS_MODULE, "cas");
+	ctrl->class = cas_class_create(THIS_MODULE, "cas");
 	if (IS_ERR(ctrl->class)) {
 		printk(KERN_ERR "Cannot create control chrdev class.\n");
 		result = PTR_ERR(ctrl->class);

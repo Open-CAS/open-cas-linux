@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2019-2021 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -865,7 +866,7 @@ static void cas_set_classifier(ocf_cache_t cache,
 	cache_priv->classifier = cls;
 }
 
-void _cas_cls_rule_destroy(struct cas_classifier *cls,
+static void _cas_cls_rule_destroy(struct cas_classifier *cls,
 		struct cas_cls_rule *r)
 {
 	struct list_head *item, *n;

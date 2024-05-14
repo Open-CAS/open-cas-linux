@@ -1,11 +1,13 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
 #ifndef __VOL_BLOCK_DEV_TOP_H__
 #define __VOL_BLOCK_DEV_TOP_H__
 
+#include "../cas_cache.h"
 
 int kcas_core_create_exported_object(ocf_core_t core);
 int kcas_core_destroy_exported_object(ocf_core_t core);

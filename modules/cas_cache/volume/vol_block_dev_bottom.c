@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -23,7 +24,7 @@
 #define CAS_DEBUG_PARAM(format, ...)
 #endif
 
-int block_dev_open_object(ocf_volume_t vol, void *volume_params)
+static int block_dev_open_object(ocf_volume_t vol, void *volume_params)
 {
 	struct bd_object *bdobj = bd_object(vol);
 	const struct ocf_volume_uuid *uuid = ocf_volume_get_uuid(vol);
@@ -50,7 +51,7 @@ int block_dev_open_object(ocf_volume_t vol, void *volume_params)
 	return 0;
 }
 
-void block_dev_close_object(ocf_volume_t vol)
+static void block_dev_close_object(ocf_volume_t vol)
 {
 	struct bd_object *bdobj = bd_object(vol);
 
@@ -60,7 +61,7 @@ void block_dev_close_object(ocf_volume_t vol)
 	cas_disk_close(bdobj->dsk);
 }
 
-unsigned int block_dev_get_max_io_size(ocf_volume_t vol)
+static unsigned int block_dev_get_max_io_size(ocf_volume_t vol)
 {
 	struct bd_object *bdobj = bd_object(vol);
 	struct block_device *bd = bdobj->btm_bd;
@@ -68,7 +69,7 @@ unsigned int block_dev_get_max_io_size(ocf_volume_t vol)
 	return queue_max_sectors(bd->bd_disk->queue) << SECTOR_SHIFT;
 }
 
-uint64_t block_dev_get_byte_length(ocf_volume_t vol)
+static uint64_t block_dev_get_byte_length(ocf_volume_t vol)
 {
 	struct bd_object *bdobj = bd_object(vol);
 	struct block_device *bd = bdobj->btm_bd;
@@ -197,7 +198,7 @@ out:
 	cas_bd_io_end(io, blkio->error);
 }
 
-void block_dev_submit_discard(struct ocf_io *io)
+static void block_dev_submit_discard(struct ocf_io *io)
 {
 	struct blkio *blkio = cas_io_to_blkio(io);
 	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
@@ -455,17 +456,5 @@ int block_dev_init(void)
 	if (ret < 0)
 		return ret;
 
-	return 0;
-}
-
-int block_dev_try_get_io_class(struct bio *bio, int *io_class)
-{
-	struct ocf_io *io;
-
-	if (bio->bi_end_io != CAS_REFER_BLOCK_CALLBACK(cas_bd_io_end))
-		return -1;
-
-	io = bio->bi_private;
-	*io_class = io->io_class;
 	return 0;
 }

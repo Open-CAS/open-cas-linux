@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -62,7 +63,7 @@ struct _cas_rpool_pre_alloc_info {
 		(struct list_head *)((unsigned long)entry + rpool->entry_size \
 				- sizeof(struct list_head))
 
-void _cas_rpool_pre_alloc_do(struct work_struct *ws)
+static void _cas_rpool_pre_alloc_do(struct work_struct *ws)
 {
 	struct _cas_rpool_pre_alloc_info *info =
 			container_of(ws, struct _cas_rpool_pre_alloc_info, ws);

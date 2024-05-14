@@ -1,18 +1,11 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
 #ifndef __VOL_BLOCK_DEV_BOTTOM_H__
 #define __VOL_BLOCK_DEV_BOTTOM_H__
-
-#include "../cas_cache.h"
-
-int block_dev_open_object(ocf_volume_t vol, void *volume_params);
-
-void block_dev_close_object(ocf_volume_t vol);
-
-int block_dev_try_get_io_class(struct bio *bio, int *io_class);
 
 int block_dev_init(void);
 
