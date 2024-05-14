@@ -76,7 +76,7 @@ def timed_async_power_cycle():
         )
 
 
-@pytest.mark.os_dependent_standby_mode_specific
+@pytest.mark.os_dependent
 @pytest.mark.multidut(2)
 @pytest.mark.require_disk("cache_dev", DiskTypeSet([DiskType.optane]))
 @pytest.mark.require_disk("core_dev", DiskTypeSet([DiskType.nand]))
@@ -337,7 +337,7 @@ def test_failover_during_background_cleaning(cache_mode, cls, cleaning_policy, n
             TestRun.executor.wait_for_connection()
 
 
-@pytest.mark.os_dependent_standby_mode_specific
+@pytest.mark.os_dependent
 @pytest.mark.multidut(2)
 @pytest.mark.require_disk("cache_dev", DiskTypeSet([DiskType.optane]))
 @pytest.mark.require_disk("core_dev", DiskTypeSet([DiskType.nand]))
@@ -588,7 +588,7 @@ def test_failover_during_dirty_flush(cache_mode, cls, num_iterations):
             TestRun.executor.wait_for_connection()
 
 
-@pytest.mark.os_dependent_standby_mode_specific
+@pytest.mark.os_dependent
 @pytest.mark.multidut(2)
 @pytest.mark.require_disk("cache_dev", DiskTypeSet([DiskType.optane]))
 @pytest.mark.require_disk("core_dev", DiskTypeSet([DiskType.nand]))
@@ -875,7 +875,7 @@ def test_failover_during_io_with_eviction(cache_mode, cls, cleaning_policy, num_
             TestRun.executor.wait_for_connection()
 
 
-@pytest.mark.os_dependent_standby_mode_specific
+@pytest.mark.os_dependent
 @pytest.mark.multidut(2)
 @pytest.mark.require_disk("cache_dev", DiskTypeSet([DiskType.optane]))
 @pytest.mark.require_disk("core_dev", DiskTypeSet([DiskType.nand]))
