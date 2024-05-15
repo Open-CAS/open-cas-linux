@@ -370,10 +370,7 @@ static void blkdev_complete_flush(struct ocf_io *io, int error)
 		return;
 	}
 
-	if (in_interrupt())
-		blkdev_defer_bio(bvol, bio, blkdev_handle_bio_noflush);
-	else
-		blkdev_handle_bio_noflush(bvol, bio);
+	blkdev_defer_bio(bvol, bio, blkdev_handle_bio_noflush);
 }
 
 static void blkdev_handle_flush(struct bd_object *bvol, struct bio *bio)
