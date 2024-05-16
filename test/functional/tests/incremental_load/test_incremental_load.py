@@ -277,7 +277,7 @@ def test_load_cache_with_inactive_core():
 
     with TestRun.step("Load cache."):
         output = TestRun.executor.run(cli.load_cmd(cache_dev.path))
-        cli_messages.check_stderr_msg(output, cli_messages.load_inactive_core_missing)
+        cli_messages.check_string_msg_all(output.stderr, cli_messages.load_inactive_core_missing)
 
     with TestRun.step("Plug missing device and stop cache."):
         plug_device.plug()
@@ -656,8 +656,8 @@ def test_remove_inactive_devices():
                 except CmdException as e:
                     TestRun.LOGGER.info(f"Remove core operation is blocked for inactive CAS device "
                                         f"as expected. Force option set to: {force}")
-                    cli_messages.check_stderr_msg(
-                        e.output, cli_messages.remove_inactive_core_with_remove_command)
+                    cli_messages.check_string_msg_all(
+                        e.output.stderr, cli_messages.remove_inactive_core_with_remove_command)
 
                     output = casadm.list_caches(output_format=OutputFormat.csv).stdout
                     if core.core_device.path not in output:
@@ -681,7 +681,7 @@ def test_remove_inactive_devices():
             except CmdException as e:
                 TestRun.LOGGER.info("Remove-inactive operation without force option is blocked for "
                                     "dirty CAS device as expected.")
-                cli_messages.check_stderr_msg(e.output, cli_messages.remove_inactive_dirty_core)
+                cli_messages.check_string_msg_all(e.output.stderr, cli_messages.remove_inactive_dirty_core)
                 output = casadm.list_caches(output_format=OutputFormat.csv).stdout
                 if core.core_device.path not in output:
                     TestRun.fail(f"CAS device is not listed in casadm list output but it should be."
@@ -780,7 +780,7 @@ def try_stop_incomplete_cache(cache):
         cache.stop()
     except CmdException as e:
         TestRun.LOGGER.info("Stopping cache without 'no data flush' option is blocked as expected.")
-        cli_messages.check_stderr_msg(e.output, cli_messages.stop_cache_incomplete)
+        cli_messages.check_string_msg_all(e.output.stderr, cli_messages.stop_cache_incomplete)
 
 
 def check_inactive_usage_stats(stats_before, stats_after, stat_name, should_be_zero):

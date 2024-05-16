@@ -13,7 +13,7 @@ from api.cas.cli import casadm_bin
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.size import Size, Unit
-from api.cas.cli_messages import check_stderr_msg, missing_param, disallowed_param
+from api.cas.cli_messages import check_string_msg_all, missing_param, disallowed_param
 from api.cas.cache_config import CacheLineSize, CacheMode
 from api.cas.cli import standby_activate_cmd, standby_load_cmd
 from api.cas.dmesg import get_md_section_size

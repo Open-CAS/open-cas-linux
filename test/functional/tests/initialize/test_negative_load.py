@@ -101,13 +101,13 @@ def test_add_cached_core():
                 core_id=str(core.core_id),
             )
         )
-        cli_messages.check_stderr_msg(output, cli_messages.add_cached_core)
+        cli_messages.check_string_msg_all(output.stderr, cli_messages.add_cached_core)
 
     with TestRun.step("Try adding the same core device to the same cache for the second time."):
         output = TestRun.executor.run_expect_fail(
             cli.add_core_cmd(cache_id=str(cache1.cache_id), core_dev=str(core_part.path))
         )
-        cli_messages.check_stderr_msg(output, cli_messages.already_cached_core)
+        cli_messages.check_string_msg_all(output.stderr, cli_messages.already_cached_core)
 
     with TestRun.step("Stop caches."):
         casadm.stop_all_caches()

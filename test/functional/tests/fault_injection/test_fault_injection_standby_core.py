@@ -16,8 +16,7 @@ from api.cas.core import CoreStatus, Core
 from test_tools.dd import Dd
 from api.cas.cli import standby_activate_cmd
 from api.cas.cli_messages import (
-    check_stderr_msg,
-    check_stdout_msg,
+    check_string_msg_all,
     activate_with_different_cache_id,
     load_inactive_core_missing,
     cache_activated_successfully,
@@ -83,7 +82,7 @@ def test_activate_neg_cache_id():
         output = TestRun.executor.run_expect_fail(
             standby_activate_cmd(cache_dev=standby_dev.path, cache_id=str(standby_cache_id))
         )
-        if not check_stderr_msg(output, activate_with_different_cache_id):
+        if not check_string_msg_all(output.stderr, activate_with_different_cache_id):
             TestRun.LOGGER.error(
                 f"Invalid error message. Expected {activate_with_different_cache_id}."
                 f"Got {output.stderr}"
@@ -147,8 +146,8 @@ def test_activate_incomplete_cache():
 
     with TestRun.step("Activate standby cache and check if a proper incompleteness info appeared"):
         output = cache.standby_activate(device=cache_dev)
-        check_stderr_msg(output, load_inactive_core_missing)
-        check_stdout_msg(output, cache_activated_successfully)
+        check_string_msg_all(output.stderr, load_inactive_core_missing)
+        check_string_msg_all(output.stdout, cache_activated_successfully)
 
     with TestRun.step("Verify that the cache is in Incomplete state"):
         status = cache.get_status()
@@ -263,8 +262,8 @@ def test_activate_neg_core_size():
         activate_cmd = standby_activate_cmd(cache_dev=cache_dev.path, cache_id="1")
         for i in range(10):
             output = TestRun.executor.run_expect_fail(activate_cmd)
-            check_stderr_msg(output, error_activating_cache)
-            check_stderr_msg(output, invalid_core_volume_size)
+            check_string_msg_all(output.stderr, error_activating_cache)
+            check_string_msg_all(output.stderr, invalid_core_volume_size)
 
     with TestRun.step("Verify that the cache is in Standby detached state"):
         status = cache.get_status()
@@ -281,7 +280,7 @@ def test_activate_neg_core_size():
 
     with TestRun.step("Activate standby cache"):
         output = cache.standby_activate(device=cache_dev)
-        check_stdout_msg(output, cache_activated_successfully)
+        check_string_msg_all(output.stdout, cache_activated_successfully)
 
     with TestRun.step("Verify that the cache is in Running state"):
         status = cache.get_status()

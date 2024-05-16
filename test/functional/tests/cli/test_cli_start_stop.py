@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -54,7 +54,7 @@ def test_cli_start_stop_default_id(shortcut):
             TestRun.fail(f"There is a wrong number of caches found in the OS: {len(caches)}."
                          f"\nNo cache should be present after stopping the cache.")
         output = casadm.list_caches(shortcut=shortcut)
-        cli_messages.check_stdout_msg(output, cli_messages.no_caches_running)
+        cli_messages.check_string_msg_all(output.stdout, cli_messages.no_caches_running)
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
@@ -97,7 +97,7 @@ def test_cli_start_stop_custom_id(shortcut):
             TestRun.fail(f"There is a wrong number of caches found in the OS: {len(caches)}."
                          f"\nNo cache should be present after stopping the cache.")
         output = casadm.list_caches(shortcut=shortcut)
-        cli_messages.check_stdout_msg(output, cli_messages.no_caches_running)
+        cli_messages.check_string_msg_all(output.stdout, cli_messages.no_caches_running)
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
@@ -148,7 +148,7 @@ def test_cli_add_remove_default_id(shortcut):
         if len(caches) != 0:
             TestRun.fail("No cache should be present after stopping the cache.")
         output = casadm.list_caches(shortcut=shortcut)
-        cli_messages.check_stdout_msg(output, cli_messages.no_caches_running)
+        cli_messages.check_string_msg_all(output.stdout, cli_messages.no_caches_running)
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
@@ -201,7 +201,7 @@ def test_cli_add_remove_custom_id(shortcut):
         if len(caches) != 0:
             TestRun.fail("No cache should be present after stopping the cache.")
         output = casadm.list_caches(shortcut=shortcut)
-        cli_messages.check_stdout_msg(output, cli_messages.no_caches_running)
+        cli_messages.check_string_msg_all(output.stdout, cli_messages.no_caches_running)
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -231,4 +231,4 @@ def test_cli_load_and_force(shortcut):
         )
         if output.exit_code == 0:
             TestRun.fail("Loading cache with 'force' option should fail.")
-        cli_messages.check_stderr_msg(output, cli_messages.load_and_force)
+        cli_messages.check_string_msg_all(output.stderr, cli_messages.load_and_force)
