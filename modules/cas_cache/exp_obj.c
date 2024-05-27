@@ -31,7 +31,7 @@ static inline void bd_release_from_disk(struct block_device *bdev,
 	return bd_unlink_disk_holder(bdev, disk);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0) || RHEL_MAJOR >= 9
 	#define KRETURN(x) 	return
 	#define MAKE_RQ_RET_TYPE void
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
