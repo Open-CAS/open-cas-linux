@@ -31,25 +31,26 @@ static inline void bd_release_from_disk(struct block_device *bdev,
 	return bd_unlink_disk_holder(bdev, disk);
 }
 
-#ifdef RHEL_MAJOR
-       #if RHEL_MAJOR >= 9
-               #define KRETURN(x)      return
-               #define MAKE_RQ_RET_TYPE void
-       #endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
+       #define KRETURN(x)      return
+       #define MAKE_RQ_RET_TYPE void
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
+       #define KRETURN(x)      ({ return (x); })
+       #define MAKE_RQ_RET_TYPE blk_qc_t
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0)
+       #define KRETURN(x)      return
+       #define MAKE_RQ_RET_TYPE void
 #else
-       #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
-               #define KRETURN(x)      return
-               #define MAKE_RQ_RET_TYPE void
-       #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
-               #define KRETURN(x)      ({ return (x); })
-               #define MAKE_RQ_RET_TYPE blk_qc_t
-       #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0)
-               #define KRETURN(x)      return
-               #define MAKE_RQ_RET_TYPE void
-       #else
-               #define KRETURN(x)      ({ return (x); })
-               #define MAKE_RQ_RET_TYPE int
-       #endif
+       #define KRETURN(x)      ({ return (x); })
+       #define MAKE_RQ_RET_TYPE int
+#endif
+
+/* For RHEL 9.x we assume backport from kernel 5.18+ */
+#ifdef RHEL_MAJOR
+	#if RHEL_MAJOR >= 9
+		#define KRETURN(x)      return
+		#define MAKE_RQ_RET_TYPE void
+	#endif
 #endif
 
 int __init cas_init_exp_objs(void)
