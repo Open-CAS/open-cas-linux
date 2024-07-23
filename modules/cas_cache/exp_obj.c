@@ -48,6 +48,8 @@ static inline void bd_release_from_disk(struct block_device *bdev,
 /* For RHEL 9.x we assume backport from kernel 5.18+ */
 #ifdef RHEL_MAJOR
 	#if RHEL_MAJOR >= 9
+		#undef KRETURN
+		#undef MAKE_RQ_RET_TYPE
 		#define KRETURN(x)      return
 		#define MAKE_RQ_RET_TYPE void
 	#endif
