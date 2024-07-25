@@ -1,3 +1,6 @@
 [submodule "ocf"]
 	path = ocf
 	url = https://github.com/Open-CAS/ocf.git
+[submodule "test-framework"]
+	path = test-framework
+	url = https://github.com/Open-CAS/test-framework.git
