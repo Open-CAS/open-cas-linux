@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -9,8 +10,7 @@ import re
 
 from core.test_run import TestRun
 from test_tools.fs_utils import check_if_directory_exists, find_all_files
-from test_tools.packaging import DebSet, RpmSet
-from test_utils.output import CmdException
+from test_tools.linux_packaging import DebSet, RpmSet
 
 
 class Packages:

@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -12,7 +13,7 @@ from test_utils.os_utils import (allocate_memory,
                                  defaultize_memory_affecting_functions,
                                  disable_memory_affecting_functions,
                                  drop_caches,
-                                 get_free_memory,
+                                 get_mem_free,
                                  is_kernel_module_loaded,
                                  load_kernel_module,
                                  unload_kernel_module,
@@ -35,8 +36,7 @@ def test_insufficient_memory_for_cas_module():
     with TestRun.step("Measure memory usage without OpenCAS module."):
         if is_kernel_module_loaded(CasModule.cache.value):
             unload_kernel_module(CasModule.cache.value)
-            unload_kernel_module(CasModule.disk.value)
-        available_mem_before_cas = get_free_memory()
+        available_mem_before_cas = get_mem_free()
 
     with TestRun.step("Load OpenCAS module"):
         output = load_kernel_module(CasModule.cache.value)
@@ -44,7 +44,7 @@ def test_insufficient_memory_for_cas_module():
             TestRun.fail("Cannot load OpenCAS module!")
 
     with TestRun.step("Measure memory usage with OpenCAS module."):
-        available_mem_with_cas = get_free_memory()
+        available_mem_with_cas = get_mem_free()
         memory_used_by_cas = available_mem_before_cas - available_mem_with_cas
         TestRun.LOGGER.info(
             f"OpenCAS module uses {memory_used_by_cas.get_value(Unit.MiB):.2f} MiB of DRAM."
@@ -52,12 +52,11 @@ def test_insufficient_memory_for_cas_module():
 
     with TestRun.step("Unload OpenCAS module."):
         unload_kernel_module(CasModule.cache.value)
-        unload_kernel_module(CasModule.disk.value)
 
     with TestRun.step("Allocate memory leaving not enough memory for OpenCAS module."):
         memory_to_leave = memory_used_by_cas * (3 / 4)
         try:
-            allocate_memory(get_free_memory() - memory_to_leave)
+            allocate_memory(get_mem_free() - memory_to_leave)
         except Exception as ex:
             TestRun.LOGGER.error(f"{ex}")
 
@@ -66,7 +65,7 @@ def test_insufficient_memory_for_cas_module():
     ):
         output = load_kernel_module(CasModule.cache.value)
         if output.stderr and output.exit_code != 0:
-            memory_left = get_free_memory()
+            memory_left = get_mem_free()
             TestRun.LOGGER.info(
                 f"Memory left for OpenCAS module: {memory_left.get_value(Unit.MiB):0.2f} MiB."
             )
