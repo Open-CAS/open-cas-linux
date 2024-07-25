@@ -601,7 +601,7 @@ static int exit_instance_finish(void *data)
 	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
 		kfree(ctx);
 
-	module_put_and_exit(0);
+	CAS_MODULE_PUT_AND_EXIT(0);
 }
 
 struct _cache_mngt_attach_context {
@@ -649,7 +649,7 @@ static int cache_start_rollback(void *data)
 	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
 		kfree(ctx);
 
-	module_put_and_exit(0);
+	CAS_MODULE_PUT_AND_EXIT(0);
 
 	return 0;
 }
