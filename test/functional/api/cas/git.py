@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -62,25 +63,21 @@ def get_current_commit_hash(from_dut: bool = False):
     executor = TestRun.executor if from_dut else LocalExecutor()
     repo_path = TestRun.usr.working_dir if from_dut else TestRun.usr.repo_dir
 
-    return executor.run(
-        f"cd {repo_path} &&"
-        f'git show HEAD -s --pretty=format:"%H"').stdout
+    return executor.run(f"cd {repo_path} &&" f'git show HEAD -s --pretty=format:"%H"').stdout
 
 
 def get_current_commit_message():
     local_executor = LocalExecutor()
     return local_executor.run(
-        f"cd {TestRun.usr.repo_dir} &&"
-        f'git show HEAD -s --pretty=format:"%B"').stdout
+        f"cd {TestRun.usr.repo_dir} &&" f'git show HEAD -s --pretty=format:"%B"'
+    ).stdout
 
 
 def get_commit_hash(cas_version, from_dut: bool = False):
     executor = TestRun.executor if from_dut else LocalExecutor()
     repo_path = TestRun.usr.working_dir if from_dut else TestRun.usr.repo_dir
 
-    output = executor.run(
-        f"cd {repo_path} && "
-        f"git rev-parse {cas_version}")
+    output = executor.run(f"cd {repo_path} && " f"git rev-parse {cas_version}")
     if output.exit_code != 0:
         raise CmdException(f"Failed to resolve '{cas_version}' to commit hash", output)
 
@@ -104,13 +101,13 @@ def checkout_cas_version(cas_version):
     TestRun.LOGGER.info(f"Checkout CAS to {commit_hash}")
 
     output = TestRun.executor.run(
-        f"cd {TestRun.usr.working_dir} && "
-        f"git checkout --force {commit_hash}")
+        f"cd {TestRun.usr.working_dir} && " f"git checkout --force {commit_hash}"
+    )
     if output.exit_code != 0:
         raise CmdException(f"Failed to checkout to {commit_hash}", output)
 
     output = TestRun.executor.run(
-        f"cd {TestRun.usr.working_dir} && "
-        f"git submodule update --force")
+        f"cd {TestRun.usr.working_dir} && " f"git submodule update --force"
+    )
     if output.exit_code != 0:
         raise CmdException(f"Failed to update submodules", output)

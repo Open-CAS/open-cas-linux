@@ -1,9 +1,10 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-from aenum import Enum, IntFlag
+from enum import Enum, IntFlag
 
 from test_utils.os_utils import get_kernel_module_parameter
 from test_utils.size import Size, Unit
@@ -56,21 +57,15 @@ class CacheMode(Enum):
 
     @staticmethod
     def with_traits(flags: CacheModeTrait):
-        return [
-            m for m in CacheMode if all(map(lambda t: t in CacheMode.get_traits(m), flags))
-        ]
+        return [m for m in CacheMode if all(map(lambda t: t in CacheMode.get_traits(m), flags))]
 
     @staticmethod
     def without_traits(flags: CacheModeTrait):
-        return [
-            m for m in CacheMode if not any(map(lambda t: t in CacheMode.get_traits(m), flags))
-        ]
+        return [m for m in CacheMode if not any(map(lambda t: t in CacheMode.get_traits(m), flags))]
 
     @staticmethod
     def with_any_trait(flags: CacheModeTrait):
-        return [
-            m for m in CacheMode if any(map(lambda t: t in CacheMode.get_traits(m), flags))
-        ]
+        return [m for m in CacheMode if any(map(lambda t: t in CacheMode.get_traits(m), flags))]
 
 
 class SeqCutOffPolicy(Enum):
@@ -90,7 +85,6 @@ class SeqCutOffPolicy(Enum):
 
 class MetadataMode(Enum):
     normal = "normal"
-    atomic = "atomic"
     DEFAULT = normal
 
     def __str__(self):
@@ -152,18 +146,16 @@ class FlushParametersAlru:
         )
 
     def __str__(self):
-        ret = ["activity threshold: "
-               + (f"{self.activity_threshold}" if self.activity_threshold is not None
-                  else "default"),
-               "flush max buffers: "
-               + (f"{self.flush_max_buffers}" if self.flush_max_buffers is not None
-                  else "default"),
-               "staleness time: "
-               + (f"{self.staleness_time}" if self.staleness_time is not None
-                  else "default"),
-               "wake up time: "
-               + (f"{self.wake_up_time}" if self.wake_up_time is not None
-                  else "default")]
+        ret = [
+            "activity threshold: "
+            + (f"{self.activity_threshold}" if self.activity_threshold is not None else "default"),
+            "flush max buffers: "
+            + (f"{self.flush_max_buffers}" if self.flush_max_buffers is not None else "default"),
+            "staleness time: "
+            + (f"{self.staleness_time}" if self.staleness_time is not None else "default"),
+            "wake up time: "
+            + (f"{self.wake_up_time}" if self.wake_up_time is not None else "default"),
+        ]
         return " | ".join(ret)
 
     @staticmethod
@@ -197,12 +189,12 @@ class FlushParametersAcp:
         )
 
     def __str__(self):
-        ret = ["flush max buffers: "
-               + (f"{self.flush_max_buffers}" if self.flush_max_buffers is not None
-                  else "default"),
-               "wake up time: "
-               + (f"{self.wake_up_time}" if self.wake_up_time is not None
-                  else "default")]
+        ret = [
+            "flush max buffers: "
+            + (f"{self.flush_max_buffers}" if self.flush_max_buffers is not None else "default"),
+            "wake up time: "
+            + (f"{self.wake_up_time}" if self.wake_up_time is not None else "default"),
+        ]
         return " | ".join(ret)
 
     @staticmethod
@@ -238,7 +230,7 @@ class SeqCutOffParameters:
         return SeqCutOffParameters(
             threshold=Size(1024, Unit.KibiByte),
             policy=SeqCutOffPolicy.full,
-            promotion_count=8
+            promotion_count=8,
         )
 
 
@@ -248,10 +240,7 @@ class PromotionParametersNhit:
         self.trigger = trigger
 
     def __eq__(self, other):
-        return (
-            self.threshold == other.threshold
-            and self.trigger == other.trigger
-        )
+        return self.threshold == other.threshold and self.trigger == other.trigger
 
     @staticmethod
     def nhit_params_range():
@@ -270,8 +259,8 @@ class PromotionParametersNhit:
 
 # Specify how IO requests unaligned to 4KiB should be handled
 class UnalignedIo(Enum):
-    PT = 0      # use PT mode
-    cache = 1   # use current cache mode
+    PT = 0  # use PT mode
+    cache = 1  # use current cache mode
     DEFAULT = cache
 
 
@@ -288,12 +277,12 @@ class KernelParameters:
     writeback_queue_unblock_size_DEFAULT = 60000
 
     def __init__(
-            self,
-            unaligned_io: UnalignedIo = None,
-            use_io_scheduler: UseIoScheduler = None,
-            seq_cut_off_mb: int = None,
-            max_writeback_queue_size: int = None,
-            writeback_queue_unblock_size: int = None
+        self,
+        unaligned_io: UnalignedIo = None,
+        use_io_scheduler: UseIoScheduler = None,
+        seq_cut_off_mb: int = None,
+        max_writeback_queue_size: int = None,
+        writeback_queue_unblock_size: int = None,
     ):
         self.unaligned_io = unaligned_io
         self.use_io_scheduler = use_io_scheduler
@@ -312,16 +301,17 @@ class KernelParameters:
                 self.use_io_scheduler, other.use_io_scheduler, UseIoScheduler.DEFAULT
             )
             and equal_or_default(
-                self.seq_cut_off_mb, other.seq_cut_off_mb,
-                self.seq_cut_off_mb_DEFAULT
+                self.seq_cut_off_mb, other.seq_cut_off_mb, self.seq_cut_off_mb_DEFAULT
             )
             and equal_or_default(
-                self.max_writeback_queue_size, other.max_writeback_queue_size,
-                self.max_writeback_queue_size_DEFAULT
+                self.max_writeback_queue_size,
+                other.max_writeback_queue_size,
+                self.max_writeback_queue_size_DEFAULT,
             )
             and equal_or_default(
-                self.writeback_queue_unblock_size, other.writeback_queue_unblock_size,
-                self.writeback_queue_unblock_size_DEFAULT
+                self.writeback_queue_unblock_size,
+                other.writeback_queue_unblock_size,
+                self.writeback_queue_unblock_size_DEFAULT,
             )
         )
 
@@ -332,7 +322,7 @@ class KernelParameters:
             UseIoScheduler.DEFAULT,
             cls.seq_cut_off_mb_DEFAULT,
             cls.max_writeback_queue_size_DEFAULT,
-            cls.writeback_queue_unblock_size_DEFAULT
+            cls.writeback_queue_unblock_size_DEFAULT,
         )
 
     @staticmethod
@@ -343,7 +333,7 @@ class KernelParameters:
             UseIoScheduler(int(get_kernel_module_parameter(module, "use_io_scheduler"))),
             int(get_kernel_module_parameter(module, "seq_cut_off_mb")),
             int(get_kernel_module_parameter(module, "max_writeback_queue_size")),
-            int(get_kernel_module_parameter(module, "writeback_queue_unblock_size"))
+            int(get_kernel_module_parameter(module, "writeback_queue_unblock_size")),
         )
 
     def get_parameter_dictionary(self):
@@ -354,10 +344,15 @@ class KernelParameters:
             params["use_io_scheduler"] = str(self.use_io_scheduler.value)
         if self.seq_cut_off_mb not in [None, self.seq_cut_off_mb_DEFAULT]:
             params["seq_cut_off_mb"] = str(self.seq_cut_off_mb)
-        if self.max_writeback_queue_size not in [None, self.max_writeback_queue_size_DEFAULT]:
+        if self.max_writeback_queue_size not in [
+            None,
+            self.max_writeback_queue_size_DEFAULT,
+        ]:
             params["max_writeback_queue_size"] = str(self.max_writeback_queue_size)
-        if (self.writeback_queue_unblock_size not in
-                [None, self.writeback_queue_unblock_size_DEFAULT]):
+        if self.writeback_queue_unblock_size not in [
+            None,
+            self.writeback_queue_unblock_size_DEFAULT,
+        ]:
             params["writeback_queue_unblock_size"] = str(self.writeback_queue_unblock_size)
         return params
 
@@ -370,7 +365,7 @@ class CacheConfig:
         cache_line_size=CacheLineSize.DEFAULT,
         cache_mode=CacheMode.DEFAULT,
         cleaning_policy=CleaningPolicy.DEFAULT,
-        kernel_parameters=None
+        kernel_parameters=None,
     ):
         self.cache_line_size = cache_line_size
         self.cache_mode = cache_mode
@@ -383,7 +378,9 @@ class CacheConfig:
             and self.cache_mode == other.cache_mode
             and self.cleaning_policy == other.cleaning_policy
             and equal_or_default(
-                self.kernel_parameters, other.kernel_parameters, KernelParameters.DEFAULT
+                self.kernel_parameters,
+                other.kernel_parameters,
+                KernelParameters.DEFAULT,
             )
         )
 

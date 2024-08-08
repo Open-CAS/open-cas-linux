@@ -1,256 +1,218 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-# Order in arrays is important!
-config_stats_cache = [
-    "cache id", "cache size", "cache device", "exported object", "core devices",
-    "inactive core devices", "write policy", "cleaning policy", "promotion policy",
-    "cache line size", "metadata memory footprint", "dirty for", "status"
-]
-config_stats_core = [
-    "core id", "core device", "exported object", "core size", "dirty for", "status",
-    "seq cutoff threshold", "seq cutoff policy"
-]
-config_stats_ioclass = ["io class id", "io class name", "eviction priority", "max size"]
-usage_stats = ["occupancy", "free", "clean", "dirty"]
-usage_stats_ioclass = ["occupancy", "clean", "dirty"]
-inactive_usage_stats = ["inactive occupancy", "inactive clean", "inactive dirty"]
-request_stats = [
-    "read hits", "read partial misses", "read full misses", "read total",
-    "write hits", "write partial misses", "write full misses", "write total",
-    "pass-through reads", "pass-through writes",
-    "serviced requests", "total requests"
-]
-block_stats_cache = [
-    "reads from core(s)", "writes to core(s)", "total to/from core(s)",
-    "reads from cache", "writes to cache", "total to/from cache",
-    "reads from exported object(s)", "writes to exported object(s)",
-    "total to/from exported object(s)"
-]
-block_stats_core = [stat.replace("(s)", "") for stat in block_stats_cache]
-error_stats = [
-    "cache read errors", "cache write errors", "cache total errors",
-    "core read errors", "core write errors", "core total errors",
-    "total errors"
-]
+
+import csv
+
+from datetime import timedelta
+from typing import List
+
+from api.cas import casadm
+from api.cas.casadm_params import StatsFilter
+from test_utils.size import Size, Unit
 
 
 class CacheStats:
-    stats_list = [
-        "config_stats",
-        "usage_stats",
-        "inactive_usage_stats",
-        "request_stats",
-        "block_stats",
-        "error_stats",
-    ]
+    def __init__(
+        self,
+        cache_id: int,
+        filter: List[StatsFilter] = None,
+        percentage_val: bool = False,
+    ):
 
-    def __init__(self, stats):
-        try:
-            self.config_stats = CacheConfigStats(
-                *[stats[stat] for stat in config_stats_cache]
-            )
-        except KeyError:
-            pass
-        try:
-            self.usage_stats = UsageStats(
-                *[stats[stat] for stat in usage_stats]
-            )
-        except KeyError:
-            pass
-        try:
-            self.inactive_usage_stats = InactiveUsageStats(
-                *[stats[stat] for stat in inactive_usage_stats]
-            )
-        except KeyError:
-            pass
-        try:
-            self.request_stats = RequestStats(
-                *[stats[stat] for stat in request_stats]
-            )
-        except KeyError:
-            pass
-        try:
-            self.block_stats = BlockStats(
-                *[stats[stat] for stat in block_stats_cache]
-            )
-        except KeyError:
-            pass
-        try:
-            self.error_stats = ErrorStats(
-                *[stats[stat] for stat in error_stats]
-            )
-        except KeyError:
-            pass
+        if filter is None:
+            filters = [
+                StatsFilter.conf,
+                StatsFilter.usage,
+                StatsFilter.req,
+                StatsFilter.blk,
+                StatsFilter.err,
+            ]
+        else:
+            filters = filter
+
+        csv_stats = casadm.print_statistics(
+            cache_id=cache_id,
+            filter=filter,
+            output_format=casadm.OutputFormat.csv,
+        ).stdout.splitlines()
+
+        stat_keys, stat_values = csv.reader(csv_stats)
+
+        # Unify names in block stats for core and cache:
+        # cache stats: Reads from core(s)
+        # core stats: Reads from core
+        stat_keys = [x.replace("(s)", "") for x in stat_keys]
+        stats_dict = dict(zip(stat_keys, stat_values))
+
+        for filter in filters:
+            match filter:
+                case StatsFilter.conf:
+                    self.config_stats = CacheConfigStats(stats_dict)
+                case StatsFilter.usage:
+                    self.usage_stats = UsageStats(stats_dict, percentage_val)
+                case StatsFilter.req:
+                    self.request_stats = RequestStats(stats_dict, percentage_val)
+                case StatsFilter.blk:
+                    self.block_stats_cache = BlockStats(stats_dict, percentage_val)
+                case StatsFilter.err:
+                    self.error_stats = ErrorStats(stats_dict, percentage_val)
 
     def __str__(self):
-        status = ""
-        for stats_item in self.stats_list:
-            current_stat = getattr(self, stats_item, None)
-            if current_stat:
-                status += f"--- Cache {current_stat}"
-        return status
+        # stats_list contains all Class.__str__ methods initialized in CacheStats
+        stats_list = [str(getattr(self, stats_item)) for stats_item in self.__dict__]
+        return "\n".join(stats_list)
 
     def __eq__(self, other):
-        if not other:
-            return False
-        for stats_item in self.stats_list:
-            if getattr(self, stats_item, None) != getattr(other, stats_item, None):
-                return False
-        return True
+        # check if all initialized variable in self(CacheStats) match other(CacheStats)
+        return [getattr(self, stats_item) for stats_item in self.__dict__] == [
+            getattr(other, stats_item) for stats_item in other.__dict__
+        ]
 
 
 class CoreStats:
-    stats_list = [
-        "config_stats",
-        "usage_stats",
-        "request_stats",
-        "block_stats",
-        "error_stats",
-    ]
+    def __init__(
+        self,
+        cache_id: int,
+        core_id: int,
+        filter: List[StatsFilter] = None,
+        percentage_val: bool = False,
+    ):
 
-    def __init__(self, stats):
-        try:
-            self.config_stats = CoreConfigStats(
-                *[stats[stat] for stat in config_stats_core]
-            )
-        except KeyError:
-            pass
-        try:
-            self.usage_stats = UsageStats(
-                *[stats[stat] for stat in usage_stats]
-            )
-        except KeyError:
-            pass
-        try:
-            self.request_stats = RequestStats(
-                *[stats[stat] for stat in request_stats]
-            )
-        except KeyError:
-            pass
-        try:
-            self.block_stats = BlockStats(
-                *[stats[stat] for stat in block_stats_core]
-            )
-        except KeyError:
-            pass
-        try:
-            self.error_stats = ErrorStats(
-                *[stats[stat] for stat in error_stats]
-            )
-        except KeyError:
-            pass
+        if filter is None:
+            filters = [
+                StatsFilter.conf,
+                StatsFilter.usage,
+                StatsFilter.req,
+                StatsFilter.blk,
+                StatsFilter.err,
+            ]
+        else:
+            filters = filter
+
+        csv_stats = casadm.print_statistics(
+            cache_id=cache_id,
+            core_id=core_id,
+            filter=filter,
+            output_format=casadm.OutputFormat.csv,
+        ).stdout.splitlines()
+
+        stat_keys, stat_values = csv.reader(csv_stats)
+
+        # Unify names in block stats for core and cache:
+        # cache stats: Reads from core(s)
+        # core stats: Reads from core
+        stat_keys = [x.replace("(s)", "") for x in stat_keys]
+        stats_dict = dict(zip(stat_keys, stat_values))
+
+        for filter in filters:
+            match filter:
+                case StatsFilter.conf:
+                    self.config_stats = CoreConfigStats(stats_dict)
+                case StatsFilter.usage:
+                    self.usage_stats = UsageStats(stats_dict, percentage_val)
+                case StatsFilter.req:
+                    self.request_stats = RequestStats(stats_dict, percentage_val)
+                case StatsFilter.blk:
+                    self.block_stats_cache = BlockStats(stats_dict, percentage_val)
+                case StatsFilter.err:
+                    self.error_stats = ErrorStats(stats_dict, percentage_val)
 
     def __str__(self):
-        status = ""
-        for stats_item in self.stats_list:
-            current_stat = getattr(self, stats_item, None)
-            if current_stat:
-                status += f"--- Core {current_stat}"
-        return status
+        # stats_list contains all Class.__str__ methods initialized in CacheStats
+        stats_list = [str(getattr(self, stats_item)) for stats_item in self.__dict__]
+        return "\n".join(stats_list)
 
     def __eq__(self, other):
-        if not other:
-            return False
-        for stats_item in self.stats_list:
-            if getattr(self, stats_item, None) != getattr(other, stats_item, None):
-                return False
-        return True
+        # check if all initialized variable in self(CacheStats) match other(CacheStats)
+        return [getattr(self, stats_item) for stats_item in self.__dict__] == [
+            getattr(other, stats_item) for stats_item in other.__dict__
+        ]
 
 
 class IoClassStats:
-    stats_list = [
-        "config_stats",
-        "usage_stats",
-        "request_stats",
-        "block_stats",
-    ]
-
-    def __init__(self, stats, block_stats_list):
-        try:
-            self.config_stats = IoClassConfigStats(
-                *[stats[stat] for stat in config_stats_ioclass]
-            )
-        except KeyError:
-            pass
-        try:
-            self.usage_stats = IoClassUsageStats(
-                *[stats[stat] for stat in usage_stats_ioclass]
-            )
-        except KeyError:
-            pass
-        try:
-            self.request_stats = RequestStats(
-                *[stats[stat] for stat in request_stats]
-            )
-        except KeyError:
-            pass
-        try:
-            self.block_stats = BlockStats(
-                *[stats[stat] for stat in block_stats_list]
-            )
-        except KeyError:
-            pass
-
     def __str__(self):
-        status = ""
-        for stats_item in self.stats_list:
-            current_stat = getattr(self, stats_item, None)
-            if current_stat:
-                status += f"--- IO class {current_stat}"
-        return status
+        # stats_list contains all Class.__str__ methods initialized in CacheStats
+        stats_list = [str(getattr(self, stats_item)) for stats_item in self.__dict__]
+        return "\n".join(stats_list)
+
+    def __init__(
+        self,
+        cache_id: int,
+        io_class_id: int,
+        core_id: int = None,
+        filter: List[StatsFilter] = None,
+        percentage_val: bool = False,
+    ):
+
+        if filter is None:
+            filters = [
+                StatsFilter.conf,
+                StatsFilter.usage,
+                StatsFilter.req,
+                StatsFilter.blk,
+            ]
+        else:
+            filters = filter
+
+        csv_stats = casadm.print_statistics(
+            cache_id=cache_id,
+            core_id=core_id,
+            io_class_id=io_class_id,
+            filter=filter,
+            output_format=casadm.OutputFormat.csv,
+        ).stdout.splitlines()
+
+        stat_keys, stat_values = csv.reader(csv_stats)
+
+        # Unify names in block stats for core and cache:
+        # cache stats: Reads from core(s)
+        # core stats: Reads from core
+        stat_keys = [x.replace("(s)", "") for x in stat_keys]
+        stats_dict = dict(zip(stat_keys, stat_values))
+
+        for filter in filters:
+            match filter:
+                case StatsFilter.conf:
+                    self.config_stats = IoClassConfigStats(stats_dict, percentage_val)
+                case StatsFilter.usage:
+                    self.usage_stats = IoClassUsageStats(stats_dict, percentage_val)
+                case StatsFilter.req:
+                    self.request_stats = RequestStats(stats_dict, percentage_val)
+                case StatsFilter.blk:
+                    self.block_stats_cache = BlockStats(stats_dict, percentage_val)
 
     def __eq__(self, other):
-        if not other:
-            return False
-        for stats_item in self.stats_list:
-            if getattr(self, stats_item, None) != getattr(other, stats_item, None):
-                return False
-        return True
-
-
-class CacheIoClassStats(IoClassStats):
-    def __init__(self, stats):
-        super().__init__(stats, block_stats_cache)
-
-
-class CoreIoClassStats(IoClassStats):
-    def __init__(self, stats):
-        super().__init__(stats, block_stats_core)
+        # check if all initialized variable in self(CacheStats) match other(CacheStats)
+        return [getattr(self, stats_item) for stats_item in self.__dict__] == [
+            getattr(other, stats_item) for stats_item in other.__dict__
+        ]
 
 
 class CacheConfigStats:
-    def __init__(
-        self,
-        cache_id,
-        cache_size,
-        cache_dev,
-        exp_obj,
-        core_dev,
-        inactive_core_dev,
-        write_policy,
-        cleaning_policy,
-        promotion_policy,
-        cache_line_size,
-        metadata_memory_footprint,
-        dirty_for,
-        status,
-    ):
-        self.cache_id = cache_id
-        self.cache_size = cache_size
-        self.cache_dev = cache_dev
-        self.exp_obj = exp_obj
-        self.core_dev = core_dev
-        self.inactive_core_dev = inactive_core_dev
-        self.write_policy = write_policy
-        self.cleaning_policy = cleaning_policy
-        self.promotion_policy = promotion_policy
-        self.cache_line_size = cache_line_size
-        self.metadata_memory_footprint = metadata_memory_footprint
-        self.dirty_for = dirty_for
-        self.status = status
+    def __init__(self, stats_dict):
+        self.cache_id = stats_dict["Cache Id"]
+        self.cache_size = parse_value(
+            value=stats_dict["Cache Size [4KiB Blocks]"], unit_type="[4KiB Blocks]"
+        )
+        self.cache_dev = stats_dict["Cache Device"]
+        self.exp_obj = stats_dict["Exported Object"]
+        self.core_dev = stats_dict["Core Devices"]
+        self.inactive_core_devices = stats_dict["Inactive Core Devices"]
+        self.write_policy = stats_dict["Write Policy"]
+        self.cleaning_policy = stats_dict["Cleaning Policy"]
+        self.promotion_policy = stats_dict["Promotion Policy"]
+        self.cache_line_size = parse_value(
+            value=stats_dict["Cache line size [KiB]"], unit_type="[KiB]"
+        )
+        self.metadata_memory_footprint = parse_value(
+            value=stats_dict["Metadata Memory Footprint [MiB]"], unit_type="[MiB]"
+        )
+        self.dirty_for = parse_value(value=stats_dict["Dirty for [s]"], unit_type="[s]")
+        self.status = stats_dict["Status"]
 
     def __str__(self):
         return (
@@ -260,10 +222,10 @@ class CacheConfigStats:
             f"Cache device: {self.cache_dev}\n"
             f"Exported object: {self.exp_obj}\n"
             f"Core devices: {self.core_dev}\n"
-            f"Inactive core devices: {self.inactive_core_dev}\n"
-            f"Write policy: {self.write_policy}\n"
-            f"Cleaning policy: {self.cleaning_policy}\n"
-            f"Promotion policy: {self.promotion_policy}\n"
+            f"Inactive Core Devices: {self.inactive_core_devices}\n"
+            f"Write Policy: {self.write_policy}\n"
+            f"Cleaning Policy: {self.cleaning_policy}\n"
+            f"Promotion Policy: {self.promotion_policy}\n"
             f"Cache line size: {self.cache_line_size}\n"
             f"Metadata memory footprint: {self.metadata_memory_footprint}\n"
             f"Dirty for: {self.dirty_for}\n"
@@ -279,7 +241,7 @@ class CacheConfigStats:
             and self.cache_dev == other.cache_dev
             and self.exp_obj == other.exp_obj
             and self.core_dev == other.core_dev
-            and self.inactive_core_dev == other.inactive_core_dev
+            and self.inactive_core_devices == other.inactive_core_devices
             and self.write_policy == other.write_policy
             and self.cleaning_policy == other.cleaning_policy
             and self.promotion_policy == other.promotion_policy
@@ -291,25 +253,19 @@ class CacheConfigStats:
 
 
 class CoreConfigStats:
-    def __init__(
-        self,
-        core_id,
-        core_dev,
-        exp_obj,
-        core_size,
-        dirty_for,
-        status,
-        seq_cutoff_threshold,
-        seq_cutoff_policy,
-    ):
-        self.core_id = core_id
-        self.core_dev = core_dev
-        self.exp_obj = exp_obj
-        self.core_size = core_size
-        self.dirty_for = dirty_for
-        self.status = status
-        self.seq_cutoff_threshold = seq_cutoff_threshold
-        self.seq_cutoff_policy = seq_cutoff_policy
+    def __init__(self, stats_dict):
+        self.core_id = stats_dict["Core Id"]
+        self.core_dev = stats_dict["Core Device"]
+        self.exp_obj = stats_dict["Exported Object"]
+        self.core_size = parse_value(
+            value=stats_dict["Core Size [4KiB Blocks]"], unit_type=" [4KiB Blocks]"
+        )
+        self.dirty_for = parse_value(value=stats_dict["Dirty for [s]"], unit_type="[s]")
+        self.status = stats_dict["Status"]
+        self.seq_cutoff_threshold = parse_value(
+            value=stats_dict["Seq cutoff threshold [KiB]"], unit_type="[KiB]"
+        )
+        self.seq_cutoff_policy = stats_dict["Seq cutoff policy"]
 
     def __str__(self):
         return (
@@ -340,13 +296,11 @@ class CoreConfigStats:
 
 
 class IoClassConfigStats:
-    def __init__(
-        self, io_class_id, io_class_name, eviction_priority, selective_allocation
-    ):
-        self.io_class_id = io_class_id
-        self.io_class_name = io_class_name
-        self.eviction_priority = eviction_priority
-        self.selective_allocation = selective_allocation
+    def __init__(self, stats_dict):
+        self.io_class_id = stats_dict["IO class ID"]
+        self.io_class_name = stats_dict["IO class name"]
+        self.eviction_priority = stats_dict["Eviction priority"]
+        self.max_size = stats_dict["Max size"]
 
     def __str__(self):
         return (
@@ -354,7 +308,7 @@ class IoClassConfigStats:
             f"IO class ID: {self.io_class_id}\n"
             f"IO class name: {self.io_class_name}\n"
             f"Eviction priority: {self.eviction_priority}\n"
-            f"Selective allocation: {self.selective_allocation}\n"
+            f"Max size: {self.max_size}\n"
         )
 
     def __eq__(self, other):
@@ -364,16 +318,17 @@ class IoClassConfigStats:
             self.io_class_id == other.io_class_id
             and self.io_class_name == other.io_class_name
             and self.eviction_priority == other.eviction_priority
-            and self.selective_allocation == other.selective_allocation
+            and self.max_size == other.max_size
         )
 
 
 class UsageStats:
-    def __init__(self, occupancy, free, clean, dirty):
-        self.occupancy = occupancy
-        self.free = free
-        self.clean = clean
-        self.dirty = dirty
+    def __init__(self, stats_dict, percentage_val):
+        unit = "[%]" if percentage_val else "[4KiB Blocks]"
+        self.occupancy = parse_value(value=stats_dict[f"Occupancy {unit}"], unit_type=unit)
+        self.free = parse_value(value=stats_dict[f"Free {unit}"], unit_type=unit)
+        self.clean = parse_value(value=stats_dict[f"Clean {unit}"], unit_type=unit)
+        self.dirty = parse_value(value=stats_dict[f"Dirty {unit}"], unit_type=unit)
 
     def __str__(self):
         return (
@@ -405,7 +360,7 @@ class UsageStats:
             self.occupancy + other.occupancy,
             self.free + other.free,
             self.clean + other.clean,
-            self.dirty + other.dirty
+            self.dirty + other.dirty,
         )
 
     def __iadd__(self, other):
@@ -417,10 +372,11 @@ class UsageStats:
 
 
 class IoClassUsageStats:
-    def __init__(self, occupancy, clean, dirty):
-        self.occupancy = occupancy
-        self.clean = clean
-        self.dirty = dirty
+    def __init__(self, stats_dict, percentage_val):
+        unit = "[%]" if percentage_val else "[4KiB Blocks]"
+        self.occupancy = parse_value(value=stats_dict[f"Occupancy {unit}"], unit_type=unit)
+        self.clean = parse_value(value=stats_dict[f"Clean {unit}"], unit_type=unit)
+        self.dirty = parse_value(value=stats_dict[f"Dirty {unit}"], unit_type=unit)
 
     def __str__(self):
         return (
@@ -449,7 +405,7 @@ class IoClassUsageStats:
         return UsageStats(
             self.occupancy + other.occupancy,
             self.clean + other.clean,
-            self.dirty + other.dirty
+            self.dirty + other.dirty,
         )
 
     def __iadd__(self, other):
@@ -484,31 +440,26 @@ class InactiveUsageStats:
 
 
 class RequestStats:
-    def __init__(
-        self,
-        read_hits,
-        read_part_misses,
-        read_full_misses,
-        read_total,
-        write_hits,
-        write_part_misses,
-        write_full_misses,
-        write_total,
-        pass_through_reads,
-        pass_through_writes,
-        requests_serviced,
-        requests_total,
-    ):
+    def __init__(self, stats_dict, percentage_val):
+        unit = "[%]" if percentage_val else "[Requests]"
         self.read = RequestStatsChunk(
-            read_hits, read_part_misses, read_full_misses, read_total
+            stats_dict=stats_dict, percentage_val=percentage_val, operation="Read"
         )
         self.write = RequestStatsChunk(
-            write_hits, write_part_misses, write_full_misses, write_total
+            stats_dict=stats_dict, percentage_val=percentage_val, operation="Write"
         )
-        self.pass_through_reads = pass_through_reads
-        self.pass_through_writes = pass_through_writes
-        self.requests_serviced = requests_serviced
-        self.requests_total = requests_total
+        self.pass_through_reads = parse_value(
+            value=stats_dict[f"Pass-Through reads {unit}"], unit_type=unit
+        )
+        self.pass_through_writes = parse_value(
+            value=stats_dict[f"Pass-Through writes {unit}"], unit_type=unit
+        )
+        self.requests_serviced = parse_value(
+            value=stats_dict[f"Serviced requests {unit}"], unit_type=unit
+        )
+        self.requests_total = parse_value(
+            value=stats_dict[f"Total requests {unit}"], unit_type=unit
+        )
 
     def __str__(self):
         return (
@@ -535,11 +486,16 @@ class RequestStats:
 
 
 class RequestStatsChunk:
-    def __init__(self, hits, part_misses, full_misses, total):
-        self.hits = hits
-        self.part_misses = part_misses
-        self.full_misses = full_misses
-        self.total = total
+    def __init__(self, stats_dict, percentage_val, operation: str):
+        unit = "[%]" if percentage_val else "[Requests]"
+        self.hits = parse_value(value=stats_dict[f"{operation} hits {unit}"], unit_type=unit)
+        self.part_misses = parse_value(
+            value=stats_dict[f"{operation} partial misses {unit}"], unit_type=unit
+        )
+        self.full_misses = parse_value(
+            value=stats_dict[f"{operation} full misses {unit}"], unit_type=unit
+        )
+        self.total = parse_value(value=stats_dict[f"{operation} total {unit}"], unit_type=unit)
 
     def __str__(self):
         return (
@@ -561,21 +517,18 @@ class RequestStatsChunk:
 
 
 class BlockStats:
-    def __init__(
-        self,
-        core_reads,
-        core_writes,
-        core_total,
-        cache_reads,
-        cache_writes,
-        cache_total,
-        exp_obj_reads,
-        exp_obj_writes,
-        exp_obj_total,
-    ):
-        self.core = BasicStatsChunk(core_reads, core_writes, core_total)
-        self.cache = BasicStatsChunk(cache_reads, cache_writes, cache_total)
-        self.exp_obj = BasicStatsChunk(exp_obj_reads, exp_obj_writes, exp_obj_total)
+    def __init__(self, stats_dict, percentage_val):
+        self.core = BasicStatsChunk(
+            stats_dict=stats_dict, percentage_val=percentage_val, device="core"
+        )
+        self.cache = BasicStatsChunk(
+            stats_dict=stats_dict, percentage_val=percentage_val, device="cache"
+        )
+        self.exp_obj = BasicStatsChunk(
+            stats_dict=stats_dict,
+            percentage_val=percentage_val,
+            device="exported object",
+        )
 
     def __str__(self):
         return (
@@ -589,30 +542,20 @@ class BlockStats:
         if not other:
             return False
         return (
-            self.core == other.core
-            and self.cache == other.cache
-            and self.exp_obj == other.exp_obj
+            self.core == other.core and self.cache == other.cache and self.exp_obj == other.exp_obj
         )
 
 
 class ErrorStats:
-    def __init__(
-        self,
-        cache_read_errors,
-        cache_write_errors,
-        cache_total_errors,
-        core_read_errors,
-        core_write_errors,
-        core_total_errors,
-        total_errors,
-    ):
-        self.cache = BasicStatsChunk(
-            cache_read_errors, cache_write_errors, cache_total_errors
+    def __init__(self, stats_dict, percentage_val):
+        unit = "[%]" if percentage_val else "[Requests]"
+        self.cache = BasicStatsChunkError(
+            stats_dict=stats_dict, percentage_val=percentage_val, device="Cache"
         )
-        self.core = BasicStatsChunk(
-            core_read_errors, core_write_errors, core_total_errors
+        self.core = BasicStatsChunkError(
+            stats_dict=stats_dict, percentage_val=percentage_val, device="Core"
         )
-        self.total_errors = total_errors
+        self.total_errors = parse_value(value=stats_dict[f"Total errors {unit}"], unit_type=unit)
 
     def __str__(self):
         return (
@@ -633,10 +576,11 @@ class ErrorStats:
 
 
 class BasicStatsChunk:
-    def __init__(self, reads, writes, total):
-        self.reads = reads
-        self.writes = writes
-        self.total = total
+    def __init__(self, stats_dict: dict, percentage_val: bool, device: str):
+        unit = "[%]" if percentage_val else "[4KiB Blocks]"
+        self.reads = parse_value(value=stats_dict[f"Reads from {device} {unit}"], unit_type=unit)
+        self.writes = parse_value(value=stats_dict[f"Writes to {device} {unit}"], unit_type=unit)
+        self.total = parse_value(value=stats_dict[f"Total to/from {device} {unit}"], unit_type=unit)
 
     def __str__(self):
         return f"Reads: {self.reads}\nWrites: {self.writes}\nTotal: {self.total}\n"
@@ -645,7 +589,44 @@ class BasicStatsChunk:
         if not other:
             return False
         return (
-            self.reads == other.reads
-            and self.writes == other.writes
-            and self.total == other.total
+            self.reads == other.reads and self.writes == other.writes and self.total == other.total
         )
+
+
+class BasicStatsChunkError:
+    def __init__(self, stats_dict: dict, percentage_val: bool, device: str):
+        unit = "[%]" if percentage_val else "[Requests]"
+        self.reads = parse_value(value=stats_dict[f"{device} read errors {unit}"], unit_type=unit)
+        self.writes = parse_value(value=stats_dict[f"{device} write errors {unit}"], unit_type=unit)
+        self.total = parse_value(value=stats_dict[f"{device} total errors {unit}"], unit_type=unit)
+
+    def __str__(self):
+        return f"Reads: {self.reads}\nWrites: {self.writes}\nTotal: {self.total}\n"
+
+    def __eq__(self, other):
+        if not other:
+            return False
+        return (
+            self.reads == other.reads and self.writes == other.writes and self.total == other.total
+        )
+
+
+def parse_value(value: str, unit_type: str) -> int | float | Size | timedelta | str:
+    match unit_type:
+        case "[Requests]":
+            stat_unit = int(value)
+        case "[%]":
+            stat_unit = float(value)
+        case "[4KiB Blocks]":
+            stat_unit = Size(float(value), Unit.Blocks4096)
+        case "[MiB]":
+            stat_unit = Size(float(value), Unit.MebiByte)
+        case "[KiB]":
+            stat_unit = Size(float(value), Unit.KibiByte)
+        case "[GiB]":
+            stat_unit = Size(float(value), Unit.GibiByte)
+        case "[s]":
+            stat_unit = timedelta(seconds=float(value))
+        case _:
+            stat_unit = value
+    return stat_unit

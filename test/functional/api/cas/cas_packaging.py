@@ -36,7 +36,8 @@ class Packages:
 
 
 class _Rpm(RpmSet):
-    def __init__(self, packages_dir: str = ""):
+    def __init__(self, packages_paths: list, packages_dir: str = ""):
+        super().__init__(packages_paths)
         self.packages_dir = packages_dir
         self.packages = get_packages_list("rpm", self.packages_dir)
 
@@ -65,7 +66,8 @@ class _Rpm(RpmSet):
 
 
 class _Deb(DebSet):
-    def __init__(self, packages_dir: str = ""):
+    def __init__(self, packages_paths: list, packages_dir: str = ""):
+        super().__init__(packages_paths)
         self.packages_dir = packages_dir
         self.packages = get_packages_list("deb", self.packages_dir)
 
@@ -98,7 +100,8 @@ def get_packages_list(package_type: str, packages_dir: str):
         return []
 
     return [
-        package for package in find_all_files(packages_dir, recursive=False)
+        package
+        for package in find_all_files(packages_dir, recursive=False)
         # include only binary packages (ready to be processed by package manager)
         if package.endswith(package_type.lower())
         and not package.endswith("src." + package_type.lower())
