@@ -34,137 +34,46 @@ casadm_help = [
     r"or go to support page \<https://open-cas\.github\.io\>\.",
 ]
 
-help_help = [r"Usage: casadm --help", r"Print help"]
+start_cache_help = [
+    r"Usage: casadm --start-cache --cache-device \<DEVICE\> \[option\.\.\.\]",
+    r"Start new cache instance or load using metadata",
+    r"Options that are valid with --start-cache \(-S\) are:",
+    r"-d  --cache-device \<DEVICE\>         Caching device to be used",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\> "
+    r"\(if not provided, the first available number will be used\)",
+    r"-l  --load                          Load cache metadata from caching device "
+    r"\(DANGEROUS - see manual or Admin Guide for details\)",
+    r"-f  --force                         Force the creation of cache instance",
+    r"-c  --cache-mode \<NAME\>             Set cache mode from available: \{wt|wb|wa|pt|wo\} "
+    r"Write-Through, Write-Back, Write-Around, Pass-Through, Write-Only; "
+    r"without this parameter Write-Through will be set by default",
+    r"-x  --cache-line-size \<NUMBER\>      Set cache line size in kibibytes: "
+    r"\{4,8,16,32,64\}\[KiB\] \(default: 4\)",
+]
 
-version_help = [
-    r"Usage: casadm --version \[option\.\.\.\]",
-    r"Print CAS version",
-    r"Options that are valid with --version \(-V\) are:"
-    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
+attach_cache_help = [
+    r"Usage: casadm --attach-cache --cache-device \<DEVICE\> --cache-id \<ID\> \[option\.\.\.\]",
+    r"Attach cache device",
+    r"Options that are valid with --attach-cache are:",
+    r"-d  --cache-device \<DEVICE\>         Caching device to be used",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\> "
+    r"\(if not provided, the first available number will be used\)",
+    r"-f  --force                         Force attaching the cache device",
+]
+detach_cache_help = [
+    r"Usage: casadm --detach-cache --cache-id \<ID\>",
+    r"Detach cache device",
+    r"Options that are valid with --detach-cache are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
 ]
 
 
-ioclass_help = [
-    r"Usage: casadm --io-class \{--load-config|--list\}",
-    r"Manage IO classes",
-    r"Loads configuration for IO classes:",
-    r"Usage: casadm --io-class --load-config --cache-id \<ID\> --file \<FILE\>",
-    r"Options that are valid with --load-config \(-C\) are:",
+stop_cache_help = [
+    r"Usage: casadm --stop-cache --cache-id \<ID\> \[option\.\.\.\]",
+    r"Stop cache instance",
+    r"Options that are valid with --stop-cache \(-T\) are:",
     r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-f  --file \<FILE\>                   Configuration file containing IO class definition",
-    r"Lists currently configured IO classes:",
-    r"Usage: casadm --io-class --list --cache-id \<ID\> \[option\.\.\.\]",
-    r"Options that are valid with --list \(-L\) are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
-]
-
-flush_cache_help = [
-    r"Usage: casadm --flush-cache --cache-id \<ID\>",
-    r"Flush all dirty data from the caching device to core devices",
-    r"Options that are valid with --flush-cache \(-F\) are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \[\<ID\>\]                Identifier of core <0-4095> within given cache "
-    r"instance",
-]
-
-reset_counters_help = [
-    r"Usage: casadm --reset-counters --cache-id \<ID\> \[option\.\.\.\]",
-    r"Reset cache statistics for core device within cache instance",
-    r"Options that are valid with --reset-counters \(-Z\) are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \<ID\>                  Identifier of core \<0-4095\> within given cache "
-    r"instance\. If not specified, statistics are reset for all cores in cache instance\.",
-]
-
-stats_help = [
-    r"Usage: casadm --stats --cache-id \<ID\> \[option\.\.\.\]",
-    r"Print statistics for cache instance",
-    r"Options that are valid with --stats \(-P\) are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \<ID\>                  Limit display of core-specific statistics to only ones "
-    r"pertaining to a specific core\. If this option is not given, casadm will display statistics "
-    r"pertaining to all cores assigned to given cache instance\.",
-    r"-d  --io-class-id \[\<ID\>\]            Display per IO class statistics",
-    r"-f  --filter \<FILTER-SPEC\>          Apply filters from the following set: "
-    r"\{all, conf, usage, req, blk, err\}",
-    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
-]
-
-list_caches_help = [
-    r"Usage: casadm --list-caches \[option\.\.\.\]",
-    r"List all cache instances and core devices",
-    r"Options that are valid with --list-caches \(-L\) are:",
-    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
-]
-
-remove_detached_help = [
-    r"Usage: casadm --remove-detached --device \<DEVICE\>",
-    r"Remove core device from core pool",
-    r"Options that are valid with --remove-detached are:",
-    r"-d  --device \<DEVICE\>               Path to core device",
-]
-
-remove_core_help = [
-    r"Usage: casadm --remove-core --cache-id \<ID\> --core-id \<ID\> \[option\.\.\.\]",
-    r"Remove active core device from cache instance",
-    r"Options that are valid with --remove-core \(-R\) are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \<ID\>                  Identifier of core \<0-4095\> within given cache "
-    r"instance",
-    r"-f  --force                         Force active core removal without data flush",
-]
-
-add_core_help = [
-    r"Usage: casadm --add-core --cache-id \<ID\> --core-device \<DEVICE\> \[option\.\.\.\]",
-    r"Add core device to cache instance",
-    r"Options that are valid with --add-core \(-A\) are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \<ID\>                  Identifier of core \<0-4095\> within given cache "
-    r"instance",
-    r"-d  --core-device \<DEVICE\>          Path to core device",
-]
-
-set_cache_mode_help = [
-    r"Usage: casadm --set-cache-mode --cache-mode \<NAME\> --cache-id \<ID\> \[option\.\.\.\]",
-    r"Set cache mode",
-    r"Options that are valid with --set-cache-mode \(-Q\) are:",
-    r"-c  --cache-mode \<NAME\>             Cache mode\. Available cache modes: \{wt|wb|wa|pt|wo\}",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-f  --flush-cache \<yes|no\>          Flush all dirty data from cache before switching "
-    r"to new mode\. Option is required when switching from Write-Back or Write-Only mode",
-]
-
-get_params_help = [
-    r"Usage: casadm --get-param --name \<NAME\>",
-    r"Get various runtime parameters",
-    r"Valid values of NAME are:",
-    r"seq-cutoff - Sequential cutoff parameters",
-    r"cleaning - Cleaning policy parameters",
-    r"cleaning-alru - Cleaning policy ALRU parameters",
-    r"cleaning-acp - Cleaning policy ACP parameters",
-    r"promotion - Promotion policy parameters",
-    r"promotion-nhit - Promotion policy NHIT parameters",
-    r"Options that are valid with --get-param \(-G\) --name \(-n\) seq-cutoff are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \<ID\>                  Identifier of core \<0-4095\> within given cache "
-    r"instance",
-    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
-    r"Options that are valid with --get-param \(-G\) --name \(-n\) cleaning are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
-    r"Options that are valid with --get-param \(-G\) --name \(-n\) cleaning-alru are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
-    r"Options that are valid with --get-param \(-G\) --name \(-n\) cleaning-acp are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
-    r"Options that are valid with --get-param \(-G\) --name \(-n\) promotion are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
-    r"Options that are valid with --get-param \(-G\) --name \(-n\) promotion-nhit are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
+    r"-n  --no-data-flush                 Do not flush dirty data \(may be dangerous\)",
 ]
 
 set_params_help = [
@@ -217,30 +126,156 @@ set_params_help = [
 ]
 
 
-stop_cache_help = [
-    r"Usage: casadm --stop-cache --cache-id \<ID\> \[option\.\.\.\]",
-    r"Stop cache instance",
-    r"Options that are valid with --stop-cache \(-T\) are:",
+get_params_help = [
+    r"Usage: casadm --get-param --name \<NAME\>",
+    r"Get various runtime parameters",
+    r"Valid values of NAME are:",
+    r"seq-cutoff - Sequential cutoff parameters",
+    r"cleaning - Cleaning policy parameters",
+    r"cleaning-alru - Cleaning policy ALRU parameters",
+    r"cleaning-acp - Cleaning policy ACP parameters",
+    r"promotion - Promotion policy parameters",
+    r"promotion-nhit - Promotion policy NHIT parameters",
+    r"Options that are valid with --get-param \(-G\) --name \(-n\) seq-cutoff are:",
     r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-n  --no-data-flush                 Do not flush dirty data \(may be dangerous\)",
+    r"-j  --core-id \<ID\>                  Identifier of core \<0-4095\> within given cache "
+    r"instance",
+    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
+    r"Options that are valid with --get-param \(-G\) --name \(-n\) cleaning are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
+    r"Options that are valid with --get-param \(-G\) --name \(-n\) cleaning-alru are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
+    r"Options that are valid with --get-param \(-G\) --name \(-n\) cleaning-acp are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
+    r"Options that are valid with --get-param \(-G\) --name \(-n\) promotion are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
+    r"Options that are valid with --get-param \(-G\) --name \(-n\) promotion-nhit are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
 ]
 
-start_cache_help = [
-    r"Usage: casadm --start-cache --cache-device \<DEVICE\> \[option\.\.\.\]",
-    r"Start new cache instance or load using metadata",
-    r"Options that are valid with --start-cache \(-S\) are:",
-    r"-d  --cache-device \<DEVICE\>         Caching device to be used",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\> "
-    r"\(if not provided, the first available number will be used\)",
-    r"-l  --load                          Load cache metadata from caching device "
-    r"\(DANGEROUS - see manual or Admin Guide for details\)",
-    r"-f  --force                         Force the creation of cache instance",
-    r"-c  --cache-mode \<NAME\>             Set cache mode from available: \{wt|wb|wa|pt|wo\} "
-    r"Write-Through, Write-Back, Write-Around, Pass-Through, Write-Only; "
-    r"without this parameter Write-Through will be set by default",
-    r"-x  --cache-line-size \<NUMBER\>      Set cache line size in kibibytes: "
-    r"\{4,8,16,32,64\}\[KiB\] \(default: 4\)",
+
+set_cache_mode_help = [
+    r"Usage: casadm --set-cache-mode --cache-mode \<NAME\> --cache-id \<ID\> \[option\.\.\.\]",
+    r"Set cache mode",
+    r"Options that are valid with --set-cache-mode \(-Q\) are:",
+    r"-c  --cache-mode \<NAME\>             Cache mode\. Available cache modes: \{wt|wb|wa|pt|wo\}",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-f  --flush-cache \<yes|no\>          Flush all dirty data from cache before switching "
+    r"to new mode\. Option is required when switching from Write-Back or Write-Only mode",
 ]
+
+
+add_core_help = [
+    r"Usage: casadm --add-core --cache-id \<ID\> --core-device \<DEVICE\> \[option\.\.\.\]",
+    r"Add core device to cache instance",
+    r"Options that are valid with --add-core \(-A\) are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-j  --core-id \<ID\>                  Identifier of core \<0-4095\> within given cache "
+    r"instance",
+    r"-d  --core-device \<DEVICE\>          Path to core device",
+]
+
+remove_core_help = [
+    r"Usage: casadm --remove-core --cache-id \<ID\> --core-id \<ID\> \[option\.\.\.\]",
+    r"Remove active core device from cache instance",
+    r"Options that are valid with --remove-core \(-R\) are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-j  --core-id \<ID\>                  Identifier of core \<0-4095\> within given cache "
+    r"instance",
+    r"-f  --force                         Force active core removal without data flush",
+]
+
+
+remove_inactive_help = [
+    r"casadm --remove-inactive --cache-id \<ID\>  --core-id \<ID\> \[option\.\.\.\]",
+    r"Remove inactive core device from cache instance",
+    r"Options that are valid with --remove-inactive are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-j  --core-id \<ID\>                  Identifier of core \<0-4095\> within given "
+    r"cache instance",
+    r"-f  --force                         Force dirty inactive core removal",
+]
+
+
+remove_detached_help = [
+    r"Usage: casadm --remove-detached --device \<DEVICE\>",
+    r"Remove core device from core pool",
+    r"Options that are valid with --remove-detached are:",
+    r"-d  --device \<DEVICE\>               Path to core device",
+]
+
+
+list_caches_help = [
+    r"Usage: casadm --list-caches \[option\.\.\.\]",
+    r"List all cache instances and core devices",
+    r"Options that are valid with --list-caches \(-L\) are:",
+    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
+]
+
+stats_help = [
+    r"Usage: casadm --stats --cache-id \<ID\> \[option\.\.\.\]",
+    r"Print statistics for cache instance",
+    r"Options that are valid with --stats \(-P\) are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-j  --core-id \<ID\>                  Limit display of core-specific statistics to only ones "
+    r"pertaining to a specific core\. If this option is not given, casadm will display statistics "
+    r"pertaining to all cores assigned to given cache instance\.",
+    r"-d  --io-class-id \[\<ID\>\]            Display per IO class statistics",
+    r"-f  --filter \<FILTER-SPEC\>          Apply filters from the following set: "
+    r"\{all, conf, usage, req, blk, err\}",
+    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
+]
+
+
+reset_counters_help = [
+    r"Usage: casadm --reset-counters --cache-id \<ID\> \[option\.\.\.\]",
+    r"Reset cache statistics for core device within cache instance",
+    r"Options that are valid with --reset-counters \(-Z\) are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-j  --core-id \<ID\>                  Identifier of core \<0-4095\> within given cache "
+    r"instance\. If not specified, statistics are reset for all cores in cache instance\.",
+]
+
+flush_cache_help = [
+    r"Usage: casadm --flush-cache --cache-id \<ID\>",
+    r"Flush all dirty data from the caching device to core devices",
+    r"Options that are valid with --flush-cache \(-F\) are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-j  --core-id \[\<ID\>\]                Identifier of core <0-4095> within given cache "
+    r"instance",
+]
+
+
+ioclass_help = [
+    r"Usage: casadm --io-class \{--load-config|--list\}",
+    r"Manage IO classes",
+    r"Loads configuration for IO classes:",
+    r"Usage: casadm --io-class --load-config --cache-id \<ID\> --file \<FILE\>",
+    r"Options that are valid with --load-config \(-C\) are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-f  --file \<FILE\>                   Configuration file containing IO class definition",
+    r"Lists currently configured IO classes:",
+    r"Usage: casadm --io-class --list --cache-id \<ID\> \[option\.\.\.\]",
+    r"Options that are valid with --list \(-L\) are:",
+    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
+    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
+]
+
+
+version_help = [
+    r"Usage: casadm --version \[option\.\.\.\]",
+    r"Print CAS version",
+    r"Options that are valid with --version \(-V\) are:"
+    r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
+]
+
+help_help = [r"Usage: casadm --help", r"Print help"]
+
 
 standby_help = [
     r"The command is not supported"
@@ -253,7 +288,6 @@ zero_metadata_help = [
     r"-d  --device \<DEVICE\>               Path to device on which metadata would be cleared",
     r"-f  --force                         Ignore potential dirty data on cache device",
 ]
-
 
 unrecognized_stderr = [
     r"Unrecognized command -\S+",

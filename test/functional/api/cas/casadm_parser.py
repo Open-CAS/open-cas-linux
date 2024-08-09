@@ -189,7 +189,7 @@ def get_casadm_version():
     return CasVersion.from_version_string(version_str)
 
 
-def get_io_class_list(cache_id: int):
+def get_io_class_list(cache_id: int) -> list:
     ret = []
     casadm_output = casadm.list_io_classes(cache_id, OutputFormat.csv).stdout.splitlines()
     casadm_output.pop(0)  # Remove header
@@ -200,7 +200,7 @@ def get_io_class_list(cache_id: int):
     return ret
 
 
-def get_core_info_by_path(core_disk_path):
+def get_core_info_by_path(core_disk_path) -> dict | None:
     output = casadm.list_caches(OutputFormat.csv, by_id_path=True)
     reader = csv.DictReader(io.StringIO(output.stdout))
     for row in reader:
