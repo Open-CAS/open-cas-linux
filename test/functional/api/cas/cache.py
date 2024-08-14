@@ -7,7 +7,7 @@
 from api.cas.casadm_parser import *
 from api.cas.core import Core
 from api.cas.dmesg import get_metadata_size_on_device
-from api.cas.statistics import CacheStats, IoClassStats
+from api.cas.statistics import CacheStats, CacheIoClassStats
 from test_utils.os_utils import *
 from test_utils.output import Output
 
@@ -53,8 +53,7 @@ class Cache:
         return stats.config_stats.metadata_memory_footprint
 
     def get_metadata_size_on_disk(self) -> Size:
-        cache_name = f"cache{self.cache_id}"
-        return get_metadata_size_on_device(cache_name=cache_name)
+        return get_metadata_size_on_device(cache_id=self.cache_id)
 
     def get_occupancy(self):
         return self.get_statistics().usage_stats.occupancy
@@ -104,11 +103,11 @@ class Cache:
 
     def get_io_class_statistics(
         self,
-        io_class_id: int,
+        io_class_id: int = None,
         stat_filter: List[StatsFilter] = None,
         percentage_val: bool = False,
-    ) -> IoClassStats:
-        return IoClassStats(
+    ) -> CacheIoClassStats:
+        return CacheIoClassStats(
             cache_id=self.cache_id,
             filter=stat_filter,
             io_class_id=io_class_id,
@@ -169,31 +168,23 @@ class Cache:
     def set_params_acp(self, acp_params: FlushParametersAcp) -> Output:
         return casadm.set_param_cleaning_acp(
             self.cache_id,
-            (
-                int(acp_params.wake_up_time.total_milliseconds())
-                if acp_params.wake_up_time
-                else None
-            ),
+            int(acp_params.wake_up_time.total_milliseconds()) if acp_params.wake_up_time else None,
             int(acp_params.flush_max_buffers) if acp_params.flush_max_buffers else None,
         )
 
     def set_params_alru(self, alru_params: FlushParametersAlru) -> Output:
         return casadm.set_param_cleaning_alru(
             self.cache_id,
-            (
-                int(alru_params.wake_up_time.total_seconds())
-                if alru_params.wake_up_time is not None
-                else None
-            ),
+            (int(alru_params.wake_up_time.total_seconds()) if alru_params.wake_up_time else None),
             (
                 int(alru_params.staleness_time.total_seconds())
-                if alru_params.staleness_time is not None
+                if alru_params.staleness_time
                 else None
             ),
-            (alru_params.flush_max_buffers if alru_params.flush_max_buffers is not None else None),
+            (alru_params.flush_max_buffers if alru_params.flush_max_buffers else None),
             (
                 int(alru_params.activity_threshold.total_milliseconds())
-                if alru_params.activity_threshold is not None
+                if alru_params.activity_threshold
                 else None
             ),
         )

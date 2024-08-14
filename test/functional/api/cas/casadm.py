@@ -41,12 +41,12 @@ def start_cache(
         reload_kernel_module("cas_cache", kernel_params.get_parameter_dictionary())
 
     _cache_line_size = (
-        None
-        if cache_line_size is None
-        else str(int(cache_line_size.value.get_value(Unit.KibiByte)))
+        str(int(cache_line_size.value.get_value(Unit.KibiByte)))
+        if cache_line_size is not None
+        else None
     )
-    _cache_id = None if cache_id is None else str(cache_id)
-    _cache_mode = None if cache_mode is None else cache_mode.name.lower()
+    _cache_id = str(cache_id) if cache_id is not None else None
+    _cache_mode = cache_mode.name.lower() if cache_mode else None
     output = TestRun.executor.run(
         start_cmd(
             cache_dev=cache_dev.path,
@@ -70,11 +70,10 @@ def load_cache(device: Device, shortcut: bool = False) -> Cache:
     return Cache(device)
 
 
-def attach_cache(cache_id: int, device: [Device], force: bool, shortcut: bool = False) -> Output:
-    cache_dev_paths = ",".join(str(devs_path.path) for devs_path in device)
+def attach_cache(cache_id: int, device: Device, force: bool, shortcut: bool = False) -> Output:
     output = TestRun.executor.run(
         attach_cache_cmd(
-            cache_dev=cache_dev_paths, cache_id=str(cache_id), force=force, shortcut=shortcut
+            cache_dev=device.path, cache_id=str(cache_id), force=force, shortcut=shortcut
         )
     )
     if output.exit_code != 0:
@@ -106,10 +105,10 @@ def set_param_cutoff(
     promotion_count: int = None,
     shortcut: bool = False,
 ) -> Output:
-    _core_id = None if core_id is None else str(core_id)
-    _threshold = None if threshold is None else str(int(threshold.get_value(Unit.KibiByte)))
-    _policy = None if policy is None else policy.name
-    _promotion_count = None if promotion_count is None else str(promotion_count)
+    _core_id = str(core_id) if core_id is not None else None
+    _threshold = str(int(threshold.get_value(Unit.KibiByte))) if threshold else None
+    _policy = policy.name if policy else None
+    _promotion_count = str(promotion_count) if promotion_count is not None else None
     command = set_param_cutoff_cmd(
         cache_id=str(cache_id),
         core_id=_core_id,
@@ -141,13 +140,17 @@ def set_param_cleaning_alru(
     activity_threshold: int = None,
     shortcut: bool = False,
 ) -> Output:
+    _wake_up = str(wake_up) if wake_up is not None else None
+    _staleness_time = str(staleness_time) if staleness_time is not None else None
+    _flush_max_buffers = str(flush_max_buffers) if flush_max_buffers is not None else None
+    _activity_threshold = str(activity_threshold) if activity_threshold is not None else None
     output = TestRun.executor.run(
         set_param_cleaning_alru_cmd(
             cache_id=str(cache_id),
-            wake_up=str(wake_up),
-            staleness_time=str(staleness_time),
-            flush_max_buffers=str(flush_max_buffers),
-            activity_threshold=str(activity_threshold),
+            wake_up=_wake_up,
+            staleness_time=_staleness_time,
+            flush_max_buffers=_flush_max_buffers,
+            activity_threshold=_activity_threshold,
             shortcut=shortcut,
         )
     )
@@ -159,11 +162,13 @@ def set_param_cleaning_alru(
 def set_param_cleaning_acp(
     cache_id: int, wake_up: int = None, flush_max_buffers: int = None, shortcut: bool = False
 ) -> Output:
+    _wake_up = str(wake_up) if wake_up is not None else None
+    _flush_max_buffers = str(flush_max_buffers) if flush_max_buffers is not None else None
     output = TestRun.executor.run(
         set_param_cleaning_acp_cmd(
             cache_id=str(cache_id),
-            wake_up=str(wake_up) if wake_up is not None else None,
-            flush_max_buffers=str(flush_max_buffers) if flush_max_buffers else None,
+            wake_up=_wake_up,
+            flush_max_buffers=_flush_max_buffers,
             shortcut=shortcut,
         )
     )
@@ -175,7 +180,7 @@ def set_param_cleaning_acp(
 def get_param_cutoff(
     cache_id: int, core_id: int, output_format: OutputFormat = None, shortcut: bool = False
 ) -> Output:
-    _output_format = None if output_format is None else output_format.name
+    _output_format = output_format.name if output_format else None
     output = TestRun.executor.run(
         get_param_cutoff_cmd(
             cache_id=str(cache_id),
@@ -190,21 +195,21 @@ def get_param_cutoff(
 
 
 def get_param_cleaning(cache_id: int, output_format: OutputFormat = None, shortcut: bool = False):
-    _output_format = None if output_format is None else output_format.name
+    _output_format = output_format.name if output_format else None
     output = TestRun.executor.run(
         get_param_cleaning_cmd(
             cache_id=str(cache_id), output_format=_output_format, shortcut=shortcut
         )
     )
     if output.exit_code != 0:
-        raise CmdException("Getting cleaning policy params failed.", output)
+        raise CmdException("Getting cleaning policy failed.", output)
     return output
 
 
 def get_param_cleaning_alru(
     cache_id: int, output_format: OutputFormat = None, shortcut: bool = False
 ):
-    _output_format = None if output_format is None else output_format.name
+    _output_format = output_format.name if output_format else None
     output = TestRun.executor.run(
         get_param_cleaning_alru_cmd(
             cache_id=str(cache_id), output_format=_output_format, shortcut=shortcut
@@ -218,7 +223,7 @@ def get_param_cleaning_alru(
 def get_param_cleaning_acp(
     cache_id: int, output_format: OutputFormat = None, shortcut: bool = False
 ):
-    _output_format = None if output_format is None else output_format.name
+    _output_format = output_format.name if output_format else None
     output = TestRun.executor.run(
         get_param_cleaning_acp_cmd(
             cache_id=str(cache_id), output_format=_output_format, shortcut=shortcut
@@ -233,11 +238,8 @@ def set_cache_mode(
     cache_mode: CacheMode, cache_id: int, flush=None, shortcut: bool = False
 ) -> Output:
     flush_cache = None
-    if flush is True:
-        flush_cache = "yes"
-    elif flush is False:
-        flush_cache = "no"
-
+    if flush:
+        flush_cache = "yes" if flush else "no"
     output = TestRun.executor.run(
         set_cache_mode_cmd(
             cache_mode=cache_mode.name.lower(),
@@ -252,7 +254,7 @@ def set_cache_mode(
 
 
 def add_core(cache: Cache, core_dev: Device, core_id: int = None, shortcut: bool = False) -> Core:
-    _core_id = None if core_id is None else str(core_id)
+    _core_id = str(core_id) if core_id is not None else None
     output = TestRun.executor.run(
         add_core_cmd(
             cache_id=str(cache.cache_id),
@@ -302,7 +304,7 @@ def remove_detached(core_device: Device, shortcut: bool = False) -> Output:
 def list_caches(
     output_format: OutputFormat = None, by_id_path: bool = True, shortcut: bool = False
 ) -> Output:
-    _output_format = None if output_format is None else output_format.name
+    _output_format = output_format.name if output_format else None
     output = TestRun.executor.run(
         list_caches_cmd(output_format=_output_format, by_id_path=by_id_path, shortcut=shortcut)
     )
@@ -321,8 +323,8 @@ def print_statistics(
     shortcut: bool = False,
 ) -> Output:
     _output_format = output_format.name if output_format else None
-    _core_id = str(core_id) if core_id else None
-    _io_class_id = str(io_class_id) if io_class_id else None
+    _io_class_id = str(io_class_id) if io_class_id is not None else None
+    _core_id = str(core_id) if core_id is not None else None
     if filter is None:
         _filter = filter
     else:
@@ -345,7 +347,7 @@ def print_statistics(
 
 
 def reset_counters(cache_id: int, core_id: int = None, shortcut: bool = False) -> Output:
-    _core_id = None if core_id is None else str(core_id)
+    _core_id = str(core_id) if core_id is not None else None
     output = TestRun.executor.run(
         reset_counters_cmd(cache_id=str(cache_id), core_id=_core_id, shortcut=shortcut)
     )
@@ -362,12 +364,8 @@ def flush_cache(cache_id: int, shortcut: bool = False) -> Output:
     return output
 
 
-def flush_core(
-    cache_id: int, core_id: int, shortcut: bool = False
-) -> Output:
-    command = flush_core_cmd(
-        cache_id=str(cache_id), core_id=str(core_id), shortcut=shortcut
-    )
+def flush_core(cache_id: int, core_id: int, shortcut: bool = False) -> Output:
+    command = flush_core_cmd(cache_id=str(cache_id), core_id=str(core_id), shortcut=shortcut)
     output = TestRun.executor.run(command)
     if output.exit_code != 0:
         raise CmdException("Flushing core failed.", output)
@@ -384,7 +382,7 @@ def load_io_classes(cache_id: int, file: str, shortcut: bool = False) -> Output:
 
 
 def list_io_classes(cache_id: int, output_format: OutputFormat, shortcut: bool = False) -> Output:
-    _output_format = None if output_format is None else output_format.name
+    _output_format = output_format.name if output_format else None
     output = TestRun.executor.run(
         list_io_classes_cmd(cache_id=str(cache_id), output_format=_output_format, shortcut=shortcut)
     )
@@ -394,7 +392,7 @@ def list_io_classes(cache_id: int, output_format: OutputFormat, shortcut: bool =
 
 
 def print_version(output_format: OutputFormat = None, shortcut: bool = False) -> Output:
-    _output_format = None if output_format is None else output_format.name
+    _output_format = output_format.name if output_format else None
     output = TestRun.executor.run(version_cmd(output_format=_output_format, shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to print version.", output)
@@ -415,12 +413,7 @@ def standby_init(
 ) -> Cache:
     if kernel_params != KernelParameters.read_current_settings():
         reload_kernel_module("cas_cache", kernel_params.get_parameter_dictionary())
-
-    _cache_line_size = (
-        None
-        if cache_line_size is None
-        else str(int(cache_line_size.value.get_value(Unit.KibiByte)))
-    )
+    _cache_line_size = str(int(cache_line_size.value.get_value(Unit.KibiByte)))
 
     output = TestRun.executor.run(
         standby_init_cmd(
@@ -510,18 +503,18 @@ def remove_core_with_script_command(cache_id: int, core_id: int, no_flush: bool 
 
 
 def stop_all_caches() -> None:
-    from .casadm_parser import get_caches
+    from api.cas.casadm_parser import get_caches
 
     caches = get_caches()
     if not caches:
         return
     for cache in caches:
-        stop_cache(cache_id=cache.cache_id)
+        stop_cache(cache_id=cache.cache_id, no_data_flush=True)
 
 
 def remove_all_detached_cores() -> None:
-    from api.cas import casadm_parser
+    from api.cas.casadm_parser import get_cas_devices_dict
 
-    devices = casadm_parser.get_cas_devices_dict()
+    devices = get_cas_devices_dict()
     for dev in devices["core_pool"]:
         TestRun.executor.run(remove_detached_cmd(dev["device"]))

@@ -12,7 +12,7 @@ from api.cas import casadm
 from api.cas.cache_config import SeqCutOffParameters, SeqCutOffPolicy
 from api.cas.casadm_params import StatsFilter
 from api.cas.casadm_parser import get_seq_cut_off_parameters, get_core_info_by_path
-from api.cas.statistics import CoreStats, IoClassStats
+from api.cas.statistics import CoreStats, CoreIoClassStats
 from core.test_run_utils import TestRun
 from storage_devices.device import Device
 from test_tools import fs_utils, disk_utils
@@ -57,8 +57,8 @@ class Core(Device):
         io_class_id: int,
         stat_filter: List[StatsFilter] = None,
         percentage_val: bool = False,
-    ):
-        return IoClassStats(
+    ) -> CoreIoClassStats:
+        return CoreIoClassStats(
             cache_id=self.cache_id,
             filter=stat_filter,
             io_class_id=io_class_id,

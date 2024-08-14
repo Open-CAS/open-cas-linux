@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -49,7 +50,12 @@ class IoClass:
         )
 
     def __eq__(self, other):
-        return (self.id, self.rule, self.priority, self.allocation) == (
+        return (
+            self.id,
+            self.rule,
+            self.priority,
+            self.allocation,
+        ) == (
             other.id,
             other.rule,
             other.priority,
@@ -57,7 +63,12 @@ class IoClass:
         )
 
     def __lt__(self, other):
-        return (self.id, self.rule, self.priority, self.allocation) < (
+        return (
+            self.id,
+            self.rule,
+            self.priority,
+            self.allocation,
+        ) < (
             other.id,
             other.rule,
             other.priority,
@@ -216,7 +227,7 @@ def remove_ioclass_config(ioclass_config_path: str = default_config_file_path):
     output = TestRun.executor.run(f"rm -f {ioclass_config_path}")
     if output.exit_code != 0:
         raise Exception(
-            "Failed to remove config file. " + f"stdout: {output.stdout} \n stderr :{output.stderr}"
+            f"Failed to remove config file. stdout: {output.stdout} \n stderr :{output.stderr}"
         )
 
 
@@ -228,7 +239,7 @@ def add_ioclass(
     ioclass_config_path: str = default_config_file_path,
 ):
     new_ioclass = f"{ioclass_id},{rule},{eviction_priority},{allocation}"
-    TestRun.LOGGER.info(f"Adding rule {new_ioclass} " + f"to config file {ioclass_config_path}")
+    TestRun.LOGGER.info(f"Adding rule {new_ioclass} to config file {ioclass_config_path}")
 
     output = TestRun.executor.run(f'echo "{new_ioclass}" >> {ioclass_config_path}')
     if output.exit_code != 0:
@@ -239,9 +250,7 @@ def add_ioclass(
 
 
 def get_ioclass(ioclass_id: int, ioclass_config_path: str = default_config_file_path):
-    TestRun.LOGGER.info(
-        f"Retrieving rule no. {ioclass_id} " + f"from config file {ioclass_config_path}"
-    )
+    TestRun.LOGGER.info(f"Retrieving rule no. {ioclass_id} from config file {ioclass_config_path}")
     output = TestRun.executor.run(f"cat {ioclass_config_path}")
     if output.exit_code != 0:
         raise Exception(
@@ -257,9 +266,7 @@ def get_ioclass(ioclass_id: int, ioclass_config_path: str = default_config_file_
 
 
 def remove_ioclass(ioclass_id: int, ioclass_config_path: str = default_config_file_path):
-    TestRun.LOGGER.info(
-        f"Removing rule no.{ioclass_id} " + f"from config file {ioclass_config_path}"
-    )
+    TestRun.LOGGER.info(f"Removing rule no.{ioclass_id} from config file {ioclass_config_path}")
     output = TestRun.executor.run(f"cat {ioclass_config_path}")
     if output.exit_code != 0:
         raise Exception(

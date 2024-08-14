@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -9,9 +10,10 @@ from test_utils.dmesg import get_dmesg
 from test_utils.size import Size, Unit
 
 
-def get_metadata_size_on_device(cache_name: str) -> Size:
+def get_metadata_size_on_device(cache_id: int) -> Size:
     dmesg_reversed = list(reversed(get_dmesg().split("\n")))
-    cache_dmesg = "\n".join(line for line in dmesg_reversed if cache_name in line)
+    cache_name = "cache" + str(cache_id)
+    cache_dmesg = "\n".join(line for line in dmesg_reversed if re.search(f"{cache_name}:", line))
     try:
         return _get_metadata_info(dmesg=cache_dmesg, section_name="Metadata size on device")
     except ValueError:

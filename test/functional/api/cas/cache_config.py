@@ -41,30 +41,33 @@ class CacheMode(Enum):
         return self.value
 
     @staticmethod
-    def get_traits(cache_mode):
-        if cache_mode == CacheMode.PT:
-            return CacheModeTrait(0)
-        elif cache_mode == CacheMode.WT:
-            return CacheModeTrait.InsertRead | CacheModeTrait.InsertWrite
-        elif cache_mode == CacheMode.WB:
-            return (
-                CacheModeTrait.InsertRead | CacheModeTrait.InsertWrite | CacheModeTrait.LazyWrites
-            )
-        elif cache_mode == CacheMode.WO:
-            return CacheModeTrait.InsertWrite | CacheModeTrait.LazyWrites
-        elif cache_mode == CacheMode.WA:
-            return CacheModeTrait.InsertRead
+    def get_traits(cache_mode) -> CacheModeTrait:
+        match cache_mode:
+            case CacheMode.PT:
+                return CacheModeTrait(0)
+            case CacheMode.WT:
+                return CacheModeTrait.InsertRead | CacheModeTrait.InsertWrite
+            case CacheMode.WB:
+                return (
+                    CacheModeTrait.InsertRead
+                    | CacheModeTrait.InsertWrite
+                    | CacheModeTrait.LazyWrites
+                )
+            case CacheMode.WO:
+                return CacheModeTrait.InsertWrite | CacheModeTrait.LazyWrites
+            case CacheMode.WA:
+                return CacheModeTrait.InsertRead
 
     @staticmethod
-    def with_traits(flags: CacheModeTrait):
+    def with_traits(flags: CacheModeTrait) -> list:
         return [m for m in CacheMode if all(map(lambda t: t in CacheMode.get_traits(m), flags))]
 
     @staticmethod
-    def without_traits(flags: CacheModeTrait):
+    def without_traits(flags: CacheModeTrait) -> list:
         return [m for m in CacheMode if not any(map(lambda t: t in CacheMode.get_traits(m), flags))]
 
     @staticmethod
-    def with_any_trait(flags: CacheModeTrait):
+    def with_any_trait(flags: CacheModeTrait) -> list:
         return [m for m in CacheMode if any(map(lambda t: t in CacheMode.get_traits(m), flags))]
 
 
@@ -127,10 +130,10 @@ class CacheStatus(Enum):
 class FlushParametersAlru:
     def __init__(
         self,
-        activity_threshold=None,
-        flush_max_buffers=None,
-        staleness_time=None,
-        wake_up_time=None,
+        activity_threshold: Time = None,
+        flush_max_buffers: int = None,
+        staleness_time: Time = None,
+        wake_up_time: Time = None,
     ):
         self.activity_threshold = activity_threshold
         self.flush_max_buffers = flush_max_buffers
@@ -213,7 +216,9 @@ class FlushParametersAcp:
 
 
 class SeqCutOffParameters:
-    def __init__(self, policy=None, threshold=None, promotion_count=None):
+    def __init__(
+        self, policy: CleaningPolicy = None, threshold: Size = None, promotion_count: int = None
+    ):
         self.policy = policy
         self.threshold = threshold
         self.promotion_count = promotion_count
@@ -235,7 +240,7 @@ class SeqCutOffParameters:
 
 
 class PromotionParametersNhit:
-    def __init__(self, threshold=None, trigger=None):
+    def __init__(self, threshold: Size = None, trigger: int = None):
         self.threshold = threshold
         self.trigger = trigger
 
@@ -362,9 +367,9 @@ class KernelParameters:
 class CacheConfig:
     def __init__(
         self,
-        cache_line_size=CacheLineSize.DEFAULT,
-        cache_mode=CacheMode.DEFAULT,
-        cleaning_policy=CleaningPolicy.DEFAULT,
+        cache_line_size: CacheLineSize = CacheLineSize.DEFAULT,
+        cache_mode: CacheMode = CacheMode.DEFAULT,
+        cleaning_policy: CleaningPolicy = CleaningPolicy.DEFAULT,
         kernel_parameters=None,
     ):
         self.cache_line_size = cache_line_size

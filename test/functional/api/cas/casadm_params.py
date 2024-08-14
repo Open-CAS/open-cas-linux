@@ -7,6 +7,18 @@
 from enum import Enum
 
 
+class ParamName(Enum):
+    seq_cutoff = "seq-cutoff"
+    cleaning = "cleaning"
+    cleaning_alru = "cleaning-alru"
+    cleaning_acp = "cleaning-acp"
+    promotion = "promotion"
+    promotion_nhit = "promotion-nhit"
+
+    def __str__(self):
+        return self.value
+
+
 class OutputFormat(Enum):
     table = 0
     csv = 1

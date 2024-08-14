@@ -174,11 +174,36 @@ def get_param_cutoff_cmd(
     command = _get_param_cmd(
         name=name,
         cache_id=cache_id,
-        core_id=core_id,
         output_format=output_format,
         shortcut=shortcut,
     )
     command += (" -j " if shortcut else " --core-id ") + core_id
+    return casadm_bin + command
+
+
+def get_param_promotion_cmd(
+    cache_id: str, output_format: str = None, shortcut: bool = False
+) -> str:
+    name = "promotion"
+    command = _get_param_cmd(
+        name=name,
+        cache_id=cache_id,
+        output_format=output_format,
+        shortcut=shortcut,
+    )
+    return casadm_bin + command
+
+
+def get_param_promotion_nhit_cmd(
+    cache_id: str, output_format: str = None, shortcut: bool = False
+) -> str:
+    name = "promotion-nhit"
+    command = _get_param_cmd(
+        name=name,
+        cache_id=cache_id,
+        output_format=output_format,
+        shortcut=shortcut,
+    )
     return casadm_bin + command
 
 
@@ -412,36 +437,36 @@ def ctl_init(force: bool = False) -> str:
 # casadm script
 
 
-def script_try_add_cmd(cache_id: str, core_dev: str, core_id: str = None) -> str:
+def script_try_add_cmd(cache_id: str, core_dev: str, core_id: str) -> str:
     command = " --script --add-core --try-add"
     command += " --cache-id " + cache_id
-    if core_id:
-        command += " --core-device " + core_dev
+    command += " --core-device " + core_dev
+    command += f" --core-id " + core_id
     return casadm_bin + command
 
 
 def script_purge_cache_cmd(cache_id: str) -> str:
-    command = "--script --purge-cache"
+    command = " --script --purge-cache"
     command += " --cache-id " + cache_id
     return casadm_bin + command
 
 
 def script_purge_core_cmd(cache_id: str, core_id: str) -> str:
-    command = "--script --purge-core"
+    command = " --script --purge-core"
     command += " --cache-id " + cache_id
     command += " --core-id " + core_id
     return casadm_bin + command
 
 
 def script_detach_core_cmd(cache_id: str, core_id: str) -> str:
-    command = "--script --remove-core --detach"
+    command = " --script --remove-core --detach"
     command += " --cache-id " + cache_id
     command += " --core-id " + core_id
     return casadm_bin + command
 
 
 def script_remove_core_cmd(cache_id: str, core_id: str, no_flush: bool = False) -> str:
-    command = "--script --remove-core"
+    command = " --script --remove-core"
     command += " --cache-id " + cache_id
     command += " --core-id " + core_id
     if no_flush:

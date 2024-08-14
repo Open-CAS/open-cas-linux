@@ -138,7 +138,7 @@ operation_forbiden_in_standby = [
 ]
 
 mutually_exclusive_params_init = [
-    r"Can\'t use \'load\' and \'init\' options simultaneously\n" r"Error during options handling"
+    r"Can\'t use \'load\' and \'init\' options simultaneously\nError during options handling"
 ]
 
 mutually_exclusive_params_load = [
