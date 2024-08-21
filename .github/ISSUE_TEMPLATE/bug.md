@@ -31,6 +31,9 @@ assignees: ''
 ## Logs
 <!--- Error logs in any form are really helpful -->
 
+## Configuration files
+<!--- If you used fio/vbdench/any other tool please include configuration file -->
+
 ## Your Environment
 <!--- Include as many relevant details about the environment you experienced the bug in -->
 * OpenCAS version (commit hash or tag):
