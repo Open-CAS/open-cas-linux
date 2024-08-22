@@ -1,0 +1,10 @@
+- name: String
+  attributes:
+    name: SeqCutoffPolicy
+    value: 'full'
+    mutable: 'true'
+  children:
+   - name: Hint
+     attributes:
+       name: ValidValues
+       value: 'full;always;never'
