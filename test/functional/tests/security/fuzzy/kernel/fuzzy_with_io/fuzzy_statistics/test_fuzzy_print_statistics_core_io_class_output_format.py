@@ -15,6 +15,7 @@ from api.cas.cache_config import (
     KernelParameters,
     UseIoScheduler,
 )
+from api.cas.casadm_params import OutputFormat
 from api.cas.cli import print_statistics_cmd
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
@@ -37,14 +38,14 @@ from tests.security.fuzzy.kernel.fuzzy_with_io.common.common import (
 @pytest.mark.parametrizex("cleaning_policy", CleaningPolicy)
 @pytest.mark.parametrizex("unaligned_io", UnalignedIo)
 @pytest.mark.parametrizex("use_io_scheduler", UseIoScheduler)
-def test_fuzzy_print_statistics_core_id(
+def test_fuzzy_print_statistics_core_io_class_output_format(
     cache_mode, cache_line_size, cleaning_policy, unaligned_io, use_io_scheduler
 ):
     """
-    title: Fuzzy test for casadm 'print statistics' command - core id
+    title: Fuzzy test for casadm 'print statistics' command for core IO class - output format
     description: |
-        Using Peach Fuzzer check Open CAS ability of handling wrong core id in casadm
-        'print statistics' command.
+        Using Peach Fuzzer check Open CAS ability of handling wrong output format for core
+        IO class in casadm 'print statistics' command.
     pass_criteria:
       - System did not crash
       - Open CAS still works.
@@ -72,11 +73,13 @@ def test_fuzzy_print_statistics_core_id(
             raise Exception("Fio is not running.")
 
     with TestRun.step("Prepare PeachFuzzer"):
-        valid_values = [str(core.core_id).encode("ascii")]
-        PeachFuzzer.generate_config(get_fuzz_config("core_id.yml"))
+        valid_values = [e.name.encode("ascii") for e in list(OutputFormat)]
+        PeachFuzzer.generate_config(get_fuzz_config("output_format.yml"))
         base_cmd = print_statistics_cmd(
             cache_id=str(core.cache_id),
-            core_id="{param}",
+            core_id=str(core.core_id),
+            io_class_id="0",
+            output_format="{param}",
             by_id_path=False,
         )
         commands = PeachFuzzer.get_fuzzed_command(
@@ -92,6 +95,6 @@ def test_fuzzy_print_statistics_core_id(
 
             run_cmd_and_validate(
                 cmd=cmd,
-                value_name="Core id",
+                value_name="Output format",
                 is_valid=cmd.param in valid_values,
             )
