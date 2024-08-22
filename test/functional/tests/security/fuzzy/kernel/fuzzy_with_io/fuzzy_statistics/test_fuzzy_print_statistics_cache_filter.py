@@ -15,6 +15,7 @@ from api.cas.cache_config import (
     KernelParameters,
     UseIoScheduler,
 )
+from api.cas.casadm_params import StatsFilter
 from api.cas.cli import print_statistics_cmd
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
@@ -37,13 +38,13 @@ from tests.security.fuzzy.kernel.fuzzy_with_io.common.common import (
 @pytest.mark.parametrizex("cleaning_policy", CleaningPolicy)
 @pytest.mark.parametrizex("unaligned_io", UnalignedIo)
 @pytest.mark.parametrizex("use_io_scheduler", UseIoScheduler)
-def test_fuzzy_print_statistics_core_id(
+def test_fuzzy_print_statistics_cache_filter(
     cache_mode, cache_line_size, cleaning_policy, unaligned_io, use_io_scheduler
 ):
     """
-    title: Fuzzy test for casadm 'print statistics' command - core id
+    title: Fuzzy test for casadm 'print statistics' command for cache - filter
     description: |
-        Using Peach Fuzzer check Open CAS ability of handling wrong core id in casadm
+        Using Peach Fuzzer check Open CAS ability of handling wrong filter for cache in casadm
         'print statistics' command.
     pass_criteria:
       - System did not crash
@@ -72,12 +73,10 @@ def test_fuzzy_print_statistics_core_id(
             raise Exception("Fio is not running.")
 
     with TestRun.step("Prepare PeachFuzzer"):
-        valid_values = [str(core.core_id).encode("ascii")]
-        PeachFuzzer.generate_config(get_fuzz_config("core_id.yml"))
+        valid_values = [e.name.encode("ascii") for e in list(StatsFilter)]
+        PeachFuzzer.generate_config(get_fuzz_config("filter.yml"))
         base_cmd = print_statistics_cmd(
-            cache_id=str(core.cache_id),
-            core_id="{param}",
-            by_id_path=False,
+            cache_id=str(core.cache_id), filter="{param}", by_id_path=False
         )
         commands = PeachFuzzer.get_fuzzed_command(
             command_template=base_cmd, count=TestRun.usr.fuzzy_iter_count
@@ -92,6 +91,6 @@ def test_fuzzy_print_statistics_core_id(
 
             run_cmd_and_validate(
                 cmd=cmd,
-                value_name="Core id",
+                value_name="Filter",
                 is_valid=cmd.param in valid_values,
             )

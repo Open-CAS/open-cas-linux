@@ -37,14 +37,14 @@ from tests.security.fuzzy.kernel.fuzzy_with_io.common.common import (
 @pytest.mark.parametrizex("cleaning_policy", CleaningPolicy)
 @pytest.mark.parametrizex("unaligned_io", UnalignedIo)
 @pytest.mark.parametrizex("use_io_scheduler", UseIoScheduler)
-def test_fuzzy_print_statistics_core_id(
+def test_fuzzy_print_statistics_cache_io_class_id(
     cache_mode, cache_line_size, cleaning_policy, unaligned_io, use_io_scheduler
 ):
     """
-    title: Fuzzy test for casadm 'print statistics' command - core id
+    title: Fuzzy test for casadm 'print statistics' command for cache - IO class id
     description: |
-        Using Peach Fuzzer check Open CAS ability of handling wrong core id in casadm
-        'print statistics' command.
+        Using Peach Fuzzer check Open CAS ability of handling wrong IO class id for cache in
+        casadm 'print statistics' command.
     pass_criteria:
       - System did not crash
       - Open CAS still works.
@@ -72,11 +72,11 @@ def test_fuzzy_print_statistics_core_id(
             raise Exception("Fio is not running.")
 
     with TestRun.step("Prepare PeachFuzzer"):
-        valid_values = [str(core.core_id).encode("ascii")]
-        PeachFuzzer.generate_config(get_fuzz_config("core_id.yml"))
+        valid_values = [b"", b"0", b"1"] + [str(x).encode("ascii") for x in range(11, 23)]
+        PeachFuzzer.generate_config(get_fuzz_config("io_class_id.yml"))
         base_cmd = print_statistics_cmd(
             cache_id=str(core.cache_id),
-            core_id="{param}",
+            io_class_id="{param}",
             by_id_path=False,
         )
         commands = PeachFuzzer.get_fuzzed_command(
@@ -92,6 +92,13 @@ def test_fuzzy_print_statistics_core_id(
 
             run_cmd_and_validate(
                 cmd=cmd,
-                value_name="Core id",
-                is_valid=cmd.param in valid_values,
+                value_name="Io class id",
+                is_valid=__is_valid(cmd.param, valid_values),
             )
+
+
+def __is_valid(param, valid_values):
+    param = param.rstrip(b"\x00\x20\n\t")
+    param = b"0" if not len(param.rstrip(b"0")) else param  # treat '00' as '0'
+
+    return param in valid_values
