@@ -1,0 +1,10 @@
+- name: String
+  attributes:
+    name: ParamName
+    value: 'cleaning'
+    mutable: 'true'
+  children:
+   - name: Hint
+     attributes:
+       name: ValidValues
+       value: 'cleaning-alru;cleaning-acp;promotion;promotion-nhit;seq-cutoff;'
