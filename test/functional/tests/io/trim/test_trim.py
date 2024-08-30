@@ -252,7 +252,7 @@ def test_trim_device_discard_support(
     with TestRun.step("Ensure that discards were detected by blktrace on proper devices."):
         discard_expected = {"core": trim_support_cache_core[1], "cache": False, "cas": True}
         TestRun.LOGGER.info(
-            f"Discards expected: core - {trim_support_cache_core[1]}, " f"cache - False, cas - True"
+            f"Discards expected: core - {trim_support_cache_core[1]}, cache - False, cas - True"
         )
         stop_monitoring_and_check_discards(blktraces, discard_expected)
 
