@@ -218,11 +218,14 @@ void *cas_rpool_try_get(struct cas_reserve_pool *rpool_master, int *cpu)
 		entry = RPOOL_ITEM_TO_ENTRY(rpool_master, item);
 		list_del(item);
 		atomic_dec(&current_rpool->count);
-		/* The actuall allocation - kmemleak should start tracking page */
-		kmemleak_alloc(entry, rpool_master->entry_size, 1, GFP_NOIO);
 	}
 
 	spin_unlock_irqrestore(&current_rpool->lock, flags);
+
+	if (entry) {
+		/* The actual allocation - kmemleak should start tracking page */
+		kmemleak_alloc(entry, rpool_master->entry_size, 1, GFP_NOIO);
+	}
 
 	CAS_DEBUG_PARAM("[%s]Removed item from reserve pool [%s] for cpu [%d], "
 				"items in pool %d", rpool_master->name,
