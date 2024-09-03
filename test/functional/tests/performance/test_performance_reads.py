@@ -1,11 +1,12 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
-from datetime import timedelta
 
 import pytest
 
+from datetime import timedelta
 from api.cas import casadm
 from api.cas.cache_config import CacheLineSize, CacheMode, SeqCutOffPolicy
 from core.test_run import TestRun
@@ -41,7 +42,9 @@ def fill_cas_cache(target, bs):
 # TODO: for disks other than Intel Optane, fio ramp is needed before fio tests on raw disk
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrizex("block_size", [Size(1, Unit.Blocks4096), Size(8, Unit.Blocks4096)])
+@pytest.mark.parametrizex(
+    "block_size", [Size(1, Unit.Blocks4096), Size(8, Unit.Blocks4096)]
+)
 @pytest.mark.parametrizex("queue_depth", [1, 16, 32])
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 def test_performance_read_hit_wt(cache_line_size, block_size, queue_depth):
@@ -54,6 +57,7 @@ def test_performance_read_hit_wt(cache_line_size, block_size, queue_depth):
     pass_criteria:
       - passes performance threshold
     """
+
     processors_number = get_number_of_processors_from_cpuinfo()
     num_jobs = [int(processors_number / 2), processors_number]
     data_size = Size(20, Unit.GibiByte)
@@ -92,12 +96,16 @@ def test_performance_read_hit_wt(cache_line_size, block_size, queue_depth):
             TestRun.LOGGER.info(str(raw_disk_results[nj]))
 
     with TestRun.step("Start cache and add core device"):
-        cache = casadm.start_cache(cache_part, CacheMode.WT, cache_line_size, cache_id=1)
+        cache = casadm.start_cache(
+            cache_part, CacheMode.WT, cache_line_size, cache_id=1, force=True
+        )
         cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
         core = cache.add_core(core_part, core_id=1)
 
     with TestRun.step("Ensure that I/O scheduler for CAS device is 'none'"):
-        TestRun.executor.run_expect_success("sudo echo none > /sys/block/cas1-1/queue/scheduler")
+        TestRun.executor.run_expect_success(
+            f"sudo echo none > /sys/block/{core.path.lstrip('/dev/')}/queue/scheduler"
+        )
 
     with TestRun.step("Fill the cache with data via CAS device"):
         fill_cas_cache(core, cache_line_size)
@@ -150,7 +158,9 @@ def test_performance_read_hit_wt(cache_line_size, block_size, queue_depth):
 # TODO: for disks other than Intel Optane, fio ramp is needed before fio tests on raw disk
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrizex("block_size", [Size(1, Unit.Blocks4096), Size(8, Unit.Blocks4096)])
+@pytest.mark.parametrizex(
+    "block_size", [Size(1, Unit.Blocks4096), Size(8, Unit.Blocks4096)]
+)
 @pytest.mark.parametrizex("queue_depth", [1, 16, 32])
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 def test_performance_read_hit_wb(cache_line_size, block_size, queue_depth):
