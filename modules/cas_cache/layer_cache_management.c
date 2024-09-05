@@ -1998,7 +1998,8 @@ static int _cache_mngt_start_queues(ocf_cache_t cache)
 		}
 	}
 
-	result = ocf_queue_create(cache, &cache_priv->mngt_queue, &queue_ops);
+	result = ocf_queue_create_mngt(cache, &cache_priv->mngt_queue,
+			&queue_ops);
 	if (result)
 		goto err;
 
@@ -2007,8 +2008,6 @@ static int _cache_mngt_start_queues(ocf_cache_t cache)
 		ocf_queue_put(cache_priv->mngt_queue);
 		goto err;
 	}
-
-	ocf_mngt_cache_set_mngt_queue(cache, cache_priv->mngt_queue);
 
 	return 0;
 err:
