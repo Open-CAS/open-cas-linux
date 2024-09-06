@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -2373,7 +2374,7 @@ static cli_command cas_commands[] = {
 			.options = standby_params_options,
 			.command_handle_opts = standby_handle_option,
 			.handle = standby_handle,
-			.flags = CLI_SU_REQUIRED,
+			.flags = (CLI_COMMAND_BLOCKED | CLI_SU_REQUIRED),
 			.help = standby_help,
 		},
 		{

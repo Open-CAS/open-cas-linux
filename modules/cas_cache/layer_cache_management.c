@@ -1882,6 +1882,15 @@ int cache_mngt_create_cache_cfg(struct ocf_mngt_cache_config *cfg,
 	char cache_name[OCF_CACHE_NAME_SIZE];
 	uint16_t cache_id;
 
+	switch (cmd->init_cache) {
+		case CACHE_INIT_STANDBY_NEW:
+		case CACHE_INIT_STANDBY_LOAD:
+			printk(KERN_ERR "Standby mode is not supported!\n");
+			return -ENOTSUP;
+		default:
+			break;
+	}
+
 	if (!cmd)
 		return -OCF_ERR_INVAL;
 
@@ -2452,6 +2461,15 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	int result = 0, rollback_result = 0;
 	ocf_cache_mode_t cache_mode_meta;
 	ocf_cache_line_size_t cache_line_size_meta;
+
+	switch (cmd->init_cache) {
+		case CACHE_INIT_STANDBY_NEW:
+		case CACHE_INIT_STANDBY_LOAD:
+			printk(KERN_ERR "Standby mode is not supported!\n");
+			return -ENOTSUP;
+		default:
+			break;
+	}
 
 	if (!try_module_get(THIS_MODULE))
 		return -KCAS_ERR_SYSTEM;
