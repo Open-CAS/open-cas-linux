@@ -20,7 +20,7 @@ from core.test_run import Blocked
 from core.test_run_utils import TestRun
 from api.cas import installer
 from api.cas import casadm
-from api.cas import git
+from test_utils import git
 from api.cas.cas_service import opencas_drop_in_directory
 from storage_devices.raid import Raid
 from storage_devices.ramdisk import RamDisk
