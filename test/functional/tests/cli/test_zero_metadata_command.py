@@ -1,7 +1,8 @@
 #
-# Copyright(c) 2021 Intel Corporation
+# Copyright(c) 2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
+
 import time
 from datetime import timedelta
 
@@ -23,14 +24,14 @@ from test_utils.size import Size, Unit
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_zero_metadata_negative_cases():
     """
-        title: Test for '--zero-metadata' negative cases.
-        description: |
-          Test for '--zero-metadata' scenarios with expected failures.
-        pass_criteria:
-          - Zeroing metadata without '--force' failed when run on cache.
-          - Zeroing metadata with '--force' failed when run on cache.
-          - Zeroing metadata failed when run on system drive.
-          - Load cache command failed after successfully zeroing metadata on the cache device.
+    title: Test for '--zero-metadata' negative cases.
+    description: |
+      Test for '--zero-metadata' scenarios with expected failures.
+    pass_criteria:
+      - Zeroing metadata without '--force' failed when run on cache.
+      - Zeroing metadata with '--force' failed when run on cache.
+      - Zeroing metadata failed when run on system drive.
+      - Load cache command failed after successfully zeroing metadata on the cache device.
     """
     with TestRun.step("Prepare cache and core devices."):
         cache_dev, core_dev, cache_disk = prepare_devices()
@@ -43,21 +44,21 @@ def test_zero_metadata_negative_cases():
             casadm.zero_metadata(cache_dev)
             TestRun.LOGGER.error("Zeroing metadata should fail!")
         except CmdException as e:
-            cli_messages.check_stderr_msg(e.output, cli_messages.unavailable_device)
+            cli_messages.check_string_msg_all(e.output.stderr, cli_messages.unavailable_device)
 
     with TestRun.step("Try to zero metadata with '--force' option and validate error message."):
         try:
             casadm.zero_metadata(cache_dev, force=True)
             TestRun.LOGGER.error("Zeroing metadata with '--force' option should fail!")
         except CmdException as e:
-            cli_messages.check_stderr_msg(e.output, cli_messages.unavailable_device)
+            cli_messages.check_string_msg_all(e.output.stderr, cli_messages.unavailable_device)
 
     with TestRun.step("Try to zeroing metadata on system disk."):
         os_disks = get_system_disks()
         for os_disk in os_disks:
             output = TestRun.executor.run(cli.zero_metadata_cmd(str(os_disk)))
             if output.exit_code != 0:
-                cli_messages.check_stderr_msg(output, cli_messages.error_handling)
+                cli_messages.check_string_msg_all(output.stderr.stderr, cli_messages.error_handling)
             else:
                 TestRun.LOGGER.error("Zeroing metadata should fail!")
 
@@ -69,8 +70,10 @@ def test_zero_metadata_negative_cases():
             casadm.zero_metadata(cache_dev)
             TestRun.LOGGER.info("Zeroing metadata successful!")
         except CmdException as e:
-            TestRun.LOGGER.error(f"Zeroing metadata should work for cache device after stopping "
-                                 f"cache! Error message: {e.output}")
+            TestRun.LOGGER.error(
+                f"Zeroing metadata should work for cache device after stopping "
+                f"cache! Error message: {e.output}"
+            )
 
     with TestRun.step("Load cache."):
         try:
@@ -85,12 +88,12 @@ def test_zero_metadata_negative_cases():
 @pytest.mark.parametrizex("filesystem", Filesystem)
 def test_zero_metadata_filesystem(filesystem):
     """
-        title: Test for '--zero-metadata' and filesystem.
-        description: |
-          Test for '--zero-metadata' on drive with filesystem.
-        pass_criteria:
-          - Zeroing metadata on device with filesystem failed and not removed filesystem.
-          - Zeroing metadata on mounted device failed.
+    title: Test for '--zero-metadata' and filesystem.
+    description: |
+      Test for '--zero-metadata' on drive with filesystem.
+    pass_criteria:
+      - Zeroing metadata on device with filesystem failed and not removed filesystem.
+      - Zeroing metadata on mounted device failed.
     """
     mount_point = "/mnt"
     with TestRun.step("Prepare devices."):
@@ -108,7 +111,7 @@ def test_zero_metadata_filesystem(filesystem):
             casadm.zero_metadata(core)
             TestRun.LOGGER.error("Zeroing metadata should fail!")
         except CmdException as e:
-            cli_messages.check_stderr_msg(e.output, cli_messages.no_cas_metadata)
+            cli_messages.check_string_msg_all(e.output.stderr, cli_messages.no_cas_metadata)
 
         file_system = get_device_filesystem_type(core.get_device_id())
 
@@ -123,21 +126,21 @@ def test_zero_metadata_filesystem(filesystem):
             casadm.zero_metadata(core)
             TestRun.LOGGER.error("Zeroing metadata should fail!")
         except CmdException as e:
-            cli_messages.check_stderr_msg(e.output, cli_messages.unavailable_device)
+            cli_messages.check_string_msg_all(e.output.stderr, cli_messages.unavailable_device)
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_zero_metadata_dirty_data():
     """
-        title: Test for '--zero-metadata' and dirty data scenario.
-        description: |
-          Test for '--zero-metadata' with and without 'force' option if there are dirty data
-          on cache.
-        pass_criteria:
-          - Zeroing metadata without force failed on cache with dirty data.
-          - Zeroing metadata with force ran successfully on cache with dirty data.
-          - Cache started successfully after zeroing metadata on cache with dirty data.
+    title: Test for '--zero-metadata' and dirty data scenario.
+    description: |
+      Test for '--zero-metadata' with and without 'force' option if there are dirty data
+      on cache.
+    pass_criteria:
+      - Zeroing metadata without force failed on cache with dirty data.
+      - Zeroing metadata with force ran successfully on cache with dirty data.
+      - Cache started successfully after zeroing metadata on cache with dirty data.
     """
     with TestRun.step("Prepare cache and core devices."):
         cache_dev, core_disk, cache_disk = prepare_devices()
@@ -173,15 +176,17 @@ def test_zero_metadata_dirty_data():
             casadm.zero_metadata(cache_dev)
             TestRun.LOGGER.error("Zeroing metadata without force should fail!")
         except CmdException as e:
-            cli_messages.check_stderr_msg(e.output, cli_messages.cache_dirty_data)
+            cli_messages.check_string_msg_all(e.output.stderr, cli_messages.cache_dirty_data)
 
     with TestRun.step("Zeroing metadata on cache device with force"):
         try:
             casadm.zero_metadata(cache_dev, force=True)
             TestRun.LOGGER.info("Zeroing metadata with force successful!")
         except CmdException as e:
-            TestRun.LOGGER.error(f"Zeroing metadata with force should work for cache device!"
-                                 f"Error message: {e.output}")
+            TestRun.LOGGER.error(
+                f"Zeroing metadata with force should work for cache device!"
+                f"Error message: {e.output}"
+            )
 
         with TestRun.step("Start cache without 'force' option."):
             try:
@@ -195,14 +200,14 @@ def test_zero_metadata_dirty_data():
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_zero_metadata_dirty_shutdown():
     """
-        title: Test for '--zero-metadata' and dirty shutdown scenario.
-        description: |
-          Test for '--zero-metadata' with and without 'force' option on cache which had been dirty
-          shut down before.
-        pass_criteria:
-          - Zeroing metadata without force failed on cache after dirty shutdown.
-          - Zeroing metadata with force ran successfully on cache after dirty shutdown.
-          - Cache started successfully after dirty shutdown and zeroing metadata on cache.
+    title: Test for '--zero-metadata' and dirty shutdown scenario.
+    description: |
+      Test for '--zero-metadata' with and without 'force' option on cache which had been dirty
+      shut down before.
+    pass_criteria:
+      - Zeroing metadata without force failed on cache after dirty shutdown.
+      - Zeroing metadata with force ran successfully on cache after dirty shutdown.
+      - Cache started successfully after dirty shutdown and zeroing metadata on cache.
     """
     with TestRun.step("Prepare cache and core devices."):
         cache_dev, core_disk, cache_disk = prepare_devices()
@@ -236,15 +241,17 @@ def test_zero_metadata_dirty_shutdown():
             casadm.zero_metadata(cache_dev)
             TestRun.LOGGER.error("Zeroing metadata without force should fail!")
         except CmdException as e:
-            cli_messages.check_stderr_msg(e.output, cli_messages.cache_dirty_shutdown)
+            cli_messages.check_string_msg_all(e.output.stderr, cli_messages.cache_dirty_shutdown)
 
     with TestRun.step("Zeroing metadata on cache device with force"):
         try:
             casadm.zero_metadata(cache_dev, force=True)
             TestRun.LOGGER.info("Zeroing metadata with force successful!")
         except CmdException as e:
-            TestRun.LOGGER.error(f"Zeroing metadata with force should work for cache device!"
-                                 f"Error message: {e.output}")
+            TestRun.LOGGER.error(
+                f"Zeroing metadata with force should work for cache device!"
+                f"Error message: {e.output}"
+            )
 
     with TestRun.step("Start cache."):
         try:
@@ -255,10 +262,10 @@ def test_zero_metadata_dirty_shutdown():
 
 
 def prepare_devices():
-    cache_disk = TestRun.disks['cache']
+    cache_disk = TestRun.disks["cache"]
     cache_disk.create_partitions([Size(100, Unit.MebiByte)])
     cache_part = cache_disk.partitions[0]
-    core_disk = TestRun.disks['core']
+    core_disk = TestRun.disks["core"]
     core_disk.create_partitions([Size(5, Unit.GibiByte)])
 
     return cache_part, core_disk, cache_disk

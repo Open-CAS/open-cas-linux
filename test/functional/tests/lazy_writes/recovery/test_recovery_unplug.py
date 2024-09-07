@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2019-2022 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -85,7 +85,7 @@ def test_recovery_unplug_cache_fs(cache_mode, cls, filesystem, direct):
                 cache.stop(no_data_flush=True)
                 TestRun.LOGGER.warning("Expected stopping cache with errors with --no-flush flag.")
             except CmdException as e1:
-                cli_messages.check_stderr_msg(e1.output, cli_messages.stop_cache_errors)
+                cli_messages.check_string_msg_all(e1.output.stderr, cli_messages.stop_cache_errors)
 
     with TestRun.step("Plug missing cache device."):
         TestRun.LOGGER.info(str(casadm.list_caches(by_id_path=False)))
@@ -170,7 +170,7 @@ def test_recovery_unplug_cache_raw(cache_mode, cls):
                 cache.stop(no_data_flush=True)
                 TestRun.LOGGER.warning("Expected stopping cache with errors with --no-flush flag.")
             except CmdException as e1:
-                cli_messages.check_stderr_msg(e1.output, cli_messages.stop_cache_errors)
+                cli_messages.check_string_msg_all(e1.output.stderr, cli_messages.stop_cache_errors)
 
     with TestRun.step("Plug missing cache device."):
         TestRun.LOGGER.info(str(casadm.list_caches(by_id_path=False)))

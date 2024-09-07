@@ -107,11 +107,11 @@ def test_stop_cache_with_mounted_partition():
     with TestRun.step("Try to remove core from cache."):
         output = TestRun.executor.run_expect_fail(cli.remove_core_cmd(cache_id=str(cache.cache_id),
                                                                       core_id=str(core.core_id)))
-        cli_messages.check_stderr_msg(output, cli_messages.remove_mounted_core)
+        cli_messages.check_string_msg_all(output.stderr, cli_messages.remove_mounted_core)
 
     with TestRun.step("Try to stop CAS."):
         output = TestRun.executor.run_expect_fail(cli.stop_cmd(cache_id=str(cache.cache_id)))
-        cli_messages.check_stderr_msg(output, cli_messages.stop_cache_mounted_core)
+        cli_messages.check_string_msg_all(output.stderr, cli_messages.stop_cache_mounted_core)
 
     with TestRun.step("Unmount core device."):
         core.unmount()

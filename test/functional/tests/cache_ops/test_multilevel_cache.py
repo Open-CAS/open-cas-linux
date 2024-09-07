@@ -49,7 +49,7 @@ def test_remove_multilevel_core():
         output = TestRun.executor.run_expect_fail(cli.remove_core_cmd(cache_id=str(cache1.cache_id),
                                                                       core_id=str(core1.core_id),
                                                                       force=True))
-        cli_messages.check_stderr_msg(output, cli_messages.remove_multilevel_core)
+        cli_messages.check_string_msg_all(output.stderr, cli_messages.remove_multilevel_core)
 
     with TestRun.step("Stop cache."):
         casadm.stop_all_caches()

@@ -8,7 +8,7 @@ import pytest
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
 from api.cas.cli import casadm_bin
-from api.cas.cli_messages import check_stderr_msg, stop_cache_errors
+from api.cas.cli_messages import check_string_msg_all, stop_cache_errors
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeLowerThan, DiskTypeSet, DiskType, Disk
 from test_tools.dd import Dd
@@ -204,7 +204,7 @@ def dirty_stop(cache_disk, caches: list):
         for cache in caches:
             cmd = f"{casadm_bin} --stop-cache --cache-id {cache.cache_id} --no-data-flush"
             output = TestRun.executor.run(cmd)
-            if not check_stderr_msg(output, stop_cache_errors):
+            if not check_string_msg_all(output.stderr, stop_cache_errors):
                 TestRun.fail(f"Cache {cache.cache_id} stopping should fail.")
 
     with TestRun.step("Turn on devices."):
