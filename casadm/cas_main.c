@@ -332,6 +332,13 @@ static cli_option start_options[] = {
 	{0}
 };
 
+static cli_option attach_cache_options[] = {
+	{'d', "cache-device", CACHE_DEVICE_DESC, 1, "DEVICE", CLI_OPTION_REQUIRED},
+	{'i', "cache-id", CACHE_ID_DESC_LONG, 1, "ID", CLI_OPTION_REQUIRED},
+	{'f', "force", "Force attaching the cache device"},
+	{0}
+};
+
 static int check_fs(const char* device, bool force)
 {
 	char cache_dev_path[MAX_STR_LEN];
@@ -403,6 +410,20 @@ int validate_cache_path(const char* path, bool force)
 	}
 
 	return SUCCESS;
+}
+
+int handle_cache_attach(void)
+{
+	return attach_cache(
+			command_args_values.cache_id,
+			command_args_values.cache_device,
+			command_args_values.force
+			);
+}
+
+int handle_cache_detach(void)
+{
+	return detach_cache(command_args_values.cache_id);
 }
 
 int handle_start()
@@ -524,6 +545,11 @@ int handle_stats()
 static cli_option stop_options[] = {
 	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
 	{'n', "no-data-flush", "Do not flush dirty data (may be dangerous)"},
+	{0}
+};
+
+static cli_option detach_options[] = {
+	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
 	{0}
 };
 
@@ -2201,6 +2227,26 @@ static cli_command cas_commands[] = {
 			.options = start_options,
 			.command_handle_opts = start_cache_command_handle_option,
 			.handle = handle_start,
+			.flags = CLI_SU_REQUIRED,
+			.help = NULL,
+		},
+		{
+			.name = "attach-cache",
+			.desc = "Attach cache device",
+			.long_desc = NULL,
+			.options = attach_cache_options,
+			.command_handle_opts = start_cache_command_handle_option,
+			.handle = handle_cache_attach,
+			.flags = CLI_SU_REQUIRED,
+			.help = NULL,
+		},
+		{
+			.name = "detach-cache",
+			.desc = "Detach cache device",
+			.long_desc = NULL,
+			.options = detach_options,
+			.command_handle_opts = command_handle_option,
+			.handle = handle_cache_detach,
 			.flags = CLI_SU_REQUIRED,
 			.help = NULL,
 		},

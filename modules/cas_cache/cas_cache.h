@@ -1,5 +1,6 @@
 /*
  * Copyright(c) 2012-2022 Intel Corporation
+ * Copyright(c) 2024 Huawei Technologies
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -70,6 +71,11 @@ struct cache_priv {
 	ocf_queue_t mngt_queue;
 	void *attach_context;
 	bool cache_exp_obj_initialized;
+	struct {
+		struct queue_limits queue_limits;
+		bool fua;
+		bool flush;
+	} device_properties;
 	ocf_queue_t io_queues[];
 };
 

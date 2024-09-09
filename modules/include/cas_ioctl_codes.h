@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -405,6 +406,8 @@ struct kcas_standby_activate
  *    39    *    KCAS_IOCTL_STANDBY_ACTIVATE                *    OK            *
  *    40    *    KCAS_IOCTL_CORE_INFO                       *    OK            *
  *    41    *    KCAS_IOCTL_START_CACHE                     *    OK            *
+ *    42    *    KCAS_IOCTL_DETACH_CACHE                    *    OK            *
+ *    43    *    KCAS_IOCTL_ATTACH_CACHE                    *    OK            *
  *******************************************************************************
  */
 
@@ -503,6 +506,12 @@ struct kcas_standby_activate
 /** Start new cache instance, load cache or recover cache */
 #define KCAS_IOCTL_START_CACHE _IOWR(KCAS_IOCTL_MAGIC, 41, struct kcas_start_cache)
 
+/** Detach cache device */
+#define KCAS_IOCTL_DETACH_CACHE _IOWR(KCAS_IOCTL_MAGIC, 42, struct kcas_stop_cache)
+
+/** Attach cache device */
+#define KCAS_IOCTL_ATTACH_CACHE _IOWR(KCAS_IOCTL_MAGIC, 43, struct kcas_start_cache)
+
 /**
  * Extended kernel CAS error codes
  */
@@ -544,6 +553,11 @@ enum kcas_error {
 
 	/** Device contains partitions */
 	KCAS_ERR_CONTAINS_PART,
+
+	/** The new device's properties doesn't match the original cache's
+	 *  properties
+	 */
+	KCAS_ERR_DEVICE_PROPERTIES_MISMATCH,
 
 	/** Given device is a partition */
 	KCAS_ERR_A_PART,

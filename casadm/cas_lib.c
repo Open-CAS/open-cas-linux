@@ -45,20 +45,8 @@
 
 #define CORE_ADD_MAX_TIMEOUT 30
 
-#define CHECK_IF_CACHE_IS_MOUNTED -1
-
-/**
- * @brief Routine verifies if filesystem is currently mounted for given cache/core
- *
- *        If FAILURE is returned, reason for failure is printed onto
- *        standard error.
- * @param cache_id cache id of filesystem (to verify if it is mounted)
- * @param core_id core id of filesystem (to verify if it is mounted); if this
- *        parameter is set to negative value, it is only checked if any core belonging
- *        to given cache is mounted;
- * @return SUCCESS if is not mounted; FAILURE if filesystem is mounted
- */
-int check_if_mounted(int cache_id, int core_id);
+int is_cache_mounted(int cache_id);
+int is_core_mounted(int cache_id, int core_id);
 
 /* KCAS_IOCTL_CACHE_CHECK_DEVICE  wrapper */
 int _check_cache_device(const char *device_path,
@@ -808,10 +796,6 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 	cache->promotion_policy = info->info.promotion_policy;
 	cache->size = info->info.cache_line_size;
 
-	if ((info->info.state & (1 << ocf_cache_state_running)) == 0) {
-		return cache;
-	}
-
 	for (cache->core_count = 0; cache->core_count < info->info.core_count; ++cache->core_count) {
 		core_id = info->core_id[cache->core_count];
 
@@ -957,16 +941,13 @@ int check_cache_already_added(const char *cache_device) {
 	return SUCCESS;
 }
 
-int start_cache(uint16_t cache_id, unsigned int cache_init,
-		const char *cache_device, ocf_cache_mode_t cache_mode,
-		ocf_cache_line_size_t line_size, int force)
+static int _verify_and_parse_volume_path(char *tgt_buf,
+		size_t tgt_buf_size, const char *cache_device,
+		size_t paths_size)
 {
 	int fd = 0;
-	struct kcas_start_cache cmd;
-	int status;
-	double min_free_ram_gb;
 
-	/* check if cache device given exists */
+	/* check if cache device exists */
 	fd = open(cache_device, 0);
 	if (fd < 0) {
 		cas_printf(LOG_ERR, "Device %s not found.\n", cache_device);
@@ -974,25 +955,50 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	}
 	close(fd);
 
+	if (set_device_path(tgt_buf, tgt_buf_size, cache_device, paths_size) != SUCCESS) {
+		return FAILURE;
+	}
+
+	return SUCCESS;
+}
+
+static int _start_cache(uint16_t cache_id, unsigned int cache_init,
+		const char *cache_device, ocf_cache_mode_t cache_mode,
+		ocf_cache_line_size_t line_size, int force, bool start)
+{
+	int fd = 0;
+	struct kcas_start_cache cmd = {};
+	int status;
+	int ioctl = start ? KCAS_IOCTL_START_CACHE : KCAS_IOCTL_ATTACH_CACHE;
+	double min_free_ram_gb;
+
 	fd = open_ctrl_device();
 	if (fd == -1)
 		return FAILURE;
 
-	memset(&cmd, 0, sizeof(cmd));
-
-	cmd.cache_id = cache_id;
-	cmd.init_cache = cache_init;
-	if (set_device_path(cmd.cache_path_name, sizeof(cmd.cache_path_name),
-			    cache_device, MAX_STR_LEN) != SUCCESS) {
+	status = _verify_and_parse_volume_path(
+			cmd.cache_path_name,
+			sizeof(cmd.cache_path_name),
+			cache_device,
+			MAX_STR_LEN);
+	if (status != SUCCESS) {
 		close(fd);
 		return FAILURE;
 	}
+
+	cmd.cache_id = cache_id;
 	cmd.caching_mode = cache_mode;
 	cmd.line_size = line_size;
 	cmd.force = (uint8_t)force;
+	cmd.init_cache = cache_init;
 
-	status = run_ioctl_interruptible_retry(fd, KCAS_IOCTL_START_CACHE, &cmd,
-			"Starting cache", cache_id, OCF_CORE_ID_INVALID);
+	status = run_ioctl_interruptible_retry(
+			fd,
+			ioctl,
+			&cmd,
+			start ? "Starting cache" : "Attaching device to cache",
+			cache_id,
+			OCF_CORE_ID_INVALID);
 	cache_id = cmd.cache_id;
 	if (status < 0) {
 		close(fd);
@@ -1002,9 +1008,11 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 			min_free_ram_gb /= GiB;
 
 			cas_printf(LOG_ERR, "Not enough free RAM.\n"
-					"You need at least %0.2fGB to start cache"
+					"You need at least %0.2fGB to %s cache"
 					" with cache line size equal %llukB.\n",
-					min_free_ram_gb, line_size / KiB);
+					min_free_ram_gb,
+					start ? "start" : "attach a device to",
+					line_size / KiB);
 
 			if (64 * KiB > line_size)
 				cas_printf(LOG_ERR, "Try with greater cache line size.\n");
@@ -1025,7 +1033,80 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	check_cache_state_incomplete(cache_id, fd);
 	close(fd);
 
-	cas_printf(LOG_INFO, "Successfully added cache instance %u\n", cache_id);
+	cas_printf(LOG_INFO, "Successfully %s %u\n",
+			start ? "added cache instance" : "attached device to cache",
+			cache_id);
+
+	return SUCCESS;
+}
+
+int start_cache(uint16_t cache_id, unsigned int cache_init,
+		const char *cache_device, ocf_cache_mode_t cache_mode,
+		ocf_cache_line_size_t line_size, int force)
+{
+	return _start_cache(cache_id, cache_init, cache_device, cache_mode,
+			line_size, force, true);
+}
+
+int attach_cache(uint16_t cache_id, const char *cache_device, int force)
+{
+	return _start_cache(cache_id, CACHE_INIT_NEW, cache_device,
+			ocf_cache_mode_none, ocf_cache_line_size_none, force, false);
+}
+
+int detach_cache(uint16_t cache_id)
+{
+	int fd = 0;
+	struct kcas_stop_cache cmd = {};
+	int ioctl_code = KCAS_IOCTL_DETACH_CACHE;
+	int status;
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	cmd.cache_id = cache_id;
+	cmd.flush_data = true;
+
+	status = run_ioctl_interruptible_retry(
+			fd,
+			ioctl_code,
+			&cmd,
+			"Detaching the device from cache",
+			cache_id,
+			OCF_CORE_ID_INVALID);
+	close(fd);
+
+	if (status < 0) {
+		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
+			cas_printf(LOG_ERR,
+				"You have interrupted detaching the device "
+				"from cache %d. CAS continues to operate "
+				"normally.\n",
+				cache_id
+				);
+			return INTERRUPTED;
+		} else if (OCF_ERR_WRITE_CACHE == cmd.ext_err_code) {
+			cas_printf(LOG_ERR,
+					"Detached the device from cache %d "
+					"with errors\n",
+					cache_id
+					);
+			print_err(cmd.ext_err_code);
+			return FAILURE;
+		} else {
+			cas_printf(LOG_ERR,
+					"Error while detaching the device from"
+					" cache %d\n",
+					cache_id
+					);
+			print_err(cmd.ext_err_code);
+			return FAILURE;
+		}
+	}
+
+	cas_printf(LOG_INFO, "Successfully detached device from cache %hu\n",
+			cache_id);
 
 	return SUCCESS;
 }
@@ -1033,40 +1114,51 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 int stop_cache(uint16_t cache_id, int flush)
 {
 	int fd = 0;
-	struct kcas_stop_cache cmd;
+	struct kcas_stop_cache cmd = {};
+	int ioctl_code = KCAS_IOCTL_STOP_CACHE;
+	int status;
 
-	/* don't even attempt ioctl if filesystem is mounted */
-	if (check_if_mounted(cache_id, CHECK_IF_CACHE_IS_MOUNTED) == FAILURE) {
+	/* Don't stop instance with mounted filesystem */
+	if (is_cache_mounted(cache_id) == FAILURE)
 		return FAILURE;
-	}
 
 	fd = open_ctrl_device();
 	if (fd == -1)
 		return FAILURE;
 
-	memset(&cmd, 0, sizeof(cmd));
 	cmd.cache_id = cache_id;
 	cmd.flush_data = flush;
 
-	if(run_ioctl_interruptible_retry(fd, KCAS_IOCTL_STOP_CACHE, &cmd, "Stopping cache",
-			cache_id, OCF_CORE_ID_INVALID) < 0) {
-		close(fd);
+	status = run_ioctl_interruptible_retry(
+			fd,
+			ioctl_code,
+			&cmd,
+			"Stopping cache",
+			cache_id,
+			OCF_CORE_ID_INVALID);
+	close(fd);
+
+	if (status < 0) {
 		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
-			cas_printf(LOG_ERR, "You have interrupted stopping of cache. CAS continues\n"
-				"to operate normally. If you want to stop cache without fully\n"
-				"flushing dirty data, use '-n' option.\n");
+			cas_printf(LOG_ERR,
+				"You have interrupted stopping of cache %d. "
+				"CAS continues\nto operate normally. The cache"
+				" can be stopped without\nflushing dirty data "
+				"by using '-n' option.\n", cache_id);
 			return INTERRUPTED;
-		} else if (cmd.ext_err_code == OCF_ERR_WRITE_CACHE){
-			cas_printf(LOG_ERR, "Removed cache %d with errors\n", cache_id);
+		} else if (OCF_ERR_WRITE_CACHE == cmd.ext_err_code){
+			cas_printf(LOG_ERR, "Stopped cache %d with errors\n", cache_id);
 			print_err(cmd.ext_err_code);
 			return FAILURE;
 		} else {
-			cas_printf(LOG_ERR, "Error while removing cache %d\n", cache_id);
+			cas_printf(LOG_ERR, "Error while stopping cache %d\n", cache_id);
 			print_err(cmd.ext_err_code);
 			return FAILURE;
 		}
 	}
-	close(fd);
+
+	cas_printf(LOG_INFO, "Successfully stopped cache %hu\n", cache_id);
+
 	return SUCCESS;
 }
 
@@ -1711,7 +1803,7 @@ int add_core(unsigned int cache_id, unsigned int core_id, const char *core_devic
 	return SUCCESS;
 }
 
-int check_if_mounted(int cache_id, int core_id)
+int _check_if_mounted(int cache_id, int core_id)
 {
 	FILE *mtab;
 	struct mntent *mstruct;
@@ -1755,6 +1847,16 @@ int check_if_mounted(int cache_id, int core_id)
 
 }
 
+int is_cache_mounted(int cache_id)
+{
+	return _check_if_mounted(cache_id, -1);
+}
+
+int is_core_mounted(int cache_id, int core_id)
+{
+	return _check_if_mounted(cache_id, core_id);
+}
+
 int remove_core(unsigned int cache_id, unsigned int core_id,
 		bool detach, bool force_no_flush)
 {
@@ -1762,7 +1864,7 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
 	struct kcas_remove_core cmd;
 
 	/* don't even attempt ioctl if filesystem is mounted */
-	if (SUCCESS != check_if_mounted(cache_id, core_id)) {
+	if (SUCCESS != is_core_mounted(cache_id, core_id)) {
 		return FAILURE;
 	}
 
@@ -1828,7 +1930,7 @@ int remove_inactive_core(unsigned int cache_id, unsigned int core_id,
 	struct kcas_remove_inactive cmd;
 
 	/* don't even attempt ioctl if filesystem is mounted */
-	if (SUCCESS != check_if_mounted(cache_id, core_id)) {
+	if (SUCCESS != is_core_mounted(cache_id, core_id)) {
 		return FAILURE;
 	}
 
@@ -2692,6 +2794,7 @@ int list_caches(unsigned int list_format, bool by_id_path)
 		char cache_ctrl_dev[MAX_STR_LEN] = "-";
 		float cache_flush_prog;
 		float core_flush_prog;
+		bool cache_device_detached;
 
 		if (!by_id_path && !curr_cache->standby_detached) {
 			if (get_dev_path(curr_cache->device, curr_cache->device,
@@ -2723,11 +2826,16 @@ int list_caches(unsigned int list_format, bool by_id_path)
 			}
 		}
 
+		cache_device_detached =
+			((curr_cache->state & (1 << ocf_cache_state_standby)) |
+			(curr_cache->state & (1 << ocf_cache_state_detached)))
+			;
+
 		fprintf(intermediate_file[1], TAG(TREE_BRANCH)
 			"%s,%u,%s,%s,%s,%s\n",
 			"cache", /* type */
 			curr_cache->id, /* id */
-			curr_cache->standby_detached ? "-" : curr_cache->device, /* device path */
+			cache_device_detached ? "-" : curr_cache->device, /* device path */
 			tmp_status, /* cache status */
 			mode_string, /* write policy */
 			cache_ctrl_dev  /* device */);
