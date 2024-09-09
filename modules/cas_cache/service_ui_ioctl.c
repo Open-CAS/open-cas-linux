@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -381,6 +382,8 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 	case KCAS_IOCTL_STANDBY_DETACH: {
 		struct kcas_standby_detach *cmd_info;
 
+		return -ENOTSUP;
+
 		GET_CMD_INFO(cmd_info, arg);
 
 		retval = cache_mngt_standby_detach(cmd_info);
@@ -390,6 +393,8 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 	case KCAS_IOCTL_STANDBY_ACTIVATE: {
 		struct kcas_standby_activate *cmd_info;
 		struct ocf_mngt_cache_standby_activate_config cfg;
+
+		return -ENOTSUP;
 
 		GET_CMD_INFO(cmd_info, arg);
 

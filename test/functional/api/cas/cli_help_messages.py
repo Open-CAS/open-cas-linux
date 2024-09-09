@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -23,7 +24,6 @@ casadm_help = [
     r"-C  --io-class                 Manage IO classes",
     r"-V  --version                  Print CAS version",
     r"-H  --help                     Print help",
-    r"--standby                  Manage failover standby",
     r"--zero-metadata            Clear metadata from caching device",
     r"For detailed help on the above commands use --help after the command\.",
     r"e\.g\.",
@@ -242,30 +242,7 @@ start_cache_help = [
 ]
 
 standby_help = [
-    r"Usage: casadm --standby \{--init|--load|--detach|--activate\}",
-    r"Manage failover standby",
-    r"Initialize cache in standby mode:",
-    r"Usage: casadm --standby --init --cache-id \<ID\> --cache-line-size \<NUMBER\> "
-    r"--cache-device \<DEVICE\> \[option...\]",
-    r"Options that are valid with --init are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-x  --cache-line-size \<NUMBER\>      Set cache line size in kibibytes: \{4,8,16,32,64\}"
-    r"\[KiB\] \(default: 4\)",
-    r"-d  --cache-device \<DEVICE\>         Caching device to be used",
-    r"-f  --force                         Force the initialization of cache instance",
-    r"Load cache in standby mode:",
-    r"Usage: casadm --standby --load --cache-device \<DEVICE\>",
-    r"Options that are valid with --load are:",
-    r"-d  --cache-device \<DEVICE\>         Caching device to be used",
-    r"Detach cache device in standby mode:",
-    r"Usage: casadm --standby --detach --cache-id \<ID\>",
-    r"Options that are valid with --detach are:",
-    r" -i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"Activate standby cache:",
-    r"Usage: casadm --standby --activate --cache-id \<ID\> --cache-device \<DEVICE\>",
-    r"Options that are valid with --activate are:",
-    r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
-    r"-d  --cache-device \<DEVICE\>         Caching device to be used"
+    r"The command is not supported"
 ]
 
 zero_metadata_help = [
