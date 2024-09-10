@@ -1,16 +1,23 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import pytest
 import time
+
 from random import shuffle
 
-import pytest
-
 from api.cas import casadm, cli, cli_messages
-from api.cas.cache_config import CacheStatus, SeqCutOffPolicy, CacheModeTrait, CacheMode, \
-    CleaningPolicy, FlushParametersAlru
+from api.cas.cache_config import (
+    CacheStatus,
+    SeqCutOffPolicy,
+    CacheModeTrait,
+    CacheMode,
+    CleaningPolicy,
+    FlushParametersAlru,
+)
 from api.cas.casadm_params import OutputFormat
 from api.cas.core import CoreStatus
 from api.cas.init_config import InitConfig
@@ -28,20 +35,135 @@ from test_utils.size import Size, Unit
 from test_utils.time import Time
 
 
+@pytest.mark.CI
+@pytest.mark.os_dependent
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_incremental_load_basic():
+    """
+    title: Incremental load test basic
+    description: |
+        Test incremental load and core pool functionality
+    pass_criteria:
+      - after start and load cores should be in active state and cache in running state
+      - after adding to core pool cores are in inactive state and cache in incomplete state
+
+    """
+    core_count = 3
+
+    with TestRun.step("Partition cache and core devices"):
+        cache_device = TestRun.disks["cache"]
+        core_device = TestRun.disks["core"]
+
+        cache_device.create_partitions([Size(2, Unit.GibiByte)])
+        core_device.create_partitions([Size(4, Unit.GibiByte)] * core_count)
+
+        cache_dev = cache_device.partitions[0]
+        core_dev_list = core_device.partitions
+
+    with TestRun.step("Start cache and add cores"):
+        cache = casadm.start_cache(cache_dev=cache_dev, force=True)
+        core_list = [cache.add_core(core_dev=core_dev) for core_dev in core_dev_list]
+
+    with TestRun.step("Check if all cores have active status"):
+        for core in core_list:
+            if core.get_status() is not CoreStatus.active:
+                TestRun.fail(f"Core {core.core_id} should be active but is {core.get_status()}.")
+
+    with TestRun.step("Stop cache"):
+        cache.stop()
+
+    with TestRun.step("Add cores to core pool"):
+        core_pool_list = [
+            casadm.try_add(core_device=core_dev, cache_id=1, core_id=core_id)
+            for core_dev, core_id in zip(core_dev_list, range(1, core_count))
+        ]
+
+    with TestRun.step("Check if all cores in core pool have detached status"):
+        for core in core_pool_list:
+            if core.get_status() is not CoreStatus.detached:
+                TestRun.fail(f"Core {core.core_id} should be detached but is {core.get_status()}.")
+
+    with TestRun.step("Load cache"):
+        cache = casadm.load_cache(cache_dev)
+        if cache.get_status() is not CacheStatus.running:
+            TestRun.fail(f"Cache {cache.cache_id} should be running but is {cache.get_status()}.")
+
+        for core in core_pool_list:
+            if core.get_status() is not CoreStatus.active:
+                TestRun.fail(f"Core {core.core_id} should be active but is {core.get_status()}.")
+
+
+@pytest.mark.CI
+@pytest.mark.os_dependent
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_incremental_load_missing_core_device():
+    """
+    title: Incremental load test with missing core device
+    description: |
+        Test incremental load and core pool functionality with missing core partition
+    pass_criteria:
+      - cores are in detached state after adding to core pool
+      - visible cores should be in active state after start and load
+      - core with missing device should be in detached state after load
+    """
+
+    with TestRun.step("Partition cache and core devices"):
+        cache_device = TestRun.disks["cache"]
+        core_device = TestRun.disks["core"]
+
+        cache_device.create_partitions([Size(2, Unit.GibiByte)])
+        core_device.create_partitions([Size(4, Unit.GibiByte)] * 3)
+
+        cache_dev = cache_device.partitions[0]
+        core_dev_list = core_device.partitions
+
+    with TestRun.step("Start cache and add cores"):
+        cache = casadm.start_cache(cache_dev=cache_dev, force=True)
+        core_list = [cache.add_core(core_dev=core_dev) for core_dev in core_dev_list]
+
+    with TestRun.step("Check if all cores have active status"):
+        for core in core_list:
+            if core.get_status() is not CoreStatus.active:
+                TestRun.fail(f"Core {core.core_id} should be active but is {core.get_status()}.")
+
+        core_with_missing_device = cache.get_core_devices()[-1]
+
+    with TestRun.step("Stop cache."):
+        cache.stop()
+
+    with TestRun.step("Remove last core partition"):
+        core_device.remove_partition(core_device.partitions[-1])
+
+    with TestRun.step("Load cache"):
+        cache = casadm.load_cache(cache_dev)
+        if cache.get_status() is not CacheStatus.incomplete:
+            TestRun.fail(
+                f"Cache {cache.cache_id} should be incomplete but is " f"{cache.get_status()}."
+            )
+        for core in cache.get_core_devices():
+            if core.get_status() is not CoreStatus.active:
+                TestRun.fail(f"Core {core.core_id} should be Active but is {core.get_status()}.")
+        if core_with_missing_device.get_status() is not CoreStatus.inactive:
+            TestRun.fail(f"Core without backend should be Inactive but is "
+                         f"{core_with_missing_device.get_status()}.")
+
+
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_attach_core_to_incomplete_cache_volume():
     """
-        title: Test for attaching device to inactive cache volume.
-        description: |
-          Try to attach core device to inactive cache volume and check if it is visible in OS
-          properly.
-        pass_criteria:
-          - No kernel error
-          - Core status changes properly
-          - Cache loads with inactive core device
-          - Cache status changes properly
-          - Exported object is present only for active core
+    title: Test for attaching device to inactive cache volume.
+    description: |
+      Try to attach core device to inactive cache volume and check if it is visible in OS
+      properly.
+    pass_criteria:
+      - No kernel error
+      - Core status changes properly
+      - Cache loads with inactive core device
+      - Cache status changes properly
+      - Exported object is present only for active core
     """
     with TestRun.step("Prepare devices."):
         devices = prepare_devices([("cache", 1), ("core", 1)])
@@ -98,13 +220,13 @@ def test_attach_core_to_incomplete_cache_volume():
 @pytest.mark.require_disk("core2", DiskTypeLowerThan("cache"))
 def test_flush_inactive_devices():
     """
-        title: Negative test for flushing inactive CAS devices.
-        description: Validate that CAS prevents flushing dirty data from inactive CAS devices.
-        pass_criteria:
-          - No kernel error
-          - Exported object appears after plugging core device
-          - Flushing inactive CAS devices is possible neither by cleaning thread,
-            nor by calling cleaning methods
+    title: Negative test for flushing inactive CAS devices.
+    description: Validate that CAS prevents flushing dirty data from inactive CAS devices.
+    pass_criteria:
+      - No kernel error
+      - Exported object appears after plugging core device
+      - Flushing inactive CAS devices is possible neither by cleaning thread,
+        nor by calling cleaning methods
     """
     with TestRun.step("Prepare devices."):
         devices = prepare_devices([("cache", 1), ("core1", 1), ("core2", 1)])
@@ -116,10 +238,13 @@ def test_flush_inactive_devices():
     with TestRun.step("Start cache in WB mode and set alru cleaning policy."):
         cache = casadm.start_cache(cache_dev, cache_mode=CacheMode.WB, force=True)
         cache.set_cleaning_policy(CleaningPolicy.alru)
-        cache.set_params_alru(FlushParametersAlru(
-            staleness_time=Time(seconds=10),
-            wake_up_time=Time(seconds=1),
-            activity_threshold=Time(milliseconds=500)))
+        cache.set_params_alru(
+            FlushParametersAlru(
+                staleness_time=Time(seconds=10),
+                wake_up_time=Time(seconds=1),
+                activity_threshold=Time(milliseconds=500),
+            )
+        )
 
     with TestRun.step("Add two cores."):
         first_core = cache.add_core(first_core_dev)
@@ -140,31 +265,43 @@ def test_flush_inactive_devices():
     with TestRun.step("Load cache."):
         cache = casadm.load_cache(cache_dev)
 
-    with TestRun.step("Wait longer than required for alru cleaning thread to start and verify "
-                      "that dirty data is flushed only from active device."):
-        dirty_lines_before = {first_core: first_core.get_dirty_blocks(),
-                              second_core: second_core.get_dirty_blocks()}
+    with TestRun.step(
+        "Wait longer than required for alru cleaning thread to start and verify "
+        "that dirty data is flushed only from active device."
+    ):
+        dirty_lines_before = {
+            first_core: first_core.get_dirty_blocks(),
+            second_core: second_core.get_dirty_blocks(),
+        }
         time.sleep(30)
         check_amount_of_dirty_data(dirty_lines_before)
 
     with TestRun.step("Try to call 'flush cache' command."):
-        dirty_lines_before = {first_core: first_core.get_dirty_blocks(),
-                              second_core: second_core.get_dirty_blocks()}
+        dirty_lines_before = {
+            first_core: first_core.get_dirty_blocks(),
+            second_core: second_core.get_dirty_blocks(),
+        }
         try:
             cache.flush_cache()
-            TestRun.fail("Flush cache operation should be blocked due to inactive cache devices, "
-                         "but it executed successfully.")
+            TestRun.fail(
+                "Flush cache operation should be blocked due to inactive cache devices, "
+                "but it executed successfully."
+            )
         except Exception as e:
             TestRun.LOGGER.info(f"Flush cache operation is blocked as expected.\n{str(e)}")
             check_amount_of_dirty_data(dirty_lines_before)
 
     with TestRun.step("Try to call 'flush core' command for inactive core."):
-        dirty_lines_before = {first_core: first_core.get_dirty_blocks(),
-                              second_core: second_core.get_dirty_blocks()}
+        dirty_lines_before = {
+            first_core: first_core.get_dirty_blocks(),
+            second_core: second_core.get_dirty_blocks(),
+        }
         try:
             first_core.flush_core()
-            TestRun.fail("Flush core operation should be blocked for inactive CAS devices, "
-                         "but it executed successfully.")
+            TestRun.fail(
+                "Flush core operation should be blocked for inactive CAS devices, "
+                "but it executed successfully."
+            )
         except Exception as e:
             TestRun.LOGGER.info(f"Flush core operation is blocked as expected.\n{str(e)}")
             check_amount_of_dirty_data(dirty_lines_before)
@@ -175,8 +312,10 @@ def test_flush_inactive_devices():
         first_core.wait_for_status_change(CoreStatus.active)
         cache_status = cache.get_status()
         if cache_status != CacheStatus.running:
-            TestRun.fail(f"Cache did not change status to 'running' after plugging core device. "
-                         f"Actual state: {cache_status}.")
+            TestRun.fail(
+                f"Cache did not change status to 'running' after plugging core device. "
+                f"Actual state: {cache_status}."
+            )
 
     with TestRun.step("Stop cache."):
         cache.stop()
@@ -186,12 +325,12 @@ def test_flush_inactive_devices():
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_list_cache_and_cache_volumes():
     """
-        title: List cache with cache volumes and check their status.
-        description: |
-          Check if casadm command correctly lists caches and cache volumes with their statuses.
-        pass_criteria:
-          - No kernel error
-          - Output of list command should be correct in each case (as described in test steps)
+    title: List cache with cache volumes and check their status.
+    description: |
+      Check if casadm command correctly lists caches and cache volumes with their statuses.
+    pass_criteria:
+      - No kernel error
+      - Output of list command should be correct in each case (as described in test steps)
     """
     with TestRun.step("Prepare devices."):
         devices = prepare_devices([("cache", 1), ("core", 1)])
@@ -203,8 +342,10 @@ def test_list_cache_and_cache_volumes():
         cache = casadm.start_cache(cache_dev, force=True)
         core = cache.add_core(core_dev)
 
-    with TestRun.step("Check if list caches command shows proper output (cache should have status "
-                      "Running and cache volume should be Active)."):
+    with TestRun.step(
+        "Check if list caches command shows proper output (cache should have status "
+        "Running and cache volume should be Active)."
+    ):
         core_status = core.get_status()
         if core_status != CoreStatus.active:
             TestRun.fail(f"Core should be in active state. Actual state: {core_status}.")
@@ -224,8 +365,10 @@ def test_list_cache_and_cache_volumes():
     with TestRun.step("Load cache."):
         cache = casadm.load_cache(cache_dev)
 
-    with TestRun.step("Check if list cache command shows proper output (cache should have status "
-                      "Incomplete and cache volume should be Inactive)."):
+    with TestRun.step(
+        "Check if list cache command shows proper output (cache should have status "
+        "Incomplete and cache volume should be Inactive)."
+    ):
         core_status = core.get_status()
         if core_status != CoreStatus.inactive:
             TestRun.fail(f"Core should be in inactive state. Actual state: {core_status}.")
@@ -239,8 +382,10 @@ def test_list_cache_and_cache_volumes():
         core.wait_for_status_change(CoreStatus.active)
         cache_status = cache.get_status()
         if cache_status != CacheStatus.running:
-            TestRun.fail(f"Cache did not change status to 'running' after plugging core device. "
-                         f"Actual state: {cache_status}")
+            TestRun.fail(
+                f"Cache did not change status to 'running' after plugging core device. "
+                f"Actual state: {cache_status}"
+            )
         cache.stop()
 
 
@@ -248,13 +393,13 @@ def test_list_cache_and_cache_volumes():
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_load_cache_with_inactive_core():
     """
-        title: Load cache with unavailable core devices.
-        description: Check if it is possible to load cache with unavailable core devices.
-        pass_criteria:
-          - No kernel error
-          - It is possible to perform cache load operation with unavailable devices.
-          - Warning message about not available core device should appear.
-          - Cache status should change to active after plugging missing core device.
+    title: Load cache with unavailable core devices.
+    description: Check if it is possible to load cache with unavailable core devices.
+    pass_criteria:
+      - No kernel error
+      - It is possible to perform cache load operation with unavailable devices.
+      - Warning message about not available core device should appear.
+      - Cache status should change to active after plugging missing core device.
     """
     with TestRun.step("Prepare devices."):
         devices = prepare_devices([("cache", 1), ("core", 1)])
@@ -285,8 +430,10 @@ def test_load_cache_with_inactive_core():
         core.wait_for_status_change(CoreStatus.active)
         cache_status = cache.get_status()
         if cache_status != CacheStatus.running:
-            TestRun.fail(f"Cache did not change status to 'running' after plugging core device. "
-                         f"Actual state: {cache_status}.")
+            TestRun.fail(
+                f"Cache did not change status to 'running' after plugging core device. "
+                f"Actual state: {cache_status}."
+            )
         cache.stop()
 
 
@@ -294,12 +441,12 @@ def test_load_cache_with_inactive_core():
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_preserve_data_for_inactive_device():
     """
-        title: Validate preserving data for inactive CAS devices.
-        description: Validate that cached data for inactive CAS devices is preserved.
-        pass_criteria:
-          - No kernel error
-          - File md5 checksums match in every iteration.
-          - Cache read hits increase after reads (md5 checksum) from CAS device with attached core.
+    title: Validate preserving data for inactive CAS devices.
+    description: Validate that cached data for inactive CAS devices is preserved.
+    pass_criteria:
+      - No kernel error
+      - File md5 checksums match in every iteration.
+      - Cache read hits increase after reads (md5 checksum) from CAS device with attached core.
     """
     mount_dir = "/mnt/test"
     with TestRun.step("Prepare devices."):
@@ -324,10 +471,13 @@ def test_preserve_data_for_inactive_device():
     with TestRun.step("Create a test file with random writes on mount point and count it's md5."):
         file_path = f"{mount_dir}/test_file"
         test_file = File.create_file(file_path)
-        dd = Dd().input("/dev/random") \
-            .output(file_path) \
-            .count(100) \
+        dd = (
+            Dd()
+            .input("/dev/random")
+            .output(file_path)
+            .count(100)
             .block_size(Size(1, Unit.Blocks512))
+        )
         dd.run()
         sync()
         md5_after_create = test_file.md5sum()
@@ -353,19 +503,24 @@ def test_preserve_data_for_inactive_device():
             or core_stats_before_stop.usage_stats.clean != core_stats_after_load.usage_stats.clean
             or core_stats_before_stop.usage_stats.dirty != core_stats_after_load.usage_stats.dirty
         ):
-            TestRun.fail(f"Statistics after counting md5 are different than after cache load.\n"
-                         f"Cache stats before: {cache_stats_before_stop}\n"
-                         f"Cache stats after: {cache_stats_after_load}\n"
-                         f"Core stats before: {core_stats_before_stop}\n"
-                         f"Core stats after: {core_stats_after_load}")
+            TestRun.fail(
+                f"Statistics after counting md5 are different than after cache load.\n"
+                f"Cache stats before: {cache_stats_before_stop}\n"
+                f"Cache stats after: {cache_stats_after_load}\n"
+                f"Core stats before: {core_stats_before_stop}\n"
+                f"Core stats after: {core_stats_after_load}"
+            )
 
-    with TestRun.step("Plug core disk using sysfs and verify this change is reflected "
-                      "on the cache list."):
+    with TestRun.step(
+        "Plug core disk using sysfs and verify this change is reflected " "on the cache list."
+    ):
         plug_device.plug()
         time.sleep(1)
         if cache.get_status() != CacheStatus.running or core.get_status() != CoreStatus.active:
-            TestRun.fail(f"Expected cache status is running (actual - {cache.get_status()}).\n"
-                         f"Expected core status is active (actual - {core.get_status()}).")
+            TestRun.fail(
+                f"Expected cache status is running (actual - {cache.get_status()}).\n"
+                f"Expected core status is active (actual - {core.get_status()})."
+            )
 
     with TestRun.step("Mount CAS device"):
         core.mount(mount_dir)
@@ -374,18 +529,24 @@ def test_preserve_data_for_inactive_device():
         cache_read_hits_before_md5 = cache.get_statistics().request_stats.read.hits
         md5_after_cache_load = test_file.md5sum()
         if md5_after_create != md5_after_cache_load:
-            TestRun.fail("Md5 checksum after cache load operation is different than before "
-                         "stopping cache.")
+            TestRun.fail(
+                "Md5 checksum after cache load operation is different than before "
+                "stopping cache."
+            )
         else:
-            TestRun.LOGGER.info("Md5 checksum is identical before and after cache load operation "
-                                "with inactive CAS device.")
+            TestRun.LOGGER.info(
+                "Md5 checksum is identical before and after cache load operation "
+                "with inactive CAS device."
+            )
 
     with TestRun.step("Verify that cache read hits increased after counting md5 checksum."):
         cache_read_hits_after_md5 = cache.get_statistics().request_stats.read.hits
         if cache_read_hits_after_md5 - cache_read_hits_before_md5 < 0:
-            TestRun.fail(f"Cache read hits did not increase after counting md5 checksum. "
-                         f"Before: {cache_read_hits_before_md5}. "
-                         f"After: {cache_read_hits_after_md5}.")
+            TestRun.fail(
+                f"Cache read hits did not increase after counting md5 checksum. "
+                f"Before: {cache_read_hits_before_md5}. "
+                f"After: {cache_read_hits_after_md5}."
+            )
         else:
             TestRun.LOGGER.info("Cache read hits increased as expected.")
 
@@ -400,14 +561,14 @@ def test_preserve_data_for_inactive_device():
 @pytest.mark.require_disk("core2", DiskTypeSet([DiskType.sata, DiskType.hdd, DiskType.hdd4k]))
 def test_print_statistics_inactive(cache_mode):
     """
-        title: Print statistics for cache with inactive cache volumes.
-        description: |
-          Check if statistics are displayed properly when there is one or more
-          inactive cache volumes added to cache.
-        pass_criteria:
-          - No kernel error
-          - All statistics should contain appropriate information depending on situation of
-            cache and core devices (as described in test steps)
+    title: Print statistics for cache with inactive cache volumes.
+    description: |
+      Check if statistics are displayed properly when there is one or more
+      inactive cache volumes added to cache.
+    pass_criteria:
+      - No kernel error
+      - All statistics should contain appropriate information depending on situation of
+        cache and core devices (as described in test steps)
     """
     with TestRun.step("Prepare devices."):
         devices = prepare_devices([("cache", 1), ("core1", 1), ("core2", 1)])
@@ -452,8 +613,9 @@ def test_print_statistics_inactive(cache_mode):
     with TestRun.step("Load cache."):
         cache = casadm.load_cache(cache_dev)
 
-    with TestRun.step("Check if inactive devices section appeared and contains appropriate "
-                      "information."):
+    with TestRun.step(
+        "Check if inactive devices section appeared and contains appropriate " "information."
+    ):
         inactive_stats_before = cache.get_statistics()
         check_if_inactive_section_exists(inactive_stats_before)
         check_number_of_inactive_devices(inactive_stats_before, 2)
@@ -463,8 +625,10 @@ def test_print_statistics_inactive(cache_mode):
         time.sleep(1)
         first_core_status = first_core.get_status()
         if first_core_status != CoreStatus.active:
-            TestRun.fail(f"Core {first_core.path} should be in active state but it is not. "
-                         f"Actual state: {first_core_status}.")
+            TestRun.fail(
+                f"Core {first_core.path} should be in active state but it is not. "
+                f"Actual state: {first_core_status}."
+            )
 
     with TestRun.step("Check cache statistics section of inactive devices."):
         inactive_stats_after = cache.get_statistics()
@@ -473,42 +637,56 @@ def test_print_statistics_inactive(cache_mode):
         # criteria for checks below
         insert_write_traits = CacheModeTrait.InsertWrite in cache_mode_traits
         lazy_write_traits = CacheModeTrait.LazyWrites in cache_mode_traits
-        lazy_writes_or_no_insert_write_traits = (not insert_write_traits
-                                                 or lazy_write_traits)
+        lazy_writes_or_no_insert_write_traits = not insert_write_traits or lazy_write_traits
 
-        check_inactive_usage_stats(inactive_stats_before.inactive_usage_stats.inactive_occupancy,
-                                   inactive_stats_after.inactive_usage_stats.inactive_occupancy,
-                                   "inactive occupancy",
-                                   not insert_write_traits)
-        check_inactive_usage_stats(inactive_stats_before.inactive_usage_stats.inactive_clean,
-                                   inactive_stats_after.inactive_usage_stats.inactive_clean,
-                                   "inactive clean",
-                                   lazy_writes_or_no_insert_write_traits)
-        check_inactive_usage_stats(inactive_stats_before.inactive_usage_stats.inactive_dirty,
-                                   inactive_stats_after.inactive_usage_stats.inactive_dirty,
-                                   "inactive dirty",
-                                   not lazy_write_traits)
+        check_inactive_usage_stats(
+            inactive_stats_before.inactive_usage_stats.inactive_occupancy,
+            inactive_stats_after.inactive_usage_stats.inactive_occupancy,
+            "inactive occupancy",
+            not insert_write_traits,
+        )
+        check_inactive_usage_stats(
+            inactive_stats_before.inactive_usage_stats.inactive_clean,
+            inactive_stats_after.inactive_usage_stats.inactive_clean,
+            "inactive clean",
+            lazy_writes_or_no_insert_write_traits,
+        )
+        check_inactive_usage_stats(
+            inactive_stats_before.inactive_usage_stats.inactive_dirty,
+            inactive_stats_after.inactive_usage_stats.inactive_dirty,
+            "inactive dirty",
+            not lazy_write_traits,
+        )
 
     with TestRun.step("Check statistics per inactive core."):
         inactive_core_stats = second_core.get_statistics()
-        if inactive_stats_after.inactive_usage_stats.inactive_occupancy == \
-                inactive_core_stats.usage_stats.occupancy:
-            TestRun.LOGGER.info("Inactive occupancy in cache statistics is equal to inactive core "
-                                "occupancy.")
+        if (
+            inactive_stats_after.inactive_usage_stats.inactive_occupancy
+            == inactive_core_stats.usage_stats.occupancy
+        ):
+            TestRun.LOGGER.info(
+                "Inactive occupancy in cache statistics is equal to inactive core " "occupancy."
+            )
         else:
-            TestRun.fail(f"Inactive core occupancy ({inactive_core_stats.usage_stats.occupancy}) "
-                         f"should be the same as cache inactive occupancy "
-                         f"({inactive_stats_after.inactive_usage_stats.inactive_occupancy}).")
+            TestRun.fail(
+                f"Inactive core occupancy ({inactive_core_stats.usage_stats.occupancy}) "
+                f"should be the same as cache inactive occupancy "
+                f"({inactive_stats_after.inactive_usage_stats.inactive_occupancy})."
+            )
 
     with TestRun.step("Remove inactive core from cache and check if cache is in running state."):
         cache.remove_inactive_core(second_core.core_id, force=True)
         cache_status = cache.get_status()
         if cache_status != CacheStatus.running:
-            TestRun.fail(f"Cache did not change status to 'running' after plugging core device. "
-                         f"Actual status: {cache_status}.")
+            TestRun.fail(
+                f"Cache did not change status to 'running' after plugging core device. "
+                f"Actual status: {cache_status}."
+            )
 
-    with TestRun.step("Check if there is no inactive devices statistics section and if cache has "
-                      "Running status."):
+    with TestRun.step(
+        "Check if there is no inactive devices statistics section and if cache has "
+        "Running status."
+    ):
         cache_stats = cache.get_statistics()
         check_if_inactive_section_exists(cache_stats, False)
         check_number_of_inactive_devices(cache_stats, 0)
@@ -523,12 +701,12 @@ def test_print_statistics_inactive(cache_mode):
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_remove_detached_cores():
     """
-        title: Validate removing core devices from core pool.
-        description: Validate that it is possible to remove core devices from core pool.
-        pass_criteria:
-          - No kernel error
-          - All core devices are correctly added after plugging core disk.
-          - All cores are successfully removed.
+    title: Validate removing core devices from core pool.
+    description: Validate that it is possible to remove core devices from core pool.
+    pass_criteria:
+      - No kernel error
+      - All core devices are correctly added after plugging core disk.
+      - All cores are successfully removed.
     """
     with TestRun.step("Prepare devices."):
         devices = prepare_devices([("cache", 1), ("core", 4)])
@@ -548,8 +726,9 @@ def test_remove_detached_cores():
     with TestRun.step("Run random writes to all CAS devices."):
         run_fio([c.path for c in cores])
 
-    with TestRun.step("Flush dirty data from two CAS devices and verify than other two contain "
-                      "dirty data."):
+    with TestRun.step(
+        "Flush dirty data from two CAS devices and verify than other two contain " "dirty data."
+    ):
         for core in cores:
             if core.core_id % 2 == 0:
                 core.flush_core()
@@ -567,12 +746,15 @@ def test_remove_detached_cores():
         plug_device.plug()
         time.sleep(1)
 
-    with TestRun.step("Verify that all cores from plugged core device are listed with "
-                      "proper status."):
+    with TestRun.step(
+        "Verify that all cores from plugged core device are listed with " "proper status."
+    ):
         for core in cores:
             if core.get_status() != CoreStatus.detached:
-                TestRun.fail(f"Each core should be in detached state. "
-                             f"Actual states: {casadm.list_caches().stdout}")
+                TestRun.fail(
+                    f"Each core should be in detached state. "
+                    f"Actual states: {casadm.list_caches().stdout}"
+                )
 
     with TestRun.step("Remove CAS devices from core pool."):
         casadm.remove_all_detached_cores()
@@ -588,16 +770,16 @@ def test_remove_detached_cores():
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_remove_inactive_devices():
     """
-        title: Validate removing inactive CAS devices.
-        description: |
-          Validate that it is possible to remove inactive CAS devices when there are no dirty
-          cache lines associated with them and that removing CAS devices is prevented otherwise
-          (unless ‘force’ option is used).
-        pass_criteria:
-          - No kernel error
-          - Removing CAS devices without dirty data is successful.
-          - Removing CAS devices with dirty data without ‘force’ option is blocked.
-          - Removing CAS devices with dirty data with ‘force’ option is successful.
+    title: Validate removing inactive CAS devices.
+    description: |
+      Validate that it is possible to remove inactive CAS devices when there are no dirty
+      cache lines associated with them and that removing CAS devices is prevented otherwise
+      (unless ‘force’ option is used).
+    pass_criteria:
+      - No kernel error
+      - Removing CAS devices without dirty data is successful.
+      - Removing CAS devices with dirty data without ‘force’ option is blocked.
+      - Removing CAS devices with dirty data with ‘force’ option is successful.
     """
     with TestRun.step("Prepare devices."):
         devices = prepare_devices([("cache", 1), ("core", 4)])
@@ -617,8 +799,9 @@ def test_remove_inactive_devices():
     with TestRun.step("Run random writes to all CAS devices."):
         run_fio([c.path for c in cores])
 
-    with TestRun.step("Flush dirty data from two CAS devices and verify than other two "
-                      "contain dirty data."):
+    with TestRun.step(
+        "Flush dirty data from two CAS devices and verify than other two " "contain dirty data."
+    ):
         for core in cores:
             if core.core_id % 2 == 0:
                 core.flush_core()
@@ -636,56 +819,75 @@ def test_remove_inactive_devices():
     with TestRun.step("Load cache."):
         casadm.load_cache(cache_dev)
 
-    with TestRun.step("Verify that all previously created CAS devices are listed with "
-                      "proper status."):
+    with TestRun.step(
+        "Verify that all previously created CAS devices are listed with " "proper status."
+    ):
         for core in cores:
             if core.get_status() != CoreStatus.inactive:
-                TestRun.fail(f"Each core should be in inactive state. "
-                             f"Actual states:\n{casadm.list_caches().stdout}")
+                TestRun.fail(
+                    f"Each core should be in inactive state. "
+                    f"Actual states:\n{casadm.list_caches().stdout}"
+                )
 
-    with TestRun.step("Try removing CAS devices using remove command. "
-                      "Operation should be blocked and proper message displayed."):
+    with TestRun.step(
+        "Try removing CAS devices using remove command. "
+        "Operation should be blocked and proper message displayed."
+    ):
         shuffle(cores)
         for force in [False, True]:
             for core in cores:
                 try:
                     core.remove_core(force)
-                    TestRun.fail(f"Removing inactive CAS device should be possible by "
-                                 f"'remove-inactive' command only but it worked with 'remove' "
-                                 f"command with force option set to {force}.")
+                    TestRun.fail(
+                        f"Removing inactive CAS device should be possible by "
+                        f"'remove-inactive' command only but it worked with 'remove' "
+                        f"command with force option set to {force}."
+                    )
                 except CmdException as e:
-                    TestRun.LOGGER.info(f"Remove core operation is blocked for inactive CAS device "
-                                        f"as expected. Force option set to: {force}")
+                    TestRun.LOGGER.info(
+                        f"Remove core operation is blocked for inactive CAS device "
+                        f"as expected. Force option set to: {force}"
+                    )
                     cli_messages.check_stderr_msg(
-                        e.output, cli_messages.remove_inactive_core_with_remove_command)
+                        e.output, cli_messages.remove_inactive_core_with_remove_command
+                    )
 
                     output = casadm.list_caches(output_format=OutputFormat.csv).stdout
                     if core.core_device.path not in output:
                         TestRun.fail(
                             f"CAS device is not listed in casadm list output but it should be."
-                            f"\n{output}")
+                            f"\n{output}"
+                        )
 
-    with TestRun.step("Try removing CAS devices using remove-inactive command without ‘force’ "
-                      "option. Verify that for dirty CAS devices operation is blocked, proper "
-                      "message is displayed and device is still listed."):
+    with TestRun.step(
+        "Try removing CAS devices using remove-inactive command without ‘force’ "
+        "option. Verify that for dirty CAS devices operation is blocked, proper "
+        "message is displayed and device is still listed."
+    ):
         shuffle(cores)
         for core in cores:
             try:
                 dirty_blocks = core.get_dirty_blocks()
                 core.remove_inactive()
                 if dirty_blocks != Size.zero():
-                    TestRun.fail("Removing dirty inactive CAS device should be impossible without "
-                                 "force option but remove-inactive command executed without "
-                                 "any error.")
+                    TestRun.fail(
+                        "Removing dirty inactive CAS device should be impossible without "
+                        "force option but remove-inactive command executed without "
+                        "any error."
+                    )
                 TestRun.LOGGER.info("Removing core with force option skipped for clean CAS device.")
             except CmdException as e:
-                TestRun.LOGGER.info("Remove-inactive operation without force option is blocked for "
-                                    "dirty CAS device as expected.")
+                TestRun.LOGGER.info(
+                    "Remove-inactive operation without force option is blocked for "
+                    "dirty CAS device as expected."
+                )
                 cli_messages.check_stderr_msg(e.output, cli_messages.remove_inactive_dirty_core)
                 output = casadm.list_caches(output_format=OutputFormat.csv).stdout
                 if core.core_device.path not in output:
-                    TestRun.fail(f"CAS device is not listed in casadm list output but it should be."
-                                 f"\n{output}")
+                    TestRun.fail(
+                        f"CAS device is not listed in casadm list output but it should be."
+                        f"\n{output}"
+                    )
                 core.remove_inactive(force=True)
 
     with TestRun.step("Plug missing disk and stop cache."):
@@ -698,14 +900,14 @@ def test_remove_inactive_devices():
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_stop_cache_with_inactive_devices():
     """
-        title: Validate stopping cache with inactive CAS devices.
-        description: |
-          Validate that cache with inactive CAS devices cannot be stopped
-          unless ‘force’ option is used.
-        pass_criteria:
-          - No kernel error
-          - Stopping cache with inactive CAS devices without ‘force’ option is blocked.
-          - Stopping cache with inactive CAS devices with ‘force’ option is successful.
+    title: Validate stopping cache with inactive CAS devices.
+    description: |
+      Validate that cache with inactive CAS devices cannot be stopped
+      unless ‘force’ option is used.
+    pass_criteria:
+      - No kernel error
+      - Stopping cache with inactive CAS devices without ‘force’ option is blocked.
+      - Stopping cache with inactive CAS devices with ‘force’ option is successful.
     """
     with TestRun.step("Prepare devices."):
         devices = prepare_devices([("cache", 1), ("core", 1)])
@@ -739,8 +941,10 @@ def test_stop_cache_with_inactive_devices():
         if core_status != CoreStatus.inactive:
             TestRun.fail(f"CAS device should be in inactive state. Actual status: {core_status}.")
 
-    with TestRun.step("Try stopping cache without ‘no data flush’ option, verify that operation "
-                      "was blocked and proper message is displayed."):
+    with TestRun.step(
+        "Try stopping cache without ‘no data flush’ option, verify that operation "
+        "was blocked and proper message is displayed."
+    ):
         try_stop_incomplete_cache(cache)
 
     with TestRun.step("Stop cache with force option."):
@@ -765,8 +969,10 @@ def test_stop_cache_with_inactive_devices():
         if core_status != CoreStatus.inactive:
             TestRun.fail(f"CAS device should be in inactive state. Actual state: {core_status}.")
 
-    with TestRun.step("Try stopping cache without ‘no data flush’ option, verify that "
-                      "operation was blocked and proper message is displayed."):
+    with TestRun.step(
+        "Try stopping cache without ‘no data flush’ option, verify that "
+        "operation was blocked and proper message is displayed."
+    ):
         try_stop_incomplete_cache(cache)
 
     with TestRun.step("Stop cache with 'no data flush' option and plug missing core device."):
@@ -789,15 +995,18 @@ def check_inactive_usage_stats(stats_before, stats_after, stat_name, should_be_z
     elif not should_be_zero and stats_after < stats_before:
         TestRun.LOGGER.info(f"{stat_name} is lower than before as expected.")
     else:
-        TestRun.LOGGER.error(f"{stat_name} ({stats_after}) is not lower than before "
-                             f"({stats_before}).")
+        TestRun.LOGGER.error(
+            f"{stat_name} ({stats_after}) is not lower than before " f"({stats_before})."
+        )
 
 
 def check_number_of_inactive_devices(stats: CacheStats, expected_num):
     inactive_core_num = stats.config_stats.inactive_core_dev
     if inactive_core_num != expected_num:
-        TestRun.fail(f"There is wrong number of inactive core devices in cache statistics. "
-                     f"(Expected: {expected_num}, actual: {inactive_core_num}")
+        TestRun.fail(
+            f"There is wrong number of inactive core devices in cache statistics. "
+            f"(Expected: {expected_num}, actual: {inactive_core_num}"
+        )
 
 
 def check_if_inactive_section_exists(stats, should_exist: bool = True):
@@ -812,8 +1021,10 @@ def check_amount_of_dirty_data(devices_dirty_lines_before):
     for dev in devices_dirty_lines_before:
         if dev.get_status() == CoreStatus.active and dev.get_dirty_blocks() != Size.zero():
             TestRun.fail("Amount of dirty data is not 0.")
-        if dev.get_status() == CoreStatus.inactive and \
-                dev.get_dirty_blocks() != devices_dirty_lines_before[dev]:
+        if (
+            dev.get_status() == CoreStatus.inactive
+            and dev.get_dirty_blocks() != devices_dirty_lines_before[dev]
+        ):
             TestRun.fail("Data from inactive cache is flushed.")
 
 
@@ -829,13 +1040,15 @@ def prepare_devices(devices):
 
 def run_fio(targets):
     for target in targets:
-        fio = (Fio()
-               .create_command()
-               .io_engine(IoEngine.libaio)
-               .read_write(ReadWrite.randwrite)
-               .direct(1)
-               .size(Size(100, Unit.MebiByte))
-               .sync()
-               .io_depth(32)
-               .target(f"{target}"))
+        fio = (
+            Fio()
+            .create_command()
+            .io_engine(IoEngine.libaio)
+            .read_write(ReadWrite.randwrite)
+            .direct(1)
+            .size(Size(100, Unit.MebiByte))
+            .sync()
+            .io_depth(32)
+            .target(f"{target}")
+        )
         fio.run()

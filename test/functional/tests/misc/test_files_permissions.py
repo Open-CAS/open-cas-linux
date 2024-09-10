@@ -1,12 +1,13 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 
 import os
 
-from api.cas.git import get_repo_files
+from test_utils.git import get_repo_files
 from api.cas.installer import (
     clean_opencas_repo,
     build_opencas,
