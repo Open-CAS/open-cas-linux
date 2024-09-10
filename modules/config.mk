@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -14,7 +15,7 @@ EXTRA_CFLAGS += -DCAS_VERSION_MAIN=$(CAS_VERSION_MAIN)
 EXTRA_CFLAGS += -DCAS_VERSION_MAJOR=$(CAS_VERSION_MAJOR)
 EXTRA_CFLAGS += -DCAS_VERSION_MINOR=$(CAS_VERSION_MINOR)
 EXTRA_CFLAGS += -DCAS_VERSION=\"$(CAS_VERSION)\"
-EXTRA_CFLAGS += -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security
+EXTRA_CFLAGS += -Ofast -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security
 
 EXTRA_CFLAGS += -I$(M)
 EXTRA_CFLAGS += -I$(M)/cas_cache

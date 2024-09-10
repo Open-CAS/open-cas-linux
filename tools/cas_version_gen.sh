@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -30,12 +31,18 @@ if [[ -d "$SOURCES_DIR/.git" ]] && which git &>/dev/null &&\
     if [[ ! -r "$MANUAL_VERSION_INPUT" ]]; then
         error "can't read version input file '$MANUAL_VERSION_INPUT'"
     fi
-    . "$MANUAL_VERSION_INPUT"
+    source "$MANUAL_VERSION_INPUT"
     if [[ ! "$CAS_VERSION_MAIN" || ! "$CAS_VERSION_MAJOR" || ! "$CAS_VERSION_MINOR" ]]; then
         error "'$MANUAL_VERSION_INPUT' - wrong version input file format;"\
             "file should contain CAS_VERSION_MAIN, CAS_VERSION_MAJOR and CAS_VERSION_MINOR"\
             "variables along with their respective values"
     fi
+
+    # Make sure version numbers are interpreted by bash as decimal numbers in case any of
+    # them were being input with leading zeros, which is interpreted as an octal by default.
+    CAS_VERSION_MAIN=$((10#$CAS_VERSION_MAIN))
+    CAS_VERSION_MAJOR=$((10#$CAS_VERSION_MAJOR))
+    CAS_VERSION_MINOR=$((10#$CAS_VERSION_MINOR))
 
     CAS_VERSION_BUILD=$(cd "$SOURCES_DIR" && git log --merges --oneline | wc -l)
     LAST_COMMIT_HASH=$(cd "$SOURCES_DIR" && git log -1 --pretty=format:%H)
@@ -80,7 +87,7 @@ if [[ -d "$SOURCES_DIR/.git" ]] && which git &>/dev/null &&\
     echo "FILE_CREATION_DATE=$FILE_CREATION_DATE" >> "$VERSION_FILE"
     echo "FILE_CREATION_TIMESTAMP=$FILE_CREATION_TIMESTAMP" >> "$VERSION_FILE"
 elif [[ -r "$VERSION_FILE" ]]; then
-    . "$VERSION_FILE" >/dev/null
+    source "$VERSION_FILE" >/dev/null
     if [[ ! "$CAS_VERSION" ]]; then
         error "'$VERSION_FILE' - wrong version file format; file does not contain CAS_VERSION"
     fi

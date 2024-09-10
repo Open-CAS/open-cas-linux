@@ -82,7 +82,7 @@ static int _cas_page_get_cpu(struct page *page)
 /*
  *
  */
-static ctx_data_t *__cas_ctx_data_alloc(uint32_t pages, bool zalloc)
+static ctx_data_t *__cas_ctx_data_alloc(uint32_t pages)
 {
 	struct blk_data *data;
 	uint32_t i;
@@ -116,14 +116,6 @@ static ctx_data_t *__cas_ctx_data_alloc(uint32_t pages, bool zalloc)
 		if (!data->vec[i].bv_page)
 			break;
 
-		if (zalloc) {
-			if (!page_addr) {
-				page_addr = page_address(
-						data->vec[i].bv_page);
-			}
-			memset(page_addr, 0, PAGE_SIZE);
-		}
-
 		data->vec[i].bv_len = PAGE_SIZE;
 		data->vec[i].bv_offset = 0;
 	}
@@ -153,12 +145,7 @@ static ctx_data_t *__cas_ctx_data_alloc(uint32_t pages, bool zalloc)
 
 ctx_data_t *cas_ctx_data_alloc(uint32_t pages)
 {
-	return __cas_ctx_data_alloc(pages, false);
-}
-
-ctx_data_t *cas_ctx_data_zalloc(uint32_t pages)
-{
-	return __cas_ctx_data_alloc(pages, true);
+	return __cas_ctx_data_alloc(pages);
 }
 
 /*

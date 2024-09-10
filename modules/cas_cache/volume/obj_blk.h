@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -24,12 +25,6 @@ struct bd_object {
 
 	uint32_t opened_by_bdev : 1;
 		/*!< Opened by supplying bdev manually */
-
-	atomic64_t pending_rqs;
-		/*!< This fields describes in flight IO requests */
-
-	struct workqueue_struct *btm_wq;
-		/*< Workqueue for I/O internally trigerred in bottom vol */
 
 	struct workqueue_struct *expobj_wq;
 		/*< Workqueue for I/O handled by top vol */

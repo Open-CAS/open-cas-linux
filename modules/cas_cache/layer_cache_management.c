@@ -1075,6 +1075,9 @@ int cache_mngt_core_pool_get_paths(struct kcas_core_pool_path *cmd_info)
 	struct get_paths_ctx visitor_ctx = {0};
 	int result;
 
+	if (visitor_ctx->core_path_name_tab == NULL)
+		return -EINVAL;
+
 	visitor_ctx.core_path_name_tab = cmd_info->core_path_tab;
 	visitor_ctx.max_count = cmd_info->core_pool_count;
 
@@ -2058,6 +2061,7 @@ static int _cache_mngt_start_queues(ocf_cache_t cache)
 			cache_priv->mngt_queue, CAS_CPUS_ALL);
 	if (result) {
 		ocf_queue_put(cache_priv->mngt_queue);
+		cache_priv->mngt_queue = NULL;
 		goto err;
 	}
 
@@ -2697,17 +2701,21 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	switch (cmd->init_cache) {
 		case CACHE_INIT_STANDBY_NEW:
 		case CACHE_INIT_STANDBY_LOAD:
+			ocf_volume_destroy(attach_cfg->device.volume);
 			printk(KERN_ERR "Standby mode is not supported!\n");
 			return -ENOTSUP;
 		default:
 			break;
 	}
 
-	if (!try_module_get(THIS_MODULE))
+	if (!try_module_get(THIS_MODULE)) {
+		ocf_volume_destroy(attach_cfg->device.volume);
 		return -KCAS_ERR_SYSTEM;
+	}
 
 	result = cache_mngt_check_bdev(&attach_cfg->device, attach_cfg->force, false, NULL);
 	if (result) {
+		ocf_volume_destroy(attach_cfg->device.volume);
 		module_put(THIS_MODULE);
 		return result;
 	}
@@ -2719,6 +2727,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 				cache_name_meta, &cache_mode_meta,
 				&cache_line_size_meta);
 		if (result) {
+			ocf_volume_destroy(attach_cfg->device.volume);
 			module_put(THIS_MODULE);
 			return result;
 		}
@@ -2729,6 +2738,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 			printk(KERN_ERR "Improper cache name format on %s.\n",
 					cmd->cache_path_name);
 
+			ocf_volume_destroy(attach_cfg->device.volume);
 			module_put(THIS_MODULE);
 			return -OCF_ERR_START_CACHE_FAIL;
 		}
@@ -2741,6 +2751,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 					"already exists.\n", cache_name_meta);
 
 			ocf_mngt_cache_put(tmp_cache);
+			ocf_volume_destroy(attach_cfg->device.volume);
 			module_put(THIS_MODULE);
 			return -OCF_ERR_CACHE_EXIST;
 		}
@@ -2755,6 +2766,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 
 	context = kzalloc(sizeof(*context), GFP_KERNEL);
 	if (!context) {
+		ocf_volume_destroy(attach_cfg->device.volume);
 		module_put(THIS_MODULE);
 		return -ENOMEM;
 	}
@@ -2764,6 +2776,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	if (IS_ERR(context->rollback_thread)) {
 		result = PTR_ERR(context->rollback_thread);
 		kfree(context);
+		ocf_volume_destroy(attach_cfg->device.volume);
 		module_put(THIS_MODULE);
 		return result;
 	}
@@ -2779,6 +2792,7 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	if (result) {
 		cas_lazy_thread_stop(context->rollback_thread);
 		kfree(context);
+		ocf_volume_destroy(attach_cfg->device.volume);
 		module_put(THIS_MODULE);
 		return result;
 	}
@@ -2786,12 +2800,12 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 
 	result = _cache_mngt_cache_priv_init(cache);
 	if (result)
-		goto err;
+		goto err_deinit_config;
 	context->priv_inited = true;
 
 	result = _cache_mngt_start_queues(cache);
 	if (result)
-		goto err;
+		goto err_deinit_config;
 
 	cache_priv = ocf_cache_get_priv(cache);
 	cache_priv->attach_context = context;
@@ -2838,6 +2852,9 @@ int cache_mngt_init_instance(struct ocf_mngt_cache_config *cfg,
 	ocf_mngt_cache_unlock(cache);
 
 	return result;
+
+err_deinit_config:
+	ocf_volume_destroy(attach_cfg->device.volume);
 err:
 	cmd->min_free_ram = context->min_free_ram;
 
@@ -3196,10 +3213,6 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	if (status)
 		return status;
 
-	cache_priv = ocf_cache_get_priv(cache);
-	mngt_queue = cache_priv->mngt_queue;
-	context = cache_priv->stop_context;
-
 	/*
 	 * Flush cache. Flushing may take a long time, so we allow user
 	 * to interrupt this operation. Hence we do first flush before
@@ -3217,6 +3230,10 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	status = _cache_mngt_lock_sync(cache);
 	if (status)
 		goto put;
+
+	cache_priv = ocf_cache_get_priv(cache);
+	mngt_queue = cache_priv->mngt_queue;
+	context = cache_priv->stop_context;
 
 	context->finish_thread = cas_lazy_thread_create(exit_instance_finish,
 			context, "cas_%s_stop", cache_name);
@@ -3502,22 +3519,6 @@ unlock:
 put:
 	ocf_mngt_cache_put(cache);
 	return result;
-}
-
-static int cache_mngt_wait_for_rq_finish_visitor(ocf_core_t core, void *cntx)
-{
-	ocf_volume_t obj = ocf_core_get_volume(core);
-	struct bd_object *bdobj = bd_object(obj);
-
-	while (atomic64_read(&bdobj->pending_rqs))
-		io_schedule();
-
-	return 0;
-}
-
-void cache_mngt_wait_for_rq_finish(ocf_cache_t cache)
-{
-	ocf_core_visit(cache, cache_mngt_wait_for_rq_finish_visitor, NULL, true);
 }
 
 int cache_mngt_set_core_params(struct kcas_set_core_param *info)

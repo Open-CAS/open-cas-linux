@@ -32,7 +32,7 @@
 	return map_cas_err_to_generic(ret); \
 })
 
-/* this handles IOctl for /dev/cas */
+/* this handles IOctl for /dev/cas_ctrl */
 /*********************************************/
 long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		unsigned long arg)

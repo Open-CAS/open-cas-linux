@@ -311,6 +311,21 @@ static inline bool cas_bd_io_prepare(int *dir, struct ocf_io *io)
 }
 
 /*
+ * Returns only flags that are relevant to request's direction.
+ */
+static inline uint64_t filter_req_flags(int dir, uint64_t flags)
+{
+	/* Remove REQ_RAHEAD flag from write request to cache which are a
+	   result of a missed read-head request. This flag caused the nvme
+	   driver to send write command with access frequency value that is
+	   reserved */
+	if (dir == WRITE)
+		flags &= ~REQ_RAHEAD;
+
+	return flags;
+}
+
+/*
  *
  */
 static void block_dev_submit_io(struct ocf_io *io)
@@ -359,7 +374,7 @@ static void block_dev_submit_io(struct ocf_io *io)
 		CAS_BIO_BISECTOR(bio) = addr / SECTOR_SIZE;
 		bio->bi_next = NULL;
 		bio->bi_private = io;
-		CAS_BIO_OP_FLAGS(bio) |= io->flags;
+		CAS_BIO_OP_FLAGS(bio) |= filter_req_flags(dir, io->flags);
 		bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_bd_io_end);
 
 		/* Add pages */

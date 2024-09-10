@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2012-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -19,6 +20,8 @@ ifneq ($(MAKECMDGOALS),rpm)
 ifneq ($(MAKECMDGOALS),srpm)
 ifneq ($(MAKECMDGOALS),deb)
 ifneq ($(MAKECMDGOALS),dsc)
+	cd $@ && $(MAKE) $(MAKECMDGOALS)
+casadm: modules
 	cd $@ && $(MAKE) $(MAKECMDGOALS)
 endif
 endif

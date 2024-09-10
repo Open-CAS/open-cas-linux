@@ -152,7 +152,9 @@ $(OBJDIR)%.o: %.c
 ifeq ($(strip $(CAS_VERSION_MAIN)),)
 	$(error "No version file")
 endif
-	@$(CC) -c $(CFLAGS) -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	@$(CC) -c $(CFLAGS) -MMD -o "$@" "$<"
+
+-include $(addprefix $(OBJDIR),$(OBJS:.o=.d))
 
 clean:
 	@echo "  CLEAN "
