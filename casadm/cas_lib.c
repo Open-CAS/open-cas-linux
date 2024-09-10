@@ -45,8 +45,8 @@
 
 #define CORE_ADD_MAX_TIMEOUT 30
 
-bool cache_mounts_detected(int cache_id);
-bool core_mounts_detected(int cache_id, int core_id);
+bool device_mounts_detected(const char *pattern, int cmplen);
+void print_mounted_devices(const char *pattern, int cmplen);
 
 /* KCAS_IOCTL_CACHE_CHECK_DEVICE  wrapper */
 int _check_cache_device(const char *device_path,
@@ -1119,8 +1119,16 @@ int stop_cache(uint16_t cache_id, int flush)
 	int status;
 
 	/* Don't stop instance with mounted filesystem */
-	if (cache_mounts_detected(cache_id))
+	int cmplen = 0;
+	char pattern[80];
+
+	/* verify if any core (or core partition) for this cache is mounted */
+	cmplen = snprintf(pattern, sizeof(pattern), "/dev/cas%d-", cache_id) - 1;
+	if (device_mounts_detected(pattern, cmplen)) {
+		cas_printf(LOG_ERR, "Can't stop cache instance %d due to mounted devices:\n", cache_id);
+		print_mounted_devices(pattern, cmplen);
 		return FAILURE;
+	}
 
 	fd = open_ctrl_device();
 	if (fd == -1)
@@ -1803,20 +1811,11 @@ int add_core(unsigned int cache_id, unsigned int core_id, const char *core_devic
 	return SUCCESS;
 }
 
-bool _device_mounts_detected(int cache_id, int core_id)
+bool device_mounts_detected(const char *pattern, int cmplen)
 {
 	FILE *mtab;
 	struct mntent *mstruct;
-	char dev_buf[80];
-	int no_match = 0, error = 0, cmplen = 0;
-	if (core_id >= 0) {
-		/* verify if specific core is mounted */
-		cmplen = snprintf(dev_buf, sizeof(dev_buf), "/dev/cas%d-%d", cache_id, core_id);
-	} else {
-		/* verify if any core from given cache is mounted
-		   do not compare terminating NULL for cache */
-		cmplen = snprintf(dev_buf, sizeof(dev_buf), "/dev/cas%d-", cache_id) - 1;
-	}
+	int no_match = 0, error = 0;
 
 	mtab = setmntent("/etc/mtab", "r");
 	if (!mtab) {
@@ -1825,23 +1824,12 @@ bool _device_mounts_detected(int cache_id, int core_id)
 	}
 
 	while ((mstruct = getmntent(mtab)) != NULL) {
-		error = strcmp_s(mstruct->mnt_fsname, cmplen, dev_buf, &no_match);
+		error = strcmp_s(mstruct->mnt_fsname, cmplen, pattern, &no_match);
 		/* mstruct->mnt_fsname is /dev/... block device path, not a mountpoint */
 		if (error != EOK)
 			return false;
 		if (no_match)
 			continue;
-
-		if (core_id < 0) {
-			cas_printf(LOG_ERR,
-				   "Can't stop cache instance %d. Device %s is mounted!\n",
-				   cache_id, mstruct->mnt_fsname);
-		} else {
-			cas_printf(LOG_ERR,
-				   "Can't remove core %d from cache %d."
-				   " Device %s is mounted!\n",
-				   core_id, cache_id, mstruct->mnt_fsname);
-		}
 
 		return true;
 	}
@@ -1849,14 +1837,26 @@ bool _device_mounts_detected(int cache_id, int core_id)
 	return false;
 }
 
-bool cache_mounts_detected(int cache_id)
+void print_mounted_devices(const char *pattern, int cmplen)
 {
-	return _device_mounts_detected(cache_id, -1);
-}
+	FILE *mtab;
+	struct mntent *mstruct;
+	int no_match = 0, error = 0;
 
-bool core_mounts_detected(int cache_id, int core_id)
-{
-	return _device_mounts_detected(cache_id, core_id);
+	mtab = setmntent("/etc/mtab", "r");
+	if (!mtab) {
+		/* should exist, but if /etc/mtab not found we cannot print mounted devices */
+		return;
+	}
+
+	while ((mstruct = getmntent(mtab)) != NULL) {
+		error = strcmp_s(mstruct->mnt_fsname, cmplen, pattern, &no_match);
+		/* mstruct->mnt_fsname is /dev/... block device path, not a mountpoint */
+		if (error != EOK || no_match)
+			continue;
+
+		cas_printf(LOG_ERR, "%s\n", mstruct->mnt_fsname);
+	}
 }
 
 int remove_core(unsigned int cache_id, unsigned int core_id,
@@ -1866,7 +1866,23 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
 	struct kcas_remove_core cmd;
 
 	/* don't even attempt ioctl if filesystem is mounted */
-	if (core_mounts_detected(cache_id, core_id)) {
+	bool mounts_detected = false;
+	int cmplen = 0;
+	char pattern[80];
+
+	/* verify if specific core is mounted */
+	cmplen = snprintf(pattern, sizeof(pattern), "/dev/cas%d-%d", cache_id, core_id);
+	mounts_detected = device_mounts_detected(pattern, cmplen)
+	if (!mounts_detected) {
+		/* verify if any partition of the core is mounted */
+		cmplen = snprintf(pattern, sizeof(pattern), "/dev/cas%d-%dp", cache_id, core_id) - 1;
+		mounts_detected = device_mounts_detected(pattern, cmplen);
+	}
+	if (mounts_detected) {
+		cas_printf(LOG_ERR, "Can't remove core %d from "
+			   "cache %d due to mounted devices:\n",
+			   core_id, cache_id);
+		print_mounted_devices(pattern, cmplen);
 		return FAILURE;
 	}
 
