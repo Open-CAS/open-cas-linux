@@ -1,9 +1,11 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2023-2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import os
+import posixpath
 import sys
 import traceback
 from datetime import timedelta
@@ -14,10 +16,11 @@ import yaml
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../test-framework"))
 
+from core.test_run import Blocked
 from core.test_run_utils import TestRun
 from api.cas import installer
 from api.cas import casadm
-from api.cas import git
+from test_utils import git
 from api.cas.cas_service import opencas_drop_in_directory
 from storage_devices.raid import Raid
 from storage_devices.ramdisk import RamDisk
@@ -91,7 +94,7 @@ def pytest_runtest_setup(item):
             TestRun.presetup()
             try:
                 TestRun.executor.wait_for_connection(timedelta(seconds=20))
-            except paramiko.AuthenticationException:
+            except (paramiko.AuthenticationException, Blocked):
                 raise
             except Exception:
                 try:
@@ -167,7 +170,9 @@ def pytest_runtest_teardown():
     for dut in TestRun.duts:
         with TestRun.use_dut(dut):
             if TestRun.executor:
-                os.makedirs(os.path.join(TestRun.LOGGER.base_dir, "dut_info", dut.ip),
+                os.makedirs(os.path.join(TestRun.LOGGER.base_dir, "dut_info",
+                                         dut.ip if dut.ip is not None
+                                         else dut.config.get("host")),
                             exist_ok=True)
                 TestRun.LOGGER.get_additional_logs()
     Log.destroy()
@@ -187,7 +192,6 @@ def pytest_addoption(parser):
     parser.addoption("--dut-config", action="append", type=str)
     parser.addoption("--log-path", action="store",
                      default=f"{os.path.join(os.path.dirname(__file__), '../results')}")
-    parser.addoption("--force-reinstall", action="store_true", default=False)
     parser.addoption("--fuzzy-iter-count", action="store")
 
 
@@ -211,10 +215,6 @@ def unmount_cas_devices():
                 f"Failed to unmount {cas_device_path}. \
                 stdout: {output.stdout} \n stderr :{output.stderr}"
             )
-
-
-def get_force_param(item):
-    return item.config.getoption("--force-reinstall")
 
 
 def __drbd_cleanup():
@@ -266,32 +266,23 @@ def base_prepare(item):
                 raid.remove_partitions()
                 raid.stop()
                 for device in raid.array_devices:
-                    Mdadm.zero_superblock(os.path.join('/dev', device.get_device_id()))
+                    Mdadm.zero_superblock(posixpath.join('/dev', device.get_device_id()))
                     Udev.settle()
 
         RamDisk.remove_all()
-
         for disk in TestRun.dut.disks:
             disk_serial = get_disk_serial_number(disk.path)
-            if disk.serial_number != disk_serial:
+            if disk.serial_number and disk.serial_number != disk_serial:
                 raise Exception(
                     f"Serial for {disk.path} doesn't match the one from the config."
                     f"Serial from config {disk.serial_number}, actual serial {disk_serial}"
                 )
 
             disk.umount_all_partitions()
-            Mdadm.zero_superblock(os.path.join('/dev', disk.get_device_id()))
+            Mdadm.zero_superblock(posixpath.join('/dev', disk.get_device_id()))
             TestRun.executor.run_expect_success("udevadm settle")
             disk.remove_partitions()
             create_partition_table(disk, PartitionTable.gpt)
-
-        cas_version = TestRun.config.get("cas_version") or git.get_current_commit_hash()
-        if get_force_param(item) and not TestRun.usr.already_updated:
-            installer.rsync_opencas_sources()
-            installer.reinstall_opencas(cas_version)
-        elif not installer.check_if_installed(cas_version):
-            installer.rsync_opencas_sources()
-            installer.set_up_opencas(cas_version)
 
         TestRun.usr.already_updated = True
         TestRun.LOGGER.add_build_info(f'Commit hash:')

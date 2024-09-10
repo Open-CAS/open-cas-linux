@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -31,8 +32,8 @@ def check_progress_bar(command: str, progress_bar_expected: bool = True):
 
     percentage = 0
     while True:
-        output = stdout.channel.recv(1024).decode('utf-8')
-        search = re.search(r'\d+.\d+', output)
+        output = stdout.channel.recv(1024).decode("utf-8")
+        search = re.search(r"\d+.\d+", output)
         last_percentage = percentage
         if search:
             TestRun.LOGGER.info(output)

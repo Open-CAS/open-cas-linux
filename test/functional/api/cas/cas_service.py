@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -8,7 +9,12 @@ from datetime import timedelta
 from string import Template
 from textwrap import dedent
 
-from test_tools.fs_utils import check_if_directory_exists, create_directory, write_file, remove
+from test_tools.fs_utils import (
+    check_if_directory_exists,
+    create_directory,
+    write_file,
+    remove,
+)
 from test_utils.systemd import reload_daemon
 
 opencas_drop_in_directory = Path("/etc/systemd/system/open-cas.service.d/")

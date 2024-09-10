@@ -1,17 +1,15 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-
-import logging
 import os
 
-from tests import conftest
 from core.test_run import TestRun
-from api.cas import cas_module, git
+from api.cas import cas_module
 from api.cas.version import get_installed_cas_version
-from test_utils import os_utils
+from test_utils import os_utils, git
 from test_utils.output import CmdException
 
 
@@ -22,27 +20,23 @@ def rsync_opencas_sources():
         # to make sure path ends with directory separator.
         # Needed for rsync to copy only contents of a directory
         # and not the directory itself.
-        os.path.join(TestRun.usr.repo_dir, ''),
-        os.path.join(TestRun.usr.working_dir, ''),
+        os.path.join(TestRun.usr.repo_dir, ""),
+        os.path.join(TestRun.usr.working_dir, ""),
         exclude_list=["test/functional/results/"],
-        delete=True)
+        delete=True,
+    )
 
 
 def clean_opencas_repo():
     TestRun.LOGGER.info("Cleaning Open CAS repo")
-    output = TestRun.executor.run(
-        f"cd {TestRun.usr.working_dir} && "
-        "make distclean")
+    output = TestRun.executor.run(f"cd {TestRun.usr.working_dir} && make distclean")
     if output.exit_code != 0:
         raise CmdException("make distclean command executed with nonzero status", output)
 
 
 def build_opencas():
     TestRun.LOGGER.info("Building Open CAS")
-    output = TestRun.executor.run(
-        f"cd {TestRun.usr.working_dir} && "
-        "./configure && "
-        "make -j")
+    output = TestRun.executor.run(f"cd {TestRun.usr.working_dir} && ./configure && make -j")
     if output.exit_code != 0:
         raise CmdException("Make command executed with nonzero status", output)
 
@@ -54,8 +48,8 @@ def install_opencas(destdir: str = ""):
         destdir = os.path.join(TestRun.usr.working_dir, destdir)
 
     output = TestRun.executor.run(
-        f"cd {TestRun.usr.working_dir} && "
-        f"make {'DESTDIR='+destdir if destdir else ''} install")
+        f"cd {TestRun.usr.working_dir} && make {'DESTDIR='+destdir if destdir else ''} install"
+    )
     if output.exit_code != 0:
         raise CmdException("Failed to install Open CAS", output)
 
@@ -78,7 +72,7 @@ def set_up_opencas(version: str = ""):
     clean_opencas_repo()
 
     if version:
-        git.checkout_cas_version(version)
+        git.checkout_version(version)
 
     build_opencas()
     install_opencas()
@@ -90,9 +84,7 @@ def uninstall_opencas():
     if output.exit_code != 0:
         raise CmdException("Open CAS is not properly installed", output)
     else:
-        TestRun.executor.run(
-            f"cd {TestRun.usr.working_dir} && "
-            f"make uninstall")
+        TestRun.executor.run(f"cd {TestRun.usr.working_dir} && make uninstall")
         if output.exit_code != 0:
             raise CmdException("There was an error during uninstall process", output)
 
