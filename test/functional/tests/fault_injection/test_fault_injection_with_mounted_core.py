@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -10,11 +11,11 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
+from test_utils.filesystem.symlink import Symlink
 from test_utils.size import Size, Unit
 
 mount_point = "/mnt/cas"
 test_file_path = f"{mount_point}/test_file"
-
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -89,6 +90,7 @@ def test_stop_cache_with_mounted_partition():
           - No system crash.
           - Unable to stop cache when partition is mounted.
           - Unable to remove core when partition is mounted.
+          - casadm displays proper message.
     """
     with TestRun.step("Prepare cache and core devices. Start CAS."):
         cache_dev = TestRun.disks['cache']
@@ -103,6 +105,10 @@ def test_stop_cache_with_mounted_partition():
         core_part.create_filesystem(Filesystem.xfs)
         core = cache.add_core(core_part)
         core.mount(mount_point)
+
+    with TestRun.step("Ensure /etc/mtab exists."):
+        if not fs_utils.check_if_symlink_exists("/etc/mtab"):
+            Symlink.create_symlink("/proc/self/mounts", "/etc/mtab")
 
     with TestRun.step("Try to remove core from cache."):
         output = TestRun.executor.run_expect_fail(cli.remove_core_cmd(cache_id=str(cache.cache_id),
@@ -119,3 +125,61 @@ def test_stop_cache_with_mounted_partition():
     with TestRun.step("Stop cache."):
         casadm.stop_all_caches()
 
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_stop_cache_with_mounted_partition_no_mtab():
+    """
+        title: Test for removing core and stopping cache when casadm is unable to check mounts.
+        description: |
+          Negative test of the ability of CAS to remove core and stop cache while core
+          is still mounted and casadm is unable to check mounts.
+        pass_criteria:
+          - No system crash.
+          - Unable to stop cache when partition is mounted.
+          - Unable to remove core when partition is mounted.
+          - casadm displays proper message informing that mount check was performed by kernel module
+    """
+    with TestRun.step("Prepare cache and core devices. Start CAS."):
+        cache_dev = TestRun.disks['cache']
+        cache_dev.create_partitions([Size(1, Unit.GibiByte)])
+        cache_part = cache_dev.partitions[0]
+        core_dev = TestRun.disks['core']
+        core_dev.create_partitions([Size(4, Unit.GibiByte)])
+        core_part = core_dev.partitions[0]
+        cache = casadm.start_cache([cache_part], force=True)
+
+    with TestRun.step("Add core device with xfs filesystem and mount it."):
+        core_part.create_filesystem(Filesystem.xfs)
+        core = cache.add_core(core_part)
+        core.mount(mount_point)
+
+    with TestRun.step("Move /etc/mtab"):
+        if fs_utils.check_if_symlink_exists("/etc/mtab"):
+            mtab = Symlink("/etc/mtab")
+        else:
+            mtab = Symlink.create_symlink("/proc/self/mounts", "/etc/mtab")
+        mtab.move("/tmp")
+
+    with TestRun.step("Try to remove core from cache."):
+        output = TestRun.executor.run_expect_fail(cli.remove_core_cmd(cache_id=str(cache.cache_id),
+                                                                      core_id=str(core.core_id)))
+        cli_messages.check_stderr_msg(output, cli_messages.remove_mounted_core_kernel)
+
+    with TestRun.step("Try to stop CAS."):
+        output = TestRun.executor.run_expect_fail(cli.stop_cmd(cache_id=str(cache.cache_id)))
+        cli_messages.check_stderr_msg(output, cli_messages.stop_cache_mounted_core_kernel)
+
+    with TestRun.step("Unmount core device."):
+        core.unmount()
+
+    with TestRun.step("Remove core."):
+        core.remove_core()
+
+    with TestRun.step("Re-add core."):
+        cache.add_core(core_part)
+
+    with TestRun.step("Stop cache."):
+        cache.stop()
+
+    mtab.move("/etc")
