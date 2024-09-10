@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -92,8 +93,17 @@ remove_mounted_core = [
     r"Can\'t remove core \d+ from cache \d+\. Device /dev/cas\d+-\d+ is mounted\!"
 ]
 
+remove_mounted_core_kernel = [
+    r"Error while removing core device \d+ from cache instance \d+",
+    r"Device opens or mount are pending to this cache"
+]
+
 stop_cache_mounted_core = [
-    r"Error while removing cache \d+",
+    r"Can\'t stop cache instance \d+\. Device /dev/cas\d+-\d+ is mounted\!"
+]
+
+stop_cache_mounted_core_kernel = [
+    r"Error while stopping cache \d+",
     r"Device opens or mount are pending to this cache"
 ]
 
