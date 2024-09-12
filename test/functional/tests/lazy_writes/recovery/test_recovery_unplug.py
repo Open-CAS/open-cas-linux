@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -89,7 +90,7 @@ def test_recovery_unplug_cache_fs(cache_mode, cls, filesystem, direct):
 
     with TestRun.step("Plug missing cache device."):
         TestRun.LOGGER.info(str(casadm.list_caches(by_id_path=False)))
-        cache_disk.plug()
+        cache_disk.plug_all()
 
     with TestRun.step("Load cache."):
         cache = casadm.load_cache(cache_device)
@@ -174,7 +175,7 @@ def test_recovery_unplug_cache_raw(cache_mode, cls):
 
     with TestRun.step("Plug missing cache device."):
         TestRun.LOGGER.info(str(casadm.list_caches(by_id_path=False)))
-        cache_disk.plug()
+        cache_disk.plug_all()
 
     with TestRun.step("Load cache."):
         cache = casadm.load_cache(cache_device)

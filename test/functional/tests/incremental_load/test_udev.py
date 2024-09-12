@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -58,7 +59,7 @@ def test_udev_core_partition():
         core_disk.unplug()
 
     with TestRun.step("Plug missing core disk."):
-        core_disk.plug()
+        core_disk.plug_all()
         time.sleep(1)
 
     with TestRun.step("List cache devices and check that created partitions are present "
@@ -102,7 +103,7 @@ def test_udev_core():
         core_disk.unplug()
 
     with TestRun.step("Plug core disk."):
-        core_disk.plug()
+        core_disk.plug_all()
         time.sleep(1)
 
     with TestRun.step("Check if core device is listed in core pool."):
@@ -112,7 +113,7 @@ def test_udev_core():
         cache_disk.unplug()
 
     with TestRun.step("Plug cache disk."):
-        cache_disk.plug()
+        cache_disk.plug_all()
 
     with TestRun.step("Check if core device is active and not in the core pool."):
         check_if_dev_in_core_pool(core_dev, False)
@@ -199,7 +200,7 @@ def test_udev_cache_load(cache_mode):
         cache_disk.unplug()
 
     with TestRun.step("Plug cache disk."):
-        cache_disk.plug()
+        cache_disk.plug_all()
         time.sleep(1)
 
     with TestRun.step("List caches and check if cache is loaded."):
@@ -263,7 +264,7 @@ def test_neg_udev_cache_load():
 
     with TestRun.step("Unplug and plug cache disk."):
         cache_disk.unplug()
-        cache_disk.plug()
+        cache_disk.plug_all()
         time.sleep(1)
 
     with TestRun.step("Check if CAS is loaded correctly."):
@@ -292,7 +293,7 @@ def test_neg_udev_cache_load():
 
     with TestRun.step("Unplug and plug core disk."):
         core_disk.unplug()
-        core_disk.plug()
+        core_disk.plug_all()
         time.sleep(1)
 
     with TestRun.step("Check if two cores assigned to not loaded cache are inserted to core pool."):

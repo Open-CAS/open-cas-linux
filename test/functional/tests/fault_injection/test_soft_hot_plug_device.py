@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -92,10 +93,10 @@ def test_soft_hot_unplug_cache(cache_mode):
         casadm.stop_all_caches()
 
     with TestRun.step("Plug back cache device"):
-        cache_dev.plug()
+        cache_dev.plug_all()
 
 
-@pytest.mark.parametrizex("cache_mode", CacheMode)
+@pytest.mark.parametrizex("cache_mode", [CacheMode.WO, CacheMode.WB])
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core1", DiskTypeLowerThan("cache"))
 @pytest.mark.require_disk("core2", DiskTypeLowerThan("cache"))
@@ -197,7 +198,7 @@ def test_soft_hot_unplug_core(cache_mode):
         casadm.stop_all_caches()
 
     with TestRun.step("Plug back core device"):
-        core_dev_unplugged.plug()
+        core_dev_unplugged.plug_all()
 
 
 def fio_prepare(core):

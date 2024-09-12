@@ -86,7 +86,7 @@ def test_fuzzy_remove_inactive_core_id(
             )
             if output.exit_code == 0:
                 with TestRun.step("Reload cache with inactive core"):
-                    core_disk.plug()
+                    core_disk.plug_all()
                     cache.add_core(core_dev=core_disk)
                     InitConfig.create_init_config_from_running_configuration()
                     cache.stop(no_data_flush=True)

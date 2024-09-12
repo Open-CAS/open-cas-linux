@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -130,7 +131,7 @@ async def test_data_integrity_unplug(cache_mode):
                         raise
 
             with TestRun.step("Plug back the cache device"):
-                cache_dev.plug()
+                cache_dev.plug_all()
 
             with TestRun.step("Load cache"):
                 cache = casadm.load_cache(cache_dev)
