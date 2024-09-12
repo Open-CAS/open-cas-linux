@@ -44,5 +44,5 @@ def set_cas_service_timeout(timeout: timedelta = timedelta(minutes=30)):
 
 
 def clear_cas_service_timeout():
-    remove(opencas_drop_in_directory, force=True, recursive=True, ignore_errors=True)
+    remove(str(opencas_drop_in_directory), force=True, recursive=True, ignore_errors=True)
     reload_daemon()
