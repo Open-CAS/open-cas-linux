@@ -84,7 +84,7 @@ already_cached_core = [
 ]
 
 remove_mounted_core = [
-    r"Can\'t remove core \d+ from cache \d+\. Device /dev/cas\d+-\d+(p\d+|) is mounted\!"
+    r"Can\'t remove core \d+ from cache \d+ due to mounted devices:"
 ]
 
 remove_mounted_core_kernel = [
@@ -93,7 +93,7 @@ remove_mounted_core_kernel = [
 ]
 
 stop_cache_mounted_core = [
-    r"Can\'t stop cache instance \d+\. Device /dev/cas\d+-\d+(p\d+|) is mounted\!"
+    r"Can\'t stop cache instance \d+ due to mounted devices:"
 ]
 
 stop_cache_mounted_core_kernel = [
