@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -86,7 +87,7 @@ def test_fuzzy_remove_inactive_cache_id(
             )
             if output.exit_code == 0:
                 with TestRun.step("Reload cache with inactive core"):
-                    core_disk.plug()
+                    core_disk.plug_all()
                     cache.add_core(core_dev=core_disk)
                     InitConfig.create_init_config_from_running_configuration()
                     cache.stop(no_data_flush=True)

@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -227,7 +228,7 @@ def test_one_core_fail(cache_mode):
         casadm.stop_all_caches()
 
     with TestRun.step("Plug back the first core."):
-        core_dev1.plug()
+        core_dev1.plug_all()
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -311,7 +312,7 @@ def test_one_core_fail_dirty():
         casadm.stop_all_caches()
 
     with TestRun.step("Plug back the first core."):
-        core_dev1.plug()
+        core_dev1.plug_all()
 
 
 def dd_builder(cache_mode: CacheMode, dev: Core, size: Size):

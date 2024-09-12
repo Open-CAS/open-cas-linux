@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 import time
@@ -221,7 +222,7 @@ def test_zero_metadata_dirty_shutdown():
             TestRun.LOGGER.info("This could ended with error (expected)")
 
     with TestRun.step("Plug cache device."):
-        cache_disk.plug()
+        cache_disk.plug_all()
         time.sleep(1)
 
     with TestRun.step("Start cache (expect to fail)."):
