@@ -243,7 +243,7 @@ def base_prepare(item):
             except Exception:
                 pass  # TODO: Reboot DUT if test is executed remotely
 
-        remove(opencas_drop_in_directory, recursive=True, ignore_errors=True)
+        remove(str(opencas_drop_in_directory), recursive=True, ignore_errors=True)
 
         from storage_devices.drbd import Drbd
         if Drbd.is_installed():
