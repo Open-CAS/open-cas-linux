@@ -76,6 +76,7 @@ def get_cas_devices_dict() -> dict:
     for device in device_list:
         if device["type"] == "cache":
             cache_id = int(device["id"])
+            core_pool = False
             params = [
                 ("id", cache_id),
                 ("device_path", device["disk"]),
@@ -91,13 +92,16 @@ def get_cas_devices_dict() -> dict:
             ]
             if core_pool:
                 params.append(("core_pool", device))
-                devices["core_pool"][(cache_id, int(device["id"]))] = dict(
+                devices["core_pool"][device["disk"]] = dict(
                     [(key, value) for key, value in params]
                 )
             else:
                 devices["cores"][(cache_id, int(device["id"]))] = dict(
                     [(key, value) for key, value in params]
                 )
+
+        elif device["type"] == "core pool":
+            core_pool = True
 
     return devices
 
