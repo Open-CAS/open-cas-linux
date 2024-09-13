@@ -189,6 +189,16 @@ class Cache:
             ),
         )
 
+    def set_promotion_policy(self, policy: PromotionPolicy) -> Output:
+        return casadm.set_param_promotion(self.cache_id, policy)
+
+    def set_params_nhit(self, promotion_params_nhit: PromotionParametersNhit) -> Output:
+        return casadm.set_param_promotion_nhit(
+            self.cache_id,
+            threshold=promotion_params_nhit.threshold.get_value(),
+            trigger=promotion_params_nhit.trigger
+        )
+
     def get_cache_config(self) -> CacheConfig:
         return CacheConfig(
             self.get_cache_line_size(),
