@@ -60,6 +60,7 @@ class Core(Device):
     ) -> CoreIoClassStats:
         return CoreIoClassStats(
             cache_id=self.cache_id,
+            core_id=self.core_id,
             filter=stat_filter,
             io_class_id=io_class_id,
             percentage_val=percentage_val,
