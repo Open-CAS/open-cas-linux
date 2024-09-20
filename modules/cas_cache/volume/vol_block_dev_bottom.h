@@ -6,7 +6,6 @@
 
 #ifndef __VOL_BLOCK_DEV_BOTTOM_H__
 #define __VOL_BLOCK_DEV_BOTTOM_H__
-
 int block_dev_init(void);
 
 #endif /* __VOL_BLOCK_DEV_BOTTOM_H__ */

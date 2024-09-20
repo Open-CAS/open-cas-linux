@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -47,23 +48,6 @@
 #include <linux/slab_def.h>
 #endif
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(3, 0, 0)
-	#include <generated/utsrelease.h>
-	#ifdef UTS_UBUNTU_RELEASE_ABI
-		#define CAS_UBUNTU
-	#endif
-#endif
-
-/*
- * For 8KB process kernel stack check if request is not continous and
- * submit each bio as separate request. This prevent nvme driver from
- * splitting requests.
- * For large requests, nvme splitting causes stack overrun.
- */
-#if THREAD_SIZE <= 8192
-	#define RQ_CHECK_CONTINOUS
-#endif
-
 #ifndef SHRT_MIN
 	#define SHRT_MIN ((s16)-32768)
 #endif
@@ -73,16 +57,6 @@
 #endif
 
 #define ENOTSUP ENOTSUPP
-
-#ifdef RHEL_RELEASE_VERSION
-	#if RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(7, 3)
-		#define CAS_RHEL_73
-	#endif
-#endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0)
-	#define CAS_GARBAGE_COLLECTOR
-#endif
 
 /* rate-limited printk */
 #define CAS_PRINT_RL(...) \

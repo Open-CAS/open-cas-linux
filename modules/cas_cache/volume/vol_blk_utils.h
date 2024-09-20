@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -8,27 +9,6 @@
 
 #include "obj_blk.h"
 #include "context.h"
-
-struct blkio {
-	int error;
-	atomic_t rq_remaning;
-	atomic_t ref_counter;
-	int32_t dir;
-
-	struct blk_data *data; /* IO data buffer */
-
-	/* BIO vector iterator for sending IO */
-	struct bio_vec_iter iter;
-};
-
-static inline struct blkio *cas_io_to_blkio(struct ocf_io *io)
-{
-	return ocf_io_get_priv(io);
-}
-
-int cas_blk_io_set_data(struct ocf_io *io, ctx_data_t *data,
-		uint32_t offset);
-ctx_data_t *cas_blk_io_get_data(struct ocf_io *io);
 
 int cas_blk_open_volume_by_bdev(ocf_volume_t *vol,
 		struct block_device *bdev);

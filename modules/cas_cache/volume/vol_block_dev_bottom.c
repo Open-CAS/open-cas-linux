@@ -86,15 +86,15 @@ static uint64_t block_dev_get_byte_length(ocf_volume_t vol)
  *
  */
 static inline struct bio *cas_bd_io_alloc_bio(struct block_device *bdev, 
-					      struct blkio *bdio)
+					      struct bio_vec_iter *iter)
 {
 	struct bio *bio
-		= cas_bio_alloc(bdev, GFP_NOIO, cas_io_iter_size_left(&bdio->iter));
+		= cas_bio_alloc(bdev, GFP_NOIO, cas_io_iter_size_left(iter));
 
 	if (bio)
 		return bio;
 
-	if (cas_io_iter_size_left(&bdio->iter) < MAX_LINES_PER_IO) {
+	if (cas_io_iter_size_left(iter) < MAX_LINES_PER_IO) {
 		/* BIO vector was small, so it was memory
 		 * common problem - NO RAM!!!
 		 */
@@ -103,211 +103,6 @@ static inline struct bio *cas_bd_io_alloc_bio(struct block_device *bdev,
 
 	/* Retry with smaller */
 	return cas_bio_alloc(bdev, GFP_NOIO, MAX_LINES_PER_IO);
-}
-
-/*
- *
- */
-static void cas_bd_io_end(struct ocf_io *io, int error)
-{
-	struct blkio *bdio = cas_io_to_blkio(io);
-
-	if (error)
-		bdio->error |= error;
-
-	if (atomic_dec_return(&bdio->rq_remaning))
-		return;
-
-	CAS_DEBUG_MSG("Completion");
-
-	/* Send completion to caller */
-	io->end(io, bdio->error);
-}
-
-/*
- *
- */
-CAS_DECLARE_BLOCK_CALLBACK(cas_bd_io_end, struct bio *bio,
-		unsigned int bytes_done, int error)
-{
-	struct ocf_io *io;
-	struct blkio *bdio;
-	struct bd_object *bdobj;
-	int err;
-
-	BUG_ON(!bio);
-	BUG_ON(!bio->bi_private);
-	CAS_BLOCK_CALLBACK_INIT(bio);
-	io = bio->bi_private;
-	bdobj = bd_object(ocf_io_get_volume(io));
-	BUG_ON(!bdobj);
-	err = CAS_BLOCK_CALLBACK_ERROR(bio, error);
-	bdio = cas_io_to_blkio(io);
-	BUG_ON(!bdio);
-
-	CAS_DEBUG_TRACE();
-
-	if (err == -EOPNOTSUPP && (CAS_BIO_OP_FLAGS(bio) & CAS_BIO_DISCARD))
-		err = 0;
-
-	cas_bd_io_end(io, err);
-
-	bio_put(bio);
-	CAS_BLOCK_CALLBACK_RETURN();
-}
-
-static void block_dev_submit_flush(struct ocf_io *io)
-{
-	struct blkio *blkio = cas_io_to_blkio(io);
-	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
-	struct block_device *bdev = bdobj->btm_bd;
-	struct request_queue *q = bdev_get_queue(bdev);
-	struct bio *bio = NULL;
-
-	/* Prevent races of completing IO */
-	atomic_set(&blkio->rq_remaning, 1);
-
-	if (q == NULL) {
-		/* No queue, error */
-		blkio->error = -EINVAL;
-		goto out;
-	}
-
-	if (!CAS_CHECK_QUEUE_FLUSH(q)) {
-		/* This block device does not support flush, call back */
-		goto out;
-	}
-
-	bio = cas_bio_alloc(bdev, GFP_NOIO, 0);
-	if (bio == NULL) {
-		CAS_PRINT_RL(KERN_ERR "Couldn't allocate memory for BIO\n");
-		blkio->error = -ENOMEM;
-		goto out;
-	}
-
-	blkio->dir = io->dir;
-
-	bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_bd_io_end);
-	CAS_BIO_SET_DEV(bio, bdev);
-	bio->bi_private = io;
-
-	atomic_inc(&blkio->rq_remaning);
-	cas_submit_bio(CAS_SET_FLUSH(io->dir), bio);
-
-out:
-	cas_bd_io_end(io, blkio->error);
-}
-
-static void block_dev_submit_discard(struct ocf_io *io)
-{
-	struct blkio *blkio = cas_io_to_blkio(io);
-	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
-	struct block_device *bd = bdobj->btm_bd;
-	struct request_queue *q = bdev_get_queue(bd);
-	struct bio *bio = NULL;
-
-	unsigned int max_discard_sectors, granularity, bio_sects;
-	int alignment;
-	sector_t sects, start, end, tmp;
-
-	/* Prevent races of completing IO */
-	atomic_set(&blkio->rq_remaning, 1);
-
-	if (!q) {
-		/* No queue, error */
-		blkio->error = -ENXIO;
-		goto out;
-	}
-
-	if (!cas_has_discard_support(bd)) {
-		/* Discard is not supported by bottom device, send completion
-		 * to caller
-		 */
-		goto out;
-	}
-
-	granularity = max(q->limits.discard_granularity >> SECTOR_SHIFT, 1U);
-	alignment = (bdev_discard_alignment(bd) >> SECTOR_SHIFT) % granularity;
-	max_discard_sectors =
-		min(q->limits.max_discard_sectors, UINT_MAX >> SECTOR_SHIFT);
-	max_discard_sectors -= max_discard_sectors % granularity;
-	if (unlikely(!max_discard_sectors))
-		goto out;
-
-	sects = io->bytes >> SECTOR_SHIFT;
-	start = io->addr >> SECTOR_SHIFT;
-
-	while (sects) {
-		bio = cas_bio_alloc(bd, GFP_NOIO, 1);
-		if (!bio) {
-			CAS_PRINT_RL(CAS_KERN_ERR "Couldn't allocate memory for BIO\n");
-			blkio->error = -ENOMEM;
-			break;
-		}
-
-		bio_sects = min_t(sector_t, sects, max_discard_sectors);
-		end = start + bio_sects;
-		tmp = end;
-		if (bio_sects < sects &&
-		    sector_div(tmp, granularity) != alignment) {
-			end = end - alignment;
-			sector_div(end, granularity);
-			end = end * granularity + alignment;
-			bio_sects = end - start;
-		}
-
-		CAS_BIO_SET_DEV(bio, bd);
-		CAS_BIO_BISECTOR(bio) = start;
-		CAS_BIO_BISIZE(bio) = bio_sects << SECTOR_SHIFT;
-		bio->bi_next = NULL;
-		bio->bi_private = io;
-		bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_bd_io_end);
-
-		atomic_inc(&blkio->rq_remaning);
-		cas_submit_bio(CAS_BIO_DISCARD, bio);
-
-		sects -= bio_sects;
-		start = end;
-
-		cond_resched();
-	}
-
-out:
-	cas_bd_io_end(io, blkio->error);
-}
-
-static inline bool cas_bd_io_prepare(int *dir, struct ocf_io *io)
-{
-	struct blkio *bdio = cas_io_to_blkio(io);
-
-	/* Setup DIR */
-	bdio->dir = *dir;
-
-	/* Convert CAS direction into kernel values */
-	switch (bdio->dir) {
-	case OCF_READ:
-		*dir = READ;
-		break;
-
-	case OCF_WRITE:
-		*dir = WRITE;
-		break;
-
-	default:
-		bdio->error = -EINVAL;
-		break;
-	}
-
-	if (!io->bytes) {
-		/* Don not accept empty request */
-		CAS_PRINT_RL(KERN_ERR "Invalid zero size IO\n");
-		bdio->error = -EINVAL;
-	}
-
-	if (bdio->error)
-		return false;
-
-	return true;
 }
 
 /*
@@ -328,44 +123,57 @@ static inline uint64_t filter_req_flags(int dir, uint64_t flags)
 /*
  *
  */
-static void block_dev_submit_io(struct ocf_io *io)
+CAS_DECLARE_BLOCK_CALLBACK(cas_bd_forward_end, struct bio *bio,
+		unsigned int bytes_done, int error)
 {
-	struct blkio *bdio = cas_io_to_blkio(io);
-	struct bd_object *bdobj = bd_object(ocf_io_get_volume(io));
-	struct bio_vec_iter *iter = &bdio->iter;
-	uint64_t addr = io->addr;
-	uint32_t bytes = io->bytes;
-	int dir = io->dir;
-	struct blk_plug plug;
+	ocf_forward_token_t token;
+	int err;
 
-	if (CAS_IS_SET_FLUSH(io->flags)) {
-		CAS_DEBUG_MSG("Flush request");
-		/* It is flush requests handle it */
-		block_dev_submit_flush(io);
-		return;
-	}
+	CAS_BLOCK_CALLBACK_INIT(bio);
+	token = (ocf_forward_token_t)bio->bi_private;
+	err = CAS_BLOCK_CALLBACK_ERROR(bio, error);
+
+	CAS_DEBUG_TRACE();
+
+	if (err == -EOPNOTSUPP && (CAS_BIO_OP_FLAGS(bio) & CAS_BIO_DISCARD))
+		err = 0;
+
+	ocf_forward_end(token, err);
+
+	bio_put(bio);
+	CAS_BLOCK_CALLBACK_RETURN();
+}
+
+
+static void block_dev_forward_io(ocf_volume_t volume,
+		ocf_forward_token_t token, int dir, uint64_t addr,
+		uint64_t bytes, uint64_t offset)
+{
+	struct bd_object *bdobj = bd_object(volume);
+	struct blk_data *data = ocf_forward_get_data(token);
+	uint64_t flags = ocf_forward_get_flags(token);
+	int bio_dir = (dir == OCF_READ) ? READ : WRITE;
+	struct bio_vec_iter iter;
+	struct blk_plug plug;
+	int error = 0;
 
 	CAS_DEBUG_PARAM("Address = %llu, bytes = %u\n", addr, bytes);
 
-	/* Prevent races of completing IO */
-	atomic_set(&bdio->rq_remaning, 1);
-
-	if (!cas_bd_io_prepare(&dir, io)) {
-		CAS_DEBUG_MSG("Invalid request");
-		cas_bd_io_end(io, -EINVAL);
+	cas_io_iter_init(&iter, data->vec, data->size);
+	if (offset != cas_io_iter_move(&iter, offset)) {
+		ocf_forward_end(token, -OCF_ERR_INVAL);
 		return;
 	}
 
 	blk_start_plug(&plug);
-
-	while (cas_io_iter_is_next(iter) && bytes) {
+	while (cas_io_iter_is_next(&iter) && bytes) {
 		/* Still IO vectors to be sent */
 
 		/* Allocate BIO */
-		struct bio *bio = cas_bd_io_alloc_bio(bdobj->btm_bd, bdio);
+		struct bio *bio = cas_bd_io_alloc_bio(bdobj->btm_bd, &iter);
 
 		if (!bio) {
-			bdio->error = -ENOMEM;
+			error = -ENOMEM;
 			break;
 		}
 
@@ -373,15 +181,15 @@ static void block_dev_submit_io(struct ocf_io *io)
 		CAS_BIO_SET_DEV(bio, bdobj->btm_bd);
 		CAS_BIO_BISECTOR(bio) = addr / SECTOR_SIZE;
 		bio->bi_next = NULL;
-		bio->bi_private = io;
-		CAS_BIO_OP_FLAGS(bio) |= filter_req_flags(dir, io->flags);
-		bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_bd_io_end);
+		bio->bi_private = (void *)token;
+		CAS_BIO_OP_FLAGS(bio) |= filter_req_flags(bio_dir, flags);
+		bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_bd_forward_end);
 
 		/* Add pages */
-		while (cas_io_iter_is_next(iter) && bytes) {
-			struct page *page = cas_io_iter_current_page(iter);
-			uint32_t offset = cas_io_iter_current_offset(iter);
-			uint32_t length = cas_io_iter_current_length(iter);
+		while (cas_io_iter_is_next(&iter) && bytes) {
+			struct page *page = cas_io_iter_current_page(&iter);
+			uint32_t offset = cas_io_iter_current_offset(&iter);
+			uint32_t length = cas_io_iter_current_length(&iter);
 			int added;
 
 			if (length > bytes)
@@ -400,19 +208,19 @@ static void block_dev_submit_io(struct ocf_io *io)
 			addr += added;
 
 			/* Update BIO vector iterator */
-			if (added != cas_io_iter_move(iter, added)) {
-				bdio->error = -ENOBUFS;
+			if (added != cas_io_iter_move(&iter, added)) {
+				error = -ENOBUFS;
 				break;
 			}
 		}
 
-		if (bdio->error == 0) {
+		if (error == 0) {
 			/* Increase IO reference for sending this IO */
-			atomic_inc(&bdio->rq_remaning);
 
+			ocf_forward_get(token);
 			/* Send BIO */
 			CAS_DEBUG_MSG("Submit IO");
-			cas_submit_bio(dir, bio);
+			cas_submit_bio(bio_dir, bio);
 			bio = NULL;
 		} else {
 			if (bio) {
@@ -424,40 +232,145 @@ static void block_dev_submit_io(struct ocf_io *io)
 			break;
 		}
 	}
-
 	blk_finish_plug(&plug);
 
-	if (bytes && bdio->error == 0) {
+	if (bytes && error == 0) {
 		/* Not all bytes sent, mark error */
-		bdio->error = -ENOBUFS;
+		error = -ENOBUFS;
 	}
 
 	/* Prevent races of completing IO when
 	 * there are still child IOs not being send.
 	 */
-	cas_bd_io_end(io, 0);
+	ocf_forward_end(token, error);
+}
+
+static void block_dev_forward_flush(ocf_volume_t volume,
+		ocf_forward_token_t token)
+{
+	struct bd_object *bdobj = bd_object(volume);
+	struct request_queue *q = bdev_get_queue(bdobj->btm_bd);
+	struct bio *bio;
+
+	if (!q) {
+		/* No queue, error */
+		ocf_forward_end(token, -OCF_ERR_INVAL);
+		return;
+	}
+
+	if (!CAS_CHECK_QUEUE_FLUSH(q)) {
+		/* This block device does not support flush, call back */
+		ocf_forward_end(token, 0);
+		return;
+	}
+
+	bio = cas_bio_alloc(bdobj->btm_bd, GFP_NOIO, 0);
+	if (!bio) {
+		CAS_PRINT_RL(KERN_ERR "Couldn't allocate memory for BIO\n");
+		ocf_forward_end(token, -OCF_ERR_NO_MEM);
+		return;
+	}
+
+	CAS_BIO_SET_DEV(bio, bdobj->btm_bd);
+	bio->bi_private = (void *)token;
+	bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_bd_forward_end);
+
+	cas_submit_bio(CAS_SET_FLUSH(0), bio);
+
+}
+
+static void block_dev_forward_discard(ocf_volume_t volume,
+		ocf_forward_token_t token, uint64_t addr, uint64_t bytes)
+{
+	struct bd_object *bdobj = bd_object(volume);
+	struct request_queue *q = bdev_get_queue(bdobj->btm_bd);
+	struct bio *bio;
+	int error = 0;
+
+	unsigned int max_discard_sectors, granularity, bio_sects;
+	int alignment;
+	sector_t sects, start, end, tmp;
+
+	if (!q) {
+		/* No queue, error */
+		ocf_forward_end(token, -OCF_ERR_INVAL);
+		return;
+	}
+
+	if (!cas_has_discard_support(bdobj->btm_bd)) {
+		/* Discard is not supported by bottom device, send completion
+		 * to caller
+		 */
+		ocf_forward_end(token, 0);
+		return;
+	}
+
+	granularity = max(q->limits.discard_granularity >> SECTOR_SHIFT, 1U);
+	alignment = (bdev_discard_alignment(bdobj->btm_bd) >> SECTOR_SHIFT)
+			% granularity;
+	max_discard_sectors =
+		min(q->limits.max_discard_sectors, UINT_MAX >> SECTOR_SHIFT);
+	max_discard_sectors -= max_discard_sectors % granularity;
+	if (unlikely(!max_discard_sectors)) {
+		ocf_forward_end(token, -OCF_ERR_INVAL);
+		return;
+	}
+
+	sects = bytes >> SECTOR_SHIFT;
+	start = addr >> SECTOR_SHIFT;
+
+	while (sects) {
+		bio = cas_bio_alloc(bdobj->btm_bd, GFP_NOIO, 1);
+		if (!bio) {
+			CAS_PRINT_RL(CAS_KERN_ERR "Couldn't allocate memory for BIO\n");
+			error = -OCF_ERR_NO_MEM;
+			break;
+		}
+
+		bio_sects = min_t(sector_t, sects, max_discard_sectors);
+		end = start + bio_sects;
+		tmp = end;
+		if (bio_sects < sects &&
+		    sector_div(tmp, granularity) != alignment) {
+			end = end - alignment;
+			sector_div(end, granularity);
+			end = end * granularity + alignment;
+			bio_sects = end - start;
+		}
+
+		CAS_BIO_SET_DEV(bio, bdobj->btm_bd);
+		CAS_BIO_BISECTOR(bio) = start;
+		CAS_BIO_BISIZE(bio) = bio_sects << SECTOR_SHIFT;
+		bio->bi_next = NULL;
+		bio->bi_private = (void *)token;
+		bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_bd_forward_end);
+
+		ocf_forward_get(token);
+		cas_submit_bio(CAS_BIO_DISCARD, bio);
+
+		sects -= bio_sects;
+		start = end;
+
+		cond_resched();
+	}
+
+	ocf_forward_end(token, error);
 }
 
 const struct ocf_volume_properties cas_object_blk_properties = {
 	.name = "Block_Device",
-	.io_priv_size = sizeof(struct blkio),
 	.volume_priv_size = sizeof(struct bd_object),
 	.caps = {
 		.atomic_writes = 0, /* Atomic writes not supported */
 	},
 	.ops = {
-		.submit_io = block_dev_submit_io,
-		.submit_flush = block_dev_submit_flush,
-		.submit_metadata = NULL,
-		.submit_discard = block_dev_submit_discard,
+		.forward_io = block_dev_forward_io,
+		.forward_flush = block_dev_forward_flush,
+		.forward_discard = block_dev_forward_discard,
 		.open = block_dev_open_object,
 		.close = block_dev_close_object,
 		.get_max_io_size = block_dev_get_max_io_size,
 		.get_length = block_dev_get_byte_length,
-	},
-	.io_ops = {
-		.set_data = cas_blk_io_set_data,
-		.get_data = cas_blk_io_get_data,
 	},
 	.deinit = NULL,
 };
