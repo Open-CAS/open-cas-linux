@@ -130,6 +130,7 @@ def test_cleaning_policies_in_write_through(cleaning_policy):
 
     with TestRun.step(f"Start cache in Write-Through mode with {cleaning_policy} cleaning policy"):
         cache = casadm.start_cache(cache_dev.partitions[0], CacheMode.WT, force=True)
+        cache.set_cleaning_policy(cleaning_policy=cleaning_policy)
         set_cleaning_policy_params(cache, cleaning_policy)
 
     with TestRun.step("Check for running CAS cleaner"):
@@ -256,7 +257,7 @@ def check_cleaning_policy_operation(
         case CleaningPolicy.nop:
             if (
                 core_writes_after_wait_for_cleaning != Size.zero()
-                or core_writes_before_wait_for_cleaning.value != Size.zero()
+                    or core_writes_before_wait_for_cleaning != Size.zero()
             ):
                 TestRun.LOGGER.error(
                     "NOP cleaning policy is not working properly! "
