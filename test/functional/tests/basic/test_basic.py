@@ -6,16 +6,16 @@
 
 import pytest
 
+from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheLineSize
 from api.cas.casadm_params import OutputFormat
 from api.cas.cli import start_cmd
-from core.test_run import TestRun
-from api.cas import casadm
 from api.cas.cli_messages import (
     check_stderr_msg,
     start_cache_on_already_used_dev,
     start_cache_with_existing_id,
 )
+from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_tools.dd import Dd
@@ -81,31 +81,31 @@ def test_negative_start_cache():
 
     with TestRun.step("Start cache on the same device but with another ID"):
         try:
-            output = TestRun.executor.run(
+            output = TestRun.executor.run_expect_fail(
                 start_cmd(
                     cache_dev=cache_dev_1.path,
                     cache_id="2",
                     force=True,
                 )
             )
-            TestRun.fail("Two caches started on same device")
-        except CmdException:
             if not check_stderr_msg(output, start_cache_on_already_used_dev):
                 TestRun.fail(f"Received unexpected error message: {output.stderr}")
+        except CmdException:
+            TestRun.fail("Two caches started on same device")
 
     with TestRun.step("Start cache with the same ID on another cache device"):
         try:
-            output = TestRun.executor.run(
+            output = TestRun.executor.run_expect_fail(
                 start_cmd(
                     cache_dev=cache_dev_2.path,
                     cache_id="1",
                     force=True,
                 )
             )
-            TestRun.fail("Two caches started with same ID")
-        except CmdException:
             if not check_stderr_msg(output, start_cache_with_existing_id):
                 TestRun.fail(f"Received unexpected error message: {output.stderr}")
+        except CmdException:
+            TestRun.fail("Two caches started with same ID")
 
 
 @pytest.mark.CI
