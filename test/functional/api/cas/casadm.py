@@ -235,10 +235,10 @@ def get_param_cleaning_acp(
 
 
 def set_cache_mode(
-    cache_mode: CacheMode, cache_id: int, flush=None, shortcut: bool = False
+    cache_mode: CacheMode, cache_id: int, flush: bool = None, shortcut: bool = False
 ) -> Output:
     flush_cache = None
-    if flush:
+    if flush is not None:
         flush_cache = "yes" if flush else "no"
     output = TestRun.executor.run(
         set_cache_mode_cmd(
