@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -60,7 +61,7 @@ def test_cli_help(shortcut):
 
     output = TestRun.executor.run("casadm" + (" -L" if shortcut else " --list-caches")
                                   + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, list_help)
+    check_stdout_msg(output, list_caches_help)
 
     output = TestRun.executor.run("casadm" + (" -P" if shortcut else " --stats")
                                   + (" -H" if shortcut else " --help"))

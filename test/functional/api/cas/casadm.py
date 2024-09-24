@@ -516,5 +516,5 @@ def remove_all_detached_cores() -> None:
     from api.cas.casadm_parser import get_cas_devices_dict
 
     devices = get_cas_devices_dict()
-    for dev in devices["core_pool"]:
-        TestRun.executor.run(remove_detached_cmd(dev["device"]))
+    for dev in devices["core_pool"].values():
+        TestRun.executor.run(remove_detached_cmd(dev["device_path"]))

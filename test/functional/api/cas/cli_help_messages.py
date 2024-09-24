@@ -274,11 +274,14 @@ version_help = [
     r"-o  --output-format \<FORMAT\>        Output format: \{table|csv\}",
 ]
 
-help_help = [r"Usage: casadm --help", r"Print help"]
+help_help = [
+    r"Usage: casadm --help",
+    r"Print help",
+]
 
 
 standby_help = [
-    r"The command is not supported"
+    r"The command is not supported",
 ]
 
 zero_metadata_help = [
