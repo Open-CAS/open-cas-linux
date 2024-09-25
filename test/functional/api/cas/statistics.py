@@ -361,6 +361,18 @@ class UsageStats:
         self.free = parse_value(value=stats_dict[f"Free {unit}"], unit_type=unit)
         self.clean = parse_value(value=stats_dict[f"Clean {unit}"], unit_type=unit)
         self.dirty = parse_value(value=stats_dict[f"Dirty {unit}"], unit_type=unit)
+        if f"Inactive Occupancy {unit}" in stats_dict:
+            self.inactive_occupancy = parse_value(
+                value=stats_dict[f"Inactive Occupancy {unit}"], unit_type=unit
+            )
+        if f"Inactive Clean {unit}" in stats_dict:
+            self.inactive_clean = parse_value(
+                value=stats_dict[f"Inactive Clean {unit}"], unit_type=unit
+            )
+        if f"Inactive Dirty {unit}" in stats_dict:
+            self.inactive_dirty = parse_value(
+                value=stats_dict[f"Inactive Dirty {unit}"], unit_type=unit
+            )
 
     def __str__(self):
         return (
