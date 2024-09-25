@@ -226,14 +226,14 @@ class CacheIoClassStats(CoreIoClassStats):
 
 class CacheConfigStats:
     def __init__(self, stats_dict):
-        self.cache_id = stats_dict["Cache Id"]
+        self.cache_id = int(stats_dict["Cache Id"])
         self.cache_size = parse_value(
             value=stats_dict["Cache Size [4KiB Blocks]"], unit_type=UnitType.block_4k
         )
         self.cache_dev = stats_dict["Cache Device"]
         self.exp_obj = stats_dict["Exported Object"]
-        self.core_dev = stats_dict["Core Devices"]
-        self.inactive_core_devices = stats_dict["Inactive Core Devices"]
+        self.core_dev = int(stats_dict["Core Devices"])
+        self.inactive_core_devices = int(stats_dict["Inactive Core Devices"])
         self.write_policy = stats_dict["Write Policy"]
         self.cleaning_policy = stats_dict["Cleaning Policy"]
         self.promotion_policy = stats_dict["Promotion Policy"]
