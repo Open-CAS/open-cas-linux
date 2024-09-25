@@ -312,7 +312,8 @@ def test_neg_udev_cache_load():
 
 def check_if_dev_in_core_pool(dev, should_be_in_core_pool=True):
     cas_devices_dict = casadm_parser.get_cas_devices_dict()
-    is_in_core_pool = any(dev.path == d["device"] for d in cas_devices_dict["core_pool"])
+    is_in_core_pool = any(dev.path == d["device_path"]
+                          for d in cas_devices_dict["core_pool"].values())
     if not (should_be_in_core_pool ^ is_in_core_pool):
         TestRun.LOGGER.info(f"Core device {dev.path} is"
                             f"{'' if should_be_in_core_pool else ' not'} listed in core pool "
