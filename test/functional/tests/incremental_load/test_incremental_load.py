@@ -244,9 +244,9 @@ def test_flush_inactive_devices():
         cache.set_cleaning_policy(CleaningPolicy.alru)
         cache.set_params_alru(
             FlushParametersAlru(
-                staleness_time=Time(seconds=10),
-                wake_up_time=Time(seconds=1),
-                activity_threshold=Time(milliseconds=500),
+                staleness_time=staleness_time,
+                wake_up_time=wake_up_time,
+                activity_threshold=activity_threshold,
             )
         )
 
@@ -626,6 +626,7 @@ def test_print_statistics_inactive(cache_mode):
 
     with TestRun.step("Attach one of detached core devices and add it to cache."):
         first_plug_device.plug_all()
+        second_plug_device.unplug()
         time.sleep(1)
         first_core_status = first_core.get_status()
         if first_core_status != CoreStatus.active:
@@ -643,21 +644,21 @@ def test_print_statistics_inactive(cache_mode):
         lazy_write_traits = CacheModeTrait.LazyWrites in cache_mode_traits
         lazy_writes_or_no_insert_write_traits = not insert_write_traits or lazy_write_traits
 
-        check_inactive_usage_stats(
-            inactive_stats_before.inactive_usage_stats.inactive_occupancy,
-            inactive_stats_after.inactive_usage_stats.inactive_occupancy,
+        check_usage_stats(
+            inactive_stats_before.usage_stats.inactive_occupancy,
+            inactive_stats_after.usage_stats.inactive_occupancy,
             "inactive occupancy",
             not insert_write_traits,
         )
-        check_inactive_usage_stats(
-            inactive_stats_before.inactive_usage_stats.inactive_clean,
-            inactive_stats_after.inactive_usage_stats.inactive_clean,
+        check_usage_stats(
+            inactive_stats_before.usage_stats.inactive_clean,
+            inactive_stats_after.usage_stats.inactive_clean,
             "inactive clean",
             lazy_writes_or_no_insert_write_traits,
         )
-        check_inactive_usage_stats(
-            inactive_stats_before.inactive_usage_stats.inactive_dirty,
-            inactive_stats_after.inactive_usage_stats.inactive_dirty,
+        check_usage_stats(
+            inactive_stats_before.usage_stats.inactive_dirty,
+            inactive_stats_after.usage_stats.inactive_dirty,
             "inactive dirty",
             not lazy_write_traits,
         )
@@ -665,7 +666,7 @@ def test_print_statistics_inactive(cache_mode):
     with TestRun.step("Check statistics per inactive core."):
         inactive_core_stats = second_core.get_statistics()
         if (
-            inactive_stats_after.inactive_usage_stats.inactive_occupancy
+            inactive_stats_after.usage_stats.inactive_occupancy
             == inactive_core_stats.usage_stats.occupancy
         ):
             TestRun.LOGGER.info(
@@ -675,7 +676,7 @@ def test_print_statistics_inactive(cache_mode):
             TestRun.fail(
                 f"Inactive core occupancy ({inactive_core_stats.usage_stats.occupancy}) "
                 f"should be the same as cache inactive occupancy "
-                f"({inactive_stats_after.inactive_usage_stats.inactive_occupancy})."
+                f"({inactive_stats_after.usage_stats.inactive_occupancy})."
             )
 
     with TestRun.step("Remove inactive core from cache and check if cache is in running state."):
@@ -993,7 +994,7 @@ def try_stop_incomplete_cache(cache):
         cli_messages.check_stderr_msg(e.output, cli_messages.stop_cache_incomplete)
 
 
-def check_inactive_usage_stats(stats_before, stats_after, stat_name, should_be_zero):
+def check_usage_stats(stats_before, stats_after, stat_name, should_be_zero):
     if should_be_zero and stats_before == Size.zero() and stats_after == Size.zero():
         TestRun.LOGGER.info(f"{stat_name} value before and after equals 0 as expected.")
     elif not should_be_zero and stats_after < stats_before:
@@ -1005,7 +1006,7 @@ def check_inactive_usage_stats(stats_before, stats_after, stat_name, should_be_z
 
 
 def check_number_of_inactive_devices(stats: CacheStats, expected_num):
-    inactive_core_num = stats.config_stats.inactive_core_dev
+    inactive_core_num = stats.config_stats.inactive_core_devices
     if inactive_core_num != expected_num:
         TestRun.fail(
             f"There is wrong number of inactive core devices in cache statistics. "
@@ -1015,9 +1016,9 @@ def check_number_of_inactive_devices(stats: CacheStats, expected_num):
 
 def check_if_inactive_section_exists(stats, should_exist: bool = True):
     TestRun.LOGGER.info(str(stats))
-    if not should_exist and hasattr(stats, "inactive_usage_stats"):
+    if not should_exist and "inactive_occupancy" in stats.usage_stats:
         TestRun.fail("There is an inactive section in cache usage statistics.")
-    elif should_exist and not hasattr(stats, "inactive_usage_stats"):
+    elif should_exist and "inactive_occupancy" not in stats.usage_stats:
         TestRun.fail("There is no inactive section in cache usage statistics.")
 
 
