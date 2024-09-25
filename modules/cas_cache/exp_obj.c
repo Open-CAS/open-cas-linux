@@ -31,27 +31,6 @@ static inline void bd_release_from_disk(struct block_device *bdev,
 	return bd_unlink_disk_holder(bdev, disk);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
-       #define KRETURN(x)      return
-       #define MAKE_RQ_RET_TYPE void
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
-       #define KRETURN(x)      ({ return (x); })
-       #define MAKE_RQ_RET_TYPE blk_qc_t
-#else
-       #define KRETURN(x)      return
-       #define MAKE_RQ_RET_TYPE void
-#endif
-
-/* For RHEL 9.x we assume backport from kernel 5.18+ */
-#ifdef RHEL_MAJOR
-	#if RHEL_MAJOR >= 9
-		#undef KRETURN
-		#undef MAKE_RQ_RET_TYPE
-		#define KRETURN(x)      return
-		#define MAKE_RQ_RET_TYPE void
-	#endif
-#endif
-
 int __init cas_init_exp_objs(void)
 {
 	CAS_DEBUG_TRACE();
@@ -82,7 +61,7 @@ void cas_deinit_exp_objs(void)
 	unregister_blkdev(cas_module.disk_major, "cas");
 }
 
-static MAKE_RQ_RET_TYPE _cas_exp_obj_submit_bio(struct bio *bio)
+static CAS_MAKE_REQ_RET_TYPE _cas_exp_obj_submit_bio(struct bio *bio)
 {
 	struct cas_disk *dsk;
 	struct cas_exp_obj *exp_obj;
@@ -93,15 +72,15 @@ static MAKE_RQ_RET_TYPE _cas_exp_obj_submit_bio(struct bio *bio)
 
 	exp_obj->ops->submit_bio(dsk, bio, exp_obj->private);
 
-	KRETURN(0);
+	CAS_KRETURN(0);
 }
 
-static MAKE_RQ_RET_TYPE _cas_exp_obj_make_rq_fn(struct request_queue *q,
+static CAS_MAKE_REQ_RET_TYPE _cas_exp_obj_make_rq_fn(struct request_queue *q,
 						 struct bio *bio)
 {
 	_cas_exp_obj_submit_bio(bio);
 	cas_blk_queue_exit(q);
-	KRETURN(0);
+	CAS_KRETURN(0);
 }
 
 static int _cas_del_partitions(struct cas_disk *dsk)
