@@ -623,8 +623,8 @@ int args_parse(app *app_values, cli_command *commands, int argc, const char **ar
 	}
 
 	if (is_command_blocked(commands, i)) {
-		cas_printf(LOG_ERR, "The command is not supported\n");
-		return FAILURE;
+		cas_printf(LOG_INFO, "The command is not supported\n");
+		return SUCCESS;
 	}
 
 	configure_cli_commands(commands);
