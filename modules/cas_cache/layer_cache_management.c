@@ -2538,20 +2538,27 @@ int cache_mngt_attach_device(const char *cache_name, size_t name_len,
 
 	result = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
 			OCF_CACHE_NAME_SIZE, &cache);
-	if (result)
+	if (result) {
+		ocf_volume_destroy(attach_cfg->device.volume);
 		goto err_get;
+	}
 
 	result = _cache_mngt_lock_sync(cache);
-	if (result)
+	if (result) {
+		ocf_volume_destroy(attach_cfg->device.volume);
 		goto err_lock;
+	}
 
 	result = cache_mngt_check_bdev(&attach_cfg->device,
 			attach_cfg->force, true, cache);
-	if (result)
+	if (result) {
+		ocf_volume_destroy(attach_cfg->device.volume);
 		goto err_ctx;
+	}
 
 	context = kzalloc(sizeof(*context), GFP_KERNEL);
 	if (!context) {
+		ocf_volume_destroy(attach_cfg->device.volume);
 		result = -ENOMEM;
 		goto err_ctx;
 	}
