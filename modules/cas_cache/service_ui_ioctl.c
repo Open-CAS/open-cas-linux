@@ -86,6 +86,10 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		GET_CMD_INFO(cmd_info, arg);
 
+		printk(KERN_ERR "Cache attach is not supported!\n");
+		retval = -ENOTSUP;
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+
 		cache_name_from_id(cache_name, cmd_info->cache_id);
 
 		retval = cache_mngt_attach_cache_cfg(cache_name, OCF_CACHE_NAME_SIZE,
@@ -104,6 +108,9 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		char cache_name[OCF_CACHE_NAME_SIZE];
 
 		GET_CMD_INFO(cmd_info, arg);
+		printk(KERN_ERR "Cache detach is not supported!\n");
+		retval = -ENOTSUP;
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
 
 		cache_name_from_id(cache_name, cmd_info->cache_id);
 
