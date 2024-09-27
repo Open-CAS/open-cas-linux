@@ -87,7 +87,7 @@ def test_recover_cache_verify_core_device(filesystem):
             TestRun.fail(f"Wrong error message during cache stop")
 
     with TestRun.step("Plug cache device"):
-        cache_device.plug()
+        cache_device.plug_all()
 
     with TestRun.step("Load cache"):
         cache = casadm.load_cache(cache_dev)
@@ -172,7 +172,7 @@ def test_recover_cache_verify_exp_obj(filesystem):
             TestRun.fail(f"Wrong error message during cache stop")
 
     with TestRun.step("Plug cache device"):
-        cache_device.plug()
+        cache_device.plug_all()
 
     with TestRun.step("Load cache"):
         casadm.load_cache(cache_dev)
