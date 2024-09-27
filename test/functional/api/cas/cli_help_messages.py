@@ -285,7 +285,7 @@ standby_help = [
 ]
 
 zero_metadata_help = [
-    r"Usage: casadm --zero-metadata --device \<DEVICE\> \[option\.\.\.\]]",
+    r"Usage: casadm --zero-metadata --device \<DEVICE\> \[option\.\.\.\]",
     r"Clear metadata from caching device",
     r"Options that are valid with --zero-metadata are:",
     r"-d  --device \<DEVICE\>               Path to device on which metadata would be cleared",
