@@ -54,7 +54,10 @@ def test_simulation_startup_from_config():
         TestRun.executor.run_expect_success(ctl_init())
 
     with TestRun.step("Verify if cache is working"):
-        cache = casadm_parser.get_caches()[0]
+        caches = casadm_parser.get_caches()
+        if not caches:
+            TestRun.fail("Cache is not working")
+        cache = caches[0]
         if cache.get_status() is not CacheStatus.running:
             TestRun.fail(
                 f"Cache {cache.cache_id} should be running but is in {cache.get_status()} "
@@ -75,7 +78,10 @@ def test_simulation_startup_from_config():
         TestRun.executor.run_expect_success(f"udevadm trigger")
 
     with TestRun.step("Verify if cache is working"):
-        cache = casadm_parser.get_caches()[0]
+        caches = casadm_parser.get_caches()
+        if not caches:
+            TestRun.fail("Cache is not working")
+        cache = caches[0]
         if cache.get_status() is not CacheStatus.running:
             TestRun.fail(
                 f"Cache {cache.cache_id} should be running but is in {cache.get_status()} "
@@ -83,7 +89,10 @@ def test_simulation_startup_from_config():
             )
 
     with TestRun.step("Verify if core is working"):
-        core = cache.get_core_devices()[0]
+        cores = cache.get_core_devices()
+        if not cores:
+            TestRun.fail("Core is not working")
+        core = cores[0]
         if core.get_status() is not CoreStatus.active:
             TestRun.fail(
                 f"Core {core.core_id} should be active but is in {core.get_status()} " f"state."
