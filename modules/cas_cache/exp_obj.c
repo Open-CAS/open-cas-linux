@@ -417,6 +417,7 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	struct cas_exp_obj *exp_obj;
 	struct request_queue *queue;
 	struct gendisk *gd;
+	cas_queue_limits_t queue_limits;
 	int result = 0;
 
 	BUG_ON(!owner);
@@ -465,7 +466,15 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 		goto error_init_tag_set;
 	}
 
-	result = cas_alloc_mq_disk(&gd, &queue, &exp_obj->tag_set);
+	if (exp_obj->ops->set_queue_limits) {
+		result = exp_obj->ops->set_queue_limits(dsk, priv,
+				&queue_limits);
+		if (result)
+			goto error_set_queue_limits;
+	}
+
+	result = cas_alloc_mq_disk(&gd, &queue, &exp_obj->tag_set,
+			&queue_limits);
 	if (result) {
 		goto error_alloc_mq_disk;
 	}
@@ -521,6 +530,7 @@ error_exp_obj_set_dev_t:
 	cas_cleanup_mq_disk(gd);
 	exp_obj->gd = NULL;
 error_alloc_mq_disk:
+error_set_queue_limits:
 	blk_mq_free_tag_set(&exp_obj->tag_set);
 error_init_tag_set:
 	module_put(owner);
