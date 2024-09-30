@@ -17,7 +17,6 @@ class Cache:
         self.cache_device = device
         self.cache_id = cache_id if cache_id else self.__get_cache_id()
         self.__cache_line_size = None
-        self.metadata_size_on_disk = self.get_metadata_size_on_disk()
 
     def __get_cache_id(self) -> int:
         device_path = self.__get_cache_device_path()
