@@ -508,7 +508,8 @@ def stop_all_caches() -> None:
     caches = get_caches()
     if not caches:
         return
-    for cache in caches:
+    # Running "cache stop" on the reversed list to resolve the multilevel cache stop problem
+    for cache in reversed(caches):
         stop_cache(cache_id=cache.cache_id, no_data_flush=True)
 
 

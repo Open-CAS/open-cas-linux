@@ -36,15 +36,17 @@ def test_udev_core_partition():
     """
     cores_count = 4
 
-    with TestRun.step("Create four partitions on core device and one on cache device."):
+    with TestRun.step("Prepare cache and core devices"):
         cache_disk = TestRun.disks["cache"]
-        cache_disk.create_partitions([Size(1, Unit.GibiByte)])
-        cache_dev = cache_disk.partitions[0]
         core_disk = TestRun.disks["core"]
+
+        cache_disk.create_partitions([Size(1, Unit.GibiByte)])
         core_disk.create_partitions([Size(2, Unit.GibiByte)] * cores_count)
+
+        cache_dev = cache_disk.partitions[0]
         core_devices = core_disk.partitions
 
-    with TestRun.step("Start cache and add created partitions as cores."):
+    with TestRun.step("Start cache and add cores"):
         cache = casadm.start_cache(cache_dev, force=True)
         for dev in core_devices:
             cache.add_core(dev)
@@ -83,30 +85,35 @@ def test_udev_core():
           - Core devices are listed in core pool when cache is not available
           - Core devices are moved from core pool and attached to cache after plugging cache device
     """
-    with TestRun.step("Start cache and add core."):
+
+    with TestRun.step("Prepare cache and core devices"):
         cache_disk = TestRun.disks["cache"]
-        cache_disk.create_partitions([Size(1, Unit.GibiByte)])
-        cache_dev = cache_disk.partitions[0]
         core_disk = TestRun.disks["core"]
+
+        cache_disk.create_partitions([Size(1, Unit.GibiByte)])
         core_disk.create_partitions([Size(2, Unit.GibiByte)])
+
+        cache_dev = cache_disk.partitions[0]
         core_dev = core_disk.partitions[0]
+
+    with TestRun.step("Start cache and add core"):
         cache = casadm.start_cache(cache_dev, force=True)
         core = cache.add_core(core_dev)
 
-    with TestRun.step("Create init config from running CAS configuration."):
+    with TestRun.step("Create init config from running CAS configuration"):
         InitConfig.create_init_config_from_running_configuration()
 
-    with TestRun.step("Stop cache."):
+    with TestRun.step("Stop cache"):
         cache.stop()
 
-    with TestRun.step("Unplug core disk."):
+    with TestRun.step("Unplug core disk"):
         core_disk.unplug()
 
-    with TestRun.step("Plug core disk."):
+    with TestRun.step("Plug core disk"):
         core_disk.plug_all()
         time.sleep(1)
 
-    with TestRun.step("Check if core device is listed in core pool."):
+    with TestRun.step("Check if core device is listed in core pool"):
         check_if_dev_in_core_pool(core_dev)
 
     with TestRun.step("Unplug cache disk."):
@@ -275,7 +282,7 @@ def test_neg_udev_cache_load():
         if len(cas_devices["caches"]) != 1:
             TestRun.LOGGER.error(f"There is wrong number of caches. Expected: 1, actual: "
                                  f"{len(cas_devices['caches'])}")
-        elif cas_devices["caches"][1]["device"] != cache_disk.partitions[0].path or \
+        elif cas_devices["caches"][1]["device_path"] != cache_disk.partitions[0].path or \
                 CacheStatus[(cas_devices["caches"][1]["status"]).lower()] != CacheStatus.running:
             TestRun.LOGGER.error(f"Cache did not load properly: {cas_devices['caches'][1]}")
         if len(cas_devices["cores"]) != 2:
@@ -286,7 +293,7 @@ def test_neg_udev_cache_load():
         for i in first_cache_core_numbers:
             correct_core_devices.append(core_disk.partitions[i].path)
         for core in cas_devices["cores"].values():
-            if core["device"] not in correct_core_devices or \
+            if core["device_path"] not in correct_core_devices or \
                     CoreStatus[core["status"].lower()] != CoreStatus.active or \
                     core["cache_id"] != 1:
                 TestRun.LOGGER.error(f"Core did not load correctly: {core}.")
@@ -305,14 +312,16 @@ def test_neg_udev_cache_load():
         for i in range(0, cores_count):
             if i not in first_cache_core_numbers:
                 core_pool_expected_devices.append(core_disk.partitions[i].path)
-        for c in cas_devices["core_pool"]:
-            if c["device"] not in core_pool_expected_devices:
+        core_pool = cas_devices["core_pool"]
+        for c in core_pool.values():
+            if c["device_path"] not in core_pool_expected_devices:
                 TestRun.LOGGER.error(f"Wrong core device added to core pool: {c}.")
 
 
 def check_if_dev_in_core_pool(dev, should_be_in_core_pool=True):
     cas_devices_dict = casadm_parser.get_cas_devices_dict()
-    is_in_core_pool = any(dev.path == d["device"] for d in cas_devices_dict["core_pool"])
+    is_in_core_pool = any(dev.path == d["device_path"]
+                          for d in cas_devices_dict["core_pool"].values())
     if not (should_be_in_core_pool ^ is_in_core_pool):
         TestRun.LOGGER.info(f"Core device {dev.path} is"
                             f"{'' if should_be_in_core_pool else ' not'} listed in core pool "

@@ -55,12 +55,12 @@ remove_inactive_dirty_core = [
 ]
 
 stop_cache_incomplete = [
-    r"Error while removing cache \d+",
+    r"Error while stopping cache \d+",
     r"Cache is in incomplete state - at least one core is inactive",
 ]
 
 stop_cache_errors = [
-    r"Removed cache \d+ with errors",
+    r"Stopped cache \d+ with errors",
     r"Error while writing to cache device",
 ]
 
