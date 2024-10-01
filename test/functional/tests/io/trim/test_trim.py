@@ -60,9 +60,8 @@ def test_trim_start_discard():
 
     with TestRun.step("Starting cache"):
         cache = casadm.start_cache(cas_part, force=True)
-        dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
 
-        metadata_size = get_metadata_size_on_device(dmesg_out)
+        metadata_size = get_metadata_size_on_device(cache_id=cache.cache_id)
 
     with TestRun.step("Stop blktrace and check if discard requests were issued"):
         cache_reqs = blktrace.stop_monitoring()
