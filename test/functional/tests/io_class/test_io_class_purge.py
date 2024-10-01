@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -103,18 +104,32 @@ def get_io_class_usage(cache, io_class_id):
 def verify_ioclass_usage_stats(cache, ioclasses_ids):
     cache_size = cache.get_statistics().config_stats.cache_size
 
-    usage_stats_sum = IoClassUsageStats(Size(0), Size(0), Size(0))
+    usage_stats_occupancy_sum = Size.zero()
+    usage_stats_clean_sum = Size.zero()
+    usage_stats_dirty_sum = Size.zero()
+
+    all_io_class_usage_stats = []
     for i in ioclasses_ids:
-        usage_stats_sum += get_io_class_usage(cache, i)
+        io_class_usage_stats = get_io_class_usage(cache, i)
+        usage_stats_occupancy_sum += io_class_usage_stats.occupancy
+        usage_stats_clean_sum += io_class_usage_stats.clean
+        usage_stats_dirty_sum += io_class_usage_stats.dirty
+        all_io_class_usage_stats.append(io_class_usage_stats)
 
     cache_usage_stats = cache.get_statistics().usage_stats
 
-    if usage_stats_sum != cache_usage_stats:
+    if (
+            cache_usage_stats.occupancy != usage_stats_occupancy_sum
+            or cache_usage_stats.clean != usage_stats_clean_sum
+            or cache_usage_stats.dirty != usage_stats_dirty_sum
+    ):
         TestRun.LOGGER.error(
-            "Sum of io classes usage stats doesn't match cache usage stats!"
-            f" Cache stats:\n{cache_usage_stats} io classes sum:\n{usage_stats_sum}"
-            f" Stats of particular io classes:\n"
-            f"{[get_io_class_usage(cache, i) for i in ioclasses_ids]}"
+            "Sum of io classes usage stats doesn't match cache usage stats!\n"
+            f"Cache usage stats: {cache_usage_stats}\n"
+            f"Usage stats occupancy sum: {usage_stats_occupancy_sum}\n"
+            f"Usage stats clean sum: {usage_stats_clean_sum}\n"
+            f"Usage stats dirty sum: {usage_stats_dirty_sum}\n"
+            f"{all_io_class_usage_stats}"
         )
 
     if cache_usage_stats.occupancy + cache_usage_stats.free > cache_size:
