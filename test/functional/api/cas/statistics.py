@@ -173,8 +173,11 @@ class CacheConfigStats:
         self.cache_line_size = parse_value(
             value=stats_dict["Cache line size [KiB]"], unit_type=UnitType.kibibyte
         )
+        footprint_prefix = "Metadata Memory Footprint "
+        footprint_key = next(k for k in stats_dict if k.startswith(footprint_prefix))
         self.metadata_memory_footprint = parse_value(
-            value=stats_dict["Metadata Memory Footprint [MiB]"], unit_type=UnitType.mebibyte
+            value=stats_dict[footprint_key],
+            unit_type=UnitType(footprint_key[len(footprint_prefix) :]),
         )
         self.dirty_for = parse_value(value=stats_dict["Dirty for [s]"], unit_type=UnitType.seconds)
         self.status = stats_dict["Status"]
