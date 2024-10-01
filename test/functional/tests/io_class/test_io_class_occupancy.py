@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -353,23 +354,38 @@ def test_ioclass_occupancy_sum_cache():
         cache.purge_cache()
 
     with TestRun.step("Verify stats before IO"):
-        usage_stats_sum = IoClassUsageStats(Size(0), Size(0), Size(0))
-        for i in io_classes:
-            usage_stats_sum += get_io_class_usage(cache, i.id)
-        usage_stats_sum += get_io_class_usage(cache, default_ioclass_id)
+        usage_stats_occupancy_sum = Size.zero()
+        usage_stats_clean_sum = Size.zero()
+        usage_stats_dirty_sum = Size.zero()
 
-        cache_stats = cache.get_statistics().usage_stats
-        cache_stats.free = Size(0)
+        all_io_class_usage_stats = []
+        for i in io_classes:
+            io_class_usage_stats = get_io_class_usage(cache, i.id)
+            usage_stats_occupancy_sum += io_class_usage_stats.occupancy
+            usage_stats_clean_sum += io_class_usage_stats.clean
+            usage_stats_dirty_sum += io_class_usage_stats.dirty
+            all_io_class_usage_stats.append(io_class_usage_stats)
+
+        io_class_usage_stats = get_io_class_usage(cache, default_ioclass_id)
+        usage_stats_occupancy_sum += io_class_usage_stats.occupancy
+        usage_stats_clean_sum += io_class_usage_stats.clean
+        usage_stats_dirty_sum += io_class_usage_stats.dirty
+
+        cache_usage_stats = cache.get_statistics().usage_stats
+        cache_usage_stats.free = Size.zero()
 
         if (
-            cache_stats.occupancy != usage_stats_sum.occupancy
-            or cache_stats.clean != usage_stats_sum.clean
-            or cache_stats.dirty != usage_stats_sum.dirty
+            cache_usage_stats.occupancy != usage_stats_occupancy_sum
+            or cache_usage_stats.clean != usage_stats_clean_sum
+            or cache_usage_stats.dirty != usage_stats_dirty_sum
         ):
             TestRun.LOGGER.error(
-                "Initial cache usage stats doesn't match sum of ioclasses stats\n"
-                f"cache stats: {cache_stats}, sumed up stats {usage_stats_sum}\n"
-                f"particular stats {[get_io_class_usage(cache, i.id) for i in io_classes]}"
+                "Initial cache usage stats doesn't match sum of io classes stats\n"
+                f"Cache usage stats: {cache_usage_stats}\n"
+                f"Usage stats occupancy sum: {usage_stats_occupancy_sum}\n"
+                f"Usage stats clean sum: {usage_stats_clean_sum}\n"
+                f"Usage stats dirty sum: {usage_stats_dirty_sum}\n"
+                f"Particular stats {all_io_class_usage_stats}"
             )
 
     with TestRun.step(f"Trigger IO to each directory"):
@@ -380,23 +396,38 @@ def test_ioclass_occupancy_sum_cache():
             )
 
     with TestRun.step("Verify stats after IO"):
-        usage_stats_sum = IoClassUsageStats(Size(0), Size(0), Size(0))
-        for i in io_classes:
-            usage_stats_sum += get_io_class_usage(cache, i.id)
-        usage_stats_sum += get_io_class_usage(cache, default_ioclass_id)
+        usage_stats_occupancy_sum = Size.zero()
+        usage_stats_clean_sum = Size.zero()
+        usage_stats_dirty_sum = Size.zero()
 
-        cache_stats = cache.get_statistics().usage_stats
-        cache_stats.free = Size(0)
+        all_io_class_usage_stats = []
+        for i in io_classes:
+            io_class_usage_stats = get_io_class_usage(cache, i.id)
+            usage_stats_occupancy_sum += io_class_usage_stats.occupancy
+            usage_stats_clean_sum += io_class_usage_stats.clean
+            usage_stats_dirty_sum += io_class_usage_stats.dirty
+            all_io_class_usage_stats.append(io_class_usage_stats)
+
+        io_class_usage_stats = get_io_class_usage(cache, default_ioclass_id)
+        usage_stats_occupancy_sum += io_class_usage_stats.occupancy
+        usage_stats_clean_sum += io_class_usage_stats.clean
+        usage_stats_dirty_sum += io_class_usage_stats.dirty
+
+        cache_usage_stats = cache.get_statistics().usage_stats
+        cache_usage_stats.free = Size.zero()
 
         if (
-            cache_stats.occupancy != usage_stats_sum.occupancy
-            or cache_stats.clean != usage_stats_sum.clean
-            or cache_stats.dirty != usage_stats_sum.dirty
+            cache_usage_stats.occupancy != usage_stats_occupancy_sum
+            or cache_usage_stats.clean != usage_stats_clean_sum
+            or cache_usage_stats.dirty != usage_stats_dirty_sum
         ):
             TestRun.LOGGER.error(
-                "Cache usage stats doesn't match sum of ioclasses stats\n"
-                f"cache stats: {cache_stats}, sumed up stats {usage_stats_sum}\n"
-                f"particular stats {[get_io_class_usage(cache, i.id) for i in io_classes]}"
+                "Initial cache usage stats doesn't match sum of io classes stats\n"
+                f"Cache usage stats: {cache_usage_stats}\n"
+                f"Usage stats occupancy sum: {usage_stats_occupancy_sum}\n"
+                f"Usage stats clean sum: {usage_stats_clean_sum}\n"
+                f"Usage stats dirty sum: {usage_stats_dirty_sum}\n"
+                f"particular stats {all_io_class_usage_stats}"
             )
 
 
