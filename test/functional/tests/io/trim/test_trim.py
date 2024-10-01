@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 import os
+import posixpath
 import time
 
 import pytest
@@ -236,7 +237,7 @@ def test_trim_device_discard_support(
 
     with TestRun.step("Create random file."):
         test_file = fs_utils.create_random_test_file(
-            os.path.join(mount_point, "test_file"), core_dev.size * 0.2
+            posixpath.join(mount_point, "test_file"), core_dev.size * 0.2
         )
         occupancy_before = core.get_occupancy()
         TestRun.LOGGER.info(str(core.get_statistics()))
