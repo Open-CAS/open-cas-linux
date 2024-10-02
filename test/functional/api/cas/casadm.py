@@ -13,6 +13,7 @@ from api.cas.cache_config import (
     SeqCutOffPolicy,
     CleaningPolicy,
     KernelParameters,
+    PromotionPolicy,
 )
 from api.cas.casadm_params import OutputFormat, StatsFilter
 from api.cas.cli import *
@@ -177,6 +178,37 @@ def set_param_cleaning_acp(
     return output
 
 
+def set_param_promotion(cache_id: int, policy: PromotionPolicy, shortcut: bool = False) -> Output:
+    output = TestRun.executor.run(
+        set_param_promotion_cmd(
+            cache_id=str(cache_id),
+            policy=policy.name,
+            shortcut=shortcut,
+        )
+    )
+    if output.exit_code != 0:
+        raise CmdException("Error while setting promotion policy.", output)
+    return output
+
+
+def set_param_promotion_nhit(
+        cache_id: int, threshold: int = None, trigger: int = None, shortcut: bool = False
+) -> Output:
+    _threshold = str(threshold) if threshold is not None else None
+    _trigger = str(trigger) if trigger is not None else None
+    output = TestRun.executor.run(
+        set_param_promotion_nhit_cmd(
+            cache_id=str(cache_id),
+            threshold=_threshold,
+            trigger=_trigger,
+            shortcut=shortcut,
+        )
+    )
+    if output.exit_code != 0:
+        raise CmdException("Error while setting promotion policy.", output)
+    return output
+
+
 def get_param_cutoff(
     cache_id: int, core_id: int, output_format: OutputFormat = None, shortcut: bool = False
 ) -> Output:
@@ -231,6 +263,34 @@ def get_param_cleaning_acp(
     )
     if output.exit_code != 0:
         raise CmdException("Getting acp cleaning policy params failed.", output)
+    return output
+
+
+def get_param_promotion(
+        cache_id: int, output_format: OutputFormat = None, shortcut: bool = False
+) -> Output:
+    _output_format = output_format.name if output_format else None
+    output = TestRun.executor.run(
+        get_param_promotion_cmd(
+            cache_id=str(cache_id), output_format=_output_format, shortcut=shortcut
+        )
+    )
+    if output.exit_code != 0:
+        raise CmdException("Getting promotion policy failed.", output)
+    return output
+
+
+def get_param_promotion_nhit(
+        cache_id: int, output_format: OutputFormat = None, shortcut: bool = False
+) -> Output:
+    _output_format = output_format.name if output_format else None
+    output = TestRun.executor.run(
+        get_param_promotion_nhit_cmd(
+            cache_id=str(cache_id), output_format=_output_format, shortcut=shortcut
+        )
+    )
+    if output.exit_code != 0:
+        raise CmdException("Getting promotion policy nhit params failed.", output)
     return output
 
 

@@ -217,7 +217,7 @@ class FlushParametersAcp:
 
 class SeqCutOffParameters:
     def __init__(
-        self, policy: CleaningPolicy = None, threshold: Size = None, promotion_count: int = None
+        self, policy: SeqCutOffPolicy = None, threshold: Size = None, promotion_count: int = None
     ):
         self.policy = policy
         self.threshold = threshold
