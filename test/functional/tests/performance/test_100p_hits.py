@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -12,14 +13,14 @@ from api.cas.cache_config import (
     SeqCutOffPolicy,
     CleaningPolicy,
 )
-from utils.performance import WorkloadParameter
 from core.test_run import TestRun
+from storage_devices.disk import DiskTypeSet, DiskTypeLowerThan, DiskType
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_utils.os_utils import Udev, set_wbt_lat, get_dut_cpu_physical_cores
-from test_utils.size import Size, Unit
 from test_utils.output import CmdException
-from storage_devices.disk import DiskTypeSet, DiskTypeLowerThan, DiskType
+from test_utils.size import Size, Unit
+from utils.performance import WorkloadParameter
 
 
 @pytest.mark.os_dependent
@@ -31,14 +32,17 @@ from storage_devices.disk import DiskTypeSet, DiskTypeLowerThan, DiskType
 @pytest.mark.parametrize("cache_line_size", CacheLineSize)
 def test_4k_100p_hit_reads_wt(queue_depth, numjobs, cache_line_size, perf_collector, request):
     """
-        title: Test CAS performance in 100% Cache Hit scenario
-        description: |
-          Characterize cache device with workload (parametrized by qd and job number), and then run
-          the same workload on cached volume.
-        pass_criteria:
-          - always passes
+    title: Test CAS performance in 100% Cache Hit scenario
+    description: |
+      Characterize cache device with workload (parametrized by qd and job number), and then run
+      the same workload on cached volume.
+    pass_criteria:
+      - always passes
     """
-    TESTING_WORKSET = Size(20, Unit.GiB)
+
+    testing_range = Size(3, Unit.GiB)
+    testing_workset = Size(20, Unit.GiB)
+    size_per_job = testing_workset / numjobs
 
     fio_cfg = (
         Fio()
@@ -49,24 +53,47 @@ def test_4k_100p_hit_reads_wt(queue_depth, numjobs, cache_line_size, perf_collec
         .io_depth(queue_depth)
         .cpus_allowed(get_dut_cpu_physical_cores())
         .direct()
+        .io_size(size_per_job)
     )
+    # spread jobs
+    offset = (testing_range / numjobs).align_down(Unit.Blocks512.value)
+    for i in range(numjobs):
+        fio_cfg.add_job(f"job_{i+1}").offset(offset * i).size(offset * (i + 1))
+
+    with TestRun.step("Prepare cache and core devices"):
+        cache_device = TestRun.disks["cache"]
+        cache_device.create_partitions([testing_range + Size(1, Unit.GiB)])
+        cache_device = cache_device.partitions[0]
+
+        core_device = TestRun.disks["core"]
+        core_device.create_partitions([testing_range])
+        core_device = core_device.partitions[0]
 
     with TestRun.step("Characterize cache device"):
         cache_dev_characteristics = characterize_cache_device(
-            request.node.name, fio_cfg, queue_depth, numjobs, TESTING_WORKSET
+            request.node.name, fio_cfg, queue_depth, numjobs, cache_device
         )
-    fio_cfg.clear_jobs()
 
-    with TestRun.step("Prepare cache and core"):
-        cache, core = prepare_config(cache_line_size, CacheMode.WT)
+    with TestRun.step("Configure cache and add core"):
+        cache = casadm.start_cache(
+            cache_device,
+            cache_mode=CacheMode.WT,
+            cache_line_size=cache_line_size,
+            force=True,
+        )
+        cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+        cache.set_cleaning_policy(CleaningPolicy.nop)
 
-    fio_cfg = fio_cfg.target(core)
-    spread_jobs(fio_cfg, numjobs, TESTING_WORKSET)
+        core = cache.add_core(core_device)
 
-    with TestRun.step("Fill the cache"):
-        prefill_cache(core, TESTING_WORKSET)
+    with TestRun.step("Disable udev"):
+        Udev.disable()
 
-    with TestRun.step("Run fio"):
+    with TestRun.step("Prefill cache"):
+        prefill_cache(core)
+
+    with TestRun.step("Run workload on the exported object"):
+        fio_cfg = fio_cfg.target(core)
         cache_results = fio_cfg.run()[0]
 
     perf_collector.insert_workload_param(numjobs, WorkloadParameter.NUM_JOBS)
@@ -76,7 +103,7 @@ def test_4k_100p_hit_reads_wt(queue_depth, numjobs, cache_line_size, perf_collec
     perf_collector.insert_config_from_cache(cache)
 
 
-def prefill_cache(core, size):
+def prefill_cache(core):
     (
         Fio()
         .create_command()
@@ -84,7 +111,7 @@ def prefill_cache(core, size):
         .block_size(Size(4, Unit.KiB))
         .read_write(ReadWrite.write)
         .target(core)
-        .size(size)
+        .size(core.size)
         .direct()
         .run()
     )
@@ -105,36 +132,7 @@ def disable_wbt_throttling():
         TestRun.LOGGER.warning("Couldn't disable write-back throttling for core device")
 
 
-def prepare_config(cache_line_size, cache_mode):
-    cache_device = TestRun.disks["cache"]
-    core_device = TestRun.disks["core"]
-
-    core_device.create_partitions([Size(3, Unit.GiB)])
-
-    cache = casadm.start_cache(
-        cache_device, cache_mode=cache_mode, cache_line_size=cache_line_size, force=True,
-    )
-    cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
-
-    cache.set_cleaning_policy(CleaningPolicy.nop)
-
-    Udev.disable()
-
-    core = cache.add_core(core_device.partitions[0])
-
-    return cache, core
-
-
-def spread_jobs(fio_cfg, numjobs, size):
-    offset = (size / numjobs).align_down(Unit.Blocks512.value)
-
-    for i in range(numjobs):
-        fio_cfg.add_job(f"job_{i+1}").offset(offset * i).size(offset * (i + 1))
-
-
-def characterize_cache_device(test_name, fio_cfg, queue_depth, numjobs, size):
-    cache_device = TestRun.disks["cache"]
-
+def characterize_cache_device(test_name, fio_cfg, queue_depth, numjobs, cache_device):
     try:
         return TestRun.dev_characteristics[test_name][queue_depth][numjobs]
     except AttributeError:
@@ -142,7 +140,6 @@ def characterize_cache_device(test_name, fio_cfg, queue_depth, numjobs, size):
     except KeyError:
         pass
 
-    spread_jobs(fio_cfg, numjobs, size)
     result = fio_cfg.target(cache_device).run()[0]
 
     if not hasattr(TestRun, "dev_characteristics"):
