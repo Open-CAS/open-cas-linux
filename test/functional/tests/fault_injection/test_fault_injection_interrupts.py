@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -317,6 +318,9 @@ def test_interrupt_cache_mode_switch_parametrized(cache_mode, stop_percentage):
     with TestRun.step("Prepare cache and core."):
         cache_part, core_part = prepare()
 
+    with TestRun.step("Disable udev"):
+        Udev.disable()
+
     for _ in TestRun.iteration(
         range(iterations_per_config), f"Reload cache configuration {iterations_per_config} times."
     ):
@@ -331,16 +335,21 @@ def test_interrupt_cache_mode_switch_parametrized(cache_mode, stop_percentage):
             core = cache.add_core(core_part)
 
         with TestRun.step(f"Create test file in mount point of exported object."):
-            test_file_size = Size(1024, Unit.MebiByte)
+            test_file_size = Size(4, Unit.GibiByte)
             test_file = fs_utils.create_random_test_file(test_file_path, test_file_size)
 
         with TestRun.step("Check md5 sum of test file."):
             test_file_md5_before = test_file.md5sum()
 
         with TestRun.step("Export file to CAS"):
-            Dd().block_size(test_file_size).input(test_file.full_path).output(core.path).oflag(
-                "direct"
-            ).run()
+            dd = (
+                Dd()
+                .block_size(test_file_size)
+                .input(test_file.full_path)
+                .output(core.path)
+                .oflag("direct")
+            )
+            dd.run()
 
         with TestRun.step("Get number of dirty data on exported object before interruption."):
             os_utils.sync()
@@ -378,7 +387,7 @@ def test_interrupt_cache_mode_switch_parametrized(cache_mode, stop_percentage):
             if cache.get_cache_mode() != cache_mode:
                 TestRun.LOGGER.error("Cache mode should remain the same.")
 
-        with TestRun.step("Unmount core and stop cache."):
+        with TestRun.step("Stop cache."):
             cache.stop()
 
         with TestRun.step("Check md5 sum of test file again."):
