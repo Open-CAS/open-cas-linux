@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -28,6 +29,7 @@ mnt_point = "/mnt/cas/"
 
 @pytest.mark.parametrizex("fs", Filesystem)
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.require_disk("separate_dev", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
@@ -39,6 +41,8 @@ def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
           - Flushing completes successfully without any errors.
     """
     with TestRun.step("Prepare devices for cache and core."):
+        separate_dev = TestRun.disks['separate_dev']
+        check_disk_size(separate_dev)
         cache_dev = TestRun.disks['cache']
         check_disk_size(cache_dev)
         cache_dev.create_partitions([required_disk_size])
@@ -59,8 +63,12 @@ def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
         cache.set_cleaning_policy(CleaningPolicy.nop)
         cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
 
-    with TestRun.step("Create test file"):
-        test_file_main = File.create_file("/tmp/test_file_main")
+    with TestRun.step("Create a test file on a separate disk"):
+        src_dir_path = "/mnt/flush_640G_test"
+        separate_dev.create_filesystem(fs)
+        separate_dev.mount(src_dir_path)
+
+        test_file_main = File.create_file(f"{src_dir_path}/test_file_main")
         fio = (
             Fio().create_command()
             .io_engine(IoEngine.libaio)
@@ -109,6 +117,10 @@ def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
     with TestRun.step("Unmount core device."):
         core_dev.unmount()
         remove(mnt_point, True, True, True)
+
+    with TestRun.step("Unmount the additional device."):
+        separate_dev.unmount()
+        remove(src_dir_path, True, True, True)
 
 
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
