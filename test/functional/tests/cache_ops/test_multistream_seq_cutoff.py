@@ -6,16 +6,18 @@
 
 import posixpath
 import random
-import pytest
-
 from time import sleep
+
+import pytest
 
 from api.cas import casadm
 from api.cas.cache_config import (
     CacheMode,
     SeqCutOffPolicy,
     CacheModeTrait,
+    CleaningPolicy,
 )
+from api.cas.casadm_params import StatsFilter
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskTypeLowerThan, DiskType
 from test_tools.dd import Dd
@@ -23,6 +25,7 @@ from test_tools.disk_utils import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_utils.os_utils import Udev
+from test_utils.output import CmdException
 from test_utils.size import Size, Unit
 
 random_thresholds = random.sample(range(1028, 1024**2, 4), 3)
@@ -58,6 +61,7 @@ def test_multistream_seq_cutoff_functional(streams_number, threshold):
         cache_disk = TestRun.disks["cache"]
         core_disk = TestRun.disks["core"]
         cache = casadm.start_cache(cache_disk, CacheMode.WB, force=True)
+        cache.set_cleaning_policy(CleaningPolicy.nop)
         core = cache.add_core(core_disk)
 
     with TestRun.step(
@@ -78,7 +82,7 @@ def test_multistream_seq_cutoff_functional(streams_number, threshold):
         max_range_offset = streams_number * range_step
 
         offsets = [o for o in range(0, max_range_offset, range_step)]
-        core_statistics_before = core.get_statistics()
+        core_statistics_before = core.get_statistics([StatsFilter.req, StatsFilter.blk])
 
         for i in TestRun.iteration(range(0, len(offsets))):
             TestRun.LOGGER.info(f"Statistics before I/O:\n{core_statistics_before}")
@@ -90,12 +94,12 @@ def test_multistream_seq_cutoff_functional(streams_number, threshold):
                 seek=int(offset.get_value(Unit.Blocks4096)),
             )
 
-            core_statistics_after = core.get_statistics()
+            core_statistics_after = core.get_statistics([StatsFilter.req, StatsFilter.blk])
             check_statistics(
                 core_statistics_before,
                 core_statistics_after,
-                expected_pt=0,
-                expected_writes_to_cache=threshold - Size(1, Unit.Blocks4096),
+                expected_pt_writes=0,
+                expected_writes_to_cache=(threshold - Size(1, Unit.Blocks4096)),
             )
             core_statistics_before = core_statistics_after
 
@@ -103,7 +107,7 @@ def test_multistream_seq_cutoff_functional(streams_number, threshold):
         "Write random number of 4k block requests to each stream and check if all "
         "writes were sent in pass-through mode"
     ):
-        core_statistics_before = core.get_statistics()
+        core_statistics_before = core.get_statistics([StatsFilter.req, StatsFilter.blk])
         random.shuffle(offsets)
 
         for i in TestRun.iteration(range(0, len(offsets))):
@@ -118,11 +122,11 @@ def test_multistream_seq_cutoff_functional(streams_number, threshold):
                 ),
             )
 
-            core_statistics_after = core.get_statistics()
+            core_statistics_after = core.get_statistics([StatsFilter.req, StatsFilter.blk])
             check_statistics(
                 core_statistics_before,
                 core_statistics_after,
-                expected_pt=additional_4k_blocks_writes,
+                expected_pt_writes=additional_4k_blocks_writes,
                 expected_writes_to_cache=Size.zero(),
             )
             core_statistics_before = core_statistics_after
@@ -138,7 +142,7 @@ def test_multistream_seq_cutoff_stress_raw(streams_seq_rand):
     description: |
         Testing the stability of a system when there are multiple sequential and random I/O streams
         running against the raw exported object with the sequential cutoff policy set to always and
-        the sequential cutoff threshold set to a value which is able to be reached by
+        the sequential cutoff threshold set to a value which can be reached by
         sequential I/O streams.
     pass_criteria:
         - No system crash
@@ -272,26 +276,29 @@ def run_dd(target_path, count, seek):
         .oflag("direct")
         .seek(seek)
     )
-    dd.run()
     TestRun.LOGGER.info(f"dd command:\n{dd}")
+    output = dd.run()
+    if output.exit_code != 0:
+        raise CmdException("Error during IO", output)
 
 
-def check_statistics(stats_before, stats_after, expected_pt, expected_writes_to_cache):
+def check_statistics(stats_before, stats_after, expected_pt_writes, expected_writes_to_cache):
     TestRun.LOGGER.info(f"Statistics after I/O:\n{stats_after}")
     writes_to_cache_before = stats_before.block_stats.cache.writes
     writes_to_cache_after = stats_after.block_stats.cache.writes
     pt_writes_before = stats_before.request_stats.pass_through_writes
     pt_writes_after = stats_after.request_stats.pass_through_writes
 
-    actual_pt = pt_writes_after - pt_writes_before
-    actual_writes_to_cache = writes_to_cache_after - writes_to_cache_before
-    if actual_pt != expected_pt:
+    pt_writes = pt_writes_after - pt_writes_before
+    writes_to_cache = writes_to_cache_after - writes_to_cache_before
+
+    if pt_writes != expected_pt_writes:
         TestRun.LOGGER.error(
-            f"Expected pass-through writes: {expected_pt}\n"
-            f"Actual pass-through writes: {actual_pt}"
+            f"Expected pass-through writes: {expected_pt_writes}\n"
+            f"Actual pass-through writes: {pt_writes}"
         )
-    if actual_writes_to_cache != expected_writes_to_cache:
+    if writes_to_cache != expected_writes_to_cache:
         TestRun.LOGGER.error(
-            f"Expected writes to cache: {expected_writes_to_cache}\n"
-            f"Actual writes to cache: {actual_writes_to_cache}"
+            f"Expected writes to cache: {expected_writes_to_cache.set_unit(Unit.Blocks4096)}\n"
+            f"Actual writes to cache: {writes_to_cache.set_unit(Unit.Blocks4096)}"
         )
