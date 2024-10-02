@@ -5,9 +5,8 @@
 #
 
 import csv
-
-from enum import Enum
 from datetime import timedelta
+from enum import Enum
 from typing import List
 
 from api.cas import casadm
@@ -43,34 +42,10 @@ class CacheStats:
         filter: List[StatsFilter] = None,
         percentage_val: bool = False,
     ):
+        stats_dict = get_stats_dict(filter=filter, cache_id=cache_id)
 
-        if filter is None:
-            filters = [
-                StatsFilter.conf,
-                StatsFilter.usage,
-                StatsFilter.req,
-                StatsFilter.blk,
-                StatsFilter.err,
-            ]
-        else:
-            filters = filter
-
-        csv_stats = casadm.print_statistics(
-            cache_id=cache_id,
-            filter=filter,
-            output_format=casadm.OutputFormat.csv,
-        ).stdout.splitlines()
-
-        stat_keys, stat_values = csv.reader(csv_stats)
-
-        # Unify names in block stats for core and cache:
-        # cache stats: Reads from core(s)
-        # core stats: Reads from core
-        stat_keys = [x.replace("(s)", "") for x in stat_keys]
-        stats_dict = dict(zip(stat_keys, stat_values))
-
-        for filter in filters:
-            match filter:
+        for section in _get_section_filters(filter):
+            match section:
                 case StatsFilter.conf:
                     self.config_stats = CacheConfigStats(stats_dict)
                 case StatsFilter.usage:
@@ -102,30 +77,10 @@ class CoreStats:
         filter: List[StatsFilter] = None,
         percentage_val: bool = False,
     ):
+        stats_dict = get_stats_dict(filter=filter, cache_id=cache_id, core_id=core_id)
 
-        if filter is None:
-            filters = [
-                StatsFilter.conf,
-                StatsFilter.usage,
-                StatsFilter.req,
-                StatsFilter.blk,
-                StatsFilter.err,
-            ]
-        else:
-            filters = filter
-
-        csv_stats = casadm.print_statistics(
-            cache_id=cache_id,
-            core_id=core_id,
-            filter=filter,
-            output_format=casadm.OutputFormat.csv,
-        ).stdout.splitlines()
-
-        stat_keys, stat_values = csv.reader(csv_stats)
-        stats_dict = dict(zip(stat_keys, stat_values))
-
-        for filter in filters:
-            match filter:
+        for section in _get_section_filters(filter):
+            match section:
                 case StatsFilter.conf:
                     self.config_stats = CoreConfigStats(stats_dict)
                 case StatsFilter.usage:
@@ -158,34 +113,12 @@ class CoreIoClassStats:
         filter: List[StatsFilter] = None,
         percentage_val: bool = False,
     ):
-        if filter is None:
-            filters = [
-                StatsFilter.conf,
-                StatsFilter.usage,
-                StatsFilter.req,
-                StatsFilter.blk,
-            ]
-        else:
-            filters = filter
+        stats_dict = get_stats_dict(
+            filter=filter, cache_id=cache_id, core_id=core_id, io_class_id=io_class_id
+        )
 
-        csv_stats = casadm.print_statistics(
-            cache_id=cache_id,
-            core_id=core_id,
-            io_class_id=io_class_id,
-            filter=filter,
-            output_format=casadm.OutputFormat.csv,
-        ).stdout.splitlines()
-
-        stat_keys, stat_values = csv.reader(csv_stats)
-
-        # Unify names in block stats for core and cache:
-        # cache stats: Reads from core(s)
-        # core stats: Reads from core
-        stat_keys = [x.replace("(s)", "") for x in stat_keys]
-        stats_dict = dict(zip(stat_keys, stat_values))
-
-        for filter in filters:
-            match filter:
+        for section in _get_section_filters(filter):
+            match section:
                 case StatsFilter.conf:
                     self.config_stats = IoClassConfigStats(stats_dict)
                 case StatsFilter.usage:
@@ -243,7 +176,7 @@ class CacheConfigStats:
         self.metadata_memory_footprint = parse_value(
             value=stats_dict["Metadata Memory Footprint [MiB]"], unit_type=UnitType.mebibyte
         )
-        self.dirty_for = parse_value(value=stats_dict["Dirty for [s]"], unit_type="[s]")
+        self.dirty_for = parse_value(value=stats_dict["Dirty for [s]"], unit_type=UnitType.seconds)
         self.status = stats_dict["Status"]
 
     def __str__(self):
@@ -655,6 +588,12 @@ class BasicStatsChunkError:
         )
 
 
+def get_stat_value(stat_dict: dict, key: str):
+    idx = key.index("[")
+    unit = UnitType(key[idx:])
+    return parse_value(stat_dict[key], unit)
+
+
 def parse_value(value: str, unit_type: UnitType) -> int | float | Size | timedelta | str:
     match unit_type:
         case UnitType.requests:
@@ -674,3 +613,42 @@ def parse_value(value: str, unit_type: UnitType) -> int | float | Size | timedel
         case _:
             stat_unit = value
     return stat_unit
+
+
+def _get_section_filters(filter: List[StatsFilter], io_class_stats: bool = False):
+    if filter is None or StatsFilter.all in filter:
+        filters = [
+            StatsFilter.conf,
+            StatsFilter.usage,
+            StatsFilter.req,
+            StatsFilter.blk,
+            StatsFilter.err,
+        ]
+    else:
+        filters = filter
+    if io_class_stats and StatsFilter.err in filters:
+        filters.remove(StatsFilter.err)
+    return filters
+
+
+def get_stats_dict(
+        filter: List[StatsFilter],
+        cache_id: int,
+        core_id: int = None,
+        io_class_id: int = None
+):
+    csv_stats = casadm.print_statistics(
+        cache_id=cache_id,
+        core_id=core_id,
+        io_class_id=io_class_id,
+        filter=filter,
+        output_format=casadm.OutputFormat.csv,
+    ).stdout.splitlines()
+    stat_keys, stat_values = csv.reader(csv_stats)
+    # Unify names in block stats for core and cache to easier compare
+    # cache vs core stats using unified key
+    # cache stats: Reads from core(s)
+    # core stats: Reads from core
+    stat_keys = [x.replace("(s)", "") for x in stat_keys]
+    stats_dict = dict(zip(stat_keys, stat_values))
+    return stats_dict
