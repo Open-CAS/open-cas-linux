@@ -1,22 +1,23 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+from time import sleep
 
 import pytest
 
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CleaningPolicy
 from api.cas.casadm import StatsFilter
+from api.cas.statistics import get_stats_dict, get_stat_value
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_utils.os_utils import Udev
 from test_utils.size import Size, Unit
-from time import sleep
-
 
 cache_size = Size(1, Unit.GibiByte)
 core_size = Size(2, Unit.GibiByte)
@@ -33,7 +34,7 @@ def test_stat_max_cache():
           Check CAS ability to display correct values in statistics
           for 16 cache devices per cache mode.
         pass_criteria:
-          - Core's statistics matches cache's statistics.
+          - Cores' statistics match cache's statistics.
     """
 
     caches_per_cache_mode = 16
@@ -82,20 +83,21 @@ def test_stat_max_cache():
         fio.run()
         sleep(3)
 
-    with TestRun.step("Check if cache's statistics matches core's statistics"):
+    with TestRun.step("Check if cache's statistics match cores' statistics"):
         for i in range(caches_count):
-            cache_stats = caches[i].get_statistics_flat(stat_filter=stat_filter)
+            cache_stats = get_stats_dict(filter=stat_filter, cache_id=caches[i].cache_id)
             cores_stats = [
-                cores[i][j].get_statistics_flat(stat_filter=stat_filter)
-                for j in range(cores_per_cache)
+                get_stats_dict(
+                    filter=stat_filter, cache_id=caches[i].cache_id, core_id=cores[i][j].core_id
+                ) for j in range(cores_per_cache)
             ]
-            fail_message = f"For cache ID {caches[i].cache_id} "
+            fail_message = f"For cache ID {caches[i].cache_id} ({caches[i].get_cache_mode()}) "
             stats_compare(cache_stats, cores_stats, cores_per_cache, fail_message)
 
 
-@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 def test_stat_max_core(cache_mode):
     """
         title: CAS statistics values for maximum core devices.
@@ -103,7 +105,7 @@ def test_stat_max_core(cache_mode):
           Check CAS ability to display correct values in statistics
           for 62 core devices.
         pass_criteria:
-          - Core's statistics matches cache's statistics.
+          - Cores' statistics match cache's statistics.
     """
 
     cores_per_cache = 62
@@ -132,11 +134,12 @@ def test_stat_max_core(cache_mode):
         fio.run()
         sleep(3)
 
-    with TestRun.step("Check if cache's statistics matches core's statistics"):
-        cache_stats = cache.get_statistics_flat(stat_filter=stat_filter)
+    with TestRun.step("Check if cache's statistics match cores' statistics"):
+        cache_stats = get_stats_dict(filter=stat_filter, cache_id=cache.cache_id)
         cores_stats = [
-            cores[j].get_statistics_flat(stat_filter=stat_filter)
-            for j in range(cores_per_cache)
+            get_stats_dict(
+                filter=stat_filter, cache_id=cache.cache_id, core_id=cores[j].core_id
+            ) for j in range(cores_per_cache)
         ]
         fail_message = f"In {cache_mode} cache mode "
         stats_compare(cache_stats, cores_stats, cores_per_cache, fail_message)
@@ -156,20 +159,20 @@ def fio_prepare():
 
 
 def stats_compare(cache_stats, cores_stats, cores_per_cache, fail_message):
-    for cache_stat_name in cache_stats.keys():
-        if cache_stat_name.lower() != "free":
-            core_stat_name = cache_stat_name.replace("(s)", "")
-            core_stat_sum = 0
-            try:
-                cache_stats[cache_stat_name] = cache_stats[cache_stat_name].value
-                for j in range(cores_per_cache):
-                    cores_stats[j][core_stat_name] = cores_stats[j][core_stat_name].value
-            except AttributeError:
-                pass
+    for stat_name in cache_stats.keys():
+        if stat_name.startswith("Free ") or stat_name.endswith("[%]"):
+            continue
+        core_stat_sum = 0
+        try:
+            cache_stats[stat_name] = get_stat_value(cache_stats, stat_name)
             for j in range(cores_per_cache):
-                core_stat_sum += cores_stats[j][core_stat_name]
-            if core_stat_sum != cache_stats[cache_stat_name]:
-                TestRun.LOGGER.error(fail_message + (
-                    f"sum of core's '{core_stat_name}' values is "
-                    f"{core_stat_sum}, should equal cache value: "
-                    f"{cache_stats[cache_stat_name]}\n"))
+                cores_stats[j][stat_name] = get_stat_value(cores_stats[j], stat_name)
+        except AttributeError:
+            pass
+        for j in range(cores_per_cache):
+            core_stat_sum += cores_stats[j][stat_name]
+        if core_stat_sum != cache_stats[stat_name]:
+            TestRun.LOGGER.error(fail_message + (
+                f"sum of cores' '{stat_name}' values is "
+                f"{core_stat_sum}, should equal cache value: "
+                f"{cache_stats[stat_name]}\n"))
