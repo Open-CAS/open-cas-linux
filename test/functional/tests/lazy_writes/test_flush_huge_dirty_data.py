@@ -85,7 +85,7 @@ def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
 
     with TestRun.step("Validate test file and read its crc32 sum."):
         if test_file_main.size != file_size:
-            TestRun.fail("Created test file hasn't reached its target size.")
+            TestRun.LOGGER.error(f"Expected test file size {file_size}. Got {test_file_main.size}")
         test_file_crc32sum_main = test_file_main.crc32sum(timeout=timedelta(hours=4))
 
     with TestRun.step("Write data to exported object."):
@@ -97,12 +97,16 @@ def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
 
     with TestRun.step(f"Check if dirty data exceeded {file_size * 0.98} GiB."):
         minimum_4KiB_blocks = int((file_size * 0.98).get_value(Unit.Blocks4096))
-        if int(cache.get_statistics().usage_stats.dirty) < minimum_4KiB_blocks:
-            TestRun.fail("There is not enough dirty data in the cache!")
+        actual_dirty_blocks = int(cache.get_statistics().usage_stats.dirty)
+        if actual_dirty_blocks < minimum_4KiB_blocks:
+            TestRun.LOGGER.error(
+                f"Expected at least: {minimum_4KiB_blocks} dirty blocks."
+                f"Got {actual_dirty_blocks}"
+            )
 
     with TestRun.step("Unmount core and stop cache with flush."):
         core.unmount()
-        # this operation could take few hours, depending on core disk
+        # this operation could take a few hours, depending on the core disk
         output = TestRun.executor.run(stop_cmd(str(cache.cache_id)), timedelta(hours=12))
         if output.exit_code != 0:
             TestRun.fail(f"Stopping cache with flush failed!\n{output.stderr}")
