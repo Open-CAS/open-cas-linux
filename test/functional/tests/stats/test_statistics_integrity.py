@@ -1,22 +1,23 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+from time import sleep
 
 import pytest
 
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheModeTrait
 from api.cas.casadm import StatsFilter
+from api.cas.statistics import get_stats_dict, get_stat_value
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_utils.os_utils import Udev
 from test_utils.size import Size, Unit
-from time import sleep
-
 
 # One cache instance per every cache mode:
 caches_count = len(CacheMode)
@@ -27,7 +28,7 @@ io_value = 1000
 io_size = Size(io_value, Unit.Blocks4096)
 # Error stats not included in 'stat_filter' because all of them
 # should equal 0 and can be checked easier, shorter way.
-stat_filter = [StatsFilter.usage, StatsFilter.req, StatsFilter.blk]
+default_stat_filter = [StatsFilter.usage, StatsFilter.req, StatsFilter.blk]
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -38,10 +39,10 @@ def test_stats_values():
         description: |
           Check if CAS displays proper usage, request, block and error statistics values
           for core devices in every cache mode - at the start, after IO and after cache
-          reload. Also check if core's statistics match cache's statistics.
+          reload. Also check if cores' statistics match cache's statistics.
         pass_criteria:
           - Usage, request, block and error statistics have proper values.
-          - Core's statistics match cache's statistics.
+          - Cores' statistics match cache's statistics.
     """
 
     with TestRun.step("Partition cache and core devices"):
@@ -68,7 +69,7 @@ def test_stats_values():
     with TestRun.step("Check statistics values after IO"):
         check_stats_after_io(caches, cores)
 
-    with TestRun.step("Check if cache's statistics match core's statistics"):
+    with TestRun.step("Check if cache's statistics match cores' statistics"):
         check_stats_sum(caches, cores)
 
     with TestRun.step("Stop and load caches back"):
@@ -96,7 +97,7 @@ def cache_prepare(cache_dev, core_dev):
         caches.append(
             casadm.start_cache(cache_dev.partitions[i], cache_mode, force=True)
         )
-    cores = [[] for i in range(caches_count)]
+    cores = [[] for _ in range(caches_count)]
     for i in range(caches_count):
         for j in range(cores_per_cache):
             core_partition_number = i * cores_per_cache + j
@@ -126,34 +127,41 @@ def fio_prepare():
     return fio
 
 
-def get_stats_flat(cores, cache=None, stat_filter=stat_filter):
-    if cache:
-        cache_stats = cache.get_statistics_flat(stat_filter=stat_filter)
+def get_stats(stat_filter, cores, cache=None):
     cores_stats = [
-        cores[j].get_statistics_flat(stat_filter=stat_filter)
-        for j in range(cores_per_cache)
+        get_stats_dict(
+            filter=stat_filter, cache_id=cores[j].cache_id, core_id=cores[j].core_id
+        ) for j in range(cores_per_cache)
     ]
     cores_stats_perc = [
-        cores[j].get_statistics_flat(stat_filter=stat_filter, percentage_val=True)
+        {k: get_stat_value(cores_stats[j], k) for k in cores_stats[j] if k.endswith("[%]")}
+        for j in range(cores_per_cache)
+    ]
+    cores_stats_values = [
+        {k: get_stat_value(cores_stats[j], k) for k in cores_stats[j] if not k.endswith("[%]")}
         for j in range(cores_per_cache)
     ]
 
     if cache:
-        return cores_stats, cores_stats_perc, cache_stats
+        cache_stats = get_stats_dict(filter=stat_filter, cache_id=cache.cache_id)
+        cache_stats_values = {
+            k: get_stat_value(cache_stats, k) for k in cache_stats if not k.endswith("[%]")
+        }
+        return cores_stats_values, cores_stats_perc, cache_stats_values
     else:
-        return cores_stats, cores_stats_perc
+        return cores_stats_values, cores_stats_perc
 
 
 def check_stats_initial(caches, cores):
     for i in range(caches_count):
-        cores_stats, cores_stats_perc = get_stats_flat(cores[i])
+        cores_stats, cores_stats_perc = get_stats(stat_filter=default_stat_filter, cores=cores[i])
         for j in range(cores_per_cache):
             for stat_name, stat_value in cores_stats[j].items():
                 try:
                     stat_value = stat_value.value
                 except AttributeError:
                     pass
-                if stat_name.lower() == "free":
+                if stat_name.startswith("Free"):
                     if stat_value != caches[i].size.value:
                         TestRun.LOGGER.error(
                             f"For core device {cores[i][j].path} "
@@ -164,7 +172,7 @@ def check_stats_initial(caches, cores):
                         f"For core device {cores[i][j].path} value for "
                         f"'{stat_name}' is {stat_value}, should equal 0\n")
             for stat_name, stat_value in cores_stats_perc[j].items():
-                if stat_name.lower() == "free":
+                if stat_name.startswith("Free"):
                     if stat_value != 100:
                         TestRun.LOGGER.error(
                             f"For core device {cores[i][j].path} percentage value "
@@ -179,15 +187,15 @@ def check_stats_after_io(caches, cores, after_reload: bool = False):
     for i in range(caches_count):
         cache_mode = caches[i].get_cache_mode()
         cores_stats = [
-            cores[i][j].get_statistics(stat_filter=stat_filter)
+            cores[i][j].get_statistics(stat_filter=default_stat_filter)
             for j in range(cores_per_cache)
         ]
         cores_stats_perc = [
-            cores[i][j].get_statistics(stat_filter=stat_filter, percentage_val=True)
+            cores[i][j].get_statistics(stat_filter=default_stat_filter, percentage_val=True)
             for j in range(cores_per_cache)
         ]
-        cores_error_stats, cores_error_stats_perc = get_stats_flat(
-            cores[i], stat_filter=[StatsFilter.err]
+        cores_error_stats, cores_error_stats_perc = get_stats(
+            stat_filter=[StatsFilter.err], cores=cores[i]
         )
         for j in range(cores_per_cache):
             fail_message = (
@@ -196,7 +204,7 @@ def check_stats_after_io(caches, cores, after_reload: bool = False):
                 validate_usage_stats(
                     cores_stats[j], cores_stats_perc[j], caches[i], cache_mode, fail_message)
                 validate_error_stats(
-                    cores_error_stats[j], cores_error_stats_perc[j], cache_mode, fail_message)
+                    cores_error_stats[j], cores_error_stats_perc[j], fail_message)
             else:
                 validate_usage_stats(
                     cores_stats[j], cores_stats_perc[j], caches[i], cache_mode, fail_message)
@@ -205,31 +213,31 @@ def check_stats_after_io(caches, cores, after_reload: bool = False):
                 validate_block_stats(
                     cores_stats[j], cores_stats_perc[j], cache_mode, fail_message)
                 validate_error_stats(
-                    cores_error_stats[j], cores_error_stats_perc[j], cache_mode, fail_message)
+                    cores_error_stats[j], cores_error_stats_perc[j], fail_message)
 
 
 def check_stats_sum(caches, cores):
     for i in range(caches_count):
         cores_stats, cores_stats_perc, cache_stats = (
-            get_stats_flat(cores[i], cache=caches[i])
+            get_stats(stat_filter=default_stat_filter, cores=cores[i], cache=caches[i])
         )
-        for cache_stat_name in cache_stats.keys():
-            if cache_stat_name.lower() != "free":
-                core_stat_name = cache_stat_name.replace("(s)", "")
-                core_stat_sum = 0
-                try:
-                    cache_stats[cache_stat_name] = cache_stats[cache_stat_name].value
-                    for j in range(cores_per_cache):
-                        cores_stats[j][core_stat_name] = cores_stats[j][core_stat_name].value
-                except AttributeError:
-                    pass
+        for stat_name in cache_stats.keys():
+            if stat_name.startswith("Free"):
+                continue
+            core_stat_sum = 0
+            try:
+                cache_stats[stat_name] = cache_stats[stat_name].value
                 for j in range(cores_per_cache):
-                    core_stat_sum += cores_stats[j][core_stat_name]
-                if core_stat_sum != cache_stats[cache_stat_name]:
-                    TestRun.LOGGER.error(
-                        f"For cache ID {caches[i].cache_id} sum of core's "
-                        f"'{core_stat_name}' values is {core_stat_sum}, "
-                        f"should equal {cache_stats[cache_stat_name]}\n")
+                    cores_stats[j][stat_name] = cores_stats[j][stat_name].value
+            except AttributeError:
+                pass
+            for j in range(cores_per_cache):
+                core_stat_sum += cores_stats[j][stat_name]
+            if core_stat_sum != cache_stats[stat_name]:
+                TestRun.LOGGER.error(
+                    f"For cache ID {caches[i].cache_id} sum of cores' "
+                    f"'{stat_name}' values is {core_stat_sum}, "
+                    f"should equal {cache_stats[stat_name]}\n")
 
 
 def validate_usage_stats(stats, stats_perc, cache, cache_mode, fail_message):
@@ -692,7 +700,7 @@ def validate_block_stats(stats, stats_perc, cache_mode, fail_message):
                 f"should equal 100\n")
 
 
-def validate_error_stats(stats, stats_perc, cache_mode, fail_message):
+def validate_error_stats(stats, stats_perc, fail_message):
     fail_message += f"in 'error' stats"
     for stat_name, stat_value in stats.items():
         if stat_value != 0:
