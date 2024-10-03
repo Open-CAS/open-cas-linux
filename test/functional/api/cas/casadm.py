@@ -380,10 +380,11 @@ def print_statistics(
     filter: List[StatsFilter] = None,
     output_format: OutputFormat = None,
     by_id_path: bool = True,
+    io_class: bool = False,
     shortcut: bool = False,
 ) -> Output:
     _output_format = output_format.name if output_format else None
-    _io_class_id = str(io_class_id) if io_class_id is not None else None
+    _io_class_id = str(io_class_id) if io_class_id is not None else "" if io_class else None
     _core_id = str(core_id) if core_id is not None else None
     if filter is None:
         _filter = filter

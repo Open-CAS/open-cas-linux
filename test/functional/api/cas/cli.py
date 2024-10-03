@@ -306,7 +306,7 @@ def print_statistics_cmd(
     command += (" -i " if shortcut else " --cache-id ") + cache_id
     if core_id:
         command += (" -j " if shortcut else " --core-id ") + core_id
-    if io_class_id:
+    if io_class_id is not None:  # might be empty string when printing all io classes
         command += (" -d " if shortcut else " --io-class-id ") + io_class_id
     if filter:
         command += (" -f " if shortcut else " --filter ") + filter
