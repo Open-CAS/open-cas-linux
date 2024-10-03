@@ -86,10 +86,12 @@ def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
     with TestRun.step("Validate test file and read its crc32 sum."):
         if test_file_main.size != file_size:
             TestRun.fail("Created test file hasn't reached its target size.")
-        test_file_crc32sum_main = test_file_main.crc32sum()
+        test_file_crc32sum_main = test_file_main.crc32sum(timeout=timedelta(hours=4))
 
     with TestRun.step("Write data to exported object."):
-        test_file_copy = test_file_main.copy(mnt_point + "test_file_copy")
+        test_file_copy = test_file_main.copy(
+            mnt_point + "test_file_copy", timeout=timedelta(hours=4)
+        )
         test_file_copy.refresh_item()
         sync()
 
@@ -107,7 +109,7 @@ def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
 
     with TestRun.step("Mount core device and check crc32 sum of test file copy."):
         core_dev.mount(mnt_point)
-        if test_file_crc32sum_main != test_file_copy.crc32sum():
+        if test_file_crc32sum_main != test_file_copy.crc32sum(timeout=timedelta(hours=4)):
             TestRun.LOGGER.error("Md5 sums should be equal.")
 
     with TestRun.step("Delete test files."):
