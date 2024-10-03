@@ -332,21 +332,6 @@ class UsageStats:
     def __ne__(self, other):
         return not self == other
 
-    def __add__(self, other):
-        return UsageStats(
-            self.occupancy + other.occupancy,
-            self.free + other.free,
-            self.clean + other.clean,
-            self.dirty + other.dirty,
-        )
-
-    def __iadd__(self, other):
-        self.occupancy += other.occupancy
-        self.free += other.free
-        self.clean += other.clean
-        self.dirty += other.dirty
-        return self
-
 
 class IoClassUsageStats:
     def __init__(self, stats_dict, percentage_val):
@@ -377,43 +362,6 @@ class IoClassUsageStats:
 
     def __ne__(self, other):
         return not self == other
-
-    def __add__(self, other):
-        return UsageStats(
-            self.occupancy + other.occupancy,
-            self.clean + other.clean,
-            self.dirty + other.dirty,
-        )
-
-    def __iadd__(self, other):
-        self.occupancy += other.occupancy
-        self.clean += other.clean
-        self.dirty += other.dirty
-        return self
-
-
-class InactiveUsageStats:
-    def __init__(self, inactive_occupancy, inactive_clean, inactive_dirty):
-        self.inactive_occupancy = inactive_occupancy
-        self.inactive_clean = inactive_clean
-        self.inactive_dirty = inactive_dirty
-
-    def __str__(self):
-        return (
-            f"Inactive usage stats:\n"
-            f"Inactive occupancy: {self.inactive_occupancy}\n"
-            f"Inactive clean: {self.inactive_clean}\n"
-            f"Inactive dirty: {self.inactive_dirty}\n"
-        )
-
-    def __eq__(self, other):
-        if not other:
-            return False
-        return (
-            self.inactive_occupancy == other.inactive_occupancy
-            and self.inactive_clean == other.inactive_clean
-            and self.inactive_dirty == other.inactive_dirty
-        )
 
 
 class RequestStats:
