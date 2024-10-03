@@ -1,10 +1,12 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-import pytest
 from datetime import timedelta
+
+import pytest
 
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheModeTrait, CleaningPolicy, SeqCutOffPolicy
@@ -75,10 +77,10 @@ def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
         fio.run()
         test_file_main.refresh_item()
 
-    with TestRun.step("Validate test file and read its md5 sum."):
+    with TestRun.step("Validate test file and read its checksum."):
         if test_file_main.size != file_size:
             TestRun.fail("Created test file hasn't reached its target size.")
-        test_file_md5sum_main = test_file_main.md5sum()
+        test_file_crc32sum_main = test_file_main.crc32sum()
 
     with TestRun.step("Write data to exported object."):
         test_file_copy = test_file_main.copy(mnt_point + "test_file_copy")
@@ -97,10 +99,10 @@ def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
         if output.exit_code != 0:
             TestRun.fail(f"Stopping cache with flush failed!\n{output.stderr}")
 
-    with TestRun.step("Mount core device and check md5 sum of test file copy."):
+    with TestRun.step("Mount core device and verify checksum of test file copy."):
         core_dev.mount(mnt_point)
-        if test_file_md5sum_main != test_file_copy.md5sum():
-            TestRun.LOGGER.error("Md5 sums should be equal.")
+        if test_file_crc32sum_main != test_file_copy.crc32sum():
+            TestRun.LOGGER.error("Checksums should be equal.")
 
     with TestRun.step("Delete test files."):
         test_file_main.remove(True)
