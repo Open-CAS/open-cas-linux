@@ -262,8 +262,8 @@ def base_prepare(item):
                                disk_path in device.get_device_id(),
                                [bd.get_device_id() for bd in TestRun.dut.disks])),
                        raid.array_devices)):
-                raid.umount_all_partitions()
                 raid.remove_partitions()
+                raid.unmount()
                 raid.stop()
                 for device in raid.array_devices:
                     Mdadm.zero_superblock(posixpath.join('/dev', device.get_device_id()))
@@ -277,11 +277,9 @@ def base_prepare(item):
                     f"Serial for {disk.path} doesn't match the one from the config."
                     f"Serial from config {disk.serial_number}, actual serial {disk_serial}"
                 )
-
-            disk.umount_all_partitions()
-            Mdadm.zero_superblock(posixpath.join('/dev', disk.get_device_id()))
-            TestRun.executor.run_expect_success("udevadm settle")
             disk.remove_partitions()
+            disk.unmount()
+            Mdadm.zero_superblock(posixpath.join('/dev', disk.get_device_id()))
             create_partition_table(disk, PartitionTable.gpt)
 
         TestRun.usr.already_updated = True
