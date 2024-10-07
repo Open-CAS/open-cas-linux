@@ -275,7 +275,7 @@ static void block_dev_forward_flush(ocf_volume_t volume,
 	bio->bi_private = (void *)token;
 	bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_bd_forward_end);
 
-	cas_submit_bio(CAS_SET_FLUSH(0), bio);
+	cas_submit_bio(CAS_SET_FLUSH(WRITE), bio);
 
 }
 
