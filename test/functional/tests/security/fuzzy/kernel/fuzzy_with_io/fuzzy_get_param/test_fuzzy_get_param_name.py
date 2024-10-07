@@ -87,7 +87,7 @@ def test_fuzzy_get_param_name(cache_mode, cache_line_size, unaligned_io, use_io_
             if param == str(ParamName.seq_cutoff):
                 cmd += f" --core-id {core.core_id}"
 
-            cmd = base_cmd.replace("{param}", param)
+            cmd = cmd.replace("{param}", param)
 
             run_cmd_and_validate(
                 cmd=get_cmd(cmd, param.encode("ascii")),

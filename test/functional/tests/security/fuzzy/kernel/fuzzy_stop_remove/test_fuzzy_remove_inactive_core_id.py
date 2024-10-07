@@ -19,6 +19,7 @@ from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.peach_fuzzer.peach_fuzzer import PeachFuzzer
+from test_utils.os_utils import Udev
 from tests.security.fuzzy.kernel.common.common import (
     prepare_cas_instance,
     get_fuzz_config,
@@ -57,6 +58,9 @@ def test_fuzzy_remove_inactive_core_id(
             cleaning_policy=cleaning_policy,
         )
 
+    with TestRun.step("Disable udev"):
+        Udev.disable()
+
     with TestRun.step("Create init config from running configuration."):
         InitConfig.create_init_config_from_running_configuration()
 
@@ -92,3 +96,6 @@ def test_fuzzy_remove_inactive_core_id(
                     cache.stop(no_data_flush=True)
                     core_disk.unplug()
                     casadm.load_cache(device=cache_disk.partitions[0])
+
+    with TestRun.step("Plug core device"):
+        core_disk.plug_all()

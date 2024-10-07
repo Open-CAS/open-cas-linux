@@ -19,6 +19,7 @@ from api.cas.cli import start_cmd
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet
 from test_tools.peach_fuzzer.peach_fuzzer import PeachFuzzer
+from test_utils.os_utils import Udev
 from test_utils.size import Unit, Size
 from tests.security.fuzzy.kernel.common.common import (
     get_fuzz_config,
@@ -48,6 +49,9 @@ def test_fuzzy_start_cache_flags(cache_mode, cache_line_size, unaligned_io, use_
     with TestRun.step("Create partition on cache device"):
         cache_disk = TestRun.disks["cache"]
         cache_disk.create_partitions([Size(400, Unit.MebiByte)])
+
+    with TestRun.step("Disable udev"):
+        Udev.disable()
 
     with TestRun.step("Start and stop cache"):
         # Reload kernel modules
@@ -93,7 +97,7 @@ def test_fuzzy_start_cache_flags(cache_mode, cache_line_size, unaligned_io, use_
                     any_alphanumeric_pattern = r"\w+"
                     base_cmd = re.sub(
                         pattern=f"{incompatible_param} {any_alphanumeric_pattern}",
-                        sub="",
+                        repl="",
                         string=base_cmd,
                     )
             base_cmd = f"{base_cmd.strip()} {param}"

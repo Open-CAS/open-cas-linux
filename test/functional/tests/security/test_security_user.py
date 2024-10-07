@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -13,6 +14,7 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
+from test_utils.os_utils import create_user, check_if_user_exists
 from test_utils.output import CmdException
 from test_utils.size import Size, Unit
 
@@ -70,9 +72,7 @@ def test_user_cli():
         casadm.stop_all_caches()
 
     with TestRun.step("Add non-root user account."):
-        TestRun.executor.run(f"useradd -N -r -l {user_name}")
-        user_home_dir = fs_utils.parse_ls_output(fs_utils.ls_item(f"/home/{user_name}"))[0]
-        user_home_dir.chmod_numerical(777, True)
+        add_user()
 
     with TestRun.step("Try to start cache."):
         try:
@@ -95,7 +95,7 @@ def test_user_cli():
 
     with TestRun.step("Try to set cache mode."):
         try:
-            output = run_as_other_user(cli.set_cache_mode_cmd(CacheMode.WB,
+            output = run_as_other_user(cli.set_cache_mode_cmd(CacheMode.WB.name.lower(),
                                                               str(cache.cache_id)), user_name)
             if output.exit_code == 0:
                 TestRun.LOGGER.error("Setting cache mode should fail!")
@@ -130,7 +130,7 @@ def test_user_cli():
 
     with TestRun.step("Try to list caches."):
         try:
-            output = run_as_other_user(cli.list_cmd(), user_name)
+            output = run_as_other_user(cli.list_caches_cmd(), user_name)
             if output.exit_code == 0:
                 TestRun.LOGGER.error("Listing caches should fail!")
         except CmdException:
@@ -222,7 +222,7 @@ def test_user_cli():
     with TestRun.step("Try to load IO class configuration."):
         try:
             output = run_as_other_user(cli.load_io_classes_cmd(
-                str(cache.cache_id), io_conf_copy), user_name)
+                str(cache.cache_id), io_conf_copy.full_path), user_name)
             if output.exit_code == 0:
                 TestRun.LOGGER.error("Loading IO class configuration should fail!")
         except CmdException:
@@ -273,7 +273,7 @@ def test_user_cli():
 
     with TestRun.step("Try to list caches with 'sudo'."):
         try:
-            run_as_other_user(cli.list_cmd(), user_name, True)
+            run_as_other_user(cli.list_caches_cmd(), user_name, True)
         except CmdException:
             TestRun.LOGGER.error("Non-root sudoer user should be able to list caches.")
 
@@ -339,7 +339,7 @@ def test_user_cli():
 
     with TestRun.step("Try to load IO class configuration with 'sudo'."):
         try:
-            run_as_other_user(cli.load_io_classes_cmd(str(cache.cache_id), io_conf_copy),
+            run_as_other_user(cli.load_io_classes_cmd(str(cache.cache_id), io_conf_copy.full_path),
                               user_name, True)
         except CmdException:
             TestRun.LOGGER.error("Non-root sudoer user should be able to "
@@ -420,9 +420,7 @@ def test_user_service():
         core.unmount()
 
     with TestRun.step("Add non-root user account."):
-        TestRun.executor.run(f"useradd -N -r -l {user_name}")
-        user_home_dir = fs_utils.parse_ls_output(fs_utils.ls_item(f"/home/{user_name}"))[0]
-        user_home_dir.chmod_numerical(777, True)
+        add_user()
 
     with TestRun.step("Try to stop OpenCAS service."):
         try:
@@ -492,3 +490,8 @@ def run_as_other_user(command, user: str, sudo: bool = False):
     if output.exit_code != 0 or output.stderr is not "":
         raise CmdException("Must be run as root.", output)
     return output
+
+
+def add_user():
+    if not check_if_user_exists(user_name):
+        create_user(user_name, additional_params=["N", "r", "l"])
