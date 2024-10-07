@@ -9,6 +9,7 @@ from api.cas.cli import script_try_add_cmd, remove_detached_cmd
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType
 from test_tools.peach_fuzzer.peach_fuzzer import PeachFuzzer
+from test_utils.os_utils import Udev
 from tests.security.fuzzy.kernel.common.common import (
     run_cmd_and_validate,
     get_fuzz_config,
@@ -40,6 +41,9 @@ def test_fuzzy_script_add_core_try_add_cache_id():
         commands = PeachFuzzer.get_fuzzed_command(
             command_template=base_cmd, count=TestRun.usr.fuzzy_iter_count
         )
+
+    with TestRun.step("Disable udev"):
+        Udev.disable()
 
     for index, cmd in TestRun.iteration(
         enumerate(commands), f"Run command {TestRun.usr.fuzzy_iter_count} times"

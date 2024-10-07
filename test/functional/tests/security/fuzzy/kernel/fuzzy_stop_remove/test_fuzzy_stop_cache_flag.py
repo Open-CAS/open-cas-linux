@@ -18,6 +18,7 @@ from api.cas.cli import stop_cmd
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.peach_fuzzer.peach_fuzzer import PeachFuzzer
+from test_utils.os_utils import Udev
 from tests.security.fuzzy.kernel.common.common import (
     prepare_cas_instance,
     get_fuzz_config,
@@ -55,6 +56,9 @@ def test_fuzzy_stop_cache_flag(
             kernel_params=KernelParameters(unaligned_io, use_io_scheduler),
             cleaning_policy=cleaning_policy,
         )
+
+    with TestRun.step("Disable udev"):
+        Udev.disable()
 
     with TestRun.step("Prepare PeachFuzzer"):
         valid_values = ["", "-n", "--no-data-flush"]
