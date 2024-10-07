@@ -21,9 +21,9 @@ static inline cas_bdev_handle_t open_bdev_exclusive(const char *path,
 }
 
 static inline void close_bdev_exclusive(cas_bdev_handle_t handle,
-		CAS_BLK_MODE mode)
+		CAS_BLK_MODE mode, void *holder)
 {
-	cas_bdev_release(handle, mode | CAS_BLK_MODE_EXCL, NULL);
+	cas_bdev_release(handle, mode | CAS_BLK_MODE_EXCL, holder);
 }
 
 int __init cas_init_disks(void)
@@ -94,7 +94,7 @@ void cas_disk_close(struct cas_disk *dsk)
 
 	CAS_DEBUG_DISK(dsk, "Destroying (%p)", dsk);
 
-	close_bdev_exclusive(dsk->bdev_handle, CAS_DISK_OPEN_MODE);
+	close_bdev_exclusive(dsk->bdev_handle, CAS_DISK_OPEN_MODE, dsk);
 
 	kfree(dsk->path);
 	kmem_cache_free(cas_module.disk_cache, dsk);
