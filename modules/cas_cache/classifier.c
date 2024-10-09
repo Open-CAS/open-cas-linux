@@ -29,8 +29,8 @@
 	trace_printk(format, ##__VA_ARGS__)
 
 #else
-#define CAS_CLS_DEBUG_MSG(format, ...)
-#define CAS_CLS_DEBUG_TRACE(format, ...)
+#define CAS_CLS_DEBUG_MSG(format, ...) ({})
+#define CAS_CLS_DEBUG_TRACE(format, ...) ({})
 #endif
 
 /* Done condition test - always accepts and stops evaluation */
