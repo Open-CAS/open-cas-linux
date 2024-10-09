@@ -70,6 +70,7 @@ repo_files_perms_exceptions = {
     "ocf/tests/unit/framework/prepare_sources_for_testing.py": 755,
     "ocf/tests/unit/framework/run_unit_tests.py": 755,
     "ocf/tests/unit/tests/add_new_test_file.py": 755,
+    "test/functional/test-framework/test_tools/checksec.sh": 744,
 }
 
 build_files_perms_exceptions = {

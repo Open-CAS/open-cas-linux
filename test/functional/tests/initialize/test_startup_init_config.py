@@ -215,11 +215,11 @@ def test_cas_startup_lazy():
         power_control.power_cycle()
 
     with TestRun.step("Verify if all the devices are initialized properly"):
-        core_pool_list = get_cas_devices_dict()["core_pool"]
+        core_pool_list = get_cas_devices_dict()["core_pool"].values()
         caches_list = get_cas_devices_dict()["caches"].values()
         cores_list = get_cas_devices_dict()["cores"].values()
 
-        core_pool_paths = {c["device"] for c in core_pool_list}
+        core_pool_paths = {c["device_path"] for c in core_pool_list}
         if core_pool_paths != expected_core_pool_paths:
             TestRun.error(
                 f"Expected the following devices in core pool "
@@ -228,7 +228,7 @@ def test_cas_startup_lazy():
         else:
             TestRun.LOGGER.info("Core pool is ok")
 
-        caches_paths = {c["device"] for c in caches_list}
+        caches_paths = {c["device_path"] for c in caches_list}
         if caches_paths != expected_caches_paths:
             TestRun.error(
                 f"Expected the following devices as caches "
@@ -237,7 +237,7 @@ def test_cas_startup_lazy():
         else:
             TestRun.LOGGER.info("Caches are ok")
 
-        cores_paths = {c["device"] for c in cores_list}
+        cores_paths = {c["device_path"] for c in cores_list}
         if cores_paths != expected_cores_paths:
             TestRun.error(
                 f"Expected the following devices as cores "
@@ -246,8 +246,7 @@ def test_cas_startup_lazy():
         else:
             TestRun.LOGGER.info("Core devices are ok")
 
-        cores_paths = {c["device"] for c in cores_list}
-        cores_states = {c["device"]: c["status"] for c in cores_list}
+        cores_states = {c["device_path"]: c["status"] for c in cores_list}
         if cores_states[active_core_path] != "Active":
             TestRun.LOGGER.error(
                 f"Core {active_core_path} should be Active "

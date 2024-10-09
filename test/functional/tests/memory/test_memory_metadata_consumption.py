@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -7,6 +8,7 @@ import pytest
 
 from api.cas import casadm
 from api.cas.cache_config import CacheLineSize, CacheMode, SeqCutOffPolicy
+from api.cas.dmesg import get_metadata_size_on_device
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
@@ -178,8 +180,7 @@ def validate_memory_consumption(cache_device, expected_maximum, actual_size):
     """Checks memory consumption"""
     stats = cache_device.get_statistics()
     TestRun.LOGGER.info(f"Statistics: {stats}")
-
-    stat_footprint = Size(int(cache_device.get_metadata_size()))
+    stat_footprint = get_metadata_size_on_device(cache_device.cache_id)
     TestRun.LOGGER.info(f"Allowed limit for current configuration is: {expected_maximum}")
 
     is_memory_within_limit("Reported Metadata Memory Footprint", expected_maximum, stat_footprint)

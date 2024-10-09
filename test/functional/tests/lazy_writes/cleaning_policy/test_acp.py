@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -233,6 +234,9 @@ def test_acp_param_flush_max_buffers(cache_line_size, cache_mode):
         fio = get_fio_cmd(core, core_size)
         fio.run_in_background()
         time.sleep(10)
+        cache_stats = cache.get_statistics()
+        if cache_stats.usage_stats.dirty == Size.zero():
+            TestRun.fail("There are no dirty data on cache")
 
     with TestRun.step("Set cleaning policy to ACP."):
         cache.set_cleaning_policy(CleaningPolicy.acp)
