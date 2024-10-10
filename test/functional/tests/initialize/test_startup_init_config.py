@@ -1,30 +1,33 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
-from datetime import timedelta
 
-from api.cas import casadm, casctl, casadm_parser
-from api.cas.casadm_parser import get_caches, get_cores, get_cas_devices_dict
+from datetime import timedelta
+from time import sleep
+from api.cas import casctl, casadm, casadm_parser
 from api.cas.cache_config import CacheMode
+from api.cas.cas_service import set_cas_service_timeout, clear_cas_service_timeout
+from api.cas.cli_messages import check_stdout_msg, no_caches_running
 from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.filesystem.file import File
 from test_tools.disk_utils import Filesystem
-from test_utils import fstab
+from test_tools.fs_utils import readlink
 from test_tools.dd import Dd
-from test_utils.size import Unit, Size
-from test_utils.os_utils import sync, Udev
+from test_utils import fstab
 from test_utils.emergency_escape import EmergencyEscape
-from api.cas.cas_service import set_cas_service_timeout, clear_cas_service_timeout
+from test_utils.filesystem.file import File
+from test_utils.os_utils import sync, Udev
+from test_utils.size import Unit, Size
 
 
 mountpoint = "/mnt"
 filepath = f"{mountpoint}/file"
+cores_number = 4
 
 
 @pytest.mark.os_dependent
@@ -80,14 +83,14 @@ def test_cas_startup(cache_mode, filesystem):
         TestRun.executor.reboot()
 
     with TestRun.step("Check if cache is started"):
-        caches = list(get_caches())
+        caches = list(casadm_parser.get_caches())
         if len(caches) != 1:
             TestRun.fail(f"Expected one cache, got {len(caches)}!")
         if caches[0].cache_id != cache.cache_id:
             TestRun.fail("Invalid cache id!")
 
     with TestRun.step("Check if core is added"):
-        cores = list(get_cores(cache.cache_id))
+        cores = list(casadm_parser.get_cores(cache.cache_id))
         if len(cores) != 1:
             TestRun.fail(f"Expected one core, got {len(cores)}!")
         if cores[0].core_id != core.core_id:
@@ -215,9 +218,9 @@ def test_cas_startup_lazy():
         power_control.power_cycle()
 
     with TestRun.step("Verify if all the devices are initialized properly"):
-        core_pool_list = get_cas_devices_dict()["core_pool"]
-        caches_list = get_cas_devices_dict()["caches"].values()
-        cores_list = get_cas_devices_dict()["cores"].values()
+        core_pool_list = casadm_parser.get_cas_devices_dict()["core_pool"]
+        caches_list = casadm_parser.get_cas_devices_dict()["caches"].values()
+        cores_list = casadm_parser.get_cas_devices_dict()["cores"].values()
 
         core_pool_paths = {c["device"] for c in core_pool_list}
         if core_pool_paths != expected_core_pool_paths:
@@ -442,29 +445,29 @@ def test_failover_config_startup():
         power_control.power_cycle()
 
     with TestRun.step("Verify if all the devices are initialized properly"):
-        core_pool_list = get_cas_devices_dict()["core_pool"]
-        caches_list = get_cas_devices_dict()["caches"].values()
-        cores_list = get_cas_devices_dict()["cores"].values()
+        core_pool_list = casadm_parser.get_cas_devices_dict()["core_pool"]
+        caches_list = casadm_parser.get_cas_devices_dict()["caches"].values()
+        cores_list = casadm_parser.get_cas_devices_dict()["cores"].values()
 
         if len(core_pool_list) != 0:
             TestRun.error(f"No cores expected in core pool. Got {core_pool_list}")
         else:
             TestRun.LOGGER.info("Core pool is ok")
 
-        expected_caches_paths = set([active_cache_path, standby_cache_path])
+        expected_caches_paths = {active_cache_path, standby_cache_path}
         caches_paths = {c["device"] for c in caches_list}
         if caches_paths != expected_caches_paths:
-            TestRun.error(
+            TestRun.LOGGER.error(
                 f"Expected the following devices as caches "
                 f"{expected_caches_paths}. Got {caches_paths}"
             )
         else:
             TestRun.LOGGER.info("Caches are ok")
 
-        expected_core_paths = set([active_core_path])
+        expected_core_paths = {active_core_path}
         cores_paths = {c["device"] for c in cores_list}
         if cores_paths != expected_core_paths:
-            TestRun.error(
+            TestRun.LOGGER.error(
                 f"Expected the following devices as cores "
                 f"{expected_core_paths}. Got {cores_paths}"
             )
@@ -570,3 +573,126 @@ def validate_cache(cache_mode):
             f"Cache started in wrong mode!\n"
             f"Should start in {cache_mode}, but started in {current_mode} mode."
         )
+
+
+@pytest.mark.os_dependent
+@pytest.mark.remote_only
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.parametrizex("cache_mode", CacheMode)
+@pytest.mark.parametrizex("reboot_type", ["soft", "hard"])
+def test_cas_lazy_startup_core_path_by_id(cache_mode, reboot_type):
+    """
+    title: Test for CAS startup when cores are set in config with wrong by-id path.
+    description: |
+      Start cache, add to config different links to devices that make up the cache
+      and check if cache start fails after reboot. Clear cache metadata before reboot.
+    pass_criteria:
+      - System does not crash
+      - Cache is running after startup
+      - Cores are detached after startup
+    """
+
+    with TestRun.step("Prepare partitions for cache and for cores"):
+        cache_dev = TestRun.disks['cache']
+        cache_dev.create_partitions([Size(200, Unit.MebiByte)])
+        cache_part = cache_dev.partitions[0]
+        core_dev = TestRun.disks['core']
+        core_dev.create_partitions([Size(400, Unit.MebiByte)] * cores_number)
+
+    with TestRun.step("Start cache and add cores"):
+        cache = casadm.start_cache(cache_part, cache_mode, force=True)
+        for partition in core_dev.partitions:
+            cache.add_core(partition)
+
+    with TestRun.step("Create opencas.conf"):
+        InitConfig.create_init_config_from_running_configuration(
+            cache_extra_flags="lazy_startup=true",
+            core_extra_flags="lazy_startup=true"
+        )
+
+    with TestRun.step("Stop cache and clear metadata before reboot"):
+        cache.stop()
+        casadm.zero_metadata(cache_part)
+
+    with TestRun.step("Reset platform"):
+        if reboot_type == "soft":
+            TestRun.executor.reboot()
+        else:           # wait few seconds to simulate power failure during normal system run
+            sleep(5)    # not when configuring Open CAS
+            power_control = TestRun.plugin_manager.get_plugin('power_control')
+            power_control.power_cycle()
+
+    with TestRun.step("Check if all cores are detached"):
+        listed_cores = casadm_parser.get_cas_devices_dict().get("core_pool")
+        listed_cores_number = len(listed_cores)
+        if listed_cores_number != cores_number:
+            TestRun.fail(f"Expected {cores_number} cores, got {listed_cores_number}!")
+
+        for core in listed_cores:
+            if core.get("status") != "Detached":
+                TestRun.fail(f"Core {core.get('device')} isn't detached as expected.")
+
+
+@pytest.mark.os_dependent
+@pytest.mark.remote_only
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.parametrizex("cache_mode", CacheMode)
+@pytest.mark.parametrizex("reboot_type", ["soft", "hard"])
+def test_cas_lazy_startup_core_path_not_by_id(cache_mode, reboot_type):
+    """
+    title: Negative test for CAS startup when cores are set in config with short path.
+    description: |
+      Start cache, add to config short path (/dev/sdX) to devices that make up the
+      cache and check if cache start fails after reboot. Clear cache metadata before reboot.
+    pass_criteria:
+      - System does not crash
+      - Cache is not running after startup
+      - No cores after startup
+    """
+
+    with TestRun.step("Prepare partitions for cache and for cores."):
+        cache_dev = TestRun.disks['cache']
+        cache_dev.create_partitions([Size(200, Unit.MebiByte)])
+        cache_part = cache_dev.partitions[0]
+        core_dev = TestRun.disks['core']
+        core_dev.create_partitions([Size(400, Unit.MebiByte)] * cores_number)
+
+    with TestRun.step("Start cache and add cores."):
+        cache = casadm.start_cache(cache_part, cache_mode, force=True)
+        cores = [cache.add_core(partition) for partition in core_dev.partitions]
+
+    with TestRun.step("Create opencas.conf."):
+        create_init_config(cache, cores, [readlink(part.path) for part in core_dev.partitions])
+
+    with TestRun.step("Stop cache and clear metadata before reboot."):
+        cache.stop()
+        casadm.zero_metadata(cache_part)
+
+    with TestRun.step("Reset platform."):
+        if reboot_type == "soft":
+            TestRun.executor.reboot()
+        else:           # wait few seconds to simulate power failure during normal system run
+            sleep(5)    # not when configuring Open CAS
+            power_control = TestRun.plugin_manager.get_plugin('power_control')
+            power_control.power_cycle()
+
+    with TestRun.step("Check if cache is not running."):
+        check_stdout_msg(casadm.list_caches(), no_caches_running)
+
+
+def create_init_config(cache, cores, paths):
+    init_conf = InitConfig()
+
+    def _add_core(core, path):
+        params = [str(cache.cache_id), str(core.core_id), path, "lazy_startup=true"]
+        init_conf.core_config_lines.append('\t'.join(params))
+
+    init_conf.add_cache(
+        cache.cache_id, cache.cache_device, cache.get_cache_mode(), "lazy_startup=true"
+    )
+    for core, path in zip(cores, paths):
+        _add_core(core, path)
+    init_conf.save_config_file()
+    return init_conf
