@@ -24,6 +24,7 @@ from tests.security.fuzzy.kernel.common.common import (
     get_fuzz_config,
     run_cmd_and_validate,
 )
+from test_utils.os_utils import Udev
 
 core_id_min = 0
 core_id_max = 4095
@@ -67,6 +68,9 @@ def test_fuzzy_add_core_core_id(
                 else CleaningPolicy.DEFAULT
             )
         )
+
+    with TestRun.step("Disable udev"):
+        Udev.disable()
 
     with TestRun.step("Prepare PeachFuzzer"):
         fuzz_config = get_fuzz_config("core_id.yml")
