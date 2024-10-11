@@ -1,0 +1,235 @@
+---
+group: Sequential cutoff
+---
+
+Sequential cutoff feature allows to detect sequential data streams
+and redirect them to backend volume (bypassing the cache).
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Setting sequential cutoff policy for core
+id: policy_core
+---
+
+The management tool shall allow to specify sequential cutoff policy
+for given core.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Setting sequential cutoff policy for all cores in given cache instance
+id: policy_all_cores
+---
+
+The management tool shall allow to specify sequential cutoff policy
+for all cores associated with given cache instance at once.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Allowed sequential cutoff policies
+id: allowed_policies
+---
+
+There shall be three sequential cutoff policies:
+
+1. always
+2. full
+3. never
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Default sequential cutoff policy
+id: policy_default
+---
+
+The default sequential cutoff policy shall be **full**.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Setting sequential cutoff threshold for core
+id: threshold_core
+---
+
+The management tool shall allow to specify sequential cutoff threshold
+for given core.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Setting sequential cutoff threshold for all cores in given cache instance
+id: threshold_all_cores
+---
+
+The management tool shall allow to specify sequential cutoff threshold
+for all cores associated with given cache instance at once.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Allowed sequential cutoff theshold values
+id: threshold_values
+---
+
+It shall be possible to specify sequential cutoff threshold value in range
+from 1 to 4194181 KiB inclusive.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Default sequential cutoff threshold value
+id: threshold_default
+---
+
+The default sequential cutoff threshold shall be 1024 KiB.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Setting sequential cutoff promotion count for core
+id: promotion_count_core
+---
+
+The management tool shall allow to specify sequential cutoff promotion count
+for given core.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: >-
+  Setting sequential cutoff promotion count for all cores in given
+  cache instance
+id: promotion_count_all_cores
+---
+
+The management tool shall allow to specify sequential cutoff promotion count
+for all cores associated with given cache instance at once.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Allowed sequential cutoff promotion count values
+id: promotion_count_values
+---
+
+It shall be possible to specify sequential cutoff promotion count value
+in range from 0 to 65535 inclusive.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Default sequential cutoff promotion count value
+id: promotion_count_default
+---
+
+The default sequential cutoff promotion count shall be 8.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Loading sequential cutoff configuration on cache load
+id: loading_configuration
+---
+
+All sequential cutoff parameters shall be loaded from cache metadata for each
+core on cache load.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Sequential cutoff stream detection
+id: operation
+---
+
+The sequential cutoff shall detect streams of sequential IO requests.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Sequential cutoff operation
+id: operation
+---
+
+When lenght of the stream reaches the cutoff threshold, each next IO request
+which continues the stream and is not full dirty hit shall be handled
+in Pass-Through mode.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Sequential cutoff for reads and writes
+id: reads_and_writes
+---
+
+The sequential cutoff shall track streams of read and write IO requests
+separately.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Multiple per-CPU sequential cutoff streams
+id: per_cpu_multiple_streams
+---
+
+The sequential cutoff shall be able to detect up to 64 per-CPU streams.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Multiple shared sequential cutoff streams
+id: shared_multiple_streams
+---
+
+The sequential cutoff shall be able to detect up to 128 shared streams.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Sequential cutoff per-CPU stream continuation
+id: per_cpu_stream_continuation
+---
+
+When new IO request is being handled, the sequential cutoff shall first try to
+account it to one of per-CPU streams local to the CPU on which the IO request
+is being handled.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Sequential cutoff shared stream continuation
+id: shared_stream_continuation
+---
+
+When new IO request is being handled and there is no per-CPU stream which can
+be continued by this IO request, the sequential cutoff shall try to account it
+to one of shared streams.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Sequential cutoff stream creation
+id: stream_creation
+---
+
+When new IO request is being handled and there is neither per-CPU nor shared
+stream which can be countinued by this IO request, the sequential cutoff shall
+create new per-CPU stream starting with this IO request.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Sequential cutoff stream promotion
+id: stream_promotion
+---
+
+When number of IO requests accounted to given per-CPU stream reaches
+the promotion count or stream length reaches the threshold, the stream
+shall be promoted to shared stream pool.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Sequential cutoff policy **always**
+id: policy_always
+---
+
+When sequential cutoff policy is set to **always**, the sequential cutoff shall
+be enabled regardless to cache occupancy.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Sequential cutoff policy **full**
+id: policy_full
+---
+
+When sequential cutoff policy is set to **full**, the sequential cutoff shall
+be enabled only when cache occupancy reaches 100%.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+title: Sequential cutoff policy **never**
+id: policy_never
+---
+
+When sequential cutoff policy is set to **never**, the sequential cutoff shall
+be disabled.
