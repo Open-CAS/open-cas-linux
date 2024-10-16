@@ -240,7 +240,7 @@ class SeqCutOffParameters:
 
 
 class PromotionParametersNhit:
-    def __init__(self, threshold: Size = None, trigger: int = None):
+    def __init__(self, threshold: int = None, trigger: int = None):
         self.threshold = threshold
         self.trigger = trigger
 
