@@ -1,11 +1,13 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import math
+import posixpath
 import pytest
-import os
+
 from api.cas import casadm, cli_messages
 from api.cas.cache_config import CacheLineSize
 from core.test_run import TestRun
@@ -32,7 +34,7 @@ def test_device_capabilities():
     """
 
     core_device = TestRun.disks['core']
-    max_io_size_path = os.path.join(disk_utils.get_sysfs_path(core_device.get_device_id()),
+    max_io_size_path = posixpath.join(disk_utils.get_sysfs_path(core_device.get_device_id()),
                                     'queue/max_sectors_kb')
     default_max_io_size = fs_utils.read_file(max_io_size_path)
 
@@ -148,7 +150,7 @@ def measure_capabilities(dev):
     dev_id = dev.parent_device.get_device_id() if isinstance(dev, Partition) \
         else dev.get_device_id()
     for c in capabilities:
-        path = os.path.join(disk_utils.get_sysfs_path(dev_id), 'queue', c)
+        path = posixpath.join(disk_utils.get_sysfs_path(dev_id), 'queue', c)
         command = f"cat {path}"
         output = TestRun.executor.run(command)
         if output.exit_code == 0:
