@@ -72,9 +72,9 @@ class CacheMode(Enum):
 
 
 class SeqCutOffPolicy(Enum):
-    full = 0
-    always = 1
-    never = 2
+    full = "full"
+    always = "always"
+    never = "never"
     DEFAULT = full
 
     @classmethod
@@ -84,6 +84,9 @@ class SeqCutOffPolicy(Enum):
                 return policy
 
         raise ValueError(f"{name} is not a valid sequential cut off name")
+
+    def __str__(self):
+        return self.value
 
 
 class MetadataMode(Enum):

@@ -173,7 +173,11 @@ def test_activate_incomplete_cache():
             TestRun.fail(f"Expected one inactive core. Got {inactive_core_count}")
 
     with TestRun.step("Check if core is in an appropriate state"):
-        core_status = CoreStatus[get_core_info_by_path(core_dev_path)["status"].lower()]
+        core_status = CoreStatus[
+            get_core_info_by_path(core_disk_path=core_dev_path, target_cache_id=cache.cache_id)[
+                "status"
+            ].lower()
+        ]
         if core_status != CoreStatus.inactive:
             TestRun.fail(
                 "The core is in an invalid state. "
