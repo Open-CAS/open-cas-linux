@@ -11,7 +11,7 @@ from enum import Enum
 from api.cas import casadm
 from api.cas.cache_config import SeqCutOffParameters, SeqCutOffPolicy
 from api.cas.casadm_params import StatsFilter
-from api.cas.casadm_parser import get_seq_cut_off_parameters, get_core_info_by_path
+from api.cas.casadm_parser import get_seq_cut_off_parameters, get_core_info_for_cache_by_path
 from api.cas.statistics import CoreStats, CoreIoClassStats
 from core.test_run_utils import TestRun
 from storage_devices.device import Device
@@ -35,18 +35,19 @@ class Core(Device):
     def __init__(self, core_device: str, cache_id: int):
         self.core_device = Device(core_device)
         self.path = None
+        self.cache_id = cache_id
         core_info = self.__get_core_info()
         # "-" is special case for cores in core pool
         if core_info["core_id"] != "-":
             self.core_id = int(core_info["core_id"])
         if core_info["exp_obj"] != "-":
             Device.__init__(self, core_info["exp_obj"])
-        self.cache_id = cache_id
         self.partitions = []
         self.block_size = None
 
     def __get_core_info(self):
-        return get_core_info_by_path(self.core_device.path)
+        return get_core_info_for_cache_by_path(core_disk_path=self.core_device.path,
+                                               target_cache_id=self.cache_id)
 
     def create_filesystem(self, fs_type: disk_utils.Filesystem, force=True, blocksize=None):
         super().create_filesystem(fs_type, force, blocksize)
