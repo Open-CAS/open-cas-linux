@@ -388,6 +388,29 @@ static int _cas_exp_obj_check_path(const char *dev_name)
 	return result;
 }
 
+static ssize_t device_attr_serial_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct gendisk *gd = dev_to_disk(dev);
+	struct cas_disk *dsk = gd->private_data;
+	struct cas_exp_obj *exp_obj = dsk->exp_obj;
+
+	return sysfs_emit(buf, "opencas-%s", exp_obj->dev_name);
+}
+
+static struct device_attribute device_attr_serial =
+	__ATTR(serial, 0444, device_attr_serial_show, NULL);
+
+static struct attribute *device_attrs[] = {
+	&device_attr_serial.attr,
+	NULL,
+};
+
+static const struct attribute_group device_attr_group = {
+	.attrs = device_attrs,
+	.name = "device",
+};
+
 int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 		struct module *owner, struct cas_exp_obj_ops *ops, void *priv)
 {
@@ -476,6 +499,10 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	if (cas_add_disk(gd))
 		goto error_add_disk;
 
+	result = sysfs_create_group(&disk_to_dev(gd)->kobj, &device_attr_group);
+	if (result)
+		goto error_sysfs;
+
 	result = bd_claim_by_disk(cas_disk_get_blkdev(dsk), dsk, gd);
 	if (result)
 		goto error_bd_claim;
@@ -483,6 +510,8 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	return 0;
 
 error_bd_claim:
+	sysfs_remove_group(&disk_to_dev(gd)->kobj, &device_attr_group);
+error_sysfs:
 	del_gendisk(dsk->exp_obj->gd);
 error_add_disk:
 error_set_geometry:
