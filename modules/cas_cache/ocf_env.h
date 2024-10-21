@@ -622,6 +622,7 @@ static inline uint32_t env_crc32(uint32_t crc, uint8_t const *data, size_t len)
 
 #define ENV_WARN(cond, fmt...)		WARN(cond, fmt)
 #define ENV_WARN_ON(cond)		WARN_ON(cond)
+#define ENV_WARN_ONCE(cond, fmt...)	WARN_ONCE(cond, fmt)
 
 #define ENV_BUG()			BUG()
 #define ENV_BUG_ON(cond)		BUG_ON(cond)
