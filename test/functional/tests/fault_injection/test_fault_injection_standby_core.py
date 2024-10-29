@@ -12,7 +12,7 @@ from core.test_run import TestRun
 from test_utils.size import Size, Unit
 from api.cas.cache_config import CacheLineSize, CacheMode, CacheStatus
 from api.cas.casadm_params import StatsFilter
-from api.cas.casadm_parser import get_core_info_by_path
+from api.cas.casadm_parser import get_core_info_for_cache_by_path
 from api.cas.core import CoreStatus, Core
 from test_tools.dd import Dd
 from api.cas.cli import standby_activate_cmd
@@ -174,9 +174,9 @@ def test_activate_incomplete_cache():
 
     with TestRun.step("Check if core is in an appropriate state"):
         core_status = CoreStatus[
-            get_core_info_by_path(core_disk_path=core_dev_path, target_cache_id=cache.cache_id)[
-                "status"
-            ].lower()
+            get_core_info_for_cache_by_path(
+                core_disk_path=core_dev_path, target_cache_id=cache.cache_id
+            )["status"].lower()
         ]
         if core_status != CoreStatus.inactive:
             TestRun.fail(
