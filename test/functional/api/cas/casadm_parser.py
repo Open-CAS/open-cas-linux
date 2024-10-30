@@ -68,6 +68,36 @@ def get_cores(cache_id: int) -> list:
     ]
 
 
+def get_inactive_cores(cache_id: int) -> list:
+    from api.cas.core import Core, CoreStatus
+
+    cores_dict = get_cas_devices_dict()["cores"].values()
+
+    def is_inactive(core):
+        return CoreStatus[core["status"].lower()] == CoreStatus.inactive
+
+    return [
+        Core(core["device_path"], core["cache_id"])
+        for core in cores_dict
+        if is_inactive(core) and core["cache_id"] == cache_id
+    ]
+
+
+def get_detached_cores(cache_id: int) -> list:
+    from api.cas.core import Core, CoreStatus
+
+    cores_dict = get_cas_devices_dict()["cores"].values()
+
+    def is_detached(core):
+        return CoreStatus[core["status"].lower()] == CoreStatus.detached
+
+    return [
+        Core(core["device_path"], core["cache_id"])
+        for core in cores_dict
+        if is_detached(core) and core["cache_id"] == cache_id
+    ]
+
+
 def get_cas_devices_dict() -> dict:
     device_list = list(csv.DictReader(casadm.list_caches(OutputFormat.csv).stdout.split("\n")))
     devices = {"caches": {}, "cores": {}, "core_pool": {}}
@@ -92,9 +122,7 @@ def get_cas_devices_dict() -> dict:
             ]
             if core_pool:
                 params.append(("core_pool", device))
-                devices["core_pool"][device["disk"]] = dict(
-                    [(key, value) for key, value in params]
-                )
+                devices["core_pool"][device["disk"]] = dict([(key, value) for key, value in params])
             else:
                 devices["cores"][(cache_id, int(device["id"]))] = dict(
                     [(key, value) for key, value in params]
@@ -205,11 +233,14 @@ def get_io_class_list(cache_id: int) -> list:
     return ret
 
 
-def get_core_info_by_path(core_disk_path) -> dict | None:
+def get_core_info_for_cache_by_path(core_disk_path: str, target_cache_id: int) -> dict | None:
     output = casadm.list_caches(OutputFormat.csv, by_id_path=True)
     reader = csv.DictReader(io.StringIO(output.stdout))
+    cache_id = -1
     for row in reader:
-        if row["type"] == "core" and row["disk"] == core_disk_path:
+        if row["type"] == "cache":
+            cache_id = int(row["id"])
+        if row["type"] == "core" and row["disk"] == core_disk_path and target_cache_id == cache_id:
             return {
                 "core_id": row["id"],
                 "core_device": row["disk"],

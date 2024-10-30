@@ -194,7 +194,7 @@ class Cache:
     def set_params_nhit(self, promotion_params_nhit: PromotionParametersNhit) -> Output:
         return casadm.set_param_promotion_nhit(
             self.cache_id,
-            threshold=promotion_params_nhit.threshold.get_value(),
+            threshold=promotion_params_nhit.threshold,
             trigger=promotion_params_nhit.trigger
         )
 
