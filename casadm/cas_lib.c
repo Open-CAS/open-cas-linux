@@ -1872,7 +1872,7 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
 
 	/* verify if specific core is mounted */
 	cmplen = snprintf(pattern, sizeof(pattern), "/dev/cas%d-%d", cache_id, core_id);
-	mounts_detected = device_mounts_detected(pattern, cmplen)
+	mounts_detected = device_mounts_detected(pattern, cmplen);
 	if (!mounts_detected) {
 		/* verify if any partition of the core is mounted */
 		cmplen = snprintf(pattern, sizeof(pattern), "/dev/cas%d-%dp", cache_id, core_id) - 1;
