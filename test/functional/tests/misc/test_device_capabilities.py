@@ -24,20 +24,19 @@ from test_utils.size import Size, Unit
 @pytest.mark.require_plugin("scsi_debug")
 def test_device_capabilities():
     """
-        title: Test whether CAS device capabilities are properly set.
-        description: |
-          Test if CAS device takes into consideration differences between devices which are used to
-          create it.
-        pass_criteria:
-          - CAS device starts successfully using differently configured devices.
-          - CAS device capabilities are as expected.
+    title: Test whether CAS device capabilities are properly set.
+    description: |
+        Test if CAS device takes into consideration differences between devices which are used to
+        create it.
+    pass_criteria:
+      - CAS device starts successfully using differently configured devices.
+      - CAS device capabilities are as expected.
     """
-
-    core_device = TestRun.disks['core']
-    max_io_size_path = posixpath.join(disk_utils.get_sysfs_path(core_device.get_device_id()),
-                                    'queue/max_sectors_kb')
+    core_device = TestRun.disks["core"]
+    max_io_size_path = posixpath.join(
+        disk_utils.get_sysfs_path(core_device.device_id), "queue/max_sectors_kb"
+    )
     default_max_io_size = fs_utils.read_file(max_io_size_path)
-
     iteration_settings = [
         {"device": "SCSI-debug module",
          "dev_size_mb": 1024, "logical_block_size": 512, "max_sectors_kb": 1024},
@@ -106,8 +105,8 @@ def create_scsi_debug_device(sector_size: int, physblk_exp: int, dev_size_mb=102
 def prepare_cas_device(cache_device, core_device):
     cache = casadm.start_cache(cache_device, cache_line_size=CacheLineSize.LINE_64KiB, force=True)
     try:
-        cache_dev_bs = disk_utils.get_block_size(cache_device.get_device_id())
-        core_dev_bs = disk_utils.get_block_size(core_device.get_device_id())
+        cache_dev_bs = disk_utils.get_block_size(cache_device.device_id)
+        core_dev_bs = disk_utils.get_block_size(core_device.device_id)
         core = cache.add_core(core_device)
         if cache_dev_bs > core_dev_bs:
             TestRun.LOGGER.error(
@@ -147,8 +146,8 @@ capabilities = {"logical_block_size": max,
 
 def measure_capabilities(dev):
     dev_capabilities = {}
-    dev_id = dev.parent_device.get_device_id() if isinstance(dev, Partition) \
-        else dev.get_device_id()
+    dev_id = dev.parent_device.device_id if isinstance(dev, Partition) \
+        else dev.device_id
     for c in capabilities:
         path = posixpath.join(disk_utils.get_sysfs_path(dev_id), 'queue', c)
         command = f"cat {path}"
@@ -167,10 +166,10 @@ def compare_capabilities(cache_device, core_device, cache, core, msg):
                                       cli_messages.try_add_core_sector_size_mismatch)
     else:
         core_dev_sectors_num = \
-            disk_utils.get_size(core_device.get_device_id()) / disk_utils.get_block_size(
-                core_device.get_device_id())
-        core_sectors_num = disk_utils.get_size(core.get_device_id()) / disk_utils.get_block_size(
-            core.get_device_id())
+            disk_utils.get_size(core_device.device_id) / disk_utils.get_block_size(
+                core_device.device_id)
+        core_sectors_num = disk_utils.get_size(core.device_id) / disk_utils.get_block_size(
+            core.device_id)
         if core_dev_sectors_num != core_sectors_num:
             TestRun.LOGGER.error(
                 "Number of sectors in CAS device and attached core device is different.")
