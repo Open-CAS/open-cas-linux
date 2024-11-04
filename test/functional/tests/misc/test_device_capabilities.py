@@ -11,6 +11,7 @@ import pytest
 from api.cas import casadm, cli_messages
 from api.cas.cache_config import CacheLineSize
 from core.test_run import TestRun
+from storage_devices.device import Device
 from storage_devices.disk import DiskTypeSet, DiskType
 from storage_devices.partition import Partition
 from test_tools import disk_utils, fs_utils
@@ -32,11 +33,9 @@ def test_device_capabilities():
       - CAS device starts successfully using differently configured devices.
       - CAS device capabilities are as expected.
     """
+
     core_device = TestRun.disks["core"]
-    max_io_size_path = posixpath.join(
-        disk_utils.get_sysfs_path(core_device.device_id), "queue/max_sectors_kb"
-    )
-    default_max_io_size = fs_utils.read_file(max_io_size_path)
+    default_max_io_size = core_device.get_max_io_size()
     iteration_settings = [
         {"device": "SCSI-debug module",
          "dev_size_mb": 1024, "logical_block_size": 512, "max_sectors_kb": 1024},
@@ -47,7 +46,7 @@ def test_device_capabilities():
         {"device": "SCSI-debug module",
          "dev_size_mb": 2048, "logical_block_size": 2048, "max_sectors_kb": 1024},
         {"device": "standard core device",
-         "max_sectors_kb": int(default_max_io_size)},
+         "max_sectors_kb": int(default_max_io_size.get_value(Unit.KibiByte))},
         {"device": "standard core device", "max_sectors_kb": 128}
     ]
 
@@ -144,19 +143,9 @@ capabilities = {"logical_block_size": max,
                 "write_same_max_bytes": min}
 
 
-def measure_capabilities(dev):
-    dev_capabilities = {}
-    dev_id = dev.parent_device.device_id if isinstance(dev, Partition) \
-        else dev.device_id
-    for c in capabilities:
-        path = posixpath.join(disk_utils.get_sysfs_path(dev_id), 'queue', c)
-        command = f"cat {path}"
-        output = TestRun.executor.run(command)
-        if output.exit_code == 0:
-            val = int(output.stdout)
-            dev_capabilities.update({c: val})
-        else:
-            TestRun.LOGGER.info(f"Could not measure capability: {c} for {dev_id}")
+def measure_capabilities(dev: Device) -> dict:
+    dev_capabilities = {capability: int(dev.get_sysfs_property(capability))
+                        for capability in capabilities}
     return dev_capabilities
 
 
