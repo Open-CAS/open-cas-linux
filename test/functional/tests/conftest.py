@@ -8,11 +8,11 @@ import os
 import posixpath
 import sys
 import traceback
-from datetime import timedelta
-
 import paramiko
 import pytest
 import yaml
+
+from datetime import timedelta
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../test-framework"))
 
@@ -35,12 +35,23 @@ from test_utils.singleton import Singleton
 from storage_devices.lvm import Lvm, LvmConfiguration
 
 
-class Opencas(metaclass=Singleton):
-    def __init__(self, repo_dir, working_dir):
-        self.repo_dir = repo_dir
-        self.working_dir = working_dir
-        self.already_updated = False
-        self.fuzzy_iter_count = 1000
+def pytest_addoption(parser):
+    TestRun.addoption(parser)
+    parser.addoption("--dut-config", action="append", type=str)
+    parser.addoption(
+        "--log-path",
+        action="store",
+        default=f"{os.path.join(os.path.dirname(__file__), '../results')}",
+    )
+    parser.addoption("--fuzzy-iter-count", action="store")
+
+
+def pytest_configure(config):
+    TestRun.configure(config)
+
+
+def pytest_generate_tests(metafunc):
+    TestRun.generate_tests(metafunc)
 
 
 def pytest_collection_modifyitems(config, items):
@@ -63,15 +74,16 @@ def pytest_runtest_setup(item):
     # User can also have own test wrapper, which runs test prepare, cleanup, etc.
     # Then it should be placed in plugins package
 
-    test_name = item.name.split('[')[0]
-    TestRun.LOGGER = create_log(item.config.getoption('--log-path'), test_name)
+    test_name = item.name.split("[")[0]
+    TestRun.LOGGER = create_log(item.config.getoption("--log-path"), test_name)
 
-    duts = item.config.getoption('--dut-config')
+    duts = item.config.getoption("--dut-config")
     required_duts = next(item.iter_markers(name="multidut"), None)
     required_duts = required_duts.args[0] if required_duts is not None else 1
     if required_duts > len(duts):
-        raise Exception(f"Test requires {required_duts} DUTs, only {len(duts)} DUT configs "
-                        f"provided")
+        raise Exception(
+            f"Test requires {required_duts} DUTs, only {len(duts)} DUT configs provided"
+        )
     else:
         duts = duts[:required_duts]
 
@@ -81,12 +93,13 @@ def pytest_runtest_setup(item):
             with open(dut) as cfg:
                 dut_config = yaml.safe_load(cfg)
         except Exception as ex:
-            raise Exception(f"{ex}\n"
-                            f"You need to specify DUT config. See the example_dut_config.py file")
+            raise Exception(
+                f"{ex}\nYou need to specify DUT config. See the example_dut_config.py file"
+            )
 
-        dut_config['plugins_dir'] = os.path.join(os.path.dirname(__file__), "../lib")
-        dut_config['opt_plugins'] = {"test_wrapper": {}, "serial_log": {}, "power_control": {}}
-        dut_config['extra_logs'] = {"cas": "/var/log/opencas.log"}
+        dut_config["plugins_dir"] = os.path.join(os.path.dirname(__file__), "../lib")
+        dut_config["opt_plugins"] = {"test_wrapper": {}, "serial_log": {}, "power_control": {}}
+        dut_config["extra_logs"] = {"cas": "/var/log/opencas.log"}
 
         try:
             TestRun.prepare(item, dut_config)
@@ -98,20 +111,22 @@ def pytest_runtest_setup(item):
                 raise
             except Exception:
                 try:
-                    TestRun.plugin_manager.get_plugin('power_control').power_cycle()
+                    TestRun.plugin_manager.get_plugin("power_control").power_cycle()
                     TestRun.executor.wait_for_connection()
                 except Exception:
                     raise Exception("Failed to connect to DUT.")
             TestRun.setup()
         except Exception as ex:
-            raise Exception(f"Exception occurred during test setup:\n"
-                            f"{str(ex)}\n{traceback.format_exc()}")
+            raise Exception(
+                f"Exception occurred during test setup:\n{str(ex)}\n{traceback.format_exc()}"
+            )
 
         TestRun.usr = Opencas(
             repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
-            working_dir=dut_config['working_dir'])
-        if item.config.getoption('--fuzzy-iter-count'):
-            TestRun.usr.fuzzy_iter_count = int(item.config.getoption('--fuzzy-iter-count'))
+            working_dir=dut_config["working_dir"],
+        )
+        if item.config.getoption("--fuzzy-iter-count"):
+            TestRun.usr.fuzzy_iter_count = int(item.config.getoption("--fuzzy-iter-count"))
 
         TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
         TestRun.dut.plugin_manager = TestRun.plugin_manager
@@ -121,6 +136,77 @@ def pytest_runtest_setup(item):
         base_prepare(item)
     TestRun.LOGGER.write_to_command_log("Test body")
     TestRun.LOGGER.start_group("Test body")
+
+
+def base_prepare(item):
+    with TestRun.LOGGER.step("Cleanup before test"):
+        TestRun.executor.run("pkill --signal=SIGKILL fsck")
+        Udev.enable()
+        kill_all_io()
+        DeviceMapper.remove_all()
+
+        if installer.check_if_installed():
+            try:
+                from api.cas.init_config import InitConfig
+
+                InitConfig.create_default_init_config()
+                unmount_cas_devices()
+                casadm.stop_all_caches()
+                casadm.remove_all_detached_cores()
+            except Exception:
+                pass  # TODO: Reboot DUT if test is executed remotely
+
+        remove(str(opencas_drop_in_directory), recursive=True, ignore_errors=True)
+
+        from storage_devices.drbd import Drbd
+
+        if Drbd.is_installed():
+            __drbd_cleanup()
+
+        lvms = Lvm.discover()
+        if lvms:
+            Lvm.remove_all()
+            LvmConfiguration.remove_filters_from_config()
+
+        raids = Raid.discover()
+        for raid in raids:
+            # stop only those RAIDs, which are comprised of test disks
+            if all(
+                map(
+                    lambda device: any(
+                        map(
+                            lambda disk_path: disk_path in device.get_device_id(),
+                            [bd.get_device_id() for bd in TestRun.dut.disks],
+                        )
+                    ),
+                    raid.array_devices,
+                )
+            ):
+                raid.remove_partitions()
+                raid.unmount()
+                raid.stop()
+                for device in raid.array_devices:
+                    Mdadm.zero_superblock(posixpath.join("/dev", device.get_device_id()))
+                    Udev.settle()
+
+        RamDisk.remove_all()
+        for disk in TestRun.dut.disks:
+            disk_serial = get_disk_serial_number(disk.path)
+            if disk.serial_number and disk.serial_number != disk_serial:
+                raise Exception(
+                    f"Serial for {disk.path} doesn't match the one from the config."
+                    f"Serial from config {disk.serial_number}, actual serial {disk_serial}"
+                )
+            disk.remove_partitions()
+            disk.unmount()
+            Mdadm.zero_superblock(posixpath.join("/dev", disk.get_device_id()))
+            create_partition_table(disk, PartitionTable.gpt)
+
+        TestRun.usr.already_updated = True
+        TestRun.LOGGER.add_build_info(f"Commit hash:")
+        TestRun.LOGGER.add_build_info(f"{git.get_current_commit_hash()}")
+        TestRun.LOGGER.add_build_info(f"Commit message:")
+        TestRun.LOGGER.add_build_info(f"{git.get_current_commit_message()}")
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -149,9 +235,11 @@ def pytest_runtest_teardown():
                     casadm.remove_all_detached_cores()
                     casadm.stop_all_caches()
                     from api.cas.init_config import InitConfig
+
                     InitConfig.create_default_init_config()
 
                 from storage_devices.drbd import Drbd
+
                 if installer.check_if_installed() and Drbd.is_installed():
                     try:
                         casadm.stop_all_caches()
@@ -163,36 +251,26 @@ def pytest_runtest_teardown():
                 DeviceMapper.remove_all()
                 RamDisk.remove_all()
         except Exception as ex:
-            TestRun.LOGGER.warning(f"Exception occurred during platform cleanup.\n"
-                                   f"{str(ex)}\n{traceback.format_exc()}")
+            TestRun.LOGGER.warning(
+                f"Exception occurred during platform cleanup.\n"
+                f"{str(ex)}\n{traceback.format_exc()}"
+            )
 
     TestRun.LOGGER.end()
     for dut in TestRun.duts:
         with TestRun.use_dut(dut):
             if TestRun.executor:
-                os.makedirs(os.path.join(TestRun.LOGGER.base_dir, "dut_info",
-                                         dut.ip if dut.ip is not None
-                                         else dut.config.get("host")),
-                            exist_ok=True)
+                os.makedirs(
+                    os.path.join(
+                        TestRun.LOGGER.base_dir,
+                        "dut_info",
+                        dut.ip if dut.ip is not None else dut.config.get("host"),
+                    ),
+                    exist_ok=True,
+                )
                 TestRun.LOGGER.get_additional_logs()
     Log.destroy()
     TestRun.teardown()
-
-
-def pytest_configure(config):
-    TestRun.configure(config)
-
-
-def pytest_generate_tests(metafunc):
-    TestRun.generate_tests(metafunc)
-
-
-def pytest_addoption(parser):
-    TestRun.addoption(parser)
-    parser.addoption("--dut-config", action="append", type=str)
-    parser.addoption("--log-path", action="store",
-                     default=f"{os.path.join(os.path.dirname(__file__), '../results')}")
-    parser.addoption("--fuzzy-iter-count", action="store")
 
 
 def unmount_cas_devices():
@@ -219,6 +297,7 @@ def unmount_cas_devices():
 
 def __drbd_cleanup():
     from storage_devices.drbd import Drbd
+
     Drbd.down_all()
     # If drbd instance had been configured on top of the CAS, the previos attempt to stop
     # failed. As drbd has been stopped try to stop CAS one more time.
@@ -226,64 +305,9 @@ def __drbd_cleanup():
         casadm.stop_all_caches()
 
 
-def base_prepare(item):
-    with TestRun.LOGGER.step("Cleanup before test"):
-        TestRun.executor.run("pkill --signal=SIGKILL fsck")
-        Udev.enable()
-        kill_all_io()
-        DeviceMapper.remove_all()
-
-        if installer.check_if_installed():
-            try:
-                from api.cas.init_config import InitConfig
-                InitConfig.create_default_init_config()
-                unmount_cas_devices()
-                casadm.stop_all_caches()
-                casadm.remove_all_detached_cores()
-            except Exception:
-                pass  # TODO: Reboot DUT if test is executed remotely
-
-        remove(str(opencas_drop_in_directory), recursive=True, ignore_errors=True)
-
-        from storage_devices.drbd import Drbd
-        if Drbd.is_installed():
-            __drbd_cleanup()
-
-        lvms = Lvm.discover()
-        if lvms:
-            Lvm.remove_all()
-            LvmConfiguration.remove_filters_from_config()
-
-        raids = Raid.discover()
-        for raid in raids:
-            # stop only those RAIDs, which are comprised of test disks
-            if all(map(lambda device:
-                       any(map(lambda disk_path:
-                               disk_path in device.get_device_id(),
-                               [bd.get_device_id() for bd in TestRun.dut.disks])),
-                       raid.array_devices)):
-                raid.remove_partitions()
-                raid.unmount()
-                raid.stop()
-                for device in raid.array_devices:
-                    Mdadm.zero_superblock(posixpath.join('/dev', device.get_device_id()))
-                    Udev.settle()
-
-        RamDisk.remove_all()
-        for disk in TestRun.dut.disks:
-            disk_serial = get_disk_serial_number(disk.path)
-            if disk.serial_number and disk.serial_number != disk_serial:
-                raise Exception(
-                    f"Serial for {disk.path} doesn't match the one from the config."
-                    f"Serial from config {disk.serial_number}, actual serial {disk_serial}"
-                )
-            disk.remove_partitions()
-            disk.unmount()
-            Mdadm.zero_superblock(posixpath.join('/dev', disk.get_device_id()))
-            create_partition_table(disk, PartitionTable.gpt)
-
-        TestRun.usr.already_updated = True
-        TestRun.LOGGER.add_build_info(f'Commit hash:')
-        TestRun.LOGGER.add_build_info(f"{git.get_current_commit_hash()}")
-        TestRun.LOGGER.add_build_info(f'Commit message:')
-        TestRun.LOGGER.add_build_info(f'{git.get_current_commit_message()}')
+class Opencas(metaclass=Singleton):
+    def __init__(self, repo_dir, working_dir):
+        self.repo_dir = repo_dir
+        self.working_dir = working_dir
+        self.already_updated = False
+        self.fuzzy_iter_count = 1000
