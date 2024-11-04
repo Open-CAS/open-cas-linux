@@ -169,25 +169,20 @@ def base_prepare(item):
             LvmConfiguration.remove_filters_from_config()
 
         raids = Raid.discover()
-        for raid in raids:
-            # stop only those RAIDs, which are comprised of test disks
-            if all(
-                map(
-                    lambda device: any(
-                        map(
-                            lambda disk_path: disk_path in device.get_device_id(),
-                            [bd.get_device_id() for bd in TestRun.dut.disks],
-                        )
-                    ),
-                    raid.array_devices,
-                )
-            ):
-                raid.remove_partitions()
-                raid.unmount()
-                raid.stop()
-                for device in raid.array_devices:
-                    Mdadm.zero_superblock(posixpath.join("/dev", device.get_device_id()))
-                    Udev.settle()
+        if len(TestRun.disks):
+            for raid in raids:
+                # stop only those RAIDs, which are comprised of test disks
+                if all(map(lambda device:
+                           any(map(lambda disk_path:
+                                   disk_path in device.get_device_id(),
+                                   [bd.get_device_id() for bd in TestRun.dut.disks])),
+                           raid.array_devices)):
+                    raid.remove_partitions()
+                    raid.unmount()
+                    raid.stop()
+                    for device in raid.array_devices:
+                        Mdadm.zero_superblock(posixpath.join('/dev', device.get_device_id()))
+                        Udev.settle()
 
         RamDisk.remove_all()
         for disk in TestRun.dut.disks:
