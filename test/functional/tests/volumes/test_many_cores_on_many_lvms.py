@@ -1,11 +1,12 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
+
 import datetime
 import pytest
 
-from api.cas.init_config import InitConfig, opencas_conf_path
 from storage_devices.lvm import Lvm, LvmConfiguration
 from api.cas import casadm
 from core.test_run import TestRun
@@ -13,6 +14,7 @@ from storage_devices.disk import DiskType, DiskTypeSet
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
 from test_utils.size import Size, Unit
+from tests.volumes.common import get_test_configuration
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -36,15 +38,17 @@ def test_many_cores_on_many_lvms():
         cache_dev = cache_device.partitions[0]
         core_dev = core_device.partitions[0]
 
+    with TestRun.step("Configure LVM to use device filters."):
+        LvmConfiguration.set_use_devices_file(False)
+
     with TestRun.step("Create LVMs."):
         config = LvmConfiguration(lvm_filters=[],
                                   pv_num=1,
                                   vg_num=1,
                                   lv_num=16,
-                                  cache_num=1,
-                                  cas_dev_num=16)
+                                  )
 
-        lvms = Lvm.create_specific_lvm_configuration([core_dev], config, lvm_as_core=True)
+        lvms = Lvm.create_specific_lvm_configuration([core_dev], config)
 
     with TestRun.step(f"Create CAS device."):
         cache = casadm.start_cache(cache_dev, force=True)
@@ -102,20 +106,3 @@ def test_many_cores_on_many_lvms():
 
     with TestRun.step("Remove LVMs."):
         Lvm.remove_all()
-
-
-def get_block_devices_list():
-    cmd = f"lsblk -l | awk '{{print $1}}' | grep -v loop"
-    devices = TestRun.executor.run_expect_success(cmd).stdout
-    devices_list = devices.splitlines()
-    devices_list.sort()
-
-    return devices_list
-
-
-def get_test_configuration():
-    InitConfig.create_init_config_from_running_configuration()
-    config_output = TestRun.executor.run(f"cat {opencas_conf_path}")
-    devices = get_block_devices_list()
-
-    return config_output.stdout, devices
