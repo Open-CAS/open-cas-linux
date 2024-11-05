@@ -57,14 +57,15 @@ def get_test_configuration():
 
     return config_output.stdout, devices
 
+
 def validate_configuration(config_before_reboot, devices_before):
     config_after_reboot, devices_after = get_test_configuration()
 
     if config_after_reboot == config_before_reboot:
         TestRun.LOGGER.info(f"Configuration is as expected")
     else:
-        TestRun.LOGGER.info(f"config before reboot: {config_before_reboot}")
-        TestRun.LOGGER.info(f"config after reboot: {config_after_reboot}")
+        TestRun.LOGGER.info(f"Config before reboot: {config_before_reboot}")
+        TestRun.LOGGER.info(f"Config after reboot: {config_after_reboot}")
         TestRun.LOGGER.error(f"Configuration changed after reboot")
 
     if devices_after == devices_before:
