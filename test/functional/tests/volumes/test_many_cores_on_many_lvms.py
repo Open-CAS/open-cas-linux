@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -22,14 +22,14 @@ from tests.volumes.common import get_test_configuration, validate_configuration
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.optane, DiskType.nand]))
 def test_many_cores_on_many_lvms():
     """
-        title: Test for CAS creation with lvms as cores: 1 cache, 16 lvms, 16 cores.
-        description: |
-          Validation of LVM support, CAS with 1 cache and 16 lvms as 16 cores.
-        pass_criteria:
-          - LVMs created successfully.
-          - CAS devices created successfully.
-          - FIO with verification ran successfully.
-          - Configuration after reboot match configuration before.
+    title: Test for CAS creation with lvms as cores: 1 cache, 16 lvms, 16 cores.
+    description: |
+        Validation of LVM support, CAS with 1 cache and 16 lvms as 16 cores.
+    pass_criteria:
+      - LVMs created successfully.
+      - CAS devices created successfully.
+      - FIO with verification ran successfully.
+      - Configuration after reboot match configuration before.
     """
     with TestRun.step(f"Prepare devices."):
         cache_device = TestRun.disks['cache']

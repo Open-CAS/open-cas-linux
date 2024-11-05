@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -22,14 +22,14 @@ from tests.volumes.common import get_test_configuration, lvm_filters, validate_c
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_many_lvms_on_single_core():
     """
-        title: Test for LVM creation on CAS device - many lvms on single core.
-        description: |
-          Validation of LVM support, many LVMs (16) created on CAS device (1 cache, 1 core).
-        pass_criteria:
-          - CAS devices created successfully.
-          - LVMs created successfully.
-          - FIO with verification ran successfully.
-          - Configuration after reboot match configuration before.
+    title: Test for LVM creation on CAS device - many lvms on single core.
+    description: |
+        Validation of LVM support, many LVMs (16) created on CAS device (1 cache, 1 core).
+    pass_criteria:
+      - CAS devices created successfully.
+      - LVMs created successfully.
+      - FIO with verification ran successfully.
+      - Configuration after reboot match configuration before.
     """
     with TestRun.step(f"Create CAS device."):
         cache_dev = TestRun.disks['cache']
