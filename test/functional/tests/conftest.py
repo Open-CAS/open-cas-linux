@@ -170,9 +170,9 @@ def base_prepare(item):
 
         raids = Raid.discover()
         if len(TestRun.disks):
+            test_run_disk_ids = {dev.device_id for dev in TestRun.disks.values()}
             for raid in raids:
                 # stop only those RAIDs, which are comprised of test disks
-                test_run_disk_ids = {dev.device_id for dev in TestRun.disks.values()}
                 if filter(lambda dev: dev.device_id in test_run_disk_ids, raid.array_devices):
                     raid.remove_partitions()
                     raid.unmount()
