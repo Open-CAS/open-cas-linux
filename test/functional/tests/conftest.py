@@ -172,16 +172,13 @@ def base_prepare(item):
         if len(TestRun.disks):
             for raid in raids:
                 # stop only those RAIDs, which are comprised of test disks
-                if all(map(lambda device:
-                           any(map(lambda disk_path:
-                                   disk_path in device.device_id,
-                                   [bd.device_id for bd in TestRun.dut.disks])),
-                           raid.array_devices)):
+                test_run_disk_ids = {dev.device_id for dev in TestRun.disks.values()}
+                if filter(lambda dev: dev.device_id in test_run_disk_ids, raid.array_devices):
                     raid.remove_partitions()
                     raid.unmount()
                     raid.stop()
                     for device in raid.array_devices:
-                        Mdadm.zero_superblock(posixpath.join('/dev', device.get_device_id()))
+                        Mdadm.zero_superblock(posixpath.join("/dev", device.get_device_id()))
                         Udev.settle()
 
         RamDisk.remove_all()
