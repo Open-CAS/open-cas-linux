@@ -1,19 +1,20 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
+
 import datetime
 import pytest
 
-from api.cas.init_config import InitConfig, opencas_conf_path
 from storage_devices.lvm import Lvm, LvmConfiguration
-
 from api.cas import casadm
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
 from test_utils.size import Size, Unit
+from tests.volumes.common import get_test_configuration, lvm_filters
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -48,16 +49,18 @@ def test_many_lvms_on_many_cores():
         for core_dev in core_partitions:
             cores.append(cache.add_core(core_dev))
 
-    with TestRun.step("Create LVMs on CAS device."):
-        lvm_filters = ["a/.*/", "r|/dev/sd*|", "r|/dev/hd*|", "r|/dev/xvd*|", "r/disk/", "r/block/",
-                       "r|/dev/nvme*|"]
+    with TestRun.step("Configure LVM to use device filters."):
+        LvmConfiguration.set_use_devices_file(False)
 
+    with TestRun.step("Add CAS device type to the LVM config file."):
+        LvmConfiguration.add_block_device_to_lvm_config("cas")
+
+    with TestRun.step("Create LVMs on CAS device."):
         config = LvmConfiguration(lvm_filters,
                                   pv_num=4,
                                   vg_num=4,
                                   lv_num=4,
-                                  cache_num=1,
-                                  cas_dev_num=len(cores))
+                                  )
 
         lvms = Lvm.create_specific_lvm_configuration(cores, config)
 
@@ -108,20 +111,3 @@ def test_many_lvms_on_many_cores():
     with TestRun.step("Remove LVMs and clean up config changes."):
         Lvm.remove_all()
         LvmConfiguration.remove_filters_from_config()
-
-
-def get_block_devices_list():
-    cmd = f"lsblk -l | awk '{{print $1}}' | grep -v loop"
-    devices = TestRun.executor.run_expect_success(cmd).stdout
-    devices_list = devices.splitlines()
-    devices_list.sort()
-
-    return devices_list
-
-
-def get_test_configuration():
-    InitConfig.create_init_config_from_running_configuration()
-    config_output = TestRun.executor.run(f"cat {opencas_conf_path}")
-    devices = get_block_devices_list()
-
-    return config_output.stdout, devices

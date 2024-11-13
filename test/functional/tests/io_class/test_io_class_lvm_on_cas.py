@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -16,6 +17,7 @@ from test_tools.disk_utils import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_utils.size import Size, Unit
+from tests.volumes.common import lvm_filters
 
 mount_point = "/mnt/"
 io_target = "/mnt/test"
@@ -43,16 +45,14 @@ def test_io_class_lvm_on_cas():
         cache = casadm.start_cache(cache_dev.partitions[0], CacheMode.WB, force=True)
         core = cache.add_core(core_dev.partitions[0])
 
-    with TestRun.step("Create LVM on CAS device."):
-        lvm_filters = ["a/.*/", "r|/dev/sd*|", "r|/dev/hd*|", "r|/dev/xvd*|", "r/disk/", "r/block/",
-                       "r|/dev/nvme*|"]
+    with TestRun.step("Add CAS device type to the LVM config file."):
+        LvmConfiguration.add_block_device_to_lvm_config("cas")
 
+    with TestRun.step("Create LVM on CAS device."):
         config = LvmConfiguration(lvm_filters,
                                   pv_num=1,
                                   vg_num=1,
-                                  lv_num=1,
-                                  cache_num=1,
-                                  cas_dev_num=1)
+                                  lv_num=1,)
 
         lvms = Lvm.create_specific_lvm_configuration(core, config)
         lvm = lvms[0]

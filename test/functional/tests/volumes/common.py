@@ -1,12 +1,20 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
+
+from api.cas.init_config import InitConfig, opencas_conf_path
 from test_tools import fs_utils
 from core.test_run import TestRun
+from test_utils.os_utils import get_block_device_names_list
 from test_utils.size import Size, Unit
 
 test_file_size = Size(500, Unit.KiloByte)
+lvm_filters = [
+    "a/.*/", "r|/dev/sd*|", "r|/dev/hd*|", "r|/dev/xvd*|", "r/disk/", "r/block/",
+    "r|/dev/nvme*|", "r|/dev/vd*|"
+]
 
 
 def create_files_with_md5sums(destination_path, files_count):
@@ -40,3 +48,11 @@ def compare_md5sums(md5_sums_source, files_to_check_path, copy_to_tmp=False):
             TestRun.fail(f"Source and target files {file_to_check_path} checksums are different.")
 
     TestRun.LOGGER.info(f"Successful verification, md5sums match.")
+
+
+def get_test_configuration():
+    InitConfig.create_init_config_from_running_configuration()
+    config_output = TestRun.executor.run(f"cat {opencas_conf_path}")
+    devices = get_block_device_names_list(exclude_list=[7])  # 7 stands for loop device
+
+    return config_output.stdout, devices
