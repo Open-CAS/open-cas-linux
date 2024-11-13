@@ -15,7 +15,7 @@ from test_tools import initramfs
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
 from type_def.size import Size, Unit
-from tests.volumes.common import get_test_configuration, lvm_filters
+from tests.volumes.common import get_test_configuration, lvm_filters, validate_configuration
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -93,21 +93,7 @@ def test_many_lvms_on_many_cores():
         TestRun.executor.reboot()
 
     with TestRun.step("Validate running configuration"):
-        config_after_reboot, devices_after = get_test_configuration()
-
-        if config_after_reboot == config_before_reboot:
-            TestRun.LOGGER.info(f"Configuration is as expected")
-        else:
-            TestRun.LOGGER.info(f"config before reboot: {config_before_reboot}")
-            TestRun.LOGGER.info(f"config after reboot: {config_after_reboot}")
-            TestRun.LOGGER.error(f"Configuration changed after reboot")
-
-        if devices_after == devices_before:
-            TestRun.LOGGER.info(f"Device list is as expected")
-        else:
-            TestRun.LOGGER.info(f"Devices before: {devices_before}")
-            TestRun.LOGGER.info(f"Devices after: {devices_after}")
-            TestRun.LOGGER.error(f"Device list changed after reboot")
+        validate_configuration(config_before_reboot, devices_before)
 
     with TestRun.step("Run FIO with verification on LVM."):
         fio_run.run()
