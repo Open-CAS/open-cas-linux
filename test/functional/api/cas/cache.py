@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -32,7 +32,7 @@ class Cache:
     def __get_cache_device_path(self) -> str:
         return self.cache_device.path if self.cache_device is not None else "-"
 
-    def get_core_devices(self) -> list:
+    def get_cores(self) -> list:
         return get_cores(self.cache_id)
 
     def get_cache_line_size(self) -> CacheLineSize:
