@@ -14,7 +14,7 @@ import yaml
 
 from datetime import timedelta
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "../test-framework"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "test-framework"))
 
 from core.test_run import Blocked
 from core.test_run_utils import TestRun
@@ -97,7 +97,7 @@ def pytest_runtest_setup(item):
                 f"{ex}\nYou need to specify DUT config. See the example_dut_config.py file"
             )
 
-        dut_config["plugins_dir"] = os.path.join(os.path.dirname(__file__), "../lib")
+        dut_config["plugins_dir"] = os.path.join(os.path.dirname(__file__), "..", "lib")
         dut_config["opt_plugins"] = {"test_wrapper": {}, "serial_log": {}, "power_control": {}}
         dut_config["extra_logs"] = {"cas": "/var/log/opencas.log"}
 
@@ -122,7 +122,7 @@ def pytest_runtest_setup(item):
             )
 
         TestRun.usr = Opencas(
-            repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
+            repo_dir=os.path.join(os.path.dirname(__file__), "..", "..", ".."),
             working_dir=dut_config["working_dir"],
         )
         if item.config.getoption("--fuzzy-iter-count"):
@@ -291,7 +291,7 @@ def __drbd_cleanup():
     from storage_devices.drbd import Drbd
 
     Drbd.down_all()
-    # If drbd instance had been configured on top of the CAS, the previos attempt to stop
+    # If drbd instance had been configured on top of the CAS, the previous attempt to stop
     # failed. As drbd has been stopped try to stop CAS one more time.
     if installer.check_if_installed():
         casadm.stop_all_caches()

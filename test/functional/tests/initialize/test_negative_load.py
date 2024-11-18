@@ -1,10 +1,12 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 
 import pytest
+
 from api.cas import casadm, casadm_parser, cli, cli_messages
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
@@ -56,7 +58,7 @@ def test_load_occupied_id():
         if caches[0].cache_id != 1:
             TestRun.LOGGER.error("Wrong cache id.")
 
-        cores = caches[0].get_core_devices()
+        cores = caches[0].get_cores()
         if len(cores) != 0:
             TestRun.LOGGER.error("Inappropriate number of cores after load!")
 
