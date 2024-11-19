@@ -2327,6 +2327,10 @@ static inline int partition_get_line(CSVFILE *csv,
 	}
 	strncpy_s(cnfg->info[part_id].name, sizeof(cnfg->info[part_id].name),
 		  name, strnlen_s(name, sizeof(cnfg->info[part_id].name)));
+	if (0 == part_id && strcmp(name, "unclassified")) {
+		cas_printf(LOG_ERR, "IO class 0 must have the default name 'unclassified'\n");
+		return FAILURE;
+	}
 
 	/* Validate Priority*/
 	*error_col = part_csv_coll_prio;
