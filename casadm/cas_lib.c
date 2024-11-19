@@ -70,7 +70,7 @@ static const char *core_states_name[] = {
 
 #define STANDBY_DETACHED_STATE "Standby detached"
 
-#define CACHE_STATE_LENGHT 20
+#define CACHE_STATE_LENGTH 20
 
 #define CAS_LOG_FILE "/var/log/opencas.log"
 #define CAS_LOG_LEVEL LOG_INFO
@@ -2202,7 +2202,7 @@ int partition_list(unsigned int cache_id, unsigned int output_format)
 	fclose(intermediate_file[1]);
 	if (!result && stat_format_output(intermediate_file[0], stdout,
 					  use_csv?RAW_CSV:TEXT)) {
-		cas_printf(LOG_ERR, "An error occured during statistics formatting.\n");
+		cas_printf(LOG_ERR, "An error occurred during statistics formatting.\n");
 		result = FAILURE;
 	}
 	fclose(intermediate_file[0]);
@@ -2414,7 +2414,7 @@ int partition_get_config(CSVFILE *csv, struct kcas_io_classes *cnfg,
 			return FAILURE;
 		} else {
 			cas_printf(LOG_ERR,
-				   "I/O error occured while reading"
+				   "I/O error occurred while reading"
 				   " IO Classes configuration file"
 				   " supplied.\n");
 			return FAILURE;
@@ -2661,7 +2661,7 @@ void *list_printout(void *ctx)
 	struct list_printout_ctx *spc = ctx;
 	if (stat_format_output(spc->intermediate,
 			       spc->out, spc->type)) {
-		cas_printf(LOG_ERR, "An error occured during statistics formatting.\n");
+		cas_printf(LOG_ERR, "An error occurred during statistics formatting.\n");
 		spc->result = FAILURE;
 	} else {
 		spc->result = SUCCESS;
@@ -2800,7 +2800,7 @@ int list_caches(unsigned int list_format, bool by_id_path)
 	for (i = 0; i < caches_count; ++i) {
 		curr_cache = caches[i];
 
-		char status_buf[CACHE_STATE_LENGHT];
+		char status_buf[CACHE_STATE_LENGTH];
 		const char *tmp_status;
 		char mode_string[12];
 		char exp_obj[32];
@@ -2867,7 +2867,7 @@ int list_caches(unsigned int list_format, bool by_id_path)
 			}
 
 			if (core_flush_prog || cache_flush_prog) {
-				snprintf(status_buf, CACHE_STATE_LENGHT,
+				snprintf(status_buf, CACHE_STATE_LENGTH,
 						"%s (%3.1f %%)", "Flushing", core_flush_prog);
 				tmp_status = status_buf;
 			} else {
@@ -2895,7 +2895,7 @@ int list_caches(unsigned int list_format, bool by_id_path)
 	pthread_join(thread, 0);
 	if (printout_ctx.result) {
 		result = 1;
-		cas_printf(LOG_ERR, "An error occured during list formatting.\n");
+		cas_printf(LOG_ERR, "An error occurred during list formatting.\n");
 
 	}
 	fclose(intermediate_file[0]);
@@ -3029,7 +3029,7 @@ int zero_md(const char *cache_device, bool force)
 	}
 
 	close(fd);
-	cas_printf(LOG_INFO, "OpenCAS's metadata wiped succesfully from device '%s'.\n", cache_device);
+	cas_printf(LOG_INFO, "OpenCAS's metadata wiped successfully from device '%s'.\n", cache_device);
 	return SUCCESS;
 }
 
