@@ -30,6 +30,7 @@ from test_tools.disk_utils import PartitionTable, create_partition_table
 from test_tools.device_mapper import DeviceMapper
 from test_tools.mdadm import Mdadm
 from test_tools.fs_utils import remove
+from test_tools import initramfs
 from log.logger import create_log, Log
 from test_utils.singleton import Singleton
 from storage_devices.lvm import Lvm, LvmConfiguration
@@ -166,7 +167,8 @@ def base_prepare(item):
         lvms = Lvm.discover()
         if lvms:
             Lvm.remove_all()
-            LvmConfiguration.remove_filters_from_config()
+        LvmConfiguration.remove_filters_from_config()
+        initramfs.update()
 
         raids = Raid.discover()
         if len(TestRun.disks):
@@ -239,6 +241,12 @@ def pytest_runtest_teardown():
                         __drbd_cleanup()
                 elif Drbd.is_installed():
                     Drbd.down_all()
+
+                lvms = Lvm.discover()
+                if lvms:
+                    Lvm.remove_all()
+                LvmConfiguration.remove_filters_from_config()
+                initramfs.update()
 
                 DeviceMapper.remove_all()
                 RamDisk.remove_all()
