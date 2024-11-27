@@ -1,5 +1,4 @@
 #
-# Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -11,7 +10,6 @@ from storage_devices.lvm import Lvm, LvmConfiguration
 from api.cas import casadm
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import initramfs
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
 from test_utils.size import Size, Unit
@@ -20,42 +18,40 @@ from tests.volumes.common import get_test_configuration, lvm_filters, validate_c
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_many_lvms_on_single_core():
+def test_many_lvms_on_many_cores_by_serial():
     """
-        title: Test for LVM creation on CAS device - many lvms on single core.
+        title: Test for LVM creation on cached volumes using their serial - many lvms on many cores.
         description: |
-          Validation of LVM support, many LVMs (16) created on CAS device (1 cache, 1 core).
+            Validate if LVMs based on exported objects combined into one volume group are created
+            successfully using cached volume's serial after system reboot.
         pass_criteria:
-          - CAS devices created successfully.
-          - LVMs created successfully.
-          - FIO with verification ran successfully.
-          - Configuration after reboot match configuration before.
+          - exported objects created successfully
+          - LVMs created successfully
+          - FIO with verification ran successfully
+          - Configuration after reboot match configuration before
     """
-    with TestRun.step(f"Create CAS device."):
-        cache_dev = TestRun.disks['cache']
-        core_dev = TestRun.disks['core']
-        cache_dev.create_partitions([Size(8, Unit.GibiByte)])
-        core_dev.create_partitions([Size(8, Unit.GibiByte)])
+    with TestRun.step("Prepare devices."):
+        cache_dev = TestRun.disks["cache"]
+        core_dev = TestRun.disks["core"]
+        cache_dev.create_partitions([Size(2, Unit.GibiByte)])
+        core_dev.create_partitions([Size(2, Unit.GibiByte)] * 4)
 
         cache = casadm.start_cache(cache_dev.partitions[0], force=True)
-        core = cache.add_core(core_dev.partitions[0])
+        cores = [cache.add_core(core_part) for core_part in core_dev.partitions]
 
-    with TestRun.step("Configure LVM to use device filters."):
-        LvmConfiguration.set_use_devices_file(False)
+    with TestRun.step("Configure LVM to use devices file."):
+        LvmConfiguration.set_use_devices_file(True)
 
     with TestRun.step("Add CAS device type to the LVM config file."):
         LvmConfiguration.add_block_device_to_lvm_config("cas")
 
-    with TestRun.step("Create LVMs on CAS device."):
+    with TestRun.step("Create LVMs on cached volumes."):
         config = LvmConfiguration(lvm_filters,
-                                  pv_num=1,
+                                  pv_num=4,
                                   vg_num=1,
-                                  lv_num=2,)
+                                  lv_num=16,)
 
-        lvms = Lvm.create_specific_lvm_configuration(core, config)
-
-    with TestRun.step("Update initramfs"):
-        initramfs.update()
+        lvms = Lvm.create_specific_lvm_configuration(cores, config)
 
     with TestRun.step("Run FIO with verification on LVM."):
         fio_run = (Fio().create_command()
@@ -63,7 +59,7 @@ def test_many_lvms_on_single_core():
                    .io_engine(IoEngine.sync)
                    .io_depth(1)
                    .time_based()
-                   .run_time(datetime.timedelta(seconds=180))
+                   .run_time(datetime.timedelta(seconds=30))
                    .do_verify()
                    .verify(VerifyMethod.md5)
                    .block_size(Size(1, Unit.Blocks4096)))
