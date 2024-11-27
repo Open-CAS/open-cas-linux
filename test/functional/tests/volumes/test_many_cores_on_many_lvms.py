@@ -11,6 +11,7 @@ from storage_devices.lvm import Lvm, LvmConfiguration
 from api.cas import casadm
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet
+from test_tools import initramfs
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
 from test_utils.size import Size, Unit
@@ -55,6 +56,9 @@ def test_many_cores_on_many_lvms():
         cores = []
         for lvm in lvms:
             cores.append(cache.add_core(lvm))
+
+    with TestRun.step("Update initramfs"):
+        initramfs.update()
 
     with TestRun.step("Run FIO with verification on LVM."):
         fio_run = (Fio().create_command()
