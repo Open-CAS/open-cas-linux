@@ -4,10 +4,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-import pytest
 import time
-
 from random import shuffle
+
+import pytest
 
 from api.cas import casadm, cli, cli_messages
 from api.cas.cache_config import (
@@ -128,7 +128,7 @@ def test_incremental_load_missing_core_device():
             if core.get_status() is not CoreStatus.active:
                 TestRun.fail(f"Core {core.core_id} should be active but is {core.get_status()}.")
 
-        core_with_missing_device = cache.get_core_devices()[-1]
+        core_with_missing_device = cache.get_cores()[-1]
 
     with TestRun.step("Stop cache."):
         cache.stop()
@@ -142,7 +142,7 @@ def test_incremental_load_missing_core_device():
             TestRun.fail(
                 f"Cache {cache.cache_id} should be incomplete but is " f"{cache.get_status()}."
             )
-        for core in cache.get_core_devices():
+        for core in cache.get_cores():
             if core.get_status() is not CoreStatus.active:
                 TestRun.fail(f"Core {core.core_id} should be Active but is {core.get_status()}.")
         if core_with_missing_device.get_status() is not CoreStatus.inactive:

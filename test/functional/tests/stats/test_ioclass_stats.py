@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 import random
@@ -17,7 +18,6 @@ from api.cas.cli_messages import (
 )
 from api.cas.statistics import (
     config_stats_ioclass,
-    usage_stats,
     usage_stats_ioclass,
     request_stats,
     block_stats_core,
@@ -234,7 +234,7 @@ def test_ioclass_stats_sections(stat_filter, per_core, random_cls):
                       f"{'cores' if per_core else 'caches'}"):
         for cache in caches:
             with TestRun.group(f"Cache {cache.cache_id}"):
-                for core in cache.get_core_devices():
+                for core in cache.get_cores():
                     if per_core:
                         TestRun.LOGGER.info(f"Core {core.cache_id}-{core.core_id}")
                     statistics = (
@@ -256,7 +256,7 @@ def test_ioclass_stats_sections(stat_filter, per_core, random_cls):
                       f"class for all {'cores' if per_core else 'caches'}"):
         for cache in caches:
             with TestRun.group(f"Cache {cache.cache_id}"):
-                for core in cache.get_core_devices():
+                for core in cache.get_cores():
                     core_info = f"Core {core.cache_id}-{core.core_id} ," if per_core else ""
                     for class_id in range(ioclass_config.MAX_IO_CLASS_ID + 1):
                         with TestRun.group(core_info + f"IO class id {class_id}"):

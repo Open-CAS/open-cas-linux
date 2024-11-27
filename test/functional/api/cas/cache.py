@@ -32,7 +32,7 @@ class Cache:
     def __get_cache_device_path(self) -> str:
         return self.cache_device.path if self.cache_device is not None else "-"
 
-    def get_core_devices(self) -> list:
+    def get_cores(self) -> list:
         return get_cores(self.cache_id)
 
     def get_cache_line_size(self) -> CacheLineSize:
