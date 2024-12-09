@@ -312,6 +312,9 @@ def __drbd_cleanup():
     if installer.check_if_installed():
         casadm.stop_all_caches()
 
+    remove("/etc/drbd.d/caches.res", force=True, ignore_errors=True)
+    remove("/etc/drbd.d/cores.res", force=True, ignore_errors=True)
+
 
 class Opencas(metaclass=Singleton):
     def __init__(self, repo_dir, working_dir):
