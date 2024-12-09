@@ -133,6 +133,9 @@ def pytest_runtest_setup(item):
         TestRun.dut.plugin_manager = TestRun.plugin_manager
         TestRun.dut.executor = TestRun.executor
         TestRun.duts.append(TestRun.dut)
+        for _ in TestRun.duts:
+            TestRun.dut.cache_list = []
+            TestRun.dut.core_list = []
 
         base_prepare(item)
     TestRun.LOGGER.write_to_command_log("Test body")
