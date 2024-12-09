@@ -29,7 +29,7 @@ from test_utils.disk_finder import get_disk_serial_number
 from test_tools.disk_utils import PartitionTable, create_partition_table
 from test_tools.device_mapper import DeviceMapper
 from test_tools.mdadm import Mdadm
-from test_tools.fs_utils import remove
+from test_tools.fs_utils import remove, check_if_directory_exists
 from test_tools import initramfs
 from log.logger import create_log, Log
 from test_utils.singleton import Singleton
@@ -184,6 +184,10 @@ def base_prepare(item):
                         Udev.settle()
 
         RamDisk.remove_all()
+
+        if check_if_directory_exists("/tmp/open_cas_test_data"):
+            remove("/tmp/open_cas_test_data/*", force=True, recursive=True)
+
         for disk in TestRun.disks.values():
             disk_serial = get_disk_serial_number(disk.path)
             if disk.serial_number and disk.serial_number != disk_serial:
@@ -250,6 +254,10 @@ def pytest_runtest_teardown():
 
                 DeviceMapper.remove_all()
                 RamDisk.remove_all()
+
+                if check_if_directory_exists("/tmp/open_cas_test_data"):
+                    remove("/tmp/open_cas_test_data/*", force=True, recursive=True)
+
         except Exception as ex:
             TestRun.LOGGER.warning(
                 f"Exception occurred during platform cleanup.\n"
