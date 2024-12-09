@@ -192,7 +192,7 @@ def set_param_promotion(cache_id: int, policy: PromotionPolicy, shortcut: bool =
 
 
 def set_param_promotion_nhit(
-        cache_id: int, threshold: int = None, trigger: int = None, shortcut: bool = False
+    cache_id: int, threshold: int = None, trigger: int = None, shortcut: bool = False
 ) -> Output:
     _threshold = str(threshold) if threshold is not None else None
     _trigger = str(trigger) if trigger is not None else None
@@ -267,7 +267,7 @@ def get_param_cleaning_acp(
 
 
 def get_param_promotion(
-        cache_id: int, output_format: OutputFormat = None, shortcut: bool = False
+    cache_id: int, output_format: OutputFormat = None, shortcut: bool = False
 ) -> Output:
     _output_format = output_format.name if output_format else None
     output = TestRun.executor.run(
@@ -281,7 +281,7 @@ def get_param_promotion(
 
 
 def get_param_promotion_nhit(
-        cache_id: int, output_format: OutputFormat = None, shortcut: bool = False
+    cache_id: int, output_format: OutputFormat = None, shortcut: bool = False
 ) -> Output:
     _output_format = output_format.name if output_format else None
     output = TestRun.executor.run(
