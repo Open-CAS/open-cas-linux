@@ -6,25 +6,17 @@
 
 from datetime import timedelta
 from typing import List
-from enum import Enum
 
 from api.cas import casadm
-from api.cas.cache_config import SeqCutOffParameters, SeqCutOffPolicy
+from api.cas.cache_config import SeqCutOffParameters, SeqCutOffPolicy, CoreStatus
 from api.cas.casadm_params import StatsFilter
-from api.cas.casadm_parser import get_seq_cut_off_parameters, get_core_info_for_cache_by_path
+from api.cas.casadm_parser import get_cas_devices_dict
 from api.cas.statistics import CoreStats, CoreIoClassStats
 from core.test_run_utils import TestRun
 from storage_devices.device import Device
 from test_tools import fs_utils, disk_utils
 from test_utils.os_utils import wait, sync
 from test_utils.size import Unit, Size
-
-
-class CoreStatus(Enum):
-    empty = 0
-    active = 1
-    inactive = 2
-    detached = 3
 
 
 SEQ_CUTOFF_THRESHOLD_MAX = Size(4194181, Unit.KibiByte)
@@ -45,9 +37,18 @@ class Core(Device):
         self.partitions = []
         self.block_size = None
 
-    def __get_core_info(self):
-        return get_core_info_for_cache_by_path(core_disk_path=self.core_device.path,
-                                               target_cache_id=self.cache_id)
+    def __get_core_info(self) -> dict | None:
+        core_dicts = get_cas_devices_dict()["cores"].values()
+        return next(
+            iter(
+                [
+                    core
+                    for core in core_dicts
+                    if core["cache_id"] == self.cache_id
+                    and core["device_path"] == self.core_device.path
+                ]
+            )
+        )
 
     def create_filesystem(self, fs_type: disk_utils.Filesystem, force=True, blocksize=None):
         super().create_filesystem(fs_type, force, blocksize)
@@ -79,15 +80,29 @@ class Core(Device):
 
     def get_status(self):
         return CoreStatus[self.__get_core_info()["status"].lower()]
+    
+    def __get_seq_cut_off_parameters(self):
+        casadm_output = casadm.get_param_cutoff(
+            self.cache_id, self.core_id, casadm.OutputFormat.csv
+        ).stdout.splitlines()
+        seq_cut_off_params = SeqCutOffParameters()
+        for line in casadm_output:
+            if "Sequential cutoff threshold" in line:
+                seq_cut_off_params.threshold = Size(int(line.split(",")[1]), Unit.KibiByte)
+            if "Sequential cutoff policy" in line:
+                seq_cut_off_params.policy = SeqCutOffPolicy.from_name(line.split(",")[1])
+            if "Sequential cutoff promotion request count threshold" in line:
+                seq_cut_off_params.promotion_count = int(line.split(",")[1])
+        return seq_cut_off_params
 
     def get_seq_cut_off_parameters(self):
-        return get_seq_cut_off_parameters(self.cache_id, self.core_id)
+        return self.__get_seq_cut_off_parameters(self.cache_id, self.core_id)
 
     def get_seq_cut_off_policy(self):
-        return get_seq_cut_off_parameters(self.cache_id, self.core_id).policy
+        return self.__get_seq_cut_off_parameters(self.cache_id, self.core_id).policy
 
     def get_seq_cut_off_threshold(self):
-        return get_seq_cut_off_parameters(self.cache_id, self.core_id).threshold
+        return self.__get_seq_cut_off_parameters(self.cache_id, self.core_id).threshold
 
     def get_dirty_blocks(self):
         return self.get_statistics().usage_stats.dirty
