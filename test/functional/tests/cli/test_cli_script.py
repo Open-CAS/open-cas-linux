@@ -1,12 +1,12 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-
 import pytest
 
-from api.cas import casadm, casadm_parser
+from api.cas import casadm
 from core.test_run import TestRun
 from test_utils.os_utils import sync
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
@@ -19,13 +19,14 @@ from test_tools.dd import Dd
 @pytest.mark.parametrize("purge_target", ["cache", "core"])
 def test_purge(purge_target):
     """
-        title: Call purge without and with `--script` switch
-        description: |
-          Check if purge is called only when `--script` switch is used.
-        pass_criteria:
-          - casadm returns an error when `--script` is missing
-          - cache is wiped when purge command is used properly
+    title: Call purge without and with `--script` switch
+    description: |
+      Check if purge is called only when `--script` switch is used.
+    pass_criteria:
+      - casadm returns an error when `--script` is missing
+      - cache is wiped when purge command is used properly
     """
+
     with TestRun.step("Prepare devices"):
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
@@ -52,25 +53,19 @@ def test_purge(purge_target):
         dd.run()
         sync()
 
-    with TestRun.step(
-        f"Try to call purge-{purge_target} without `--script` switch"
-    ):
+    with TestRun.step(f"Try to call purge-{purge_target} without `--script` switch"):
         original_occupancy = cache.get_statistics().usage_stats.occupancy
         purge_params = f"--cache-id {cache.cache_id} "
         if purge_target == "core":
             purge_params += f"--core-id {core.core_id}"
-        TestRun.executor.run_expect_fail(
-            f"casadm --purge-{purge_target} {purge_params}"
-        )
+        TestRun.executor.run_expect_fail(f"casadm --purge-{purge_target} {purge_params}")
 
         if cache.get_statistics().usage_stats.occupancy != original_occupancy:
             TestRun.fail(
                 f"Purge {purge_target} should not be possible to use without `--script` switch!"
             )
 
-    with TestRun.step(
-        f"Try to call purge-{purge_target} with `--script` switch"
-    ):
+    with TestRun.step(f"Try to call purge-{purge_target} with `--script` switch"):
         TestRun.executor.run_expect_success(
             f"casadm --script --purge-{purge_target} {purge_params}"
         )
@@ -79,7 +74,5 @@ def test_purge(purge_target):
             TestRun.fail(f"{cache.get_statistics().usage_stats.occupancy.get_value()}")
             TestRun.fail(f"Purge {purge_target} should invalidate all cache lines!")
 
-    with TestRun.step(
-        f"Stop cache"
-    ):
+    with TestRun.step(f"Stop cache"):
         casadm.stop_all_caches()

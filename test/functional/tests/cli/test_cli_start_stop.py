@@ -1,9 +1,11 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
+
 from random import randint
 
 from api.cas import casadm, casadm_parser, cli_messages
@@ -12,23 +14,22 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.size import Unit, Size
 
-CACHE_ID_RANGE = (1, 16384)
-CORE_ID_RANGE = (0, 4095)
-
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.parametrize("shortcut", [True, False])
 def test_cli_start_stop_default_id(shortcut):
     """
-        title: Test for starting a cache with a default ID - short and long command
-        description: |
-          Start a new cache with a default ID and then stop this cache.
-        pass_criteria:
-          - The cache has successfully started with default ID
-          - The cache has successfully stopped
+    title: Test for starting a cache with a default ID - short and long command
+    description: |
+        Start a new cache with a default ID and then stop this cache.
+    pass_criteria:
+      - The cache has successfully started with default ID
+      - The cache has successfully stopped
     """
+    CACHE_ID_RANGE = (1, 16384)
+
     with TestRun.step("Prepare the device for the cache."):
-        cache_device = TestRun.disks['cache']
+        cache_device = TestRun.disks["cache"]
         cache_device.create_partitions([Size(500, Unit.MebiByte)])
         cache_device = cache_device.partitions[0]
 
@@ -38,12 +39,16 @@ def test_cli_start_stop_default_id(shortcut):
     with TestRun.step("Check if the cache has started successfully."):
         caches = casadm_parser.get_caches()
         if len(caches) != 1:
-            TestRun.fail(f"There is a wrong number of caches found in the OS: {len(caches)}. "
-                         f"Should be only 1.")
+            TestRun.fail(
+                f"There is a wrong number of caches found in the OS: {len(caches)}. "
+                f"Should be only 1."
+            )
         if cache.cache_device.path != cache_device.path:
-            TestRun.fail(f"The cache has started using a wrong device:"
-                         f" {cache.cache_device.path}."
-                         f"\nShould use {cache_device.path}.")
+            TestRun.fail(
+                f"The cache has started using a wrong device:"
+                f" {cache.cache_device.path}."
+                f"\nShould use {cache_device.path}."
+            )
 
     with TestRun.step("Stop the cache."):
         casadm.stop_cache(cache.cache_id, shortcut=shortcut)
@@ -51,8 +56,10 @@ def test_cli_start_stop_default_id(shortcut):
     with TestRun.step("Check if the cache has stopped properly."):
         caches = casadm_parser.get_caches()
         if len(caches) != 0:
-            TestRun.fail(f"There is a wrong number of caches found in the OS: {len(caches)}."
-                         f"\nNo cache should be present after stopping the cache.")
+            TestRun.fail(
+                f"There is a wrong number of caches found in the OS: {len(caches)}."
+                f"\nNo cache should be present after stopping the cache."
+            )
         output = casadm.list_caches(shortcut=shortcut)
         cli_messages.check_stdout_msg(output, cli_messages.no_caches_running)
 
@@ -61,15 +68,16 @@ def test_cli_start_stop_default_id(shortcut):
 @pytest.mark.parametrize("shortcut", [True, False])
 def test_cli_start_stop_custom_id(shortcut):
     """
-        title: Test for starting a cache with a custom ID - short and long command
-        description: |
-          Start a new cache with a random ID (from allowed pool) and then stop this cache.
-        pass_criteria:
-          - The cache has successfully started with a custom ID
-          - The cache has successfully stopped
+    title: Test for starting a cache with a custom ID - short and long command
+    description: |
+        Start a new cache with a random ID (from allowed pool) and then stop this cache.
+    pass_criteria:
+      - The cache has successfully started with a custom ID
+      - The cache has successfully stopped
     """
+
     with TestRun.step("Prepare the device for the cache."):
-        cache_device = TestRun.disks['cache']
+        cache_device = TestRun.disks["cache"]
         cache_device.create_partitions([Size(500, Unit.MebiByte)])
         cache_device = cache_device.partitions[0]
 
@@ -81,12 +89,16 @@ def test_cli_start_stop_custom_id(shortcut):
     with TestRun.step("Check if the cache has started successfully."):
         caches = casadm_parser.get_caches()
         if len(caches) != 1:
-            TestRun.fail(f"There is a wrong number of caches found in the OS: {len(caches)}. "
-                         f"Should be only 1.")
+            TestRun.fail(
+                f"There is a wrong number of caches found in the OS: {len(caches)}. "
+                f"Should be only 1."
+            )
         if cache.cache_device.path != cache_device.path:
-            TestRun.fail(f"The cache has started using a wrong device:"
-                         f" {cache.cache_device.path}."
-                         f"\nShould use {cache_device.path}.")
+            TestRun.fail(
+                f"The cache has started using a wrong device:"
+                f" {cache.cache_device.path}."
+                f"\nShould use {cache_device.path}."
+            )
 
     with TestRun.step("Stop the cache."):
         casadm.stop_cache(cache.cache_id, shortcut=shortcut)
@@ -94,8 +106,10 @@ def test_cli_start_stop_custom_id(shortcut):
     with TestRun.step("Check if the cache has stopped properly."):
         caches = casadm_parser.get_caches()
         if len(caches) != 0:
-            TestRun.fail(f"There is a wrong number of caches found in the OS: {len(caches)}."
-                         f"\nNo cache should be present after stopping the cache.")
+            TestRun.fail(
+                f"There is a wrong number of caches found in the OS: {len(caches)}."
+                f"\nNo cache should be present after stopping the cache."
+            )
         output = casadm.list_caches(shortcut=shortcut)
         cli_messages.check_stdout_msg(output, cli_messages.no_caches_running)
 
@@ -105,19 +119,20 @@ def test_cli_start_stop_custom_id(shortcut):
 @pytest.mark.parametrize("shortcut", [True, False])
 def test_cli_add_remove_default_id(shortcut):
     """
-        title: Test for adding and removing a core with a default ID - short and long command
-        description: |
-          Start a new cache and add a core to it without passing a core ID as an argument
-          and then remove this core from the cache.
-        pass_criteria:
-          - The core is added to the cache with a default ID
-          - The core is successfully removed from the cache
+    title: Test for adding and removing a core with a default ID - short and long command
+    description: |
+        Start a new cache and add a core to it without passing a core ID as an argument
+        and then remove this core from the cache.
+    pass_criteria:
+      - The core is added to the cache with a default ID
+      - The core is successfully removed from the cache
     """
+
     with TestRun.step("Prepare the devices."):
-        cache_disk = TestRun.disks['cache']
+        cache_disk = TestRun.disks["cache"]
         cache_disk.create_partitions([Size(50, Unit.MebiByte)])
         cache_device = cache_disk.partitions[0]
-        core_device = TestRun.disks['core']
+        core_device = TestRun.disks["core"]
 
     with TestRun.step("Start the cache and add the core."):
         cache = casadm.start_cache(cache_device, shortcut=shortcut, force=True)
@@ -156,19 +171,21 @@ def test_cli_add_remove_default_id(shortcut):
 @pytest.mark.parametrize("shortcut", [True, False])
 def test_cli_add_remove_custom_id(shortcut):
     """
-        title: Test for adding and removing a core with a custom ID - short and long command
-        description: |
-          Start a new cache and add a core to it with passing a random core ID
-          (from allowed pool) as an argument and then remove this core from the cache.
-        pass_criteria:
-          - The core is added to the cache with a default ID
-          - The core is successfully removed from the cache
+    title: Test for adding and removing a core with a custom ID - short and long command
+    description: |
+        Start a new cache and add a core to it with passing a random core ID
+        (from allowed pool) as an argument and then remove this core from the cache.
+    pass_criteria:
+      - The core is added to the cache with a default ID
+      - The core is successfully removed from the cache
     """
+    CORE_ID_RANGE = (0, 4095)
+
     with TestRun.step("Prepare the devices."):
-        cache_disk = TestRun.disks['cache']
+        cache_disk = TestRun.disks["cache"]
         cache_disk.create_partitions([Size(50, Unit.MebiByte)])
         cache_device = cache_disk.partitions[0]
-        core_device = TestRun.disks['core']
+        core_device = TestRun.disks["core"]
 
     with TestRun.step("Start the cache and add the core with a random ID."):
         core_id = randint(*CORE_ID_RANGE)
@@ -208,16 +225,17 @@ def test_cli_add_remove_custom_id(shortcut):
 @pytest.mark.parametrize("shortcut", [True, False])
 def test_cli_load_and_force(shortcut):
     """
-        title: Test if it is possible to use start command with 'load' and 'force' flag at once
-        description: |
-          Try to start cache with 'load' and 'force' options at the same time
-          and check if it is not possible to do
-        pass_criteria:
-          - Start cache command with both 'force' and 'load' options should fail
-          - Proper message should be received
+    title: Test if it is possible to use start command with 'load' and 'force' flag at once
+    description: |
+        Try to start cache with 'load' and 'force' options at the same time
+        and check if it is not possible to do
+    pass_criteria:
+      - Start cache command with both 'force' and 'load' options should fail
+      - Proper message should be received
     """
+
     with TestRun.step("Prepare cache."):
-        cache_device = TestRun.disks['cache']
+        cache_device = TestRun.disks["cache"]
         cache_device.create_partitions([Size(50, Unit.MebiByte)])
         cache_device = cache_device.partitions[0]
         cache = casadm.start_cache(cache_device)
