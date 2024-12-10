@@ -29,7 +29,7 @@ from test_utils.disk_finder import get_disk_serial_number
 from test_tools.disk_utils import PartitionTable, create_partition_table
 from test_tools.device_mapper import DeviceMapper
 from test_tools.mdadm import Mdadm
-from test_tools.fs_utils import remove
+from test_tools.fs_utils import remove, check_if_directory_exists
 from test_tools import initramfs
 from log.logger import create_log, Log
 from test_utils.singleton import Singleton
@@ -133,6 +133,9 @@ def pytest_runtest_setup(item):
         TestRun.dut.plugin_manager = TestRun.plugin_manager
         TestRun.dut.executor = TestRun.executor
         TestRun.duts.append(TestRun.dut)
+        for _ in TestRun.duts:
+            TestRun.dut.cache_list = []
+            TestRun.dut.core_list = []
 
         base_prepare(item)
     TestRun.LOGGER.write_to_command_log("Test body")
@@ -184,6 +187,10 @@ def base_prepare(item):
                         Udev.settle()
 
         RamDisk.remove_all()
+
+        if check_if_directory_exists("/tmp/open_cas_test_data"):
+            remove("/tmp/open_cas_test_data/*", force=True)
+
         for disk in TestRun.disks.values():
             disk_serial = get_disk_serial_number(disk.path)
             if disk.serial_number and disk.serial_number != disk_serial:
@@ -250,6 +257,10 @@ def pytest_runtest_teardown():
 
                 DeviceMapper.remove_all()
                 RamDisk.remove_all()
+
+                if check_if_directory_exists("/tmp/open_cas_test_data"):
+                    remove("/tmp/open_cas_test_data/*", force=True)
+
         except Exception as ex:
             TestRun.LOGGER.warning(
                 f"Exception occurred during platform cleanup.\n"
@@ -303,6 +314,9 @@ def __drbd_cleanup():
     # failed. As drbd has been stopped try to stop CAS one more time.
     if installer.check_if_installed():
         casadm.stop_all_caches()
+
+    remove("/etc/drbd.d/caches.res", force=True, ignore_errors=True)
+    remove("/etc/drbd.d/cores.res", force=True, ignore_errors=True)
 
 
 class Opencas(metaclass=Singleton):

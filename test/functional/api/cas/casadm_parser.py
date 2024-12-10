@@ -5,7 +5,6 @@
 #
 
 import csv
-import io
 import json
 
 from datetime import timedelta, datetime
@@ -45,8 +44,8 @@ def get_caches() -> list:
     for cache in caches_dict.values():
         caches_list.append(
             Cache(
+                cache_id=(cache["id"]),
                 device=(Device(cache["device_path"]) if cache["device_path"] != "-" else None),
-                cache_id=cache["id"],
             )
         )
 
@@ -59,7 +58,7 @@ def get_cores(cache_id: int) -> list:
     cores_dict = get_cas_devices_dict()["cores"].values()
 
     def is_active(core):
-        return CoreStatus[core["status"].lower()] == CoreStatus.active
+        return core["status"] == CoreStatus.active
 
     return [
         Core(core["device_path"], core["cache_id"])
@@ -74,7 +73,7 @@ def get_inactive_cores(cache_id: int) -> list:
     cores_dict = get_cas_devices_dict()["cores"].values()
 
     def is_inactive(core):
-        return CoreStatus[core["status"].lower()] == CoreStatus.inactive
+        return core["status"] == CoreStatus.inactive
 
     return [
         Core(core["device_path"], core["cache_id"])
@@ -89,7 +88,7 @@ def get_detached_cores(cache_id: int) -> list:
     cores_dict = get_cas_devices_dict()["cores"].values()
 
     def is_detached(core):
-        return CoreStatus[core["status"].lower()] == CoreStatus.detached
+        return core["status"] == CoreStatus.detached
 
     return [
         Core(core["device_path"], core["cache_id"])
@@ -110,15 +109,17 @@ def get_cas_devices_dict() -> dict:
             params = [
                 ("id", cache_id),
                 ("device_path", device["disk"]),
-                ("status", device["status"]),
+                ("status", CacheStatus(device["status"].lower())),
             ]
             devices["caches"][cache_id] = dict([(key, value) for key, value in params])
 
         elif device["type"] == "core":
             params = [
                 ("cache_id", cache_id),
+                ("core_id", (int(device["id"]) if device["id"] != "-" else device["id"])),
                 ("device_path", device["disk"]),
-                ("status", device["status"]),
+                ("status", CoreStatus(device["status"].lower())),
+                ("exp_obj", device["device"]),
             ]
             if core_pool:
                 params.append(("core_pool", device))
@@ -201,21 +202,6 @@ def get_flush_parameters_acp(cache_id: int):
     return flush_parameters
 
 
-def get_seq_cut_off_parameters(cache_id: int, core_id: int):
-    casadm_output = casadm.get_param_cutoff(
-        cache_id, core_id, casadm.OutputFormat.csv
-    ).stdout.splitlines()
-    seq_cut_off_params = SeqCutOffParameters()
-    for line in casadm_output:
-        if "Sequential cutoff threshold" in line:
-            seq_cut_off_params.threshold = Size(int(line.split(",")[1]), Unit.KibiByte)
-        if "Sequential cutoff policy" in line:
-            seq_cut_off_params.policy = SeqCutOffPolicy.from_name(line.split(",")[1])
-        if "Sequential cutoff promotion request count threshold" in line:
-            seq_cut_off_params.promotion_count = int(line.split(",")[1])
-    return seq_cut_off_params
-
-
 def get_casadm_version():
     casadm_output = casadm.print_version(OutputFormat.csv).stdout.split("\n")
     version_str = casadm_output[1].split(",")[-1]
@@ -231,21 +217,3 @@ def get_io_class_list(cache_id: int) -> list:
         ioclass = IoClass(int(values[0]), values[1], int(values[2]), values[3])
         ret.append(ioclass)
     return ret
-
-
-def get_core_info_for_cache_by_path(core_disk_path: str, target_cache_id: int) -> dict | None:
-    output = casadm.list_caches(OutputFormat.csv, by_id_path=True)
-    reader = csv.DictReader(io.StringIO(output.stdout))
-    cache_id = -1
-    for row in reader:
-        if row["type"] == "cache":
-            cache_id = int(row["id"])
-        if row["type"] == "core" and row["disk"] == core_disk_path and target_cache_id == cache_id:
-            return {
-                "core_id": row["id"],
-                "core_device": row["disk"],
-                "status": row["status"],
-                "exp_obj": row["device"],
-            }
-
-    return None
