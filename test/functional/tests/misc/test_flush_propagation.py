@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-import re
 import pytest
 from time import sleep
 
@@ -16,7 +15,7 @@ from api.cas.cache_config import (
 from storage_devices.disk import DiskType, DiskTypeSet
 from core.test_run import TestRun
 from test_tools.disk_utils import Filesystem
-from test_utils.scsi_debug import Logs, syslog_path
+from test_tools.scsi_debug import Logs, syslog_path
 from test_tools.fs_utils import create_random_test_file
 from test_utils import os_utils
 from types.size import Size, Unit
