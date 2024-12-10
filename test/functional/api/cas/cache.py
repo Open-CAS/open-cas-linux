@@ -9,7 +9,7 @@ from api.cas.core import Core
 from api.cas.dmesg import get_metadata_size_on_device
 from api.cas.statistics import CacheStats, CacheIoClassStats
 from test_utils.os_utils import *
-from test_utils.output import Output
+from connection.utils.output import Output
 
 
 class Cache:

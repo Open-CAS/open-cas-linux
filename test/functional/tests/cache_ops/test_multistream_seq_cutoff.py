@@ -25,7 +25,7 @@ from test_tools.disk_utils import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_utils.os_utils import Udev
-from test_utils.output import CmdException
+from connection.utils.output import CmdException
 from types.size import Size, Unit
 
 random_thresholds = random.sample(range(1028, 1024**2, 4), 3)

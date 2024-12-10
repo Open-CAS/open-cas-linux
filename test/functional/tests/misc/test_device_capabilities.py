@@ -14,7 +14,7 @@ from core.test_run import TestRun
 from storage_devices.device import Device
 from storage_devices.disk import DiskTypeSet, DiskType
 from test_tools import disk_utils
-from test_utils.output import CmdException
+from connection.utils.output import CmdException
 from types.size import Size, Unit
 
 

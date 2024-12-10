@@ -30,7 +30,7 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_utils.filesystem.file import File
 from test_utils.os_utils import Udev, sync
-from test_utils.output import CmdException
+from connection.utils.output import CmdException
 from types.size import Size, Unit
 from types.time import Time
 

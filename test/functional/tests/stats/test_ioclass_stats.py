@@ -28,7 +28,7 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.disk_utils import Filesystem
 from test_utils.filesystem.file import File
 from test_utils.os_utils import sync, Udev
-from test_utils.output import CmdException
+from connection.utils.output import CmdException
 from types.size import Size, Unit
 
 IoClass = ioclass_config.IoClass

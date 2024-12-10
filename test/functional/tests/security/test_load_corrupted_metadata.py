@@ -19,7 +19,7 @@ from storage_devices.device import Device
 from core.test_run import TestRun
 from storage_devices.ramdisk import RamDisk
 from test_tools.dd import Dd
-from test_utils.output import CmdException
+from connection.utils.output import CmdException
 from types.size import Size, Unit
 
 

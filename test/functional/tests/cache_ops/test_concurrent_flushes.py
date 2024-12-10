@@ -15,7 +15,7 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
-from test_utils.output import CmdException
+from connection.utils.output import CmdException
 from types.size import Size, Unit
 
 

@@ -8,7 +8,7 @@ import re
 
 from test_utils import git
 from core.test_run import TestRun
-from test_utils.output import CmdException
+from connection.utils.output import CmdException
 
 
 class CasVersion:

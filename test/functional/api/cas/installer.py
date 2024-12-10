@@ -10,7 +10,7 @@ from core.test_run import TestRun
 from api.cas import cas_module
 from api.cas.version import get_installed_cas_version
 from test_utils import os_utils, git
-from test_utils.output import CmdException
+from connection.utils.output import CmdException
 
 
 def rsync_opencas_sources():
