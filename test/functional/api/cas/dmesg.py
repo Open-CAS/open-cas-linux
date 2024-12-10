@@ -6,7 +6,7 @@
 
 import re
 
-from test_utils.dmesg import get_dmesg
+from test_tools.dmesg import get_dmesg
 from types.size import Size, Unit
 
 
