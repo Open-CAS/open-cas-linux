@@ -16,7 +16,7 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_utils.os_utils import Udev, kill_all_io
 from types.size import Size, Unit
-from test_utils.time import Time
+from types.time import Time
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

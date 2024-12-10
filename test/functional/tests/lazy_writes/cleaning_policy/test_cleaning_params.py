@@ -20,7 +20,7 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
 from test_utils.os_utils import Udev
 from types.size import Size, Unit
-from test_utils.time import Time
+from types.time import Time
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

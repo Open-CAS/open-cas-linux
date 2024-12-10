@@ -19,7 +19,7 @@ from test_utils import os_utils
 from test_utils.filesystem.file import File
 from test_utils.os_utils import DropCachesMode
 from types.size import Size, Unit
-from test_utils.time import Time
+from types.time import Time
 from tests.lazy_writes.recovery.recovery_tests_methods import power_cycle_dut
 
 test_file_size = Size(300, Unit.MebiByte)
