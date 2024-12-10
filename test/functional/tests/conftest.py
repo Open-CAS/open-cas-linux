@@ -32,7 +32,7 @@ from test_tools.mdadm import Mdadm
 from test_tools.fs_utils import remove
 from test_tools import initramfs
 from log.logger import create_log, Log
-from test_utils.singleton import Singleton
+from test_utils.common.singleton import Singleton
 from storage_devices.lvm import Lvm, LvmConfiguration
 
 
