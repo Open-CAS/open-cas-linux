@@ -7,7 +7,8 @@ import pytest
 
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, ErrorFilter, VerifyMethod
-from test_tools.device_mapper import ErrorDevice, DmTable
+from test_tools.device_mapper import DmTable
+from storage_devices.error_device import ErrorDevice
 from core.test_run import TestRun
 from api.cas import casadm
 from api.cas.cache_config import (

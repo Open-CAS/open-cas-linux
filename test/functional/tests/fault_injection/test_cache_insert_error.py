@@ -16,7 +16,8 @@ from api.cas.cache_config import (
 
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.device_mapper import ErrorDevice, DmTable
+from test_tools.device_mapper import DmTable
+from storage_devices.error_device import ErrorDevice
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, ErrorFilter, VerifyMethod
 from test_utils.os_utils import Udev
