@@ -13,7 +13,7 @@ from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from test_utils.asynchronous import start_async_func
+from connection.utils.asynchronous import start_async_func
 from types.size import Size, Unit
 
 
