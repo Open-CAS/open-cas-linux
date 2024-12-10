@@ -5,6 +5,7 @@
 
 from datetime import timedelta
 
+import test_tools.common.wait
 from core.test_run import TestRun
 from test_tools import fs_utils
 from test_tools.dd import Dd
@@ -47,8 +48,8 @@ def power_cycle_dut(wait_for_flush_begin=False, core_device=None):
             raise Exception("Core device is None.")
         TestRun.LOGGER.info("Waiting for flushing to begin...")
         core_writes_before = core_device.get_io_stats().sectors_written
-        os_utils.wait(lambda: core_writes_before < core_device.get_io_stats().sectors_written,
-                      timedelta(minutes=3),
-                      timedelta(milliseconds=100))
+        test_tools.common.wait.wait(lambda: core_writes_before < core_device.get_io_stats().sectors_written,
+                                    timedelta(minutes=3),
+                                    timedelta(milliseconds=100))
     power_control = TestRun.plugin_manager.get_plugin('power_control')
     power_control.power_cycle()

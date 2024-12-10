@@ -17,8 +17,8 @@ from test_utils.os_utils import (
     set_wbt_lat,
     get_wbt_lat,
     get_dut_cpu_number,
-    wait,
 )
+from test_tools.common.wait import wait
 from api.cas import casadm
 from api.cas.cache_config import (
     CacheMode,
