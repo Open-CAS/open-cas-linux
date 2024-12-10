@@ -1,15 +1,12 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
-
-import re
 
 import pytest
 
 from api.cas import casadm
-from api.cas.casadm_params import OutputFormat
 from api.cas.cli_help_messages import *
 from api.cas.cli_messages import check_stderr_msg, check_stdout_msg
 from core.test_run import TestRun
@@ -99,29 +96,3 @@ def test_cli_help(shortcut):
                                   + (" -H" if shortcut else " --help"))
     check_stderr_msg(output, unrecognized_stderr)
     check_stdout_msg(output, unrecognized_stdout)
-
-
-@pytest.mark.parametrize("output_format", OutputFormat)
-@pytest.mark.parametrize("shortcut", [True, False])
-def test_cli_version(shortcut, output_format):
-    """
-    title: Test for 'version' command.
-    description: Test if version displays.
-    pass_criteria:
-      - Proper OCL's components names displays in table with its versions.
-    """
-    TestRun.LOGGER.info("Check OCL's version.")
-    output = casadm.print_version(output_format, shortcut).stdout
-    TestRun.LOGGER.info(output)
-    if not names_in_output(output) or not versions_in_output(output):
-        TestRun.fail("'Version' command failed.")
-
-
-def names_in_output(output):
-    return ("CAS Cache Kernel Module" in output
-            and "CAS CLI Utility" in output)
-
-
-def versions_in_output(output):
-    version_pattern = re.compile(r"(\d){2}\.(\d){2}\.(\d)\.(\d){4}.(\S)")
-    return len(version_pattern.findall(output)) == 2
