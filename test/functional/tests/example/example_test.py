@@ -20,7 +20,7 @@ from test_utils.filesystem.directory import Directory
 from test_utils.filesystem.file import File
 from types.size import Size, Unit
 from test_utils.emergency_escape import EmergencyEscape
-from test_utils.fstab import add_mountpoint
+from test_tools.fstab import add_mountpoint
 from storage_devices.lvm import Lvm
 
 

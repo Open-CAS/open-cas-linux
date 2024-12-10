@@ -15,7 +15,7 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.filesystem.file import File
 from test_tools.disk_utils import Filesystem
-from test_utils import fstab
+from test_tools import fstab
 from test_tools.dd import Dd
 from types.size import Unit, Size
 from test_utils.os_utils import sync, Udev
