@@ -22,6 +22,7 @@ class UnitType(Enum):
     kibibyte = "[KiB]"
     gibibyte = "[GiB]"
     seconds = "[s]"
+    byte = "[B]"
 
     def __str__(self):
         return self.value
