@@ -7,7 +7,7 @@
 
 import os
 
-from test_utils.git import get_repo_files
+from test_tools.git import get_repo_files
 from api.cas.installer import (
     clean_opencas_repo,
     build_opencas,

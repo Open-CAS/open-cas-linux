@@ -9,7 +9,8 @@ import os
 from core.test_run import TestRun
 from api.cas import cas_module
 from api.cas.version import get_installed_cas_version
-from test_utils import os_utils, git
+from test_utils import os_utils
+from test_tools import git
 from connection.utils.output import CmdException
 
 

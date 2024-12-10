@@ -20,7 +20,6 @@ from core.test_run import Blocked
 from core.test_run_utils import TestRun
 from api.cas import installer
 from api.cas import casadm
-from test_utils import git
 from api.cas.cas_service import opencas_drop_in_directory
 from storage_devices.raid import Raid
 from storage_devices.ramdisk import RamDisk
@@ -30,7 +29,7 @@ from test_tools.disk_utils import PartitionTable, create_partition_table
 from test_tools.device_mapper import DeviceMapper
 from test_tools.mdadm import Mdadm
 from test_tools.fs_utils import remove
-from test_tools import initramfs
+from test_tools import initramfs, git
 from log.logger import create_log, Log
 from test_utils.common.singleton import Singleton
 from storage_devices.lvm import Lvm, LvmConfiguration
