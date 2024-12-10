@@ -15,7 +15,7 @@ from test_tools.fs_utils import (
     write_file,
     remove,
 )
-from test_utils.systemd import reload_daemon
+from test_tools.systemctl import reload_daemon
 
 opencas_drop_in_directory = Path("/etc/systemd/system/open-cas.service.d/")
 test_drop_in_file = Path("10-modified-timeout.conf")
