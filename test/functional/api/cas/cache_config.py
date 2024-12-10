@@ -125,6 +125,17 @@ class CacheStatus(Enum):
     incomplete = "incomplete"
     standby = "standby"
     standby_detached = "standby detached"
+    detached = "detached"
+
+    def __str__(self):
+        return self.value
+
+
+class CoreStatus(Enum):
+    empty = "empty"
+    active = "active"
+    inactive = "inactive"
+    detached = "detached"
 
     def __str__(self):
         return self.value
