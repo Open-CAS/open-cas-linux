@@ -16,7 +16,6 @@ from packaging import version
 from core.test_run import TestRun
 from test_tools import fs_utils
 from test_utils import os_utils
-from test_utils.generator import random_string
 
 default_config_file_path = "/tmp/opencas_ioclass.conf"
 
@@ -178,13 +177,14 @@ class IoClass:
     def add_random_params(rule: str):
         if rule == "directory":
             allowed_chars = string.ascii_letters + string.digits + "/"
-            rule += f":/{random_string(random.randint(1, 40), allowed_chars)}"
+            rule += f":/{''.join(random.choices(allowed_chars, k=random.randint(1, 40)))}"
         elif rule in ["file_size", "lba", "pid", "file_offset", "request_size", "wlth"]:
             rule += f":{Operator(random.randrange(len(Operator))).name}:{random.randrange(1000000)}"
         elif rule == "io_class":
             rule += f":{random.randrange(MAX_IO_CLASS_PRIORITY + 1)}"
         elif rule in ["extension", "process_name", "file_name_prefix"]:
-            rule += f":{random_string(random.randint(1, 10))}"
+            allowed_chars = string.ascii_letters + string.digits
+            rule += f":{''.join(random.choices(allowed_chars, k=random.randint(1, 10)))}"
         if random.randrange(2):
             rule += "&done"
         return rule
