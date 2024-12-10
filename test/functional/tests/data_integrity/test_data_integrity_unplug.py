@@ -22,7 +22,7 @@ from test_tools.fio.fio_param import ReadWrite
 from test_utils.asynchronous import start_async_func
 from test_utils.filesystem.directory import Directory
 from test_utils.output import CmdException
-from test_utils.size import Unit, Size
+from types.size import Unit, Size
 
 ram_disk, tmp_dir, fio_seed = None, None, None
 num_jobs = 8

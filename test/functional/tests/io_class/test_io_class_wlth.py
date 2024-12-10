@@ -11,7 +11,7 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_utils.os_utils import sync, Udev, drop_caches
-from test_utils.size import Unit, Size
+from types.size import Unit, Size
 from tests.io_class.io_class_common import prepare
 
 

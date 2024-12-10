@@ -16,7 +16,7 @@ from test_tools.fs_utils import create_random_test_file, remove
 from test_tools.iostat import IOstatBasic
 from test_utils.filesystem.file import File
 from test_utils.os_utils import Udev, sync
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 bs = Size(512, Unit.KibiByte)
 mnt_point = "/mnt/cas/"

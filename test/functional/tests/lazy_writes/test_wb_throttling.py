@@ -4,14 +4,11 @@
 #
 
 import pytest
-import time
-import random
 from datetime import timedelta
 
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_tools.iostat import IOstatExtended

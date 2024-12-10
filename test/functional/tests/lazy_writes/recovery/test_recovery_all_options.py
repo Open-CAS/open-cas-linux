@@ -18,7 +18,7 @@ from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_utils import os_utils
 from test_utils.filesystem.file import File
 from test_utils.os_utils import DropCachesMode
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 from test_utils.time import Time
 from tests.lazy_writes.recovery.recovery_tests_methods import power_cycle_dut
 

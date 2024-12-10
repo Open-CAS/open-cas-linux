@@ -19,7 +19,7 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_utils import os_utils
 from test_utils.os_utils import Runlevel
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 from tests.io_class.io_class_common import (
     prepare,
     mountpoint,

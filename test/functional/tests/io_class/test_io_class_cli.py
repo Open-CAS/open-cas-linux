@@ -13,7 +13,7 @@ from api.cas.ioclass_config import IoClass
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 ioclass_config_path = "/tmp/opencas_ioclass.conf"
 

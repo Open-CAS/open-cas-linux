@@ -8,7 +8,7 @@ import pytest
 
 from api.cas.cas_module import CasModule
 from core.test_run import TestRun
-from test_utils.size import Unit
+from types.size import Unit
 from test_utils.os_utils import (allocate_memory,
                                  disable_memory_affecting_functions,
                                  drop_caches,

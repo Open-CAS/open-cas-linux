@@ -16,7 +16,7 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, CpusAllowedPolicy
 from test_utils.os_utils import Udev, sync, get_dut_cpu_physical_cores
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 
 class VerifyType(Enum):

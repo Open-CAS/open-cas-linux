@@ -10,7 +10,7 @@ from storage_devices.lvm import get_block_devices_list
 from api.cas.init_config import InitConfig
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite, VerifyMethod
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 
 def run_fio_on_lvm(volumes: []):

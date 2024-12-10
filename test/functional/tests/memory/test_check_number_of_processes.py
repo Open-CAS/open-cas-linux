@@ -10,7 +10,7 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.os_utils import (get_number_of_processors_from_cpuinfo,
                                  get_number_of_processes)
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 cleaning_threads_expected = 1
 management_thread_expected = 1

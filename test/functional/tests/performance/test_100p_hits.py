@@ -19,7 +19,7 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_utils.os_utils import Udev, set_wbt_lat, get_dut_cpu_physical_cores
 from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 from utils.performance import WorkloadParameter
 
 

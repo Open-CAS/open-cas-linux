@@ -6,11 +6,11 @@
 
 import pytest
 
-from api.cas import casadm, casadm_parser
+from api.cas import casadm
 from core.test_run import TestRun
 from test_utils.os_utils import sync
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.size import Unit, Size
+from types.size import Unit, Size
 from test_tools.dd import Dd
 
 

@@ -15,10 +15,10 @@ from storage_devices.drbd import Drbd
 from test_tools.drbdadm import Drbdadm
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
-from test_tools.fs_utils import copy, check_if_file_exists
+from test_tools.fs_utils import copy
 from test_utils.filesystem.directory import Directory
 from test_utils.filesystem.file import File
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 from test_utils.emergency_escape import EmergencyEscape
 from test_utils.fstab import add_mountpoint
 from storage_devices.lvm import Lvm

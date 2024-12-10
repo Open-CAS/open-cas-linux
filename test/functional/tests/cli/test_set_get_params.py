@@ -19,7 +19,7 @@ from api.cas.cache_config import (
 )
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 
 # There should be at least 2 cache instances and 2 cores per cache

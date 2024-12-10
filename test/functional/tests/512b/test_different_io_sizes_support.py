@@ -14,7 +14,7 @@ from storage_devices.disk import DiskType, DiskTypeSet
 from api.cas.cache_config import CacheMode
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 

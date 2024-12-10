@@ -18,7 +18,7 @@ from test_utils.os_utils import (
     set_wbt_lat,
     get_dut_cpu_physical_cores,
 )
-from test_utils.size import Unit, Size
+from types.size import Unit, Size
 
 
 def fill_cas_cache(target, bs):

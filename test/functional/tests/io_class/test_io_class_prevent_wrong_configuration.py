@@ -11,7 +11,7 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_utils.output import CmdException
-from test_utils.size import Unit, Size
+from types.size import Unit, Size
 from tests.io_class.io_class_common import prepare, ioclass_config_path
 
 headerless_configuration = "1,unclassified,22,1.00"

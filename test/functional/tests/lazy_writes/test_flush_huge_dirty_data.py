@@ -19,7 +19,7 @@ from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_tools.fs_utils import remove
 from test_utils.filesystem.file import File
 from test_utils.os_utils import sync, Udev
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 file_size = Size(640, Unit.GiB)
 required_disk_size = file_size * 1.02

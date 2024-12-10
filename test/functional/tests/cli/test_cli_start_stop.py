@@ -10,7 +10,7 @@ from api.cas import casadm, casadm_parser, cli_messages
 from api.cas.cli import start_cmd
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.size import Unit, Size
+from types.size import Unit, Size
 
 CACHE_ID_RANGE = (1, 16384)
 CORE_ID_RANGE = (0, 4095)

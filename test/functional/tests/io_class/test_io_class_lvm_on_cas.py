@@ -16,7 +16,7 @@ from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 from tests.volumes.common import lvm_filters
 
 mount_point = "/mnt/"

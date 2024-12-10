@@ -15,7 +15,7 @@ from test_tools.disk_utils import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, CpusAllowedPolicy, ReadWrite
 from test_utils.os_utils import get_dut_cpu_physical_cores
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 mount_point = "/mnt/test"
 runtime = timedelta(minutes=15)

@@ -20,7 +20,7 @@ from core.test_run import TestRun
 from storage_devices.ramdisk import RamDisk
 from test_tools.dd import Dd
 from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 
 @pytest.mark.parametrizex("cache_mode", CacheMode)

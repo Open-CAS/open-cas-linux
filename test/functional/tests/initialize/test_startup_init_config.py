@@ -17,7 +17,7 @@ from test_utils.filesystem.file import File
 from test_tools.disk_utils import Filesystem
 from test_utils import fstab
 from test_tools.dd import Dd
-from test_utils.size import Unit, Size
+from types.size import Unit, Size
 from test_utils.os_utils import sync, Udev
 from test_utils.emergency_escape import EmergencyEscape
 from api.cas.cas_service import set_cas_service_timeout, clear_cas_service_timeout

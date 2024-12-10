@@ -15,7 +15,7 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_utils.os_utils import get_mem_available, get_module_mem_footprint
 from test_utils.os_utils import sync, Udev
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 cores_count = 16
 cache_size = Size(50, Unit.GibiByte)

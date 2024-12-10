@@ -17,7 +17,7 @@ from test_tools.disk_utils import Filesystem
 from test_utils.filesystem.file import File
 from test_utils.os_utils import sync
 from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 from api.cas.cli_messages import (
     check_stderr_msg,
     missing_param,

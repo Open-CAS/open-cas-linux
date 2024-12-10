@@ -3,14 +3,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-import time
-
 import pytest
 
 from api.cas import cli, casadm
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 
 @pytest.mark.require_disk("cache_1", DiskTypeSet([DiskType.optane, DiskType.nand]))

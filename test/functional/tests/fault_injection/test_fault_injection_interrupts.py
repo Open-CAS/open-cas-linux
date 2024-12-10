@@ -16,7 +16,7 @@ from test_tools.dd import Dd
 from test_tools.disk_utils import Filesystem
 from test_utils import os_utils
 from test_utils.os_utils import Udev, DropCachesMode
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 from tests.lazy_writes.recovery.recovery_tests_methods import compare_files
 
 mount_point = "/mnt/cas"

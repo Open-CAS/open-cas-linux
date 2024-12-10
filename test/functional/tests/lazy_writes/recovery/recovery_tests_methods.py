@@ -10,7 +10,7 @@ from test_tools import fs_utils
 from test_tools.dd import Dd
 from test_utils import os_utils
 from test_utils.filesystem.file import File
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 
 def create_test_files(test_file_size):

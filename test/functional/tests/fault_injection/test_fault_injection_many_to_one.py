@@ -12,8 +12,8 @@ from api.cas.core import Core
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from test_tools.dd import Dd
-from test_utils.os_utils import Udev, sync
-from test_utils.size import Size, Unit
+from test_utils.os_utils import Udev
+from types.size import Size, Unit
 
 block_size = Size(1, Unit.Blocks4096)
 

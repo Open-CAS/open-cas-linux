@@ -16,7 +16,7 @@ from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType
 from storage_devices.raid import RaidConfiguration, Raid, Level, MetadataVariant
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 
 @pytest.mark.os_dependent

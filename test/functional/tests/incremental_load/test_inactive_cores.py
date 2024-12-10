@@ -13,7 +13,7 @@ from api.cas.core import Core, CoreStatus
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

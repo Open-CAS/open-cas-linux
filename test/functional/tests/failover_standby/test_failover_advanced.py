@@ -23,13 +23,12 @@ from storage_devices.disk import DiskType, DiskTypeSet
 from storage_devices.drbd import Drbd
 from test_tools.dd import Dd
 from test_tools.disk_utils import Filesystem
-from test_utils.size import Size, Unit
 from test_utils.filesystem.file import File
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite
-from test_tools.fs_utils import readlink, create_directory
+from test_tools.fs_utils import create_directory
 from test_utils.drbd import Resource, Node
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 from test_failover_multihost import check_drbd_installed
 

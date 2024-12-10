@@ -15,7 +15,7 @@ from test_tools.dd import Dd
 from test_tools.disk_utils import Filesystem
 from test_utils.filesystem.file import File
 from test_utils.os_utils import drop_caches, DropCachesMode, sync
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 
 @pytest.mark.os_dependent

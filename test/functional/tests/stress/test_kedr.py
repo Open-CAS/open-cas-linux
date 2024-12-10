@@ -11,7 +11,7 @@ from test_tools.kedr import Kedr, KedrProfile
 from api.cas import cas_module, installer, casadm
 from core.test_run import TestRun
 from test_utils import os_utils
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 from test_tools.disk_utils import Filesystem
 from test_utils.os_utils import sync
 from test_tools.fio.fio import Fio

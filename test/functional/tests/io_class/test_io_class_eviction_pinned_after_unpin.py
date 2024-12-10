@@ -13,7 +13,7 @@ from api.cas.cache_config import CacheMode, CleaningPolicy, SeqCutOffPolicy
 from .io_class_common import ioclass_config, get_io_class_occupancy, run_io_dir
 from api.cas import casadm
 from test_utils.os_utils import sync, Udev, drop_caches
-from test_utils.size import Unit, Size
+from types.size import Unit, Size
 
 
 cache_size = Size(100, Unit.MiB)

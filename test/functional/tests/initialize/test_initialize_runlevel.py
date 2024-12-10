@@ -16,7 +16,7 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_utils import os_utils
 from test_utils.os_utils import Runlevel
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 
 mount_point = "/mnt/test"

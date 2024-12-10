@@ -21,7 +21,7 @@ from api.cas.cache_config import (
 )
 from storage_devices.disk import DiskTypeSet, DiskType
 from test_utils.io_stats import IoStats
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)

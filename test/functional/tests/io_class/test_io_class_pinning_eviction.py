@@ -13,7 +13,7 @@ from api.cas.ioclass_config import IoClass, default_config_file_path
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from core.test_run import TestRun
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 from .io_class_common import (
     prepare,
     mountpoint,

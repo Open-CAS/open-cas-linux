@@ -14,7 +14,7 @@ from core.test_run import TestRun
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.size import Unit, Size
+from types.size import Unit, Size
 
 
 start_size = int(Size(512, Unit.Byte))

@@ -13,7 +13,7 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 iterations_per_config = 50
 cas_conf_path = "/etc/opencas/opencas.conf"

@@ -17,7 +17,7 @@ from core.test_run_utils import TestRun
 from storage_devices.device import Device
 from test_tools import fs_utils, disk_utils
 from test_utils.os_utils import wait, sync
-from test_utils.size import Unit, Size
+from types.size import Unit, Size
 
 
 class CoreStatus(Enum):

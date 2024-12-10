@@ -13,7 +13,7 @@ from test_tools import fs_utils, disk_utils
 from test_tools.disk_utils import Filesystem
 from test_utils.filesystem.file import File
 from test_utils.filesystem.symlink import Symlink
-from test_utils.size import Size, Unit
+from types.size import Size, Unit
 
 mount_point, mount_point2 = "/mnt/cas", "/mnt/cas2"
 test_file_path = f"{mount_point}/test_file"
