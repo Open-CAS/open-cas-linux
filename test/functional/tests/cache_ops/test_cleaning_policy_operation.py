@@ -106,7 +106,7 @@ def test_cleaning_policies_in_write_back(cleaning_policy: CleaningPolicy):
 @pytest.mark.parametrize("cleaning_policy", CleaningPolicy)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_cleaning_policies_in_write_through(cleaning_policy):
+def test_cleaning_policies_in_write_through(cleaning_policy: CleaningPolicy):
     """
     title: Test for cleaning policy operation in Write-Through cache mode.
     description: |
