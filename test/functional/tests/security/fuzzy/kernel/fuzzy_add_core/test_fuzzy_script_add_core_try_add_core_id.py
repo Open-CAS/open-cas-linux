@@ -9,7 +9,7 @@ from api.cas.cli import script_try_add_cmd, remove_detached_cmd
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType
 from test_tools.peach_fuzzer.peach_fuzzer import PeachFuzzer
-from test_utils.os_utils import Udev
+from test_tools.udev import Udev
 from tests.security.fuzzy.kernel.common.common import (
     run_cmd_and_validate,
     get_fuzz_config,

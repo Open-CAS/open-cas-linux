@@ -16,7 +16,7 @@ from api.cas.statistics import CoreStats, CoreIoClassStats
 from core.test_run_utils import TestRun
 from storage_devices.device import Device
 from test_tools import fs_utils, disk_utils
-from test_utils.os_utils import sync
+from test_tools.os_tools import sync
 from test_tools.common.wait import wait
 from types.size import Unit, Size
 

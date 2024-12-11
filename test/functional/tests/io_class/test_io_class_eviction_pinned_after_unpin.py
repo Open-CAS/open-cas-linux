@@ -12,7 +12,8 @@ from core.test_run import TestRun
 from api.cas.cache_config import CacheMode, CleaningPolicy, SeqCutOffPolicy
 from .io_class_common import ioclass_config, get_io_class_occupancy, run_io_dir
 from api.cas import casadm
-from test_utils.os_utils import sync, Udev, drop_caches
+from test_tools.os_tools import sync, drop_caches
+from test_tools.udev import Udev
 from types.size import Unit, Size
 
 

@@ -16,8 +16,8 @@ from storage_devices.disk import DiskType, DiskTypeSet
 from core.test_run import TestRun
 from test_tools.disk_utils import Filesystem
 from test_tools.fs_utils import create_random_test_file
+from test_tools.os_tools import sync
 from test_tools.scsi_debug import Logs, syslog_path
-from test_utils import os_utils
 from types.size import Size, Unit
 
 mount_point = "/mnt/cas"
@@ -60,11 +60,11 @@ def test_flush_signal_core(cache_mode):
 
     with TestRun.step("Create temporary file on exported object."):
         tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
-        os_utils.sync()
+        sync()
 
     with TestRun.step("Flush cache."):
         cache.flush_cache()
-        os_utils.sync()
+        sync()
 
     with TestRun.step(f"Check {syslog_path} for flush request and delete temporary file."):
         Logs.check_syslog_for_signals()
@@ -72,11 +72,11 @@ def test_flush_signal_core(cache_mode):
 
     with TestRun.step("Create temporary file on exported object."):
         tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
-        os_utils.sync()
+        sync()
 
     with TestRun.step("Flush core."):
         core.flush_core()
-        os_utils.sync()
+        sync()
 
     with TestRun.step(f"Check {syslog_path} for flush request and delete temporary file."):
         Logs.check_syslog_for_signals()
@@ -90,7 +90,7 @@ def test_flush_signal_core(cache_mode):
 
     with TestRun.step("Create big temporary file on exported object."):
         tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(5, Unit.GibiByte))
-        os_utils.sync()
+        sync()
 
     with TestRun.step("Wait for automatic flush from alru cleaning policy and check log."):
         wait_time = (
@@ -107,12 +107,12 @@ def test_flush_signal_core(cache_mode):
 
     with TestRun.step("Create temporary file on exported object."):
         create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
-        os_utils.sync()
+        sync()
 
     with TestRun.step("Unmount exported object and remove it from cache."):
         core.unmount()
         core.remove_core()
-        os_utils.sync()
+        sync()
 
     with TestRun.step(f"Check {syslog_path} for flush request."):
         Logs.check_syslog_for_signals()
@@ -158,11 +158,11 @@ def test_flush_signal_cache(cache_mode):
 
     with TestRun.step("Create temporary file on exported object."):
         tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
-        os_utils.sync()
+        sync()
 
     with TestRun.step("Flush cache."):
         cache.flush_cache()
-        os_utils.sync()
+        sync()
 
     with TestRun.step(f"Check {syslog_path} for flush and FUA requests and delete temporary file."):
         Logs.check_syslog_for_signals()
@@ -170,11 +170,11 @@ def test_flush_signal_cache(cache_mode):
 
     with TestRun.step("Create temporary file on exported object."):
         tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
-        os_utils.sync()
+        sync()
 
     with TestRun.step("Flush core."):
         core.flush_core()
-        os_utils.sync()
+        sync()
 
     with TestRun.step(f"Check {syslog_path} for flush request and delete temporary file."):
         Logs.check_syslog_for_signals()
@@ -188,7 +188,7 @@ def test_flush_signal_cache(cache_mode):
 
     with TestRun.step("Create big temporary file on exported object."):
         tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(5, Unit.GibiByte))
-        os_utils.sync()
+        sync()
 
     with TestRun.step("Wait for automatic flush from alru cleaning policy and check log."):
         wait_time = (
@@ -205,12 +205,12 @@ def test_flush_signal_cache(cache_mode):
 
     with TestRun.step("Create temporary file on exported object."):
         create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
-        os_utils.sync()
+        sync()
 
     with TestRun.step("Unmount exported object and remove it from cache."):
         core.unmount()
         core.remove_core()
-        os_utils.sync()
+        sync()
 
     with TestRun.step(f"Check {syslog_path} for flush and FUA requests."):
         Logs.check_syslog_for_signals()
@@ -262,12 +262,12 @@ def test_flush_signal_multilevel_cache(cache_mode):
 
     with TestRun.step("Create temporary file on the 2nd exported object."):
         tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(512, Unit.MebiByte))
-        os_utils.sync()
+        sync()
 
     with TestRun.step("Flush both caches."):
         cache2.flush_cache()
         cache1.flush_cache()
-        os_utils.sync()
+        sync()
 
     with TestRun.step(f"Check {syslog_path} for flush and FUA requests and delete temporary file."):
         Logs.check_syslog_for_signals()
@@ -275,12 +275,12 @@ def test_flush_signal_multilevel_cache(cache_mode):
 
     with TestRun.step("Create temporary file on the 2nd exported object."):
         tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(512, Unit.MebiByte))
-        os_utils.sync()
+        sync()
 
     with TestRun.step("Flush both cores."):
         core2.flush_core()
         core1.flush_core()
-        os_utils.sync()
+        sync()
 
     with TestRun.step(f"Check {syslog_path} for flush request and delete temporary file."):
         Logs.check_syslog_for_signals()
@@ -298,7 +298,7 @@ def test_flush_signal_multilevel_cache(cache_mode):
 
     with TestRun.step("Create big temporary file on the 2nd exported object."):
         tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(3, Unit.GibiByte))
-        os_utils.sync()
+        sync()
 
     with TestRun.step("Wait for automatic flush from alru cleaning policy and check log."):
         wait_time = (
@@ -315,13 +315,13 @@ def test_flush_signal_multilevel_cache(cache_mode):
 
     with TestRun.step("Create temporary file on the 2nd exported object."):
         create_random_test_file(f"{mount_point}/tmp.file", Size(512, Unit.MebiByte))
-        os_utils.sync()
+        sync()
 
     with TestRun.step("Unmount the 2nd exported object and remove cores from caches."):
         core2.unmount()
         core2.remove_core()
         core1.remove_core()
-        os_utils.sync()
+        sync()
 
     with TestRun.step(f"Check {syslog_path} for flush request."):
         Logs.check_syslog_for_signals()

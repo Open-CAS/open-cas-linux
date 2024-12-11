@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-from time import sleep
 import pytest
 
 from api.cas import casadm
@@ -27,7 +26,8 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite
 from test_tools.fs_utils import readlink
 from test_utils.drbd import Resource, Node
-from test_utils.os_utils import sync, Udev
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
 from types.size import Size, Unit
 from test_tools import fs_utils
 

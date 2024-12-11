@@ -15,7 +15,8 @@ from core.test_run_utils import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
-from test_utils.os_utils import sync, Udev
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
 from types.size import Unit
 from tests.io_class.io_class_common import (
     prepare,

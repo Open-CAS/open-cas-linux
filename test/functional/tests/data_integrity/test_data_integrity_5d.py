@@ -18,7 +18,7 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.filesystem.file import File
-from test_utils.os_utils import sync
+from test_tools.os_tools import sync
 from types.size import Unit, Size
 
 

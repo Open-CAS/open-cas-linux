@@ -9,7 +9,6 @@ import test_tools.common.wait
 from core.test_run import TestRun
 from test_tools import fs_utils
 from test_tools.dd import Dd
-from test_utils import os_utils
 from test_utils.filesystem.file import File
 from types.size import Size, Unit
 

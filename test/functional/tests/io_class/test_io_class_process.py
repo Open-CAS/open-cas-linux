@@ -11,7 +11,8 @@ from api.cas import ioclass_config, casadm
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
-from test_utils.os_utils import sync, Udev
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
 from types.size import Size, Unit
 from tests.io_class.io_class_common import prepare, ioclass_config_path
 

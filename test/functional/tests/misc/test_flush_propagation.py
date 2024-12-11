@@ -15,9 +15,9 @@ from api.cas.cache_config import (
 from storage_devices.disk import DiskType, DiskTypeSet
 from core.test_run import TestRun
 from test_tools.disk_utils import Filesystem
+from test_tools.os_tools import sync
 from test_tools.scsi_debug import Logs, syslog_path
 from test_tools.fs_utils import create_random_test_file
-from test_utils import os_utils
 from types.size import Size, Unit
 
 mount_point = "/mnt/cas"
@@ -56,12 +56,12 @@ def test_flush_signal_propagation_cache():
         if core.is_mounted():
             core.unmount()
         core.mount(mount_point)
-        os_utils.sync()
+        sync()
 
     with TestRun.step("Create temporary file on the exported object."):
         Logs._read_syslog(Logs.last_read_line)
         tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
-        os_utils.sync()
+        sync()
         sleep(3)
 
     with TestRun.step(f"Check {syslog_path} for flush request and delete temporary file."):
@@ -102,12 +102,12 @@ def test_flush_signal_propagation_core():
         if core.is_mounted():
             core.unmount()
         core.mount(mount_point)
-        os_utils.sync()
+        sync()
 
     with TestRun.step("Create temporary file on the exported object."):
         Logs._read_syslog(Logs.last_read_line)
         tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
-        os_utils.sync()
+        sync()
         sleep(3)
 
     with TestRun.step(f"Check {syslog_path} for flush request and delete temporary file."):

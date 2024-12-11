@@ -9,7 +9,7 @@ from api.cas import casadm
 from api.cas.cache_config import CacheMode
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.os_utils import Udev
+from test_tools.udev import Udev
 from types.size import Unit, Size
 from test_tools.dd import Dd
 from test_tools.iostat import IOstatBasic

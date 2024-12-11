@@ -17,7 +17,8 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskTypeLowerThan, DiskType
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
-from test_utils.os_utils import Udev, set_wbt_lat, get_dut_cpu_physical_cores
+from test_tools.os_tools import set_wbt_lat, get_dut_cpu_physical_cores
+from test_tools.udev import Udev
 from connection.utils.output import CmdException
 from types.size import Size, Unit
 from utils.performance import WorkloadParameter

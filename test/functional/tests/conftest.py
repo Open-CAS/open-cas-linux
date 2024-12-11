@@ -23,7 +23,8 @@ from api.cas import casadm
 from api.cas.cas_service import opencas_drop_in_directory
 from storage_devices.raid import Raid
 from storage_devices.ramdisk import RamDisk
-from test_utils.os_utils import Udev, kill_all_io
+from test_tools.os_tools import kill_all_io
+from test_tools.udev import Udev
 from test_utils.disk_finder import get_disk_serial_number
 from test_tools.disk_utils import PartitionTable, create_partition_table
 from test_tools.device_mapper import DeviceMapper

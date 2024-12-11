@@ -15,7 +15,7 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
 from test_tools.disk_utils import Filesystem
 from test_utils.filesystem.file import File
-from test_utils.os_utils import sync
+from test_tools.os_tools import sync
 from connection.utils.output import CmdException
 from types.size import Size, Unit
 from api.cas.cli_messages import (

@@ -17,7 +17,8 @@ from test_tools.dd import Dd
 from test_tools.disk_utils import Filesystem
 from test_utils.filesystem.directory import Directory
 from test_utils.filesystem.file import File
-from test_utils.os_utils import drop_caches, DropCachesMode, sync, Udev
+from test_tools.os_tools import drop_caches, DropCachesMode, sync
+from test_tools.udev import Udev
 from types.size import Size, Unit
 from tests.io_class.io_class_common import mountpoint, prepare, ioclass_config_path
 

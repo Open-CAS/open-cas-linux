@@ -24,7 +24,7 @@ from tests.security.fuzzy.kernel.common.common import (
     get_fuzz_config,
     run_cmd_and_validate,
 )
-from test_utils.os_utils import Udev
+from test_tools.udev import Udev
 
 core_id_min = 0
 core_id_max = 4095

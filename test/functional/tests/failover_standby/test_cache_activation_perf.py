@@ -10,7 +10,7 @@ from core.test_run import TestRun
 from test_tools.dd import Dd
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from test_utils.os_utils import Udev
+from test_tools.udev import Udev
 from types.size import Size, Unit
 from storage_devices.disk import DiskType, DiskTypeSet
 from storage_devices.device import Device

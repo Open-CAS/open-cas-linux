@@ -15,7 +15,8 @@ from test_tools.disk_utils import Filesystem
 from test_tools.fs_utils import create_random_test_file, remove
 from test_tools.iostat import IOstatBasic
 from test_utils.filesystem.file import File
-from test_utils.os_utils import Udev, sync
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
 from types.size import Size, Unit
 
 bs = Size(512, Unit.KibiByte)

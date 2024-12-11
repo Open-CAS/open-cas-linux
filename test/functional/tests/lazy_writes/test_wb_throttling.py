@@ -12,25 +12,19 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_tools.iostat import IOstatExtended
-from test_utils.os_utils import (
+from test_tools.os_tools import (
     kill_all_io,
     set_wbt_lat,
     get_wbt_lat,
-    get_dut_cpu_number,
 )
 from test_tools.common.wait import wait
 from api.cas import casadm
 from api.cas.cache_config import (
     CacheMode,
-    CacheModeTrait,
     CleaningPolicy,
-    FlushParametersAcp,
     SeqCutOffPolicy,
     CacheLineSize,
-    Time,
 )
-from test_tools.blktrace import BlkTrace, BlkTraceMask, ActionKind, RwbsKind
-
 
 runtime = timedelta(days=30)
 

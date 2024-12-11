@@ -5,13 +5,13 @@
 
 import pytest
 
+import test_tools.udev
 from api.cas import casadm, casadm_parser, cli, cli_messages
 from api.cas.cache_config import CacheMode, CleaningPolicy, CacheModeTrait
 from tests.lazy_writes.recovery.recovery_tests_methods import copy_file, compare_files
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
-from test_utils import os_utils
 from types.size import Size, Unit
 
 mount_point = "/mnt/cas"
@@ -99,5 +99,5 @@ def prepare():
     core_dev = TestRun.disks['core']
     core_dev.create_partitions([Size(2, Unit.GibiByte)])
     core_part = core_dev.partitions[0]
-    os_utils.Udev.disable()
+    test_tools.udev.Udev.disable()
     return cache_part, core_part

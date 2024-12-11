@@ -6,6 +6,8 @@
 import os
 import pytest
 from datetime import timedelta
+
+import test_tools.runlevel
 from api.cas import ioclass_config, casadm_parser
 from api.cas.cache_config import CacheMode
 from api.cas.casadm_params import StatsFilter
@@ -17,8 +19,8 @@ from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
-from test_utils import os_utils
-from test_utils.os_utils import Runlevel
+from test_tools.os_tools import sync, drop_caches
+from test_tools.runlevel import Runlevel
 from types.size import Size, Unit
 from tests.io_class.io_class_common import (
     prepare,
@@ -73,10 +75,10 @@ def test_io_class_service_load(runlevel):
         InitConfig.create_init_config_from_running_configuration(
             cache_extra_flags=f"ioclass_file={ioclass_config_path}"
         )
-        os_utils.sync()
+        sync()
 
     with TestRun.step(f"Reboot system to runlevel {runlevel}."):
-        os_utils.change_runlevel(runlevel)
+        test_tools.runlevel.change_runlevel(runlevel)
         TestRun.executor.reboot()
 
     with TestRun.step(
@@ -152,8 +154,8 @@ def run_io():
     )
     fio.run()
 
-    os_utils.sync()
-    os_utils.drop_caches()
+    sync()
+    drop_caches()
 
 
 def prepare_and_load_io_class_config(cache, metadata_not_cached=False):

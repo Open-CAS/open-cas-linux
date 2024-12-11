@@ -15,7 +15,7 @@ from packaging import version
 
 from core.test_run import TestRun
 from test_tools import fs_utils
-from test_utils import os_utils
+from test_tools.os_tools import get_kernel_version
 
 default_config_file_path = "/tmp/opencas_ioclass.conf"
 
@@ -166,7 +166,7 @@ class IoClass:
             "file_offset",
             "request_size",
         ]
-        if os_utils.get_kernel_version() >= version.Version("4.13"):
+        if get_kernel_version() >= version.Version("4.13"):
             rules.append("wlth")
 
         rule = random.choice(rules)

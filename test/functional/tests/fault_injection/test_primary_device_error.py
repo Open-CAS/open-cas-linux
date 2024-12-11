@@ -19,7 +19,7 @@ from api.cas.cache_config import (
     CleaningPolicy,
 )
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_utils.os_utils import Udev
+from test_tools.udev import Udev
 from types.size import Size, Unit
 
 

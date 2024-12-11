@@ -16,8 +16,9 @@ from core.test_run import TestRun
 from test_tools.dd import Dd
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from test_utils.os_utils import Udev, sync
-from test_utils.os_utils import drop_caches, DropCachesMode
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
+from test_tools.os_tools import drop_caches, DropCachesMode
 from types.size import Size, Unit
 
 ioclass_config_path = "/etc/opencas/ioclass.conf"

@@ -18,7 +18,8 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_tools.fs_utils import remove
 from test_utils.filesystem.file import File
-from test_utils.os_utils import sync, Udev
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
 from types.size import Size, Unit
 
 file_size = Size(640, Unit.GiB)

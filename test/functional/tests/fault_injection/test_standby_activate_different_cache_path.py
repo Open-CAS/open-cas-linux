@@ -16,7 +16,7 @@ from api.cas.cache_config import CacheLineSize
 from api.cas.cache import CacheStatus
 from test_tools.dd import Dd
 from test_tools.fs_utils import check_if_symlink_exists
-from test_utils.os_utils import sync
+from test_tools.os_tools import sync
 
 
 @pytest.mark.CI

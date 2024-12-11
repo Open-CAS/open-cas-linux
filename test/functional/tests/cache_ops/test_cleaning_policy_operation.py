@@ -18,7 +18,7 @@ from api.cas.cache_config import (
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from types.size import Size, Unit
-from test_utils.os_utils import Udev
+from test_tools.udev import Udev
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 

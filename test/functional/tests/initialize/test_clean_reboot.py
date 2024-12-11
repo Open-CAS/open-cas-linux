@@ -14,7 +14,7 @@ from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.dd import Dd
 from test_tools.disk_utils import Filesystem
 from test_utils.filesystem.file import File
-from test_utils.os_utils import drop_caches, DropCachesMode, sync
+from test_tools.os_tools import drop_caches, DropCachesMode, sync
 from types.size import Size, Unit
 
 

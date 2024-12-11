@@ -17,7 +17,6 @@ from api.cas.cli_messages import (
 )
 from api.cas.statistics import (
     config_stats_ioclass,
-    usage_stats,
     usage_stats_ioclass,
     request_stats,
     block_stats_core,
@@ -27,7 +26,8 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.disk_utils import Filesystem
 from test_utils.filesystem.file import File
-from test_utils.os_utils import sync, Udev
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
 from connection.utils.output import CmdException
 from types.size import Size, Unit
 

@@ -15,7 +15,7 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CleaningPolicy
-from test_utils.os_utils import Udev
+from test_tools.udev import Udev
 
 
 @pytest.mark.CI

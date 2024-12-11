@@ -15,7 +15,7 @@ from api.cas.cache_config import CacheLineSize, CacheMode
 from api.cas.cli import standby_activate_cmd, standby_load_cmd
 from api.cas.dmesg import get_md_section_size
 from test_tools.dd import Dd
-from test_utils.os_utils import sync
+from test_tools.os_tools import sync
 from test_utils.filesystem.file import File
 
 

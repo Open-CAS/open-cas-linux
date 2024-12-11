@@ -13,8 +13,9 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from test_utils.os_utils import get_mem_available, get_module_mem_footprint
-from test_utils.os_utils import sync, Udev
+from test_tools.memory import get_mem_available, get_module_mem_footprint
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
 from types.size import Size, Unit
 
 cores_count = 16

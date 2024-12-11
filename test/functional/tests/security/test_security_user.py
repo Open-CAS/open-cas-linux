@@ -14,7 +14,7 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
-from test_utils.os_utils import create_user, check_if_user_exists
+from test_tools.os_tools import create_user, check_if_user_exists
 from connection.utils.output import CmdException
 from types.size import Size, Unit
 
