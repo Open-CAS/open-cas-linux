@@ -9,7 +9,7 @@ import pytest
 from api.cas import casadm
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 from api.cas.cache_config import CacheLineSize, CacheStatus
 from api.cas.casadm_params import StatsFilter
 from api.cas.casadm_parser import get_core_info_for_cache_by_path

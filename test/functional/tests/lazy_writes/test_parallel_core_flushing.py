@@ -15,7 +15,7 @@ from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.dd import Dd
 from test_utils.filesystem.file import File
 from connection.utils.output import CmdException
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

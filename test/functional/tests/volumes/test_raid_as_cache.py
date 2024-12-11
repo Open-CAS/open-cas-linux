@@ -13,7 +13,7 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from storage_devices.raid import Raid, RaidConfiguration, MetadataVariant, Level
 from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 mount_point = "/mnt/test"
 mount_point2 = "/mnt/test2"

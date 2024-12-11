@@ -28,7 +28,7 @@ from test_tools.fs_utils import readlink
 from test_utils.drbd import Resource, Node
 from test_tools.os_tools import sync
 from test_tools.udev import Udev
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 from test_tools import fs_utils
 
 

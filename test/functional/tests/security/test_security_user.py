@@ -16,7 +16,7 @@ from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from test_tools.os_tools import create_user, check_if_user_exists
 from connection.utils.output import CmdException
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 mount_point = "/mnt/cas"
 system_casadm_bin_path = "/sbin/casadm"

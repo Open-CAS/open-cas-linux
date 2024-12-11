@@ -14,7 +14,7 @@ from .io_class_common import ioclass_config, get_io_class_occupancy, run_io_dir
 from api.cas import casadm
 from test_tools.os_tools import sync, drop_caches
 from test_tools.udev import Udev
-from types.size import Unit, Size
+from type_def.size import Unit, Size
 
 
 cache_size = Size(100, Unit.MiB)

@@ -25,8 +25,8 @@ from test_tools.blktrace import BlkTrace, BlkTraceMask, ActionKind, RwbsKind
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_tools.os_tools import kill_all_io
-from types.size import Size, Unit
-from types.time import Time
+from type_def.size import Size, Unit
+from type_def.time import Time
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

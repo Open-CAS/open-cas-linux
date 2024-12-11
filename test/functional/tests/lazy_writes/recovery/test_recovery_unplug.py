@@ -14,7 +14,7 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.disk_utils import Filesystem
 from connection.utils.output import CmdException
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 from tests.lazy_writes.recovery.recovery_tests_methods import create_test_files, copy_file, \
     compare_files
 

@@ -20,7 +20,7 @@ from test_tools.fs_utils import remove
 from test_utils.filesystem.file import File
 from test_tools.os_tools import sync
 from test_tools.udev import Udev
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 file_size = Size(640, Unit.GiB)
 required_disk_size = file_size * 1.02

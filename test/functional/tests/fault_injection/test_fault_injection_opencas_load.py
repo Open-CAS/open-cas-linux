@@ -12,7 +12,7 @@ from tests.lazy_writes.recovery.recovery_tests_methods import copy_file, compare
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools import fs_utils
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 mount_point = "/mnt/cas"
 test_file_path = f"{mount_point}/test_file"

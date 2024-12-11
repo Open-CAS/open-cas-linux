@@ -21,7 +21,7 @@ from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_utils.filesystem.file import File
 from test_tools.os_tools import sync
 from test_tools.udev import Udev
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 from tests.io_class.io_class_common import prepare, ioclass_config_path, mountpoint
 
 

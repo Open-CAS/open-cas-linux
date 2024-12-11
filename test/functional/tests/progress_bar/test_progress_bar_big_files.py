@@ -11,7 +11,7 @@ from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType
 from test_tools.disk_utils import Filesystem
 from test_tools.fs_utils import create_random_test_file
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 mount_point = "/mnt/test"

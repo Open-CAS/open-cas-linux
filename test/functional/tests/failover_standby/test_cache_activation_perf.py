@@ -11,7 +11,7 @@ from test_tools.dd import Dd
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_tools.udev import Udev
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 from storage_devices.disk import DiskType, DiskTypeSet
 from storage_devices.device import Device
 from api.cas import casadm, dmesg

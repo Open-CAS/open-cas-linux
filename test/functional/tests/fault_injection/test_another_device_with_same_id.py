@@ -8,7 +8,7 @@ import pytest
 from api.cas import cli, casadm
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 @pytest.mark.require_disk("cache_1", DiskTypeSet([DiskType.optane, DiskType.nand]))

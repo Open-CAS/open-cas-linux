@@ -14,7 +14,7 @@ from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

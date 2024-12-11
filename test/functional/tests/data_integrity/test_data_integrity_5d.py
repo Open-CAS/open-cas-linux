@@ -19,7 +19,7 @@ from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.filesystem.file import File
 from test_tools.os_tools import sync
-from types.size import Unit, Size
+from type_def.size import Unit, Size
 
 
 start_size = Size(512, Unit.Byte).get_value()

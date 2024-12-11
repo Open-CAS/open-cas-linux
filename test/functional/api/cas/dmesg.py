@@ -7,7 +7,7 @@
 import re
 
 from test_tools.dmesg import get_dmesg
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 def get_metadata_size_on_device(cache_id: int) -> Size:

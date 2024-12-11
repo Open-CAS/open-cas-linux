@@ -29,7 +29,7 @@ from test_utils.filesystem.file import File
 from test_tools.os_tools import sync
 from test_tools.udev import Udev
 from connection.utils.output import CmdException
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 IoClass = ioclass_config.IoClass
 

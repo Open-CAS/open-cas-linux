@@ -8,7 +8,7 @@ import pytest
 from api.cas import casadm
 from storage_devices.disk import DiskType, DiskTypeSet
 from core.test_run import TestRun
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 scsi_dev_size_gb = str(40 * 1024)
 

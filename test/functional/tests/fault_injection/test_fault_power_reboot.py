@@ -11,7 +11,7 @@ from api.cas import casadm, cli, cli_messages
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from connection.utils.output import CmdException
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 log_path = "/var/log/opencas.log"
 wait_long_time = 180

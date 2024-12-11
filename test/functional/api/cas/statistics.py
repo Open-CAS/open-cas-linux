@@ -11,7 +11,7 @@ from typing import List
 
 from api.cas import casadm
 from api.cas.casadm_params import StatsFilter
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 class UnitType(Enum):

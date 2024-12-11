@@ -14,7 +14,7 @@ from storage_devices.disk import DiskType, DiskTypeSet
 from test_tools import initramfs
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 from tests.volumes.common import get_test_configuration
 
 

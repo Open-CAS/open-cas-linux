@@ -7,7 +7,7 @@ from datetime import timedelta
 
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 mount_point = "/mnt/test"
 

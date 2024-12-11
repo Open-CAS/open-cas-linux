@@ -13,7 +13,7 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeLowerThan, DiskTypeSet
 from test_tools.disk_utils import Filesystem
 from connection.utils.output import CmdException
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 mount_point = "/mnt/cas"
 cores_amount = 3

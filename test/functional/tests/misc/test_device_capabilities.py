@@ -15,7 +15,7 @@ from storage_devices.device import Device
 from storage_devices.disk import DiskTypeSet, DiskType
 from test_tools import disk_utils
 from connection.utils.output import CmdException
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 @pytest.mark.os_dependent

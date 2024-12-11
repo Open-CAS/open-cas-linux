@@ -10,7 +10,7 @@ from api.cas import casadm
 from api.cas import dmesg
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 from api.cas.cache_config import CacheLineSize, CacheMode
 from api.cas.cli import standby_activate_cmd, standby_load_cmd
 from api.cas.dmesg import get_md_section_size

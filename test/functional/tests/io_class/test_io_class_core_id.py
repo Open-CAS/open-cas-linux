@@ -12,7 +12,7 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
 from test_tools.os_tools import sync, drop_caches
 from test_tools.udev import Udev
-from types.size import Unit, Size
+from type_def.size import Unit, Size
 
 dd_bs = Size(1, Unit.Blocks4096)
 dd_count = 1230

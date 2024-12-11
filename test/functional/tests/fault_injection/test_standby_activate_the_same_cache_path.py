@@ -10,7 +10,7 @@ from api.cas import casadm
 from api.cas.casadm_parser import get_caches
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 from api.cas.cache_config import CacheStatus
 
 

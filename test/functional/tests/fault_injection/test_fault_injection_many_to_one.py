@@ -13,7 +13,7 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from test_tools.dd import Dd
 from test_tools.udev import Udev
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 block_size = Size(1, Unit.Blocks4096)
 

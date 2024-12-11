@@ -13,7 +13,7 @@ from api.cas.core import CoreStatus
 from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeLowerThan, DiskTypeSet, DiskType
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 @pytest.mark.CI

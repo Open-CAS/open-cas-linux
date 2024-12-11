@@ -17,7 +17,7 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_tools.udev import Udev
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 # One cache instance per every cache mode:
 caches_count = len(CacheMode)

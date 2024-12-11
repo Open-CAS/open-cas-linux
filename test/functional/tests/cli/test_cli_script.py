@@ -10,7 +10,7 @@ from api.cas import casadm
 from core.test_run import TestRun
 from test_tools.os_tools import sync
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from types.size import Unit, Size
+from type_def.size import Unit, Size
 from test_tools.dd import Dd
 
 

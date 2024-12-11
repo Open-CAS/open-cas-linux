@@ -17,8 +17,8 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_utils.filesystem.file import File
 from test_tools.os_tools import DropCachesMode, drop_caches, sync
-from types.size import Size, Unit
-from types.time import Time
+from type_def.size import Size, Unit
+from type_def.time import Time
 from tests.lazy_writes.recovery.recovery_tests_methods import power_cycle_dut
 
 test_file_size = Size(300, Unit.MebiByte)

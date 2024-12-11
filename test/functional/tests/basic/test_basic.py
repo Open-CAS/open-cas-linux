@@ -22,7 +22,7 @@ from test_tools.dd import Dd
 from test_tools.disk_utils import Filesystem
 from test_utils.filesystem.file import File
 from connection.utils.output import CmdException
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 version_file_path = r"/var/lib/opencas/cas_version"
 mountpoint = "/mnt"

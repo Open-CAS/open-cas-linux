@@ -22,7 +22,7 @@ from core.test_run import TestRun
 from storage_devices.device import Device
 from test_tools.os_tools import reload_kernel_module
 from connection.utils.output import CmdException, Output
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 # casadm commands

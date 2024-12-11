@@ -8,7 +8,7 @@ import pytest
 
 from api.cas.cas_module import CasModule
 from core.test_run import TestRun
-from types.size import Unit
+from type_def.size import Unit
 from test_tools.os_tools import (drop_caches,
                                  is_kernel_module_loaded,
                                  load_kernel_module,

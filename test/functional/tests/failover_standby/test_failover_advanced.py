@@ -28,7 +28,7 @@ from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite
 from test_tools.fs_utils import create_directory
 from test_utils.drbd import Resource, Node
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 from test_failover_multihost import check_drbd_installed
 

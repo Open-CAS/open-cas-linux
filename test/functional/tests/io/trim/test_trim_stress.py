@@ -11,7 +11,7 @@ from api.cas.cache_config import CacheMode, CacheLineSize
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType
 from test_tools.disk_utils import Filesystem
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 @pytest.mark.os_dependent

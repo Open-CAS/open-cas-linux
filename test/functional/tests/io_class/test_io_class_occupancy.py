@@ -18,7 +18,7 @@ from test_tools import fs_utils
 from test_tools.disk_utils import Filesystem
 from test_tools.os_tools import sync
 from test_tools.udev import Udev
-from types.size import Unit, Size
+from type_def.size import Unit, Size
 from tests.io_class.io_class_common import (
     prepare,
     mountpoint,

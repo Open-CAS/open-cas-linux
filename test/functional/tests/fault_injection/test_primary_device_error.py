@@ -20,7 +20,7 @@ from api.cas.cache_config import (
 )
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.udev import Udev
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 @pytest.mark.parametrizex("cache_mode", CacheMode.without_traits(CacheModeTrait.LazyWrites))

@@ -19,7 +19,7 @@ from test_tools.blktrace import BlkTrace, BlkTraceMask, RwbsKind
 from test_tools.disk_utils import Filesystem, check_if_device_supports_trim
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 from api.cas.dmesg import get_metadata_size_on_device
 
 

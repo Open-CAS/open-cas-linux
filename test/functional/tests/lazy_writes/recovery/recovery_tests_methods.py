@@ -10,7 +10,7 @@ from core.test_run import TestRun
 from test_tools import fs_utils
 from test_tools.dd import Dd
 from test_utils.filesystem.file import File
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 def create_test_files(test_file_size):

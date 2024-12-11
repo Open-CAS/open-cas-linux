@@ -12,7 +12,7 @@ from core.test_run import TestRun
 from storage_devices.partition import Partition
 from test_tools import fs_utils, disk_utils
 from test_tools.disk_utils import PartitionTable, Filesystem
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 
 mount_point = "/mnt/cas"
 cores_number = 16

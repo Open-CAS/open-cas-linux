@@ -16,7 +16,7 @@ from test_tools.fs_utils import readlink
 from test_tools.os_tools import DropCachesMode, sync, drop_caches
 from test_tools.udev import Udev
 from connection.utils.output import CmdException
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 from tests.lazy_writes.recovery.recovery_tests_methods import create_test_files, copy_file, \
     compare_files, power_cycle_dut
 

@@ -18,7 +18,7 @@ from test_tools.os_tools import (
     get_number_of_processors_from_cpuinfo,
     get_dut_cpu_physical_cores,
 )
-from types.size import Unit, Size
+from type_def.size import Unit, Size
 
 
 # TODO: for disks other than Intel Optane, fio ramp is needed before fio tests on raw disk

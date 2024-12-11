@@ -18,7 +18,7 @@ from test_tools.disk_utils import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_tools.os_tools import sync, drop_caches
-from types.size import Size, Unit
+from type_def.size import Size, Unit
 from tests.io_class.io_class_common import template_config_path
 
 

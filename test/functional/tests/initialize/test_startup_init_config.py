@@ -17,7 +17,7 @@ from test_utils.filesystem.file import File
 from test_tools.disk_utils import Filesystem
 from test_tools import fstab
 from test_tools.dd import Dd
-from types.size import Unit, Size
+from type_def.size import Unit, Size
 from test_tools.os_tools import sync
 from test_tools.udev import Udev
 from test_utils.emergency_escape import EmergencyEscape

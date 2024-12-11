@@ -7,8 +7,8 @@
 from enum import Enum, IntFlag
 
 from test_tools.os_tools import get_kernel_module_parameter
-from types.size import Size, Unit
-from types.time import Time
+from type_def.size import Size, Unit
+from type_def.time import Time
 
 
 class CacheLineSize(Enum):
