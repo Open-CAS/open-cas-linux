@@ -372,4 +372,4 @@ def test_clean_remove_core_without_fs(cache_mode):
 
 
 def check_device_write_stats(device: Device):
-    return IOstatBasic.get_iostat_list(devices_list=[device])[0].total_writes.value
+    return IOstatBasic.get_iostat_list(devices_list=[device.get_device_id()])[0].total_writes.value

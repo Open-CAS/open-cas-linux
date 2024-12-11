@@ -89,10 +89,14 @@ def test_wb_throttling():
     with TestRun.step("Wait for IO processes to finish and print debug informations"):
         sleep_interval = timedelta(seconds=5)
         eta = runtime
-        while eta.total_seconds() > 0:
+        while int(eta.total_seconds()) > 0:
             # Instead of explicit sleeping with `time.sleep()` iostat is used for waiting
             iostat = IOstatExtended.get_iostat_list(
-                [core, cache_device, core_device],
+                [
+                    core.get_device_id(),
+                    cache_device.get_device_id(),
+                    core_device.get_device_id()
+                ],
                 since_boot=False,
                 interval=int(sleep_interval.total_seconds()),
             )
