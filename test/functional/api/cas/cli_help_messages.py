@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2024-2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -192,7 +192,7 @@ remove_core_help = [
 
 
 remove_inactive_help = [
-    r"casadm --remove-inactive --cache-id \<ID\>  --core-id \<ID\> \[option\.\.\.\]",
+    r"Usage: casadm --remove-inactive --cache-id \<ID\> --core-id \<ID\> \[option\.\.\.\]",
     r"Remove inactive core device from cache instance",
     r"Options that are valid with --remove-inactive are:",
     r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
