@@ -6,6 +6,7 @@
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm, casadm_parser, dmesg
 from api.cas.casadm import standby_init
 from api.cas.cli import casadm_bin, standby_init_cmd
@@ -13,7 +14,7 @@ from core.test_run import TestRun
 from storage_devices.device import Device
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_utils.filesystem.file import File
 from test_tools.os_tools import sync
 from connection.utils.output import CmdException
@@ -557,7 +558,7 @@ def test_standby_init_with_preexisting_filesystem(filesystem):
         cache_id = 1
 
     with TestRun.step("Create filesystem on cache device partition"):
-        cache_device.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
 
     with TestRun.step("Try initialize cache without force flag"):
         output = TestRun.executor.run(

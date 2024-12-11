@@ -7,11 +7,12 @@ from datetime import timedelta
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, CpusAllowedPolicy, ReadWrite
 from test_tools.os_tools import get_dut_cpu_physical_cores
@@ -47,7 +48,7 @@ def test_io_engines(cache_mode, filesystem, io_engine):
         cache = casadm.start_cache(cache_dev, cache_mode, force=True)
 
         TestRun.LOGGER.info(f"Create filesystem '{filesystem}' on '{core_dev.path}'")
-        core_dev.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
         core = cache.add_core(core_dev)
         core.mount(mount_point)
 

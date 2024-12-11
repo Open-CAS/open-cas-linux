@@ -5,14 +5,14 @@
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CleaningPolicy, CacheModeTrait, SeqCutOffPolicy
 from storage_devices.device import Device
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
-from test_tools.fs_utils import create_random_test_file, remove
+from test_tools.fs_tools import create_random_test_file, remove, Filesystem
 from test_tools.iostat import IOstatBasic
 from test_utils.filesystem.file import File
 from test_tools.os_tools import sync
@@ -180,7 +180,7 @@ def test_clean_remove_core_with_fs(cache_mode, fs):
         cache = casadm.start_cache(cache_part, cache_mode)
 
     with TestRun.step(f"Add core with {fs.name} filesystem to cache and mount it."):
-        core_part.create_filesystem(fs)
+        test_tools.fs_utils.create_filesystem(fs)
         core = cache.add_core(core_part)
         core.mount(mnt_point)
 

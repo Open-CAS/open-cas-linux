@@ -14,7 +14,7 @@ from datetime import timedelta
 from packaging import version
 
 from core.test_run import TestRun
-from test_tools import fs_utils
+from test_tools import fs_tools
 from test_tools.os_tools import get_kernel_version
 
 default_config_file_path = "/tmp/opencas_ioclass.conf"

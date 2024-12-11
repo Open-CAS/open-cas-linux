@@ -8,12 +8,13 @@ from collections import namedtuple
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import ioclass_config, casadm
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
+from test_tools import fs_tools
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_tools.os_tools import drop_caches, DropCachesMode, sync
 from test_tools.udev import Udev
 from type_def.size import Unit, Size
@@ -42,7 +43,7 @@ def test_ioclass_usage_sum():
 
     with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}"):
         filesystem = Filesystem.xfs
-        core.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
         core.mount(mountpoint)
         sync()
 

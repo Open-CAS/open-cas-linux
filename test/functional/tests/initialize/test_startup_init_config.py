@@ -14,7 +14,7 @@ from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.filesystem.file import File
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_tools import fstab
 from test_tools.dd import Dd
 from type_def.size import Unit, Size

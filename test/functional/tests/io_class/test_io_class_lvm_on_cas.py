@@ -6,14 +6,15 @@
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm, ioclass_config
 from api.cas.cache_config import CacheMode
 from api.cas.ioclass_config import IoClass
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from storage_devices.lvm import Lvm, LvmConfiguration
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools import fs_tools
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from type_def.size import Size, Unit
@@ -58,7 +59,7 @@ def test_io_class_lvm_on_cas():
         lvm = lvms[0]
 
     with TestRun.step("Create filesystem for LVM and mount it."):
-        lvm.create_filesystem(Filesystem.ext4)
+        test_tools.fs_utils.create_filesystem(Filesystem.ext4)
         lvm.mount(mount_point)
 
     with TestRun.step("Prepare and load IO class config."):

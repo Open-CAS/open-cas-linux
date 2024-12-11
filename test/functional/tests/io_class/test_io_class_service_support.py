@@ -7,6 +7,7 @@ import os
 import pytest
 from datetime import timedelta
 
+import test_tools.fs_tools
 import test_tools.runlevel
 from api.cas import ioclass_config, casadm_parser
 from api.cas.cache_config import CacheMode
@@ -15,8 +16,8 @@ from api.cas.init_config import InitConfig
 from api.cas.ioclass_config import IoClass
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools import fs_tools
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_tools.os_tools import sync, drop_caches
@@ -51,7 +52,7 @@ def test_io_class_service_load(runlevel):
         run_io_dir_read(core.path)
 
     with TestRun.step("Create ext4 filesystem on CAS device and mount it."):
-        core.create_filesystem(Filesystem.ext4)
+        test_tools.fs_utils.create_filesystem(Filesystem.ext4)
         core.mount(mountpoint)
 
     with TestRun.step(

@@ -12,7 +12,7 @@ from api.cas.cache_config import CacheMode
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_utils.filesystem.file import File
 from test_tools.os_tools import drop_caches, DropCachesMode, sync
 from type_def.size import Size, Unit

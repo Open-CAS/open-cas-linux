@@ -12,8 +12,8 @@ from core.test_run import TestRun
 from api.cas import casadm
 from storage_devices.disk import DiskType, DiskTypeSet
 from api.cas.cache_config import CacheMode
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools import fs_tools
+from test_tools.fs_tools import Filesystem
 from type_def.size import Size, Unit
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine

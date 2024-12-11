@@ -5,9 +5,9 @@
 #
 
 from api.cas.init_config import InitConfig, opencas_conf_path
-from test_tools import fs_utils
+from test_tools import fs_tools
 from core.test_run import TestRun
-from test_tools.disk_utils import get_block_device_names_list
+from test_tools.disk_tools import get_block_device_names_list
 from type_def.size import Size, Unit
 
 test_file_size = Size(500, Unit.KiloByte)

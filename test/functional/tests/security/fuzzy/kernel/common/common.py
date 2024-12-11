@@ -11,10 +11,11 @@ from typing import List
 
 import yaml
 
+import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheLineSize, KernelParameters, CleaningPolicy
 from core.test_run import TestRun
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from type_def.size import Size, Unit
 
 
@@ -66,7 +67,7 @@ def prepare_cas_instance(
         cache.set_cleaning_policy(cleaning_policy)
 
     if mount_point:
-        core_device.create_filesystem(Filesystem.ext4)
+        test_tools.fs_utils.create_filesystem(Filesystem.ext4)
         core = cache.add_core(core_device)
         core.mount(mount_point)
     else:

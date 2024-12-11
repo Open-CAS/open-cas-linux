@@ -10,6 +10,7 @@ from time import sleep
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import (
     CacheMode,
@@ -21,7 +22,7 @@ from api.cas.casadm_params import StatsFilter
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskTypeLowerThan, DiskType
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_tools.udev import Udev
@@ -222,7 +223,7 @@ def test_multistream_seq_cutoff_stress_fs(streams_seq_rand, filesystem, cache_mo
     with TestRun.step("Create filesystem on core device"):
         cache_disk = TestRun.disks["cache"]
         core_disk = TestRun.disks["core"]
-        core_disk.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
 
     with TestRun.step("Start cache and add core"):
         cache = casadm.start_cache(cache_dev=cache_disk, cache_mode=cache_mode, force=True)

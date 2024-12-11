@@ -12,8 +12,8 @@ import pytest
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
 from core.test_run import TestRun
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools import fs_tools
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan

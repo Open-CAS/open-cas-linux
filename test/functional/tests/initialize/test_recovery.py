@@ -14,8 +14,7 @@ from api.cas.cli_messages import check_stderr_msg, stop_cache_errors
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeLowerThan, DiskTypeSet, DiskType
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
-from test_tools.fs_utils import check_if_file_exists
+from test_tools.fs_tools import check_if_file_exists, Filesystem
 from test_utils.filesystem.file import File
 from test_tools.os_tools import sync
 from type_def.size import Size, Unit

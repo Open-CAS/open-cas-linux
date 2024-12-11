@@ -8,6 +8,7 @@ from datetime import timedelta
 from typing import List
 from enum import Enum
 
+import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import SeqCutOffParameters, SeqCutOffPolicy
 from api.cas.casadm_params import StatsFilter
@@ -15,7 +16,7 @@ from api.cas.casadm_parser import get_seq_cut_off_parameters, get_core_info_for_
 from api.cas.statistics import CoreStats, CoreIoClassStats
 from core.test_run_utils import TestRun
 from storage_devices.device import Device
-from test_tools import fs_utils, disk_utils
+from test_tools import fs_tools, disk_tools
 from test_tools.os_tools import sync
 from test_tools.common.wait import wait
 from type_def.size import Unit, Size
@@ -50,7 +51,7 @@ class Core(Device):
         return get_core_info_for_cache_by_path(core_disk_path=self.core_device.path,
                                                target_cache_id=self.cache_id)
 
-    def create_filesystem(self, fs_type: disk_utils.Filesystem, force=True, blocksize=None):
+    def create_filesystem(self, fs_type: test_tools.fs_utils.Filesystem, force=True, blocksize=None):
         super().create_filesystem(fs_type, force, blocksize)
         self.core_device.filesystem = self.filesystem
 

@@ -7,12 +7,12 @@ import os
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm, cli
 from api.cas.cache_config import CacheMode, CacheModeTrait, CleaningPolicy, SeqCutOffPolicy
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.disk_utils import Filesystem
-from test_tools.fs_utils import readlink
+from test_tools.fs_tools import readlink, Filesystem
 from test_tools.os_tools import DropCachesMode, sync, drop_caches
 from test_tools.udev import Udev
 from connection.utils.output import CmdException
@@ -126,7 +126,7 @@ def test_recovery_flush_reset_fs(cache_mode, fs):
         core_device = core_disk.partitions[0]
 
     with TestRun.step(f"Create {fs} filesystem on core."):
-        core_device.create_filesystem(fs)
+        test_tools.fs_utils.create_filesystem(fs)
 
     with TestRun.step("Create test files."):
         source_file, target_file = create_test_files(test_file_size)

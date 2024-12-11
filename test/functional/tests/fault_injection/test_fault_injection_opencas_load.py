@@ -11,7 +11,7 @@ from api.cas.cache_config import CacheMode, CleaningPolicy, CacheModeTrait
 from tests.lazy_writes.recovery.recovery_tests_methods import copy_file, compare_files
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
+from test_tools import fs_tools
 from type_def.size import Size, Unit
 
 mount_point = "/mnt/cas"

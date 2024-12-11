@@ -5,11 +5,12 @@
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.core import CoreStatus
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from connection.utils.output import CmdException
 from type_def.size import Size, Unit
 
@@ -89,7 +90,7 @@ def test_core_pool_exclusive_open():
         core_disk = TestRun.disks["core"]
         core_disk.create_partitions([Size(1, Unit.GibiByte)])
         core_dev = core_disk.partitions[0]
-        core_dev.create_filesystem(Filesystem.ext4)
+        test_tools.fs_utils.create_filesystem(Filesystem.ext4)
         cache_id = 1
         core_id = 1
 
@@ -126,7 +127,7 @@ def test_core_pool_exclusive_open():
     with TestRun.step("Check if it is impossible to make filesystem on the core device "
                       "from core pool."):
         try:
-            core_dev.create_filesystem(Filesystem.ext4, force=False)
+            test_tools.fs_utils.create_filesystem(Filesystem.ext4, force=False)
             TestRun.fail("Successfully created filesystem on core from core pool, "
                          "this is unexpected behaviour.")
         except Exception:

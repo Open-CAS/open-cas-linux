@@ -13,7 +13,7 @@ from api.cas.cache_config import CacheLineSize
 from core.test_run import TestRun
 from storage_devices.device import Device
 from storage_devices.disk import DiskTypeSet, DiskType
-from test_tools import disk_utils
+from test_tools import disk_tools
 from connection.utils.output import CmdException
 from type_def.size import Size, Unit
 

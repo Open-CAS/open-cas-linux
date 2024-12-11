@@ -9,7 +9,7 @@ from api.cas import ioclass_config, cli_messages
 from api.cas.ioclass_config import IoClass
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
+from test_tools import fs_tools
 from connection.utils.output import CmdException
 from type_def.size import Unit, Size
 from tests.io_class.io_class_common import prepare, ioclass_config_path

@@ -8,11 +8,12 @@ import os
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm, cli_messages
 from api.cas.cache_config import CacheMode, CacheModeTrait, CacheLineSize
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from connection.utils.output import CmdException
 from type_def.size import Size, Unit
 from tests.lazy_writes.recovery.recovery_tests_methods import create_test_files, copy_file, \
@@ -53,7 +54,7 @@ def test_recovery_unplug_cache_fs(cache_mode, cls, filesystem, direct):
         source_file_md5 = source_file.md5sum()
 
     with TestRun.step("Create filesystem on core device."):
-        core_device.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
 
     with TestRun.step("Start cache and add core."):
         cache = casadm.start_cache(cache_device, cache_mode, cls)

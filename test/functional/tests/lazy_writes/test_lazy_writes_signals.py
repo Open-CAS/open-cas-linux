@@ -6,6 +6,7 @@
 import pytest
 from time import sleep
 
+import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import (CacheMode,
                                   CacheModeTrait,
@@ -14,8 +15,7 @@ from api.cas.cache_config import (CacheMode,
                                   Time)
 from storage_devices.disk import DiskType, DiskTypeSet
 from core.test_run import TestRun
-from test_tools.disk_utils import Filesystem
-from test_tools.fs_utils import create_random_test_file
+from test_tools.fs_tools import create_random_test_file, Filesystem
 from test_tools.os_tools import sync
 from test_tools.scsi_debug import Logs, syslog_path
 from type_def.size import Size, Unit
@@ -47,7 +47,7 @@ def test_flush_signal_core(cache_mode):
 
     with TestRun.step("Start cache and add SCSI device with xfs filesystem as core."):
         cache = casadm.start_cache(cache_part, cache_mode)
-        core_dev.create_filesystem(Filesystem.xfs)
+        test_tools.fs_utils.create_filesystem(Filesystem.xfs)
         core = cache.add_core(core_dev)
 
     with TestRun.step("Mount exported object."):
@@ -145,7 +145,7 @@ def test_flush_signal_cache(cache_mode):
 
     with TestRun.step("Start SCSI device as cache and add core with xfs filesystem."):
         cache = casadm.start_cache(cache_dev, cache_mode)
-        core_part.create_filesystem(Filesystem.xfs)
+        test_tools.fs_utils.create_filesystem(Filesystem.xfs)
         core = cache.add_core(core_part)
 
     with TestRun.step("Mount exported object."):

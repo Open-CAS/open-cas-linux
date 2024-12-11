@@ -7,7 +7,7 @@
 from api.cas import casadm_parser
 from api.cas.cache_config import CacheMode
 from storage_devices.device import Device
-from test_tools import fs_utils
+from test_tools import fs_tools
 
 
 opencas_conf_path = "/etc/opencas/opencas.conf"

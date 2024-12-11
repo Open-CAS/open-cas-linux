@@ -6,11 +6,12 @@
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm, casadm_parser, cli, cli_messages
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils, disk_utils
-from test_tools.disk_utils import Filesystem
+from test_tools import fs_tools, disk_tools
+from test_tools.fs_tools import Filesystem
 from test_utils.filesystem.file import File
 from test_utils.filesystem.symlink import Symlink
 from type_def.size import Size, Unit
@@ -41,7 +42,7 @@ def test_load_cache_with_mounted_core():
         cache = casadm.start_cache(cache_part, force=True)
 
     with TestRun.step("Add core device with xfs filesystem to cache and mount it."):
-        core_part.create_filesystem(Filesystem.xfs)
+        test_tools.fs_utils.create_filesystem(Filesystem.xfs)
         core = cache.add_core(core_part)
         core.mount(mount_point)
 
@@ -116,7 +117,7 @@ def test_stop_cache_with_mounted_partition():
 
     with TestRun.step("Create xfs filesystems on one exported object partition "
                       "and on the non-partitioned exported object."):
-        fs_part.create_filesystem(Filesystem.xfs)
+        test_tools.fs_utils.create_filesystem(Filesystem.xfs)
         core2.create_filesystem(Filesystem.xfs)
 
     with TestRun.step("Mount created filesystems."):
@@ -180,7 +181,7 @@ def test_stop_cache_with_mounted_partition_no_mtab():
         cache = casadm.start_cache(cache_part, force=True)
 
     with TestRun.step("Add core device with xfs filesystem and mount it."):
-        core_part.create_filesystem(Filesystem.xfs)
+        test_tools.fs_utils.create_filesystem(Filesystem.xfs)
         core = cache.add_core(core_part)
         core.mount(mount_point)
 

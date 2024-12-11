@@ -9,13 +9,14 @@ from itertools import permutations
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import ioclass_config, casadm
 from api.cas.ioclass_config import IoClass
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
+from test_tools import fs_tools
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_utils.filesystem.file import File
@@ -232,7 +233,7 @@ def test_ioclass_direct(filesystem):
                 f"Preparing {filesystem.name} filesystem and mounting {core.path} at"
                 f" {mountpoint}"
             )
-            core.create_filesystem(filesystem)
+            test_tools.fs_utils.create_filesystem(filesystem)
             core.mount(mountpoint)
             sync()
         else:
@@ -328,7 +329,7 @@ def test_ioclass_metadata(filesystem):
     with TestRun.step(
         f"Prepare {filesystem.name} filesystem and mount {core.path} " f"at {mountpoint}."
     ):
-        core.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
         core.mount(mountpoint)
         sync()
 
@@ -474,7 +475,7 @@ def test_ioclass_id_as_condition():
     with TestRun.step(
         f"Prepare {filesystem.name} filesystem " f"and mount {core.path} at {mountpoint}."
     ):
-        core.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
         core.mount(mountpoint)
         fs_utils.create_directory(base_dir_path)
         sync()
@@ -615,7 +616,7 @@ def test_ioclass_conditions_or():
     with TestRun.step(
         f"Prepare {filesystem.name} filesystem " f"and mount {core.path} at {mountpoint}."
     ):
-        core.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
         core.mount(mountpoint)
         for i in range(1, 6):
             fs_utils.create_directory(f"{mountpoint}/dir{i}")
@@ -682,7 +683,7 @@ def test_ioclass_conditions_and():
     TestRun.LOGGER.info(
         f"Preparing {filesystem.name} filesystem " f"and mounting {core.path} at {mountpoint}"
     )
-    core.create_filesystem(filesystem)
+    test_tools.fs_utils.create_filesystem(filesystem)
     core.mount(mountpoint)
     sync()
 
@@ -743,7 +744,7 @@ def test_ioclass_effective_ioclass():
     with TestRun.LOGGER.step(
         f"Preparing {filesystem.name} filesystem " f"and mounting {core.path} at {mountpoint}"
     ):
-        core.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
         core.mount(mountpoint)
         fs_utils.create_directory(test_dir)
         sync()

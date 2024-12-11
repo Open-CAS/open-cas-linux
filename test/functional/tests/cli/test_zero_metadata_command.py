@@ -8,11 +8,12 @@ from datetime import timedelta
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm, cli_messages, cli
 from api.cas.cache_config import CacheMode, CleaningPolicy
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.disk_utils import get_device_filesystem_type, Filesystem
+from test_tools.fs_tools import Filesystem, get_device_filesystem_type
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_tools.disk_finder import get_system_disks
@@ -98,7 +99,7 @@ def test_zero_metadata_filesystem(filesystem):
         cache_dev, core_disk, cache_disk = prepare_devices()
 
     with TestRun.step("Create filesystem on core device."):
-        core_disk.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
 
     with TestRun.step("Start cache and add core."):
         cache = casadm.start_cache(cache_dev, force=True)

@@ -17,9 +17,9 @@ from api.cas.cli_messages import (
 )
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
+from test_tools import fs_tools
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_utils.filesystem.file import File
 from connection.utils.output import CmdException
 from type_def.size import Size, Unit

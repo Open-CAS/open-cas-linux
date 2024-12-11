@@ -9,7 +9,7 @@ from datetime import timedelta
 from string import Template
 from textwrap import dedent
 
-from test_tools.fs_utils import (
+from test_tools.fs_tools import (
     check_if_directory_exists,
     create_directory,
     write_file,

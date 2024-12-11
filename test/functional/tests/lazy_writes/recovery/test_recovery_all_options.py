@@ -7,12 +7,13 @@ import os
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheModeTrait, CacheLineSize, CleaningPolicy, \
     FlushParametersAcp
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_utils.filesystem.file import File
@@ -57,7 +58,7 @@ def test_recovery_all_options(cache_mode, cache_line_size, cleaning_policy, file
         file_md5 = test_file.md5sum()
 
     with TestRun.step(f"Make {filesystem} on core device."):
-        core_device.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
 
     with TestRun.step("Mount core device."):
         core_device.mount(mount_point)

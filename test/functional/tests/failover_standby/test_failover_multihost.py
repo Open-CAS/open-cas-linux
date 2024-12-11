@@ -21,15 +21,14 @@ from storage_devices.disk import DiskType, DiskTypeSet
 from storage_devices.drbd import Drbd
 from storage_devices.raid import Raid, RaidConfiguration, MetadataVariant, Level
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite
-from test_tools.fs_utils import readlink
+from test_tools.fs_tools import readlink, Filesystem
 from test_utils.drbd import Resource, Node
 from test_tools.os_tools import sync
 from test_tools.udev import Udev
 from type_def.size import Size, Unit
-from test_tools import fs_utils
+from test_tools import fs_tools
 
 
 cache_id = 5

@@ -8,9 +8,10 @@ from math import isclose
 
 import pytest
 
+import test_tools.fs_tools
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools import fs_tools
+from test_tools.fs_tools import Filesystem
 from .io_class_common import *
 
 
@@ -37,7 +38,7 @@ def test_io_class_eviction_priority():
 
     with TestRun.step(f"Preparing filesystem and mounting {core.path} at {mountpoint}"):
         filesystem = Filesystem.xfs
-        core.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
         core.mount(mountpoint)
         sync()
 

@@ -25,10 +25,10 @@ from storage_devices.raid import Raid
 from storage_devices.ramdisk import RamDisk
 from test_tools.os_tools import kill_all_io
 from test_tools.udev import Udev
-from test_tools.disk_utils import PartitionTable, create_partition_table
+from test_tools.disk_tools import PartitionTable, create_partition_table
 from test_tools.device_mapper import DeviceMapper
 from test_tools.mdadm import Mdadm
-from test_tools.fs_utils import remove
+from test_tools.fs_tools import remove
 from test_tools import initramfs, git
 from log.logger import create_log, Log
 from test_utils.common.singleton import Singleton

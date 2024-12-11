@@ -5,13 +5,15 @@
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from storage_devices.partition import Partition
-from test_tools import fs_utils, disk_utils
-from test_tools.disk_utils import PartitionTable, Filesystem
+from test_tools import fs_tools, disk_tools
+from test_tools.disk_tools import PartitionTable
+from test_tools.fs_tools import Filesystem
 from type_def.size import Size, Unit
 
 mount_point = "/mnt/cas"
@@ -43,7 +45,7 @@ def test_cas_preserves_partitions(partition_table, filesystem, cache_mode):
 
     with TestRun.step("Create filesystem on core devices."):
         for i in range(cores_number):
-            core_dev.partitions[i].create_filesystem(filesystem)
+            test_tools.fs_utils.create_filesystem(filesystem)
 
     with TestRun.step("Mount core devices and create test files."):
         files = []
@@ -124,7 +126,7 @@ def test_partition_create_cas(partition_table, filesystem, cache_mode):
 
     with TestRun.step("Create filesystem on core devices."):
         for part in core.partitions:
-            part.create_filesystem(filesystem)
+            test_tools.fs_utils.create_filesystem(filesystem)
 
     with TestRun.step("Mount core devices and create test files."):
         files = []

@@ -13,7 +13,7 @@ from api.cas.cache_config import CacheMode
 from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeLowerThan, DiskTypeSet, DiskType
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_tools.os_tools import sync, drop_caches

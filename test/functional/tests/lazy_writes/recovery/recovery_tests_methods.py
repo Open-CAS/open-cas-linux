@@ -7,7 +7,7 @@ from datetime import timedelta
 
 import test_tools.common.wait
 from core.test_run import TestRun
-from test_tools import fs_utils
+from test_tools import fs_tools
 from test_tools.dd import Dd
 from test_utils.filesystem.file import File
 from type_def.size import Size, Unit

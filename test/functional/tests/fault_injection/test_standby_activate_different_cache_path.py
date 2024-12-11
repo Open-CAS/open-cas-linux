@@ -15,7 +15,7 @@ from type_def.size import Size, Unit
 from api.cas.cache_config import CacheLineSize
 from api.cas.cache import CacheStatus
 from test_tools.dd import Dd
-from test_tools.fs_utils import check_if_symlink_exists
+from test_tools.fs_tools import check_if_symlink_exists
 from test_tools.os_tools import sync
 
 

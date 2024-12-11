@@ -6,6 +6,7 @@
 import pytest
 from collections import namedtuple
 
+import test_tools.fs_tools
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet
 from storage_devices.raid import Raid, RaidConfiguration, MetadataVariant, Level
@@ -13,9 +14,8 @@ from storage_devices.ramdisk import RamDisk
 from test_utils.drbd import Resource, Node
 from storage_devices.drbd import Drbd
 from test_tools.drbdadm import Drbdadm
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
-from test_tools.fs_utils import copy
+from test_tools import fs_tools
+from test_tools.fs_tools import copy, Filesystem
 from test_utils.filesystem.directory import Directory
 from test_utils.filesystem.file import File
 from type_def.size import Size, Unit
@@ -52,7 +52,7 @@ def test_create_example_partitions():
             test_disk.create_partitions(part_sizes)
         for i in TestRun.iteration(range(0, 5)):
             with TestRun.step(f"Create filesystem on partition {i}"):
-                test_disk.partitions[i].create_filesystem(Filesystem.ext3)
+                test_tools.fs_utils.create_filesystem(Filesystem.ext3)
 
 
 @pytest.mark.require_disk("cache1", DiskTypeSet([DiskType.optane, DiskType.nand]))

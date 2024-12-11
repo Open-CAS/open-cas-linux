@@ -6,6 +6,7 @@ import random
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm
 from api.cas import ioclass_config
 from api.cas.cache_config import CleaningPolicy, CacheMode, CacheLineSize
@@ -24,7 +25,7 @@ from api.cas.statistics import (
 )
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_utils.filesystem.file import File
 from test_tools.os_tools import sync
 from test_tools.udev import Udev
@@ -310,7 +311,7 @@ def prepare(random_cls, cache_count=1, cores_per_cache=1):
     cache_devices = cache_device.partitions
     core_devices = core_device.partitions
     for core_device in core_devices:
-        core_device.create_filesystem(Filesystem.ext4)
+        test_tools.fs_utils.create_filesystem(Filesystem.ext4)
 
     Udev.disable()
     caches, cores = [], []

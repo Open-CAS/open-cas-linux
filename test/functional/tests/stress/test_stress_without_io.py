@@ -11,8 +11,8 @@ from api.cas.cache_config import CacheMode
 from api.cas.init_config import InitConfig
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools import fs_tools
+from test_tools.fs_tools import Filesystem
 from type_def.size import Size, Unit
 
 iterations_per_config = 50

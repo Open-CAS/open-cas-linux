@@ -11,8 +11,8 @@ from .common import compare_md5sums, create_files_with_md5sums
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from storage_devices.raid import Raid, RaidConfiguration, MetadataVariant, Level
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools import fs_tools
+from test_tools.fs_tools import Filesystem
 from type_def.size import Size, Unit
 
 mount_point = "/mnt/test"

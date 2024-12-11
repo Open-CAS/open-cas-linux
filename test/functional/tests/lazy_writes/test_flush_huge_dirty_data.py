@@ -7,16 +7,16 @@
 import pytest
 from datetime import timedelta
 
+import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheModeTrait, CleaningPolicy, SeqCutOffPolicy
 from api.cas.cli import stop_cmd
 from core.test_run import TestRun
 from storage_devices.device import Device
 from storage_devices.disk import DiskType, DiskTypeLowerThan, DiskTypeSet
-from test_tools.disk_utils import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
-from test_tools.fs_utils import remove
+from test_tools.fs_tools import remove, Filesystem
 from test_utils.filesystem.file import File
 from test_tools.os_tools import sync
 from test_tools.udev import Udev
@@ -56,7 +56,7 @@ def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
         cache = casadm.start_cache(cache_part, cache_mode)
 
     with TestRun.step(f"Add core with {fs.name} filesystem to cache and mount it."):
-        core_dev.create_filesystem(fs)
+        test_tools.fs_utils.create_filesystem(fs)
         core = cache.add_core(core_dev)
         core.mount(mnt_point)
 
@@ -66,7 +66,7 @@ def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
 
     with TestRun.step("Create a test file on a separate disk"):
         src_dir_path = "/mnt/flush_640G_test"
-        separate_dev.create_filesystem(fs)
+        test_tools.fs_utils.create_filesystem(fs)
         separate_dev.mount(src_dir_path)
 
         test_file_main = File.create_file(f"{src_dir_path}/test_file_main")

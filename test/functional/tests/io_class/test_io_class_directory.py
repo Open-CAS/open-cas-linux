@@ -9,12 +9,13 @@ from datetime import datetime
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import ioclass_config, casadm
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
+from test_tools import fs_tools
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_utils.filesystem.directory import Directory
 from test_utils.filesystem.file import File
 from test_tools.os_tools import drop_caches, DropCachesMode, sync
@@ -46,7 +47,7 @@ def test_ioclass_directory_depth(filesystem):
     with TestRun.step(
         f"Prepare {filesystem.name} filesystem and mount {core.path} " f"at {mountpoint}."
     ):
-        core.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
         core.mount(mountpoint)
         sync()
 
@@ -178,7 +179,7 @@ def test_ioclass_directory_file_operations(filesystem):
     with TestRun.step(
         f"Prepare {filesystem.name} filesystem " f"and mounting {core.path} at {mountpoint}."
     ):
-        core.create_filesystem(fs_type=filesystem)
+        test_tools.fs_utils.create_filesystem(fs_type=filesystem)
         core.mount(mount_point=mountpoint)
         sync()
 
@@ -346,7 +347,7 @@ def test_ioclass_directory_dir_operations(filesystem):
     with TestRun.step(
         f"Prepare {filesystem.name} filesystem " f"and mount {core.path} at {mountpoint}."
     ):
-        core.create_filesystem(fs_type=filesystem)
+        test_tools.fs_utils.create_filesystem(fs_type=filesystem)
         core.mount(mount_point=mountpoint)
         sync()
 

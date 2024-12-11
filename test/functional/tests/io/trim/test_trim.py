@@ -8,15 +8,17 @@ import time
 
 import pytest
 
+import test_tools.fs_tools
 from test_tools.os_tools import sync, drop_caches
 from test_tools.udev import Udev
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheModeTrait, CleaningPolicy, SeqCutOffPolicy
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet
-from test_tools import fs_utils
+from test_tools import fs_tools
 from test_tools.blktrace import BlkTrace, BlkTraceMask, RwbsKind
-from test_tools.disk_utils import Filesystem, check_if_device_supports_trim
+from test_tools.disk_tools import check_if_device_supports_trim
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from type_def.size import Size, Unit
@@ -228,7 +230,7 @@ def test_trim_device_discard_support(
         cache = casadm.start_cache(cache_dev, cache_mode, force=True)
         cache.set_cleaning_policy(cleaning_policy)
 
-        core_dev.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
         core = cache.add_core(core_dev)
 
     with TestRun.step("Mount filesystem with discard option."):

@@ -9,7 +9,7 @@ import re
 import pytest
 
 from core.test_run import TestRun
-from test_tools.fs_utils import Permissions, PermissionsUsers, PermissionSign
+from test_tools.fs_tools import Permissions, PermissionsUsers, PermissionSign
 from test_utils.filesystem.fs_item import FsItem
 
 

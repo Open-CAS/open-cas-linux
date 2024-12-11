@@ -9,8 +9,7 @@ from api.cas.cache_config import CacheMode, CleaningPolicy, SeqCutOffPolicy
 from api.cas.progress_bar import check_progress_bar
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType
-from test_tools.disk_utils import Filesystem
-from test_tools.fs_utils import create_random_test_file
+from test_tools.fs_tools import create_random_test_file, Filesystem
 from type_def.size import Size, Unit
 
 

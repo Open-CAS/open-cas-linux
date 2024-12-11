@@ -7,11 +7,11 @@ import pytest
 from collections import namedtuple
 from math import isclose
 
-
+import test_tools.fs_tools
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from api.cas.ioclass_config import IoClass, default_config_file_path
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools import fs_tools
+from test_tools.fs_tools import Filesystem
 from core.test_run import TestRun
 from type_def.size import Size, Unit
 from .io_class_common import (
@@ -44,7 +44,7 @@ def test_io_class_pinning_eviction():
         cache_line_count = cache.get_statistics().config_stats.cache_size
 
     with TestRun.step("Mount filesystem"):
-        core.create_filesystem(Filesystem.xfs)
+        test_tools.fs_utils.create_filesystem(Filesystem.xfs)
         core.mount(mountpoint)
 
     with TestRun.step("Prepare test dirs"):
@@ -141,7 +141,7 @@ def test_pinned_ioclasses_eviction():
         cache_line_count = cache.get_statistics().config_stats.cache_size
 
     with TestRun.step("Mount filesystem"):
-        core.create_filesystem(Filesystem.xfs)
+        test_tools.fs_utils.create_filesystem(Filesystem.xfs)
         core.mount(mountpoint)
 
     with TestRun.step("Prepare test dirs"):

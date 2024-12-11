@@ -7,6 +7,7 @@ import posixpath
 import random
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import (
     CacheMode,
@@ -14,7 +15,7 @@ from api.cas.cache_config import (
 )
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from type_def.size import Size, Unit
 from test_tools.udev import Udev
 from test_tools.fio.fio import Fio
@@ -104,7 +105,7 @@ def test_change_cleaning_policy_during_io_fs(filesystem):
         cache = casadm.start_cache(cache_dev.partitions[0], CacheMode.WB, force=True)
 
     with TestRun.step(f"Create filesystem on core device"):
-        core_dev.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
 
     with TestRun.step(f"Add core to the cache"):
         core = cache.add_core(core_dev)

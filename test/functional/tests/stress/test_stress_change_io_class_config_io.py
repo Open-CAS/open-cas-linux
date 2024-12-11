@@ -15,7 +15,7 @@ from api.cas.cache_config import CacheMode
 from api.cas.ioclass_config import IoClass
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine
 from connection.utils.asynchronous import start_async_func

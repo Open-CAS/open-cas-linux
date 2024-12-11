@@ -13,8 +13,8 @@ from api.cas.cache_config import CacheMode, CleaningPolicy, SeqCutOffPolicy
 from api.cas.ioclass_config import IoClass
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools import fs_tools
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_tools.os_tools import sync, drop_caches

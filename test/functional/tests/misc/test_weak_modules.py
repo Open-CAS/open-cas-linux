@@ -11,7 +11,7 @@ import pytest
 
 from api.cas.installer import clean_opencas_repo, rsync_opencas_sources
 from core.test_run import TestRun
-from test_tools.fs_utils import (
+from test_tools.fs_tools import (
     check_if_regular_file_exists,
     check_if_symlink_exists,
     readlink,

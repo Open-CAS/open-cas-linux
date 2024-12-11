@@ -9,7 +9,7 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from api.cas.cache import CacheMode, casadm
 from type_def.size import Size, Unit
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from .common import create_files_with_md5sums, compare_md5sums
 
 mount_point = "/mnt/test"

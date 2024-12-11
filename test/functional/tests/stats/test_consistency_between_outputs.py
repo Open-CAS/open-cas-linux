@@ -7,12 +7,13 @@ import random
 import re
 import pytest
 
+import test_tools.fs_tools
 from api.cas.cache_config import CacheMode, CacheLineSize, CacheModeTrait
 from api.cas.casadm import OutputFormat, print_statistics, start_cache
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from type_def.size import Size, Unit
 
 iterations = 64
@@ -45,7 +46,7 @@ def test_output_consistency(cache_line_size, cache_mode, test_object):
 
     with TestRun.step("Start cache and add core with a filesystem."):
         cache = start_cache(cache_part, cache_mode, cache_line_size, force=True)
-        core_part.create_filesystem(Filesystem.xfs)
+        test_tools.fs_utils.create_filesystem(Filesystem.xfs)
         exp_obj = cache.add_core(core_part)
 
     with TestRun.step("Select object to test."):

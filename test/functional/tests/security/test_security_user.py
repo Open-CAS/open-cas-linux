@@ -6,14 +6,15 @@
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import casadm, cli
 from api.cas.cache_config import CacheMode
 from api.cas.casadm_params import OutputFormat
 from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools import fs_tools
+from test_tools.fs_tools import Filesystem
 from test_tools.os_tools import create_user, check_if_user_exists
 from connection.utils.output import CmdException
 from type_def.size import Size, Unit
@@ -51,7 +52,7 @@ def test_user_cli():
         cache = casadm.start_cache(cache_dev, force=True)
 
     with TestRun.step("Add core to cache and mount it."):
-        core_part1.create_filesystem(Filesystem.ext3)
+        test_tools.fs_utils.create_filesystem(Filesystem.ext3)
         core = cache.add_core(core_part1)
         core.mount(mount_point)
 
@@ -403,7 +404,7 @@ def test_user_service():
         cache = casadm.start_cache(cache_dev, force=True)
 
     with TestRun.step("Add core to cache and mount it."):
-        core_dev.create_filesystem(Filesystem.ext3)
+        test_tools.fs_utils.create_filesystem(Filesystem.ext3)
         core = cache.add_core(core_dev)
         core.mount(mount_point)
 

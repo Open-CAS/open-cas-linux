@@ -8,13 +8,14 @@ from math import isclose
 
 import pytest
 
+import test_tools.fs_tools
 from api.cas import ioclass_config, casadm
 from api.cas.cache_config import CacheMode, CacheLineSize
 from api.cas.ioclass_config import IoClass, default_config_file_path
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools import fs_tools
+from test_tools.fs_tools import Filesystem
 from test_tools.os_tools import sync
 from test_tools.udev import Udev
 from type_def.size import Unit
@@ -55,7 +56,7 @@ def test_ioclass_repart(io_class_size_multiplication):
 
     with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}"):
         filesystem = Filesystem.xfs
-        core.create_filesystem(filesystem)
+        test_tools.fs_utils.create_filesystem(filesystem)
         core.mount(mountpoint)
         sync()
 
