@@ -15,7 +15,7 @@ from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.disk_utils import get_device_filesystem_type, Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
-from test_utils.disk_finder import get_system_disks
+from test_tools.disk_finder import get_system_disks
 from connection.utils.output import CmdException
 from types.size import Size, Unit
 
