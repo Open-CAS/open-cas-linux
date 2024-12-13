@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -7,7 +8,6 @@ import posixpath
 import random
 import pytest
 
-import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import (
     CacheMode,
@@ -105,7 +105,7 @@ def test_change_cleaning_policy_during_io_fs(filesystem):
         cache = casadm.start_cache(cache_dev.partitions[0], CacheMode.WB, force=True)
 
     with TestRun.step(f"Create filesystem on core device"):
-        test_tools.fs_utils.create_filesystem(filesystem)
+        core_dev.create_filesystem(filesystem)
 
     with TestRun.step(f"Add core to the cache"):
         core = cache.add_core(core_dev)

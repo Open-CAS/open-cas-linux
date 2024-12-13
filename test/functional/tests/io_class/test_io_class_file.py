@@ -1,13 +1,12 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import random
-
 import pytest
 
-import test_tools.fs_tools
 from api.cas import ioclass_config, casadm
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
@@ -57,7 +56,7 @@ def test_ioclass_file_extension():
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
     with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}."):
-        test_tools.fs_utils.create_filesystem(Filesystem.ext3)
+        core.create_filesystem(Filesystem.ext3)
         core.mount(mountpoint)
 
     with TestRun.step("Flush cache."):
@@ -124,7 +123,7 @@ def test_ioclass_file_name_prefix():
     with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}"):
         previous_occupancy = cache.get_occupancy()
 
-        test_tools.fs_utils.create_filesystem(Filesystem.ext3)
+        core.create_filesystem(Filesystem.ext3)
         core.mount(mountpoint)
 
         current_occupancy = cache.get_occupancy()
@@ -210,7 +209,7 @@ def test_ioclass_file_extension_preexisting_filesystem():
 
     with TestRun.step(f"Prepare files on raw block device."):
         casadm.remove_core(cache.cache_id, core_id=core.core_id)
-        test_tools.fs_utils.create_filesystem(Filesystem.ext3)
+        core.core_device.create_filesystem(Filesystem.ext3)
         core.core_device.mount(mountpoint)
 
         for ext in extensions:
@@ -292,7 +291,7 @@ def test_ioclass_file_offset():
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
     with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}."):
-        test_tools.fs_utils.create_filesystem(Filesystem.ext3)
+        core.create_filesystem(Filesystem.ext3)
         core.mount(mountpoint)
 
     with TestRun.step("Flush cache."):
@@ -384,7 +383,7 @@ def test_ioclass_file_size(filesystem):
     with TestRun.step(
         f"Prepare {filesystem.name} filesystem and mount {core.path} " f"at {mountpoint}."
     ):
-        test_tools.fs_utils.create_filesystem(filesystem)
+        core.create_filesystem(filesystem)
         core.mount(mountpoint)
         sync()
 

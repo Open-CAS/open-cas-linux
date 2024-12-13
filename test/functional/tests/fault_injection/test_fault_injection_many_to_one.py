@@ -289,7 +289,7 @@ def test_one_core_fail_dirty():
     with TestRun.step("Check if core device is really out of cache."):
         output = str(casadm.list_caches().stdout.splitlines())
         if core_part1.path in output:
-            TestRun.exception("The first core device should be unplugged!")
+            TestRun.LOGGER.exception("The first core device should be unplugged!")
 
     with TestRun.step("Verify that I/O to the remaining cores does not insert to cache"):
         dd_builder(cache_mode, core2, Size(100, Unit.MebiByte)).run()

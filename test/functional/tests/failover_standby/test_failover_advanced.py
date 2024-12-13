@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -1092,13 +1093,6 @@ def test_failover_io_long(cls, cleaning_policy, num_iterations):
             primary_node
         ):
             TestRun.executor.wait_for_connection()
-
-
-def check_drbd_installed(duts):
-    for dut in duts:
-        with TestRun.use_dut(dut):
-            if not Drbd.is_installed():
-                TestRun.fail(f"DRBD is not installed on DUT {dut.ip}")
 
 
 def prepare_devices(duts):

@@ -1,27 +1,27 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import os
 import pytest
+
 from datetime import timedelta
 
-import test_tools.fs_tools
-import test_tools.runlevel
-from api.cas import ioclass_config, casadm_parser
 from api.cas.cache_config import CacheMode
 from api.cas.casadm_params import StatsFilter
+from api.cas.casadm_parser import get_caches, get_cores
 from api.cas.init_config import InitConfig
-from api.cas.ioclass_config import IoClass
+from api.cas.ioclass_config import IoClass, remove_ioclass_config, create_ioclass_config, \
+    add_ioclass
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools import fs_tools
-from test_tools.fs_tools import Filesystem
+from test_tools.fs_tools import Filesystem, copy, read_file
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_tools.os_tools import sync, drop_caches
-from test_tools.runlevel import Runlevel
+from test_tools.runlevel import Runlevel, change_runlevel
 from type_def.size import Size, Unit
 from tests.io_class.io_class_common import (
     prepare,
@@ -52,7 +52,7 @@ def test_io_class_service_load(runlevel):
         run_io_dir_read(core.path)
 
     with TestRun.step("Create ext4 filesystem on CAS device and mount it."):
-        test_tools.fs_utils.create_filesystem(Filesystem.ext4)
+        core.create_filesystem(Filesystem.ext4)
         core.mount(mountpoint)
 
     with TestRun.step(
@@ -79,18 +79,18 @@ def test_io_class_service_load(runlevel):
         sync()
 
     with TestRun.step(f"Reboot system to runlevel {runlevel}."):
-        test_tools.runlevel.change_runlevel(runlevel)
+        change_runlevel(runlevel)
         TestRun.executor.reboot()
 
     with TestRun.step(
         "Check if CAS device loads properly - "
         "IO class configuration and statistics shall not change"
     ):
-        caches = casadm_parser.get_caches()
+        caches = get_caches()
         if len(caches) != 1:
             TestRun.fail("Cache did not start at boot time.")
         cache = caches[0]
-        cores = casadm_parser.get_cores(cache.cache_id)
+        cores = get_cores(cache.cache_id)
         if len(cores) != 1:
             TestRun.fail(f"Actual number of cores: {len(cores)}\nExpected number of cores: 1")
         core = cores[0]
@@ -160,17 +160,17 @@ def run_io():
 
 
 def prepare_and_load_io_class_config(cache, metadata_not_cached=False):
-    ioclass_config.remove_ioclass_config()
+    remove_ioclass_config()
 
     if metadata_not_cached:
-        ioclass_config.create_ioclass_config(
+        create_ioclass_config(
             add_default_rule=True, ioclass_config_path=ioclass_config_path
         )
-        ioclass_config.add_ioclass(1, "metadata&done", 1, "0.00", ioclass_config_path)
+        add_ioclass(1, "metadata&done", 1, "0.00", ioclass_config_path)
     else:
-        fs_utils.copy(template_config_path, ioclass_config_path)
+        copy(template_config_path, ioclass_config_path)
 
-    config_io_classes = IoClass.csv_to_list(fs_utils.read_file(ioclass_config_path))
+    config_io_classes = IoClass.csv_to_list(read_file(ioclass_config_path))
     cache.load_io_class(ioclass_config_path)
     output_io_classes = cache.list_io_classes()
     if not IoClass.compare_ioclass_lists(config_io_classes, output_io_classes):

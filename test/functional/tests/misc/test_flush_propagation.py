@@ -1,12 +1,13 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
+
 from time import sleep
 
-import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import (
     CacheMode,
@@ -45,7 +46,7 @@ def test_flush_signal_propagation_cache():
 
     with TestRun.step("Start cache on SCSI device and add core with xfs filesystem"):
         cache = casadm.start_cache(cache_dev, CacheMode.WT)
-        test_tools.fs_utils.create_filesystem(Filesystem.xfs)
+        core_dev.create_filesystem(Filesystem.xfs)
         core = cache.add_core(core_dev)
 
     with TestRun.step("Turn off cleaning policy and sequential cutoff"):
@@ -91,7 +92,7 @@ def test_flush_signal_propagation_core():
 
     with TestRun.step("Start cache and add SCSI device with xfs filesystem as core."):
         cache = casadm.start_cache(cache_dev, CacheMode.WT)
-        test_tools.fs_utils.create_filesystem(Filesystem.xfs)
+        core_dev.create_filesystem(Filesystem.xfs)
         core = cache.add_core(core_dev)
 
     with TestRun.step("Turn off cleaning policy and sequential cutoff"):

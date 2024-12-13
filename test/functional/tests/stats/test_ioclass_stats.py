@@ -1,12 +1,12 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
-import random
 
+import random
 import pytest
 
-import test_tools.fs_tools
 from api.cas import casadm
 from api.cas import ioclass_config
 from api.cas.cache_config import CleaningPolicy, CacheMode, CacheLineSize
@@ -311,7 +311,7 @@ def prepare(random_cls, cache_count=1, cores_per_cache=1):
     cache_devices = cache_device.partitions
     core_devices = core_device.partitions
     for core_device in core_devices:
-        test_tools.fs_utils.create_filesystem(Filesystem.ext4)
+        core_device.create_filesystem(Filesystem.ext4)
 
     Udev.disable()
     caches, cores = [], []

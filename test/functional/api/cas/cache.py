@@ -8,8 +8,8 @@ from api.cas.casadm_parser import *
 from api.cas.core import Core
 from api.cas.dmesg import get_metadata_size_on_device
 from api.cas.statistics import CacheStats, CacheIoClassStats
-from test_tools.os_tools import *
 from connection.utils.output import Output
+from test_tools.os_tools import sync
 
 
 class Cache:

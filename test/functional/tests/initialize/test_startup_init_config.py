@@ -222,7 +222,7 @@ def test_cas_startup_lazy():
 
         core_pool_paths = {c["device_path"] for c in core_pool_list}
         if core_pool_paths != expected_core_pool_paths:
-            TestRun.error(
+            TestRun.LOGGER.error(
                 f"Expected the following devices in core pool "
                 f"{expected_core_pool_paths}. Got {core_pool_paths}"
             )
@@ -231,7 +231,7 @@ def test_cas_startup_lazy():
 
         caches_paths = {c["device_path"] for c in caches_list}
         if caches_paths != expected_caches_paths:
-            TestRun.error(
+            TestRun.LOGGER.error(
                 f"Expected the following devices as caches "
                 f"{expected_caches_paths}. Got {caches_paths}"
             )
@@ -240,7 +240,7 @@ def test_cas_startup_lazy():
 
         cores_paths = {c["device_path"] for c in cores_list}
         if cores_paths != expected_cores_paths:
-            TestRun.error(
+            TestRun.LOGGER.error(
                 f"Expected the following devices as cores "
                 f"{expected_caches_paths}. Got {cores_paths}"
             )
@@ -447,14 +447,14 @@ def test_failover_config_startup():
         cores_list = get_cas_devices_dict()["cores"].values()
 
         if len(core_pool_list) != 0:
-            TestRun.error(f"No cores expected in core pool. Got {core_pool_list}")
+            TestRun.LOGGER.error(f"No cores expected in core pool. Got {core_pool_list}")
         else:
             TestRun.LOGGER.info("Core pool is ok")
 
         expected_caches_paths = set([active_cache_path, standby_cache_path])
         caches_paths = {c["device"] for c in caches_list}
         if caches_paths != expected_caches_paths:
-            TestRun.error(
+            TestRun.LOGGER.error(
                 f"Expected the following devices as caches "
                 f"{expected_caches_paths}. Got {caches_paths}"
             )
@@ -464,7 +464,7 @@ def test_failover_config_startup():
         expected_core_paths = set([active_core_path])
         cores_paths = {c["device"] for c in cores_list}
         if cores_paths != expected_core_paths:
-            TestRun.error(
+            TestRun.LOGGER.error(
                 f"Expected the following devices as cores "
                 f"{expected_core_paths}. Got {cores_paths}"
             )

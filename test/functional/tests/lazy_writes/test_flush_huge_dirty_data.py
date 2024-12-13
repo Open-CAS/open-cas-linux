@@ -5,9 +5,9 @@
 #
 
 import pytest
+
 from datetime import timedelta
 
-import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheModeTrait, CleaningPolicy, SeqCutOffPolicy
 from api.cas.cli import stop_cmd
@@ -56,7 +56,7 @@ def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
         cache = casadm.start_cache(cache_part, cache_mode)
 
     with TestRun.step(f"Add core with {fs.name} filesystem to cache and mount it."):
-        test_tools.fs_utils.create_filesystem(fs)
+        core_dev.create_filesystem(fs)
         core = cache.add_core(core_dev)
         core.mount(mnt_point)
 
@@ -66,7 +66,7 @@ def test_flush_over_640_gibibytes_with_fs(cache_mode, fs):
 
     with TestRun.step("Create a test file on a separate disk"):
         src_dir_path = "/mnt/flush_640G_test"
-        test_tools.fs_utils.create_filesystem(fs)
+        separate_dev.create_filesystem(fs)
         separate_dev.mount(src_dir_path)
 
         test_file_main = File.create_file(f"{src_dir_path}/test_file_main")

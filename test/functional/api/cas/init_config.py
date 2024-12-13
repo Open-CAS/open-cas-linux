@@ -7,8 +7,7 @@
 from api.cas import casadm_parser
 from api.cas.cache_config import CacheMode
 from storage_devices.device import Device
-from test_tools import fs_tools
-
+from test_tools.fs_tools import remove, write_file
 
 opencas_conf_path = "/etc/opencas/opencas.conf"
 
@@ -34,7 +33,7 @@ class InitConfig:
 
     @staticmethod
     def remove_config_file():
-        fs_utils.remove(opencas_conf_path, force=False)
+        remove(opencas_conf_path, force=False)
 
     def save_config_file(self):
         config_lines = []
@@ -47,7 +46,7 @@ class InitConfig:
             config_lines.append(CoreConfigLine.header)
             for c in self.core_config_lines:
                 config_lines.append(str(c))
-        fs_utils.write_file(opencas_conf_path, "\n".join(config_lines), False)
+        write_file(opencas_conf_path, "\n".join(config_lines), False)
 
     @classmethod
     def create_init_config_from_running_configuration(
@@ -69,7 +68,7 @@ class InitConfig:
     @classmethod
     def create_default_init_config(cls):
         cas_version = casadm_parser.get_casadm_version()
-        fs_utils.write_file(opencas_conf_path, f"version={cas_version.base}")
+        write_file(opencas_conf_path, f"version={cas_version.base}")
 
 
 class CacheConfigLine:

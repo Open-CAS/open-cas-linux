@@ -1,10 +1,12 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-from collections import namedtuple
 import pytest
+
+from collections import namedtuple
 
 from api.cas.ioclass_config import default_config_file_path
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan

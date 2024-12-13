@@ -5,9 +5,9 @@
 #
 
 from api.cas.init_config import InitConfig, opencas_conf_path
-from test_tools import fs_tools
 from core.test_run import TestRun
 from test_tools.disk_tools import get_block_device_names_list
+from test_tools.fs_tools import create_random_test_file, parse_ls_output, ls_item
 from type_def.size import Size, Unit
 
 test_file_size = Size(500, Unit.KiloByte)
@@ -23,7 +23,7 @@ def create_files_with_md5sums(destination_path, files_count):
         temp_file = f"/tmp/file{i}"
         destination_file = f"{destination_path}/file{i}"
 
-        test_file = fs_utils.create_random_test_file(temp_file, test_file_size)
+        test_file = create_random_test_file(temp_file, test_file_size)
         test_file.copy(destination_file, force=True)
 
         md5sums.append(test_file.md5sum())
@@ -37,12 +37,12 @@ def compare_md5sums(md5_sums_source, files_to_check_path, copy_to_tmp=False):
 
     for i in range(md5_sums_elements):
         file_to_check_path = f"{files_to_check_path}/file{i}"
-        file_to_check = fs_utils.parse_ls_output(fs_utils.ls_item(file_to_check_path))[0]
+        file_to_check = parse_ls_output(ls_item(file_to_check_path))[0]
 
         if copy_to_tmp:
             file_to_check_path = f"{files_to_check_path}/filetmp"
             file_to_check.copy(file_to_check_path, force=True)
-            file_to_check = fs_utils.parse_ls_output(fs_utils.ls_item(file_to_check_path))[0]
+            file_to_check = parse_ls_output(ls_item(file_to_check_path))[0]
 
         if md5_sums_source[i] != file_to_check.md5sum():
             TestRun.fail(f"Source and target files {file_to_check_path} checksums are different.")

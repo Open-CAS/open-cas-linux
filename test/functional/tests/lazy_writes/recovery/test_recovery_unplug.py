@@ -5,10 +5,8 @@
 #
 
 import os
-
 import pytest
 
-import test_tools.fs_tools
 from api.cas import casadm, cli_messages
 from api.cas.cache_config import CacheMode, CacheModeTrait, CacheLineSize
 from core.test_run import TestRun
@@ -54,7 +52,7 @@ def test_recovery_unplug_cache_fs(cache_mode, cls, filesystem, direct):
         source_file_md5 = source_file.md5sum()
 
     with TestRun.step("Create filesystem on core device."):
-        test_tools.fs_utils.create_filesystem(filesystem)
+        core_device.create_filesystem(filesystem)
 
     with TestRun.step("Start cache and add core."):
         cache = casadm.start_cache(cache_device, cache_mode, cls)

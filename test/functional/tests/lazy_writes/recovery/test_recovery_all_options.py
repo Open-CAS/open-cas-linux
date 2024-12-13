@@ -1,13 +1,12 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import os
-
 import pytest
 
-import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheModeTrait, CacheLineSize, CleaningPolicy, \
     FlushParametersAcp
@@ -58,7 +57,7 @@ def test_recovery_all_options(cache_mode, cache_line_size, cleaning_policy, file
         file_md5 = test_file.md5sum()
 
     with TestRun.step(f"Make {filesystem} on core device."):
-        test_tools.fs_utils.create_filesystem(filesystem)
+        core_device.create_filesystem(filesystem)
 
     with TestRun.step("Mount core device."):
         core_device.mount(mount_point)

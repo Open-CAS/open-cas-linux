@@ -1,13 +1,13 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-from datetime import timedelta
-
 import pytest
 
-import test_tools.fs_tools
+from datetime import timedelta
+
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
 from core.test_run import TestRun
@@ -48,7 +48,7 @@ def test_io_engines(cache_mode, filesystem, io_engine):
         cache = casadm.start_cache(cache_dev, cache_mode, force=True)
 
         TestRun.LOGGER.info(f"Create filesystem '{filesystem}' on '{core_dev.path}'")
-        test_tools.fs_utils.create_filesystem(filesystem)
+        core_dev.create_filesystem(filesystem)
         core = cache.add_core(core_dev)
         core.mount(mount_point)
 

@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -7,7 +8,6 @@ import random
 import re
 import pytest
 
-import test_tools.fs_tools
 from api.cas.cache_config import CacheMode, CacheLineSize, CacheModeTrait
 from api.cas.casadm import OutputFormat, print_statistics, start_cache
 from core.test_run import TestRun
@@ -46,7 +46,7 @@ def test_output_consistency(cache_line_size, cache_mode, test_object):
 
     with TestRun.step("Start cache and add core with a filesystem."):
         cache = start_cache(cache_part, cache_mode, cache_line_size, force=True)
-        test_tools.fs_utils.create_filesystem(Filesystem.xfs)
+        core_part.create_filesystem(Filesystem.xfs)
         exp_obj = cache.add_core(core_part)
 
     with TestRun.step("Select object to test."):

@@ -1,17 +1,17 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
+
 from collections import namedtuple
 from math import isclose
 
-import test_tools.fs_tools
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from api.cas.ioclass_config import IoClass, default_config_file_path
-from test_tools import fs_tools
-from test_tools.fs_tools import Filesystem
+from test_tools.fs_tools import Filesystem, create_directory
 from core.test_run import TestRun
 from type_def.size import Size, Unit
 from .io_class_common import (
@@ -44,7 +44,7 @@ def test_io_class_pinning_eviction():
         cache_line_count = cache.get_statistics().config_stats.cache_size
 
     with TestRun.step("Mount filesystem"):
-        test_tools.fs_utils.create_filesystem(Filesystem.xfs)
+        core.create_filesystem(Filesystem.xfs)
         core.mount(mountpoint)
 
     with TestRun.step("Prepare test dirs"):
@@ -58,7 +58,7 @@ def test_io_class_pinning_eviction():
         ]
 
         for io_class in io_classes:
-            fs_utils.create_directory(io_class.dir_path, parents=True)
+            create_directory(io_class.dir_path, parents=True)
 
     with TestRun.step("Remove old config"):
         ioclass_config.remove_ioclass_config()
@@ -141,7 +141,7 @@ def test_pinned_ioclasses_eviction():
         cache_line_count = cache.get_statistics().config_stats.cache_size
 
     with TestRun.step("Mount filesystem"):
-        test_tools.fs_utils.create_filesystem(Filesystem.xfs)
+        core.create_filesystem(Filesystem.xfs)
         core.mount(mountpoint)
 
     with TestRun.step("Prepare test dirs"):
@@ -152,7 +152,7 @@ def test_pinned_ioclasses_eviction():
         ]
 
         for io_class in io_classes:
-            fs_utils.create_directory(io_class.dir_path, parents=True)
+            create_directory(io_class.dir_path, parents=True)
 
     with TestRun.step("Remove old config"):
         ioclass_config.remove_ioclass_config()

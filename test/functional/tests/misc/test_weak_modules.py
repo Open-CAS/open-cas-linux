@@ -1,14 +1,14 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-
 import os
 import re
-
 import pytest
 
+from api.cas.cas_packaging import Packages
 from api.cas.installer import clean_opencas_repo, rsync_opencas_sources
 from core.test_run import TestRun
 from test_tools.fs_tools import (
@@ -17,7 +17,6 @@ from test_tools.fs_tools import (
     readlink,
     remove,
 )
-from api.cas.packaging import Packages
 
 
 modules_links_dir = "/lib/modules/$(uname -r)/weak-updates/block/opencas"

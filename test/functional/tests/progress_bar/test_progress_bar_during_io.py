@@ -1,12 +1,14 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
+
+import pytest
 
 from datetime import timedelta
 from time import sleep
 
-import pytest
 from api.cas import casadm, cli
 from api.cas.cache_config import CacheMode, CleaningPolicy, SeqCutOffPolicy
 from api.cas.progress_bar import check_progress_bar
