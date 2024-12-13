@@ -6,15 +6,13 @@
 
 import pytest
 
-import test_tools.fs_tools
 from api.cas import casadm, casadm_parser, cli
 from api.cas.cache_config import CacheMode, CleaningPolicy, CacheModeTrait
 from api.cas.casadm_parser import wait_for_flushing
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_tools
 from test_tools.dd import Dd
-from test_tools.fs_tools import Filesystem
+from test_tools.fs_tools import Filesystem, create_random_test_file
 from test_tools.os_tools import DropCachesMode, sync, drop_caches
 from test_tools.udev import Udev
 from type_def.size import Size, Unit
@@ -55,7 +53,7 @@ def test_interrupt_core_flush(cache_mode, filesystem):
             cache.set_cleaning_policy(CleaningPolicy.nop)
 
         with TestRun.step(f"Add core device with {filesystem} filesystem and mount it."):
-            test_tools.fs_utils.create_filesystem(filesystem)
+            core_part.create_filesystem(filesystem)
             core = cache.add_core(core_part)
             core.mount(mount_point)
 
@@ -139,7 +137,7 @@ def test_interrupt_cache_flush(cache_mode, filesystem):
             cache.set_cleaning_policy(CleaningPolicy.nop)
 
         with TestRun.step(f"Add core device with {filesystem} filesystem and mount it."):
-            test_tools.fs_utils.create_filesystem(filesystem)
+            core_part.create_filesystem(filesystem)
             core = cache.add_core(core_part)
             core.mount(mount_point)
 
@@ -226,7 +224,7 @@ def test_interrupt_core_remove(cache_mode, filesystem):
             cache.set_cleaning_policy(CleaningPolicy.nop)
 
         with TestRun.step(f"Add core device with {filesystem} filesystem and mount it"):
-            test_tools.fs_utils.create_filesystem(filesystem)
+            core_part.create_filesystem(filesystem)
             core = cache.add_core(core_part)
             core.mount(mount_point)
 
@@ -343,7 +341,7 @@ def test_interrupt_cache_mode_switch_parametrized(cache_mode, stop_percentage):
             core = cache.add_core(core_part)
 
         with TestRun.step(f"Create test file in mount point of exported object"):
-            test_file = fs_utils.create_random_test_file(test_file_path, test_file_size)
+            test_file = create_random_test_file(test_file_path, test_file_size)
 
         with TestRun.step("Calculate md5sum of test file"):
             test_file_md5_before = test_file.md5sum()
@@ -443,7 +441,7 @@ def test_interrupt_cache_stop(cache_mode, filesystem):
             cache.set_cleaning_policy(CleaningPolicy.nop)
 
         with TestRun.step(f"Add core device with {filesystem} filesystem and mount it."):
-            test_tools.fs_utils.create_filesystem(filesystem)
+            core_part.create_filesystem(filesystem)
             core = cache.add_core(core_part)
             core.mount(mount_point)
 

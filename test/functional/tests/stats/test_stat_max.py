@@ -4,9 +4,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-from time import sleep
-
 import pytest
+
+from time import sleep
 
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CleaningPolicy

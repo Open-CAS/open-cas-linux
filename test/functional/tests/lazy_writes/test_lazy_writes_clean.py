@@ -1,11 +1,11 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
 
-import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CleaningPolicy, CacheModeTrait, SeqCutOffPolicy
 from storage_devices.device import Device
@@ -180,7 +180,7 @@ def test_clean_remove_core_with_fs(cache_mode, fs):
         cache = casadm.start_cache(cache_part, cache_mode)
 
     with TestRun.step(f"Add core with {fs.name} filesystem to cache and mount it."):
-        test_tools.fs_utils.create_filesystem(fs)
+        core_part.create_filesystem(fs)
         core = cache.add_core(core_part)
         core.mount(mnt_point)
 

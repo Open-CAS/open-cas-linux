@@ -4,9 +4,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import pytest
+
 from datetime import timedelta
 
-import pytest
 from api.cas import casadm, cli
 from api.cas.cache_config import CacheMode, CleaningPolicy, SeqCutOffPolicy
 from api.cas.casadm_parser import get_flushing_progress, wait_for_flushing

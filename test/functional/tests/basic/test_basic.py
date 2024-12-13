@@ -17,9 +17,8 @@ from api.cas.cli_messages import (
 )
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_tools
 from test_tools.dd import Dd
-from test_tools.fs_tools import Filesystem
+from test_tools.fs_tools import Filesystem, read_file
 from test_utils.filesystem.file import File
 from connection.utils.output import CmdException
 from type_def.size import Size, Unit
@@ -45,7 +44,7 @@ def test_cas_version():
         cmd_cas_versions = [version.split(",")[1] for version in cmd_version.split("\n")[1:]]
 
     with TestRun.step(f"Read cas version from {version_file_path} location"):
-        file_read = fs_utils.read_file(version_file_path).split("\n")
+        file_read = read_file(version_file_path).split("\n")
         file_cas_version = next(
             (line.split("=")[1] for line in file_read if "CAS_VERSION=" in line)
         )

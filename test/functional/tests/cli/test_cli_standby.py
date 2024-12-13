@@ -6,7 +6,6 @@
 
 import pytest
 
-import test_tools.fs_tools
 from api.cas import casadm, casadm_parser, dmesg
 from api.cas.casadm import standby_init
 from api.cas.cli import casadm_bin, standby_init_cmd
@@ -558,7 +557,7 @@ def test_standby_init_with_preexisting_filesystem(filesystem):
         cache_id = 1
 
     with TestRun.step("Create filesystem on cache device partition"):
-        test_tools.fs_utils.create_filesystem(filesystem)
+        cache_device.create_filesystem(filesystem)
 
     with TestRun.step("Try initialize cache without force flag"):
         output = TestRun.executor.run(

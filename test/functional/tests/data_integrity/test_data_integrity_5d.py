@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -12,8 +13,7 @@ import pytest
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
 from core.test_run import TestRun
-from test_tools import fs_tools
-from test_tools.fs_tools import Filesystem
+from test_tools.fs_tools import Filesystem, create_directory, check_if_directory_exists
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
@@ -72,8 +72,8 @@ def test_data_integrity_5d_dss(filesystems):
     with TestRun.step("Create filesystems and mount cores"):
         for i, core in enumerate(cores):
             mount_point = core.path.replace('/dev/', '/mnt/')
-            if not fs_utils.check_if_directory_exists(mount_point):
-                fs_utils.create_directory(mount_point)
+            if not check_if_directory_exists(mount_point):
+                create_directory(mount_point)
             TestRun.LOGGER.info(f"Create filesystem {filesystems[i].name} on {core.path}")
             core.create_filesystem(filesystems[i])
             TestRun.LOGGER.info(f"Mount filesystem {filesystems[i].name} on {core.path} to "
@@ -106,7 +106,7 @@ def test_data_integrity_5d_dss(filesystems):
             core.unmount()
 
     with TestRun.step("Calculate md5 for each core"):
-        core_md5s = [File(core.full_path).md5sum() for core in cores]
+        core_md5s = [File(core.path).md5sum() for core in cores]
 
     with TestRun.step("Stop caches"):
         for cache in caches:
@@ -171,7 +171,7 @@ def test_data_integrity_5d():
         fio_run.run()
 
     with TestRun.step("Calculate md5 for each core"):
-        core_md5s = [File(core.full_path).md5sum() for core in cores]
+        core_md5s = [File(core.path).md5sum() for core in cores]
 
     with TestRun.step("Stop caches"):
         for cache in caches:

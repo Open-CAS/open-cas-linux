@@ -5,10 +5,8 @@
 #
 
 import random
-
 import pytest
 
-import test_tools.fs_tools
 from api.cas import casadm
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeLowerThan, DiskTypeSet
@@ -47,7 +45,7 @@ def test_remove_core_when_other_mounted_auto_numeration():
         free_core = cache.add_core(core_device.partitions[0])
         mounted_cores = []
         for i, part in enumerate(core_device.partitions[1:]):
-            test_tools.fs_utils.create_filesystem(Filesystem.xfs)
+            part.create_filesystem(Filesystem.xfs)
             mounted_cores.append(cache.add_core(part))
             mounted_cores[i].mount(
                 mount_point=f"{mount_point}{cache.cache_id}-{mounted_cores[i].core_id}"
@@ -91,7 +89,7 @@ def test_remove_core_when_other_mounted_custom_numeration():
 
         mounted_cores = []
         for i, part in enumerate(core_device.partitions[1:]):
-            test_tools.fs_utils.create_filesystem(Filesystem.xfs)
+            part.create_filesystem(Filesystem.xfs)
             mounted_cores.append(
                 cache.add_core(core_dev=part, core_id=int(f"{random_prefix}{random_interfix}{i}"))
             )

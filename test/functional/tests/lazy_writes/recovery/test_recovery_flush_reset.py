@@ -1,13 +1,12 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import os
-
 import pytest
 
-import test_tools.fs_tools
 from api.cas import casadm, cli
 from api.cas.cache_config import CacheMode, CacheModeTrait, CleaningPolicy, SeqCutOffPolicy
 from core.test_run import TestRun
@@ -125,8 +124,8 @@ def test_recovery_flush_reset_fs(cache_mode, fs):
         cache_device = cache_disk.partitions[0]
         core_device = core_disk.partitions[0]
 
-    with TestRun.step(f"Create {fs} filesystem on core."):
-        test_tools.fs_utils.create_filesystem(fs)
+    with TestRun.step(f"Create {fs} filesystem on core device."):
+        core_device.create_filesystem(fs)
 
     with TestRun.step("Create test files."):
         source_file, target_file = create_test_files(test_file_size)
@@ -151,7 +150,7 @@ def test_recovery_flush_reset_fs(cache_mode, fs):
         core.unmount()
 
     with TestRun.step("Trigger flush."):
-        os_utils.drop_caches(DropCachesMode.ALL)
+        drop_caches(DropCachesMode.ALL)
         TestRun.executor.run_in_background(cli.flush_cache_cmd(f"{cache.cache_id}"))
 
     with TestRun.step("Hard reset DUT during data flushing."):

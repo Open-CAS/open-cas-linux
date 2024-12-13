@@ -8,7 +8,6 @@ from datetime import timedelta
 
 import pytest
 
-import test_tools.fs_tools
 from api.cas import casadm, cli_messages, cli
 from api.cas.cache_config import CacheMode, CleaningPolicy
 from core.test_run import TestRun
@@ -99,7 +98,7 @@ def test_zero_metadata_filesystem(filesystem):
         cache_dev, core_disk, cache_disk = prepare_devices()
 
     with TestRun.step("Create filesystem on core device."):
-        test_tools.fs_utils.create_filesystem(filesystem)
+        core_disk.create_filesystem(filesystem)
 
     with TestRun.step("Start cache and add core."):
         cache = casadm.start_cache(cache_dev, force=True)

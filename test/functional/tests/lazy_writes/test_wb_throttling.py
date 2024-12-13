@@ -1,9 +1,11 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
+
 from datetime import timedelta
 
 from type_def.size import Size, Unit
@@ -40,8 +42,8 @@ def test_wb_throttling():
         description: |
           Fill cache with data, run intensive IO (rwmix=74) with occasional trims.
         pass_criteria:
-          - Hang task did not occurred
-          - System did not crashed
+          - Hang task did not occur
+          - System did not crash
     """
     with TestRun.step("Prepare devices."):
         cache_device = TestRun.disks["cache"]

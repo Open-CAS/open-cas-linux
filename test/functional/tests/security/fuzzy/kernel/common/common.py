@@ -3,15 +3,15 @@
 # Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
+
 import base64
 import os
 import posixpath
+import yaml
+
 from collections import namedtuple
 from typing import List
 
-import yaml
-
-import test_tools.fs_tools
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheLineSize, KernelParameters, CleaningPolicy
 from core.test_run import TestRun
@@ -67,7 +67,7 @@ def prepare_cas_instance(
         cache.set_cleaning_policy(cleaning_policy)
 
     if mount_point:
-        test_tools.fs_utils.create_filesystem(Filesystem.ext4)
+        core_device.create_filesystem(Filesystem.ext4)
         core = cache.add_core(core_device)
         core.mount(mount_point)
     else:

@@ -6,10 +6,10 @@
 
 import random
 import time
+import pytest
+
 from collections import namedtuple
 from datetime import timedelta
-
-import pytest
 
 from api.cas import casadm
 from api.cas.cache_config import (

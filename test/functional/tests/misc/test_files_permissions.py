@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-
 import os
 
 from test_tools.git import get_repo_files

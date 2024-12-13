@@ -1,21 +1,20 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
+
+import pytest
 
 from collections import namedtuple
 from math import isclose
 
-import pytest
-
-import test_tools.fs_tools
 from api.cas import ioclass_config, casadm
 from api.cas.cache_config import CacheMode, CacheLineSize
 from api.cas.ioclass_config import IoClass, default_config_file_path
 from storage_devices.device import Device
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_tools
-from test_tools.fs_tools import Filesystem
+from test_tools.fs_tools import Filesystem, create_directory
 from test_tools.os_tools import sync
 from test_tools.udev import Udev
 from tests.io_class.io_class_common import (
@@ -54,7 +53,7 @@ def test_ioclass_occupancy_load():
 
     with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}"):
         filesystem = Filesystem.xfs
-        test_tools.fs_utils.create_filesystem(filesystem)
+        core.create_filesystem(filesystem)
         core.mount(mountpoint)
         sync()
 
@@ -67,7 +66,7 @@ def test_ioclass_occupancy_load():
         ]
 
         for io_class in io_classes:
-            fs_utils.create_directory(io_class.dir_path, parents=True)
+            create_directory(io_class.dir_path, parents=True)
 
     with TestRun.step("Remove old ioclass config"):
         ioclass_config.remove_ioclass_config()

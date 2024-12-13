@@ -14,7 +14,7 @@ from datetime import timedelta
 from packaging import version
 
 from core.test_run import TestRun
-from test_tools import fs_tools
+from test_tools.fs_tools import write_file
 from test_tools.os_tools import get_kernel_version
 
 default_config_file_path = "/tmp/opencas_ioclass.conf"
@@ -108,7 +108,7 @@ class IoClass:
         ioclass_config_path: str = default_config_file_path,
     ):
         TestRun.LOGGER.info(f"Creating config file {ioclass_config_path}")
-        fs_utils.write_file(
+        write_file(
             ioclass_config_path, IoClass.list_to_csv(ioclass_list, add_default_rule)
         )
 

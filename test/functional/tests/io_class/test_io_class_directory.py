@@ -1,21 +1,20 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import random
 import time
-from datetime import datetime
-
 import pytest
 
-import test_tools.fs_tools
+from datetime import datetime
+
 from api.cas import ioclass_config, casadm
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_tools
 from test_tools.dd import Dd
-from test_tools.fs_tools import Filesystem
+from test_tools.fs_tools import Filesystem, create_directory, remove
 from test_utils.filesystem.directory import Directory
 from test_utils.filesystem.file import File
 from test_tools.os_tools import drop_caches, DropCachesMode, sync
@@ -47,19 +46,19 @@ def test_ioclass_directory_depth(filesystem):
     with TestRun.step(
         f"Prepare {filesystem.name} filesystem and mount {core.path} " f"at {mountpoint}."
     ):
-        test_tools.fs_utils.create_filesystem(filesystem)
+        core.create_filesystem(filesystem)
         core.mount(mountpoint)
         sync()
 
     with TestRun.step(f"Create the base directory: {base_dir_path}."):
-        fs_utils.create_directory(base_dir_path)
+        create_directory(base_dir_path)
 
     with TestRun.step(f"Create a nested directory."):
         nested_dir_path = base_dir_path
         random_depth = random.randint(40, 80)
         for i in range(random_depth):
             nested_dir_path += f"/dir_{i}"
-        fs_utils.create_directory(path=nested_dir_path, parents=True)
+        create_directory(path=nested_dir_path, parents=True)
 
     # Test classification in nested dir by reading a previously unclassified file
     with TestRun.step("Create the first file in the nested directory."):
@@ -177,9 +176,9 @@ def test_ioclass_directory_file_operations(filesystem):
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
     with TestRun.step(
-        f"Prepare {filesystem.name} filesystem " f"and mounting {core.path} at {mountpoint}."
+        f"Prepare {filesystem.name} filesystem and mounting {core.path} at {mountpoint}."
     ):
-        test_tools.fs_utils.create_filesystem(fs_type=filesystem)
+        core.create_filesystem(fs_type=filesystem)
         core.mount(mount_point=mountpoint)
         sync()
 
@@ -347,7 +346,7 @@ def test_ioclass_directory_dir_operations(filesystem):
     with TestRun.step(
         f"Prepare {filesystem.name} filesystem " f"and mount {core.path} at {mountpoint}."
     ):
-        test_tools.fs_utils.create_filesystem(fs_type=filesystem)
+        core.create_filesystem(fs_type=filesystem)
         core.mount(mount_point=mountpoint)
         sync()
 
@@ -399,7 +398,7 @@ def test_ioclass_directory_dir_operations(filesystem):
         )
 
     with TestRun.step(f"Remove {classified_dir_path_2}."):
-        fs_utils.remove(path=classified_dir_path_2, force=True, recursive=True)
+        remove(path=classified_dir_path_2, force=True, recursive=True)
         sync()
         drop_caches(DropCachesMode.ALL)
 

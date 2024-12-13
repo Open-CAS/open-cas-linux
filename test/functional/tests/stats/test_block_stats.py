@@ -5,7 +5,6 @@
 #
 
 import json
-
 import pytest
 
 from api.cas import casadm

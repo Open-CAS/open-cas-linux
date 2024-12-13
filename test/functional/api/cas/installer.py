@@ -9,7 +9,7 @@ import os
 from core.test_run import TestRun
 from api.cas import cas_module
 from api.cas.version import get_installed_cas_version
-from test_tools import git, os_tools
+from test_tools import git
 from connection.utils.output import CmdException
 from test_tools.os_tools import is_kernel_module_loaded
 

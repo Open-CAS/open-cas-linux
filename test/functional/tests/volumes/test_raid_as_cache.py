@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -11,8 +12,7 @@ from .common import compare_md5sums, create_files_with_md5sums
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from storage_devices.raid import Raid, RaidConfiguration, MetadataVariant, Level
-from test_tools import fs_tools
-from test_tools.fs_tools import Filesystem
+from test_tools.fs_tools import Filesystem, create_random_test_file, remove
 from type_def.size import Size, Unit
 
 mount_point = "/mnt/test"
@@ -66,14 +66,14 @@ def test_raid_as_cache(cache_mode):
 
     with TestRun.step("Copy files to cache and check md5sum."):
         for i in range(0, number_of_files):
-            test_file = fs_utils.create_random_test_file(test_file_tmp_path, test_file_size)
+            test_file = create_random_test_file(test_file_tmp_path, test_file_size)
             test_file_copied = test_file.copy(test_file_path, force=True)
 
             if test_file.md5sum() != test_file_copied.md5sum():
                 TestRun.LOGGER.error("Checksums are different.")
 
-            fs_utils.remove(test_file.full_path, True)
-            fs_utils.remove(test_file_copied.full_path, True)
+            remove(test_file.full_path, True)
+            remove(test_file_copied.full_path, True)
 
         TestRun.LOGGER.info(f"Successful verification.")
 

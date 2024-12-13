@@ -6,15 +6,13 @@
 
 import pytest
 
-import test_tools.fs_tools
 from api.cas import casadm, ioclass_config
 from api.cas.cache_config import CacheMode
 from api.cas.ioclass_config import IoClass
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from storage_devices.lvm import Lvm, LvmConfiguration
-from test_tools import fs_tools
-from test_tools.fs_tools import Filesystem
+from test_tools.fs_tools import Filesystem, read_file, remove
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from type_def.size import Size, Unit
@@ -59,11 +57,11 @@ def test_io_class_lvm_on_cas():
         lvm = lvms[0]
 
     with TestRun.step("Create filesystem for LVM and mount it."):
-        test_tools.fs_utils.create_filesystem(Filesystem.ext4)
+        lvm.create_filesystem(Filesystem.ext4)
         lvm.mount(mount_point)
 
     with TestRun.step("Prepare and load IO class config."):
-        io_classes = IoClass.csv_to_list(fs_utils.read_file("/etc/opencas/ioclass-config.csv"))
+        io_classes = IoClass.csv_to_list(read_file("/etc/opencas/ioclass-config.csv"))
         # remove two firs elements/lines: unclassified and metadata
         io_classes.pop(1)
         io_classes.pop(0)
@@ -124,7 +122,7 @@ def test_io_class_lvm_on_cas():
             else:
                 file_size = Size(1100, Unit.MebiByte)
 
-            fs_utils.remove(io_target)
+            remove(io_target)
 
     with TestRun.step("Remove LVMs."):
         TestRun.executor.run(f"umount {mount_point}")
