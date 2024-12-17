@@ -83,8 +83,8 @@ class Core(Device):
             percentage_val=percentage_val,
         )
 
-    def get_status(self):
-        return CoreStatus[self.__get_core_info()["status"].lower()]
+    def get_status(self) -> CoreStatus:
+        return self.__get_core_info()["status"]
     
     def __get_seq_cut_off_parameters(self):
         casadm_output = casadm.get_param_cutoff(
