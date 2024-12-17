@@ -10,7 +10,7 @@ import pytest
 from api.cas import cas_module, casctl
 from api.cas.cas_module import CasModule
 from core.test_run import TestRun
-from test_utils import os_utils
+from test_tools.os_tools import load_kernel_module
 
 
 @pytest.mark.os_dependent
@@ -46,5 +46,5 @@ def test_init_status():
             TestRun.fail("CAS management device is present in OS when CAS module is not loaded.")
 
     with TestRun.step("Load CAS modules and start CAS service"):
-        os_utils.load_kernel_module(CasModule.cache.value)
+        load_kernel_module(CasModule.cache.value)
         casctl.start()

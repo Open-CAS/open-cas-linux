@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -22,14 +23,12 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet
 from storage_devices.drbd import Drbd
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
-from test_utils.size import Size, Unit
 from test_utils.filesystem.file import File
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite
-from test_tools.fs_utils import readlink, create_directory
+from test_tools.fs_tools import create_directory, Filesystem
 from test_utils.drbd import Resource, Node
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 
 from test_failover_multihost import check_drbd_installed
 
@@ -1094,13 +1093,6 @@ def test_failover_io_long(cls, cleaning_policy, num_iterations):
             primary_node
         ):
             TestRun.executor.wait_for_connection()
-
-
-def check_drbd_installed(duts):
-    for dut in duts:
-        with TestRun.use_dut(dut):
-            if not Drbd.is_installed():
-                TestRun.fail(f"DRBD is not installed on DUT {dut.ip}")
 
 
 def prepare_devices(duts):

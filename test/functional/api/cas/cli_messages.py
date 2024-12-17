@@ -7,7 +7,7 @@
 import re
 
 from core.test_run import TestRun
-from test_utils.output import Output
+from connection.utils.output import Output
 
 load_inactive_core_missing = [
     r"WARNING: Can not resolve path to core \d+ from cache \d+\. By-id path will be shown for that "

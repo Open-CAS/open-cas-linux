@@ -19,8 +19,8 @@ from api.cas.cli import start_cmd
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet
 from test_tools.peach_fuzzer.peach_fuzzer import PeachFuzzer
-from test_utils.os_utils import Udev
-from test_utils.size import Unit, Size
+from test_tools.udev import Udev
+from type_def.size import Unit, Size
 from tests.security.fuzzy.kernel.common.common import (
     get_fuzz_config,
     run_cmd_and_validate,

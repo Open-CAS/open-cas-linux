@@ -4,9 +4,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-from time import sleep
-
 import pytest
+
+from time import sleep
 
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheModeTrait
@@ -16,8 +16,8 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from test_utils.os_utils import Udev
-from test_utils.size import Size, Unit
+from test_tools.udev import Udev
+from type_def.size import Size, Unit
 
 # One cache instance per every cache mode:
 caches_count = len(CacheMode)

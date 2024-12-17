@@ -10,7 +10,7 @@ from datetime import timedelta
 import paramiko
 
 from core.test_run import TestRun
-from test_utils.os_utils import wait
+from test_tools.common.wait import wait
 
 
 def check_progress_bar(command: str, progress_bar_expected: bool = True):

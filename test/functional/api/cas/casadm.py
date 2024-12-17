@@ -20,9 +20,9 @@ from api.cas.cli import *
 from api.cas.core import Core
 from core.test_run import TestRun
 from storage_devices.device import Device
-from test_utils.os_utils import reload_kernel_module
-from test_utils.output import CmdException, Output
-from test_utils.size import Size, Unit
+from test_tools.os_tools import reload_kernel_module
+from connection.utils.output import CmdException, Output
+from type_def.size import Size, Unit
 
 
 # casadm commands

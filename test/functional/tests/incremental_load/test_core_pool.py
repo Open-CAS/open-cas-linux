@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -9,9 +10,9 @@ from api.cas import casadm
 from api.cas.core import CoreStatus
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.disk_utils import Filesystem
-from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from test_tools.fs_tools import Filesystem
+from connection.utils.output import CmdException
+from type_def.size import Size, Unit
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

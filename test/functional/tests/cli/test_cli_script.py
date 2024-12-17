@@ -1,16 +1,17 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 
 import pytest
 
-from api.cas import casadm, casadm_parser
+from api.cas import casadm
 from core.test_run import TestRun
-from test_utils.os_utils import sync
+from test_tools.os_tools import sync
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.size import Unit, Size
+from type_def.size import Unit, Size
 from test_tools.dd import Dd
 
 

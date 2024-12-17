@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -11,12 +12,12 @@ from storage_devices.device import Device
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
-from test_tools.fs_utils import create_random_test_file, remove
+from test_tools.fs_tools import create_random_test_file, remove, Filesystem
 from test_tools.iostat import IOstatBasic
 from test_utils.filesystem.file import File
-from test_utils.os_utils import Udev, sync
-from test_utils.size import Size, Unit
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
+from type_def.size import Size, Unit
 
 bs = Size(512, Unit.KibiByte)
 mnt_point = "/mnt/cas/"
@@ -371,4 +372,4 @@ def test_clean_remove_core_without_fs(cache_mode):
 
 
 def check_device_write_stats(device: Device):
-    return IOstatBasic.get_iostat_list(devices_list=[device])[0].total_writes.value
+    return IOstatBasic.get_iostat_list(devices_list=[device.get_device_id()])[0].total_writes.value

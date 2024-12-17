@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -7,14 +8,12 @@ import pytest
 
 from api.cas import casadm, casadm_parser, cli, cli_messages
 from api.cas.cache_config import CacheMode, CleaningPolicy, CacheModeTrait
+from test_tools.fs_tools import create_random_test_file
+from test_tools.udev import Udev
 from tests.lazy_writes.recovery.recovery_tests_methods import copy_file, compare_files
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
-from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
-from test_utils import os_utils
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 
 mount_point = "/mnt/cas"
 test_file_path = f"{mount_point}/test_file"
@@ -48,7 +47,7 @@ def test_stop_no_flush_load_cache(cache_mode):
 
     with TestRun.step(f"Create test file in mount point of exported object and check its md5 sum."):
         test_file_size = Size(48, Unit.MebiByte)
-        test_file = fs_utils.create_random_test_file(test_file_path, test_file_size)
+        test_file = create_random_test_file(test_file_path, test_file_size)
         test_file_md5_before = test_file.md5sum()
         copy_file(source=test_file.full_path, target=core.path, size=test_file_size,
                   direct="oflag")
@@ -101,5 +100,5 @@ def prepare():
     core_dev = TestRun.disks['core']
     core_dev.create_partitions([Size(2, Unit.GibiByte)])
     core_part = core_dev.partitions[0]
-    os_utils.Udev.disable()
+    Udev.disable()
     return cache_part, core_part

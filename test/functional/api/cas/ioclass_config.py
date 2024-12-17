@@ -14,9 +14,8 @@ from datetime import timedelta
 from packaging import version
 
 from core.test_run import TestRun
-from test_tools import fs_utils
-from test_utils import os_utils
-from test_utils.generator import random_string
+from test_tools.fs_tools import write_file
+from test_tools.os_tools import get_kernel_version
 
 default_config_file_path = "/tmp/opencas_ioclass.conf"
 
@@ -109,7 +108,7 @@ class IoClass:
         ioclass_config_path: str = default_config_file_path,
     ):
         TestRun.LOGGER.info(f"Creating config file {ioclass_config_path}")
-        fs_utils.write_file(
+        write_file(
             ioclass_config_path, IoClass.list_to_csv(ioclass_list, add_default_rule)
         )
 
@@ -167,7 +166,7 @@ class IoClass:
             "file_offset",
             "request_size",
         ]
-        if os_utils.get_kernel_version() >= version.Version("4.13"):
+        if get_kernel_version() >= version.Version("4.13"):
             rules.append("wlth")
 
         rule = random.choice(rules)
@@ -178,13 +177,14 @@ class IoClass:
     def add_random_params(rule: str):
         if rule == "directory":
             allowed_chars = string.ascii_letters + string.digits + "/"
-            rule += f":/{random_string(random.randint(1, 40), allowed_chars)}"
+            rule += f":/{''.join(random.choices(allowed_chars, k=random.randint(1, 40)))}"
         elif rule in ["file_size", "lba", "pid", "file_offset", "request_size", "wlth"]:
             rule += f":{Operator(random.randrange(len(Operator))).name}:{random.randrange(1000000)}"
         elif rule == "io_class":
             rule += f":{random.randrange(MAX_IO_CLASS_PRIORITY + 1)}"
         elif rule in ["extension", "process_name", "file_name_prefix"]:
-            rule += f":{random_string(random.randint(1, 10))}"
+            allowed_chars = string.ascii_letters + string.digits
+            rule += f":{''.join(random.choices(allowed_chars, k=random.randint(1, 10)))}"
         if random.randrange(2):
             rule += "&done"
         return rule

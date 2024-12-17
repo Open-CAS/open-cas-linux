@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -19,7 +20,7 @@ from api.cas.cache_config import (
 )
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 # There should be at least 2 cache instances and 2 cores per cache

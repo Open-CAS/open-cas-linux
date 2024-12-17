@@ -12,9 +12,8 @@ from core.test_run import TestRun
 from api.cas import casadm
 from storage_devices.disk import DiskType, DiskTypeSet
 from api.cas.cache_config import CacheMode
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
-from test_utils.size import Size, Unit
+from test_tools.fs_tools import Filesystem, remove, create_directory
+from type_def.size import Size, Unit
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 
@@ -52,8 +51,8 @@ def test_support_different_io_size(cache_mode):
         cache.load_io_class(opencas_ioclass_conf_path)
 
     with TestRun.step("Create a filesystem on the core device and mount it"):
-        fs_utils.remove(path=mountpoint, force=True, recursive=True, ignore_errors=True)
-        fs_utils.create_directory(path=mountpoint)
+        remove(path=mountpoint, force=True, recursive=True, ignore_errors=True)
+        create_directory(path=mountpoint)
         core.create_filesystem(Filesystem.xfs)
         core.mount(mountpoint)
 

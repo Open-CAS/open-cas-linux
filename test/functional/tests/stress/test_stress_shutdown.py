@@ -1,11 +1,14 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import time
 import pytest
+
 from datetime import timedelta
+
 from api.cas import casadm, casadm_parser
 from api.cas.cache_config import CacheLineSize, CacheMode, CleaningPolicy, CacheModeTrait
 from api.cas.init_config import InitConfig
@@ -13,7 +16,7 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeLowerThan, DiskTypeSet
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 
 cores_number = 2
 iterations_per_config = 5

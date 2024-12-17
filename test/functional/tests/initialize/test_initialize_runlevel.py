@@ -1,22 +1,24 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import os
 import pytest
 import time
+
 from api.cas import casadm, casadm_parser
 from api.cas.cache_config import CacheMode
 from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeLowerThan, DiskTypeSet, DiskType
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from test_utils import os_utils
-from test_utils.os_utils import Runlevel
-from test_utils.size import Size, Unit
+from test_tools.os_tools import sync, drop_caches
+from test_tools.runlevel import Runlevel, change_runlevel
+from type_def.size import Size, Unit
 
 
 mount_point = "/mnt/test"
@@ -36,7 +38,7 @@ def test_init_reboot_runlevels(runlevel, cache_mode):
           - Cache should be loaded successfully after reboot.
     """
     with TestRun.step(f"Set runlevel to {runlevel.value}."):
-        os_utils.change_runlevel(runlevel)
+        change_runlevel(runlevel)
 
     with TestRun.step("Prepare CAS device."):
         cache_disk = TestRun.disks['cache']
@@ -65,8 +67,8 @@ def test_init_reboot_runlevels(runlevel, cache_mode):
             .file_size(Size(30, Unit.GibiByte))
 
         fio.run_in_background()
-        os_utils.sync()
-        os_utils.drop_caches()
+        sync()
+        drop_caches()
 
         time.sleep(10)
         TestRun.executor.run_expect_success("pgrep fio")
@@ -86,5 +88,5 @@ def test_init_reboot_runlevels(runlevel, cache_mode):
     with TestRun.step("Stop cache and set default runlevel."):
         if len(caches) != 0:
             casadm.stop_all_caches()
-        os_utils.change_runlevel(Runlevel.runlevel3)
+        change_runlevel(Runlevel.runlevel3)
         TestRun.executor.reboot()

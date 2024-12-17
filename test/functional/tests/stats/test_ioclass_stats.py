@@ -1,9 +1,10 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
-import random
 
+import random
 import pytest
 
 from api.cas import casadm
@@ -17,7 +18,6 @@ from api.cas.cli_messages import (
 )
 from api.cas.statistics import (
     config_stats_ioclass,
-    usage_stats,
     usage_stats_ioclass,
     request_stats,
     block_stats_core,
@@ -25,11 +25,12 @@ from api.cas.statistics import (
 )
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_utils.filesystem.file import File
-from test_utils.os_utils import sync, Udev
-from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
+from connection.utils.output import CmdException
+from type_def.size import Size, Unit
 
 IoClass = ioclass_config.IoClass
 

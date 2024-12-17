@@ -13,11 +13,11 @@ from core.test_run import TestRun
 from storage_devices.device import Device
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_utils.filesystem.file import File
-from test_utils.os_utils import sync
-from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from test_tools.os_tools import sync
+from connection.utils.output import CmdException
+from type_def.size import Size, Unit
 from api.cas.cli_messages import (
     check_stderr_msg,
     missing_param,

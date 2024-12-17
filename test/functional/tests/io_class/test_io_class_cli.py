@@ -1,8 +1,8 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
-
 
 import pytest
 
@@ -12,8 +12,8 @@ from api.cas.casadm_params import OutputFormat
 from api.cas.ioclass_config import IoClass
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
-from test_utils.size import Size, Unit
+from test_tools.fs_tools import read_file, remove
+from type_def.size import Size, Unit
 
 ioclass_config_path = "/tmp/opencas_ioclass.conf"
 
@@ -61,7 +61,7 @@ def test_io_class_export_configuration():
             f"{casadm.list_io_classes_cmd(str(cache.cache_id), OutputFormat.csv.name)}"
             f" > {saved_config_path}"
         )
-        csv = fs_utils.read_file(saved_config_path)
+        csv = read_file(saved_config_path)
         if not IoClass.compare_ioclass_lists(IoClass.csv_to_list(csv), random_list):
             TestRun.LOGGER.error(
                 "Exported configuration does not match expected\n"
@@ -98,7 +98,7 @@ def test_io_class_export_configuration():
             )
 
     with TestRun.LOGGER.step(f"Test cleanup"):
-        fs_utils.remove(saved_config_path)
+        remove(saved_config_path)
 
 
 def prepare(cache_mode: CacheMode = None):

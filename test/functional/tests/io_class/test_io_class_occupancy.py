@@ -4,21 +4,20 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import pytest
+
 from collections import namedtuple
 from math import isclose
-
-import pytest
 
 from api.cas import ioclass_config, casadm
 from api.cas.cache_config import CacheMode, CacheLineSize
 from api.cas.ioclass_config import IoClass, default_config_file_path
-from api.cas.statistics import IoClassUsageStats
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
-from test_utils.os_utils import sync, Udev
-from test_utils.size import Unit, Size
+from test_tools.fs_tools import Filesystem, create_directory
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
+from type_def.size import Unit, Size
 from tests.io_class.io_class_common import (
     prepare,
     mountpoint,
@@ -69,7 +68,7 @@ def test_io_class_occupancy_directory_write(io_size_multiplication, cache_mode):
         ]
 
         for io_class in io_classes:
-            fs_utils.create_directory(io_class.dir_path, parents=True)
+            create_directory(io_class.dir_path, parents=True)
 
     with TestRun.step("Remove old ioclass config"):
         ioclass_config.remove_ioclass_config()
@@ -199,7 +198,7 @@ def test_io_class_occupancy_directory_read(io_size_multiplication):
         ]
 
         for io_class in io_classes:
-            fs_utils.create_directory(io_class.dir_path, parents=True)
+            create_directory(io_class.dir_path, parents=True)
 
     with TestRun.step(
         f"In each directory create file with size of {io_size_multiplication} "
@@ -330,7 +329,7 @@ def test_ioclass_occupancy_sum_cache():
         ]
 
         for io_class in io_classes:
-            fs_utils.create_directory(io_class.dir_path, parents=True)
+            create_directory(io_class.dir_path, parents=True)
 
     with TestRun.step("Remove old ioclass config"):
         ioclass_config.remove_ioclass_config()

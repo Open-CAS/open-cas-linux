@@ -1,12 +1,13 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import time
-from datetime import timedelta
-
 import pytest
+
+from datetime import timedelta
 
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CleaningPolicy, FlushParametersAlru, SeqCutOffPolicy
@@ -14,9 +15,10 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from test_utils.os_utils import Udev, kill_all_io
-from test_utils.size import Size, Unit
-from test_utils.time import Time
+from test_tools.os_tools import kill_all_io
+from test_tools.udev import Udev
+from type_def.size import Size, Unit
+from type_def.time import Time
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

@@ -13,12 +13,12 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, CpusAllowedPolicy
-from test_utils.os_utils import (
+from test_tools.os_tools import (
     get_number_of_processors_from_cpuinfo,
     set_wbt_lat,
     get_dut_cpu_physical_cores,
 )
-from test_utils.size import Unit, Size
+from type_def.size import Unit, Size
 
 
 def fill_cas_cache(target, bs):

@@ -5,16 +5,15 @@
 #
 
 import os
-
 import pytest
 
 from api.cas import casadm, cli_messages
 from api.cas.cache_config import CacheMode, CacheModeTrait, CacheLineSize
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.disk_utils import Filesystem
-from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from test_tools.fs_tools import Filesystem
+from connection.utils.output import CmdException
+from type_def.size import Size, Unit
 from tests.lazy_writes.recovery.recovery_tests_methods import create_test_files, copy_file, \
     compare_files
 

@@ -9,7 +9,7 @@ import os
 import re
 
 from core.test_run import TestRun
-from test_tools.fs_utils import check_if_directory_exists, find_all_files
+from test_tools.fs_tools import check_if_directory_exists, find_all_files
 from test_tools.linux_packaging import DebSet, RpmSet
 
 

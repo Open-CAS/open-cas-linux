@@ -11,12 +11,11 @@ from api.cas.cache_config import CacheMode, CleaningPolicy, CacheModeTrait
 from api.cas.casadm_parser import wait_for_flushing
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
-from test_utils import os_utils
-from test_utils.os_utils import Udev, DropCachesMode
-from test_utils.size import Size, Unit
+from test_tools.fs_tools import Filesystem, create_random_test_file
+from test_tools.os_tools import DropCachesMode, sync, drop_caches
+from test_tools.udev import Udev
+from type_def.size import Size, Unit
 from tests.lazy_writes.recovery.recovery_tests_methods import compare_files
 
 mount_point = "/mnt/cas"
@@ -65,8 +64,8 @@ def test_interrupt_core_flush(cache_mode, filesystem):
             test_file_md5sum_before = test_file.md5sum()
 
         with TestRun.step("Get number of dirty data on exported object before interruption."):
-            os_utils.sync()
-            os_utils.drop_caches(DropCachesMode.ALL)
+            sync()
+            drop_caches(DropCachesMode.ALL)
             core_dirty_blocks_before = core.get_dirty_blocks()
 
         with TestRun.step("Start flushing core device."):
@@ -149,8 +148,8 @@ def test_interrupt_cache_flush(cache_mode, filesystem):
             test_file_md5sum_before = test_file.md5sum()
 
         with TestRun.step("Get number of dirty data on exported object before interruption."):
-            os_utils.sync()
-            os_utils.drop_caches(DropCachesMode.ALL)
+            sync()
+            drop_caches(DropCachesMode.ALL)
             cache_dirty_blocks_before = cache.get_dirty_blocks()
 
         with TestRun.step("Start flushing cache."):
@@ -238,8 +237,8 @@ def test_interrupt_core_remove(cache_mode, filesystem):
         with TestRun.step(
             "Get number of dirty data on exported object before core removal interruption"
         ):
-            os_utils.sync()
-            os_utils.drop_caches(DropCachesMode.ALL)
+            sync()
+            drop_caches(DropCachesMode.ALL)
             cache_dirty_blocks_before = cache.get_dirty_blocks()
 
         with TestRun.step("Unmount core"):
@@ -342,7 +341,7 @@ def test_interrupt_cache_mode_switch_parametrized(cache_mode, stop_percentage):
             core = cache.add_core(core_part)
 
         with TestRun.step(f"Create test file in mount point of exported object"):
-            test_file = fs_utils.create_random_test_file(test_file_path, test_file_size)
+            test_file = create_random_test_file(test_file_path, test_file_size)
 
         with TestRun.step("Calculate md5sum of test file"):
             test_file_md5_before = test_file.md5sum()
@@ -358,8 +357,8 @@ def test_interrupt_cache_mode_switch_parametrized(cache_mode, stop_percentage):
             dd.run()
 
         with TestRun.step("Get number of dirty data on exported object before interruption"):
-            os_utils.sync()
-            os_utils.drop_caches(DropCachesMode.ALL)
+            sync()
+            drop_caches(DropCachesMode.ALL)
             cache_dirty_blocks_before = cache.get_dirty_blocks()
 
         with TestRun.step("Start switching cache mode"):
@@ -450,8 +449,8 @@ def test_interrupt_cache_stop(cache_mode, filesystem):
             test_file = create_test_file()
 
         with TestRun.step("Get number of dirty data on exported object before interruption."):
-            os_utils.sync()
-            os_utils.drop_caches(DropCachesMode.ALL)
+            sync()
+            drop_caches(DropCachesMode.ALL)
             cache_dirty_blocks_before = cache.get_dirty_blocks()
 
         with TestRun.step("Unmount core."):

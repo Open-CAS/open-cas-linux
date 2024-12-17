@@ -15,8 +15,9 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
-from test_utils.os_utils import Udev, sync
-from test_utils.size import Size, Unit
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
+from type_def.size import Size, Unit
 
 io_size = Size(10000, Unit.Blocks4096)
 

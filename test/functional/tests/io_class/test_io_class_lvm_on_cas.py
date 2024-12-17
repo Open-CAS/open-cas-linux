@@ -12,11 +12,10 @@ from api.cas.ioclass_config import IoClass
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from storage_devices.lvm import Lvm, LvmConfiguration
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem, read_file, remove
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 from tests.volumes.common import lvm_filters
 
 mount_point = "/mnt/"
@@ -62,7 +61,7 @@ def test_io_class_lvm_on_cas():
         lvm.mount(mount_point)
 
     with TestRun.step("Prepare and load IO class config."):
-        io_classes = IoClass.csv_to_list(fs_utils.read_file("/etc/opencas/ioclass-config.csv"))
+        io_classes = IoClass.csv_to_list(read_file("/etc/opencas/ioclass-config.csv"))
         # remove two firs elements/lines: unclassified and metadata
         io_classes.pop(1)
         io_classes.pop(0)
@@ -123,7 +122,7 @@ def test_io_class_lvm_on_cas():
             else:
                 file_size = Size(1100, Unit.MebiByte)
 
-            fs_utils.remove(io_target)
+            remove(io_target)
 
     with TestRun.step("Remove LVMs."):
         TestRun.executor.run(f"umount {mount_point}")

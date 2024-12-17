@@ -4,9 +4,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import pytest
+
 from datetime import timedelta
 
-import pytest
 from api.cas import casadm, cli
 from api.cas.cache_config import CacheMode, CleaningPolicy, SeqCutOffPolicy
 from api.cas.casadm_parser import get_flushing_progress, wait_for_flushing
@@ -14,8 +15,8 @@ from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.dd import Dd
 from test_utils.filesystem.file import File
-from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from connection.utils.output import CmdException
+from type_def.size import Size, Unit
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

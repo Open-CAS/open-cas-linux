@@ -16,8 +16,8 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, ErrorFilter
-from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from connection.utils.output import CmdException
+from type_def.size import Size, Unit
 
 
 @pytest.mark.parametrizex("cache_mode", CacheMode)

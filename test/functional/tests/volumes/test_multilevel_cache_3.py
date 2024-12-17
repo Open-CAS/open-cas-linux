@@ -1,15 +1,16 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-
 import pytest
+
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from api.cas.cache import CacheMode, casadm
-from test_utils.size import Size, Unit
-from test_tools.disk_utils import Filesystem
+from type_def.size import Size, Unit
+from test_tools.fs_tools import Filesystem
 from .common import create_files_with_md5sums, compare_md5sums
 
 mount_point = "/mnt/test"

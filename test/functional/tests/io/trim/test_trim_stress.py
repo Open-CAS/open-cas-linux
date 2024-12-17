@@ -1,17 +1,20 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import os
-from datetime import timedelta
 import pytest
+
+from datetime import timedelta
+
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheLineSize
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType
-from test_tools.disk_utils import Filesystem
-from test_utils.size import Size, Unit
+from test_tools.fs_tools import Filesystem
+from type_def.size import Size, Unit
 
 
 @pytest.mark.os_dependent

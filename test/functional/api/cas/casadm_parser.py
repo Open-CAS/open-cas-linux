@@ -18,7 +18,7 @@ from api.cas.ioclass_config import IoClass
 from api.cas.version import CasVersion
 from core.test_run_utils import TestRun
 from storage_devices.device import Device
-from test_utils.output import CmdException
+from connection.utils.output import CmdException
 
 
 class Stats(dict):

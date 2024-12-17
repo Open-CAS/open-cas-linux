@@ -3,23 +3,23 @@
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
-import os
+
 import posixpath
 import time
-
 import pytest
 
+from test_tools.os_tools import sync, drop_caches
+from test_tools.udev import Udev
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheModeTrait, CleaningPolicy, SeqCutOffPolicy
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet
-from test_tools import fs_utils
 from test_tools.blktrace import BlkTrace, BlkTraceMask, RwbsKind
-from test_tools.disk_utils import Filesystem, check_if_device_supports_trim
+from test_tools.disk_tools import check_if_device_supports_trim
+from test_tools.fs_tools import Filesystem, create_random_test_file
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from test_utils import os_utils
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 from api.cas.dmesg import get_metadata_size_on_device
 
 
@@ -129,7 +129,7 @@ def test_trim_propagation():
             raise Exception("Core device doesn't support discards")
 
     with TestRun.step(f"Disable udev"):
-        os_utils.Udev.disable()
+        Udev.disable()
 
     with TestRun.step(f"Prepare cache instance in WB with one core"):
         cache = casadm.start_cache(cache_dev, CacheMode.WB, force=True)
@@ -161,7 +161,7 @@ def test_trim_propagation():
     with TestRun.step("Power cycle"):
         power_control = TestRun.plugin_manager.get_plugin("power_control")
         power_control.power_cycle()
-        os_utils.Udev.disable()
+        Udev.disable()
 
     with TestRun.step("Load cache"):
         cache = casadm.start_cache(cache_dev, load=True)
@@ -235,7 +235,7 @@ def test_trim_device_discard_support(
         core.mount(mount_point, ["discard"])
 
     with TestRun.step("Create random file."):
-        test_file = fs_utils.create_random_test_file(
+        test_file = create_random_test_file(
             posixpath.join(mount_point, "test_file"), core_dev.size * 0.2
         )
         occupancy_before = core.get_occupancy()
@@ -246,8 +246,8 @@ def test_trim_device_discard_support(
 
     with TestRun.step("Remove file."):
         test_file.remove()
-        os_utils.sync()
-        os_utils.drop_caches()
+        sync()
+        drop_caches()
         time.sleep(5)
 
     with TestRun.step("Ensure that discards were detected by blktrace on proper devices."):
@@ -315,8 +315,8 @@ def compare_properties(value, expected_value, property_name):
 
 def stop_monitoring_and_check_discards(blktraces, discard_support):
     time.sleep(60)
-    os_utils.sync()
-    os_utils.drop_caches()
+    sync()
+    drop_caches()
     time.sleep(5)
 
     discard_flag = RwbsKind.D  # Discard
