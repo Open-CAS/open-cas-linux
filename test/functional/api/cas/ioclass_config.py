@@ -18,7 +18,7 @@ from test_tools import fs_utils
 from test_utils import os_utils
 from test_utils.generator import random_string
 
-default_config_file_path = "/tmp/opencas_ioclass.conf"
+default_config_file_path = "/tmp/open_cas_test_data/opencas_ioclass.conf"
 
 MAX_IO_CLASS_ID = 32
 MAX_IO_CLASS_PRIORITY = 255

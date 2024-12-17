@@ -22,6 +22,7 @@ class UnitType(Enum):
     kibibyte = "[KiB]"
     gibibyte = "[GiB]"
     seconds = "[s]"
+    byte = "[B]"
 
     def __str__(self):
         return self.value
@@ -68,6 +69,16 @@ class CacheStats:
             getattr(other, stats_item) for stats_item in other.__dict__
         ]
 
+    def __iter__(self):
+        return iter([getattr(self, stats_item) for stats_item in self.__dict__])
+
+    def __sub__(self, other):
+        self.usage_stats -= other.usage_stats
+        self.request_stats -= other.request_stats
+        self.block_stats -= other.block_stats
+        self.error_stats -= other.error_stats
+        return self
+
 
 class CoreStats:
     def __init__(
@@ -92,6 +103,13 @@ class CoreStats:
                 case StatsFilter.err:
                     self.error_stats = ErrorStats(stats_dict, percentage_val)
 
+    def __sub__(self, other):
+        self.usage_stats -= other.usage_stats
+        self.request_stats -= other.request_stats
+        self.block_stats -= other.block_stats
+        self.error_stats -= other.error_stats
+        return self
+
     def __str__(self):
         # stats_list contains all Class.__str__ methods initialized in CacheStats
         stats_list = [str(getattr(self, stats_item)) for stats_item in self.__dict__]
@@ -102,6 +120,9 @@ class CoreStats:
         return [getattr(self, stats_item) for stats_item in self.__dict__] == [
             getattr(other, stats_item) for stats_item in other.__dict__
         ]
+
+    def __iter__(self):
+        return iter([getattr(self, stats_item) for stats_item in self.__dict__])
 
 
 class CoreIoClassStats:
@@ -138,6 +159,14 @@ class CoreIoClassStats:
         # stats_list contains all Class.__str__ methods initialized in CacheStats
         stats_list = [str(getattr(self, stats_item)) for stats_item in self.__dict__]
         return "\n".join(stats_list)
+
+    def __iter__(self):
+        return iter([getattr(self, stats_item) for stats_item in self.__dict__])
+
+    def __sub__(self, other):
+        self.usage_stats -= other.usage_stats
+        self.request_stats -= other.request_stats
+        self.block_stats -= other.block_stats
 
 
 class CacheIoClassStats(CoreIoClassStats):
@@ -219,6 +248,9 @@ class CacheConfigStats:
             and self.status == other.status
         )
 
+    def __iter__(self):
+        return iter([getattr(self, stats_item) for stats_item in self.__dict__])
+
 
 class CoreConfigStats:
     def __init__(self, stats_dict):
@@ -262,6 +294,9 @@ class CoreConfigStats:
             and self.seq_cutoff_policy == other.seq_cutoff_policy
         )
 
+    def __iter__(self):
+        return iter([getattr(self, stats_item) for stats_item in self.__dict__])
+
 
 class IoClassConfigStats:
     def __init__(self, stats_dict):
@@ -288,6 +323,9 @@ class IoClassConfigStats:
             and self.eviction_priority == other.eviction_priority
             and self.max_size == other.max_size
         )
+
+    def __iter__(self):
+        return iter([getattr(self, stats_item) for stats_item in self.__dict__])
 
 
 class UsageStats:
@@ -335,6 +373,16 @@ class UsageStats:
     def __ne__(self, other):
         return not self == other
 
+    def __iter__(self):
+        return iter([getattr(self, stats_item) for stats_item in self.__dict__])
+
+    def __sub__(self, other):
+        self.occupancy -= other.occupancy
+        self.free -= other.free
+        self.clean -= other.clean
+        self.dirty -= other.dirty
+        return self
+
 
 class IoClassUsageStats:
     def __init__(self, stats_dict, percentage_val):
@@ -365,6 +413,15 @@ class IoClassUsageStats:
 
     def __ne__(self, other):
         return not self == other
+
+    def __iter__(self):
+        return iter([getattr(self, stats_item) for stats_item in self.__dict__])
+
+    def __sub__(self, other):
+        self.occupancy -= other.occupancy
+        self.clean -= other.clean
+        self.dirty -= other.dirty
+        return self
 
 
 class RequestStats:
@@ -412,6 +469,18 @@ class RequestStats:
             and self.requests_total == other.requests_total
         )
 
+    def __iter__(self):
+        return iter([getattr(self, stats_item) for stats_item in self.__dict__])
+
+    def __sub__(self, other):
+        self.read -= other.read
+        self.write -= other.write
+        self.pass_through_reads -= other.pass_through_reads
+        self.pass_through_writes -= other.pass_through_writes
+        self.requests_serviced -= other.requests_serviced
+        self.requests_total -= other.requests_total
+        return self
+
 
 class RequestStatsChunk:
     def __init__(self, stats_dict, percentage_val: bool, operation: OperationType):
@@ -443,6 +512,16 @@ class RequestStatsChunk:
             and self.total == other.total
         )
 
+    def __iter__(self):
+        return iter([getattr(self, stats_item) for stats_item in self.__dict__])
+
+    def __sub__(self, other):
+        self.hits -= other.hits
+        self.part_misses -= other.part_misses
+        self.full_misses -= other.full_misses
+        self.total -= other.total
+        return self
+
 
 class BlockStats:
     def __init__(self, stats_dict, percentage_val):
@@ -473,6 +552,15 @@ class BlockStats:
             self.core == other.core and self.cache == other.cache and self.exp_obj == other.exp_obj
         )
 
+    def __iter__(self):
+        return iter([getattr(self, stats_item) for stats_item in self.__dict__])
+
+    def __sub__(self, other):
+        self.core -= other.core
+        self.cache -= other.cache
+        self.exp_obj -= other.exp_obj
+        return self
+
 
 class ErrorStats:
     def __init__(self, stats_dict, percentage_val):
@@ -502,6 +590,15 @@ class ErrorStats:
             and self.total_errors == other.total_errors
         )
 
+    def __iter__(self):
+        return iter([getattr(self, stats_item) for stats_item in self.__dict__])
+
+    def __sub__(self, other):
+        self.cache -= other.cache
+        self.core -= other.core
+        self.total_errors -= other.total_errors
+        return self
+
 
 class BasicStatsChunk:
     def __init__(self, stats_dict: dict, percentage_val: bool, device: str):
@@ -520,6 +617,15 @@ class BasicStatsChunk:
             self.reads == other.reads and self.writes == other.writes and self.total == other.total
         )
 
+    def __iter__(self):
+        return iter([getattr(self, stats_item) for stats_item in self.__dict__])
+
+    def __sub__(self, other):
+        self.reads -= other.reads
+        self.writes -= other.writes
+        self.total -= other.total
+        return self
+
 
 class BasicStatsChunkError:
     def __init__(self, stats_dict: dict, percentage_val: bool, device: str):
@@ -537,6 +643,15 @@ class BasicStatsChunkError:
         return (
             self.reads == other.reads and self.writes == other.writes and self.total == other.total
         )
+
+    def __iter__(self):
+        return iter([getattr(self, stats_item) for stats_item in self.__dict__])
+
+    def __sub__(self, other):
+        self.reads -= other.reads
+        self.writes -= other.writes
+        self.total -= other.total
+        return self
 
 
 def get_stat_value(stat_dict: dict, key: str):

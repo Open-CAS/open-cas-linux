@@ -26,7 +26,7 @@ class OutputFormat(Enum):
 
 class StatsFilter(Enum):
     all = "all"
-    conf = "configuration"
+    conf = "config"
     usage = "usage"
     req = "request"
     blk = "block"
