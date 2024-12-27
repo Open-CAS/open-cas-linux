@@ -1,6 +1,5 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -20,7 +19,6 @@ from test_utils.os_utils import sync
 
 
 @pytest.mark.CI
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
