@@ -5,22 +5,17 @@
 #
 
 import pytest
-from collections import namedtuple
-import random
 
 from api.cas import casadm
 from api.cas import dmesg
-from api.cas.cli import casadm_bin
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.size import Size, Unit
-from api.cas.cli_messages import check_stderr_msg, missing_param, disallowed_param
+from type_def.size import Size, Unit
 from api.cas.cache_config import CacheLineSize, CacheMode
 from api.cas.cli import standby_activate_cmd, standby_load_cmd
 from api.cas.dmesg import get_md_section_size
-from api.cas.ioclass_config import IoClass
 from test_tools.dd import Dd
-from test_utils.os_utils import sync
+from test_tools.os_tools import sync
 from test_utils.filesystem.file import File
 
 

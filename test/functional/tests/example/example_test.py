@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -13,14 +14,13 @@ from storage_devices.ramdisk import RamDisk
 from test_utils.drbd import Resource, Node
 from storage_devices.drbd import Drbd
 from test_tools.drbdadm import Drbdadm
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
-from test_tools.fs_utils import copy, check_if_file_exists
+from test_tools.fs_tools import copy, Filesystem, replace_in_lines, remove, Permissions, \
+    PermissionsUsers
 from test_utils.filesystem.directory import Directory
 from test_utils.filesystem.file import File
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 from test_utils.emergency_escape import EmergencyEscape
-from test_utils.fstab import add_mountpoint
+from test_tools.fstab import add_mountpoint
 from storage_devices.lvm import Lvm
 
 
@@ -102,7 +102,7 @@ def test_create_example_files():
         content_before_change = file1.read()
         TestRun.LOGGER.info(f"File content: {content_before_change}")
     with TestRun.step("Replace single line in file"):
-        fs_utils.replace_in_lines(file1, 'content line', 'replaced line')
+        replace_in_lines(file1, 'content line', 'replaced line')
     with TestRun.step("Read file content and check if it changed"):
         content_after_change = file1.read()
         if content_before_change == content_after_change:
@@ -115,19 +115,19 @@ def test_create_example_files():
     with TestRun.step("Change permissions of second file"):
         file2.chmod_numerical(123)
     with TestRun.step("Remove second file"):
-        fs_utils.remove(file2.full_path, True)
+        remove(file2.full_path, True)
 
     with TestRun.step("List contents of home directory"):
         dir1 = Directory("~")
         dir_content = dir1.ls()
     with TestRun.step("Change permissions of file"):
-        file1.chmod(fs_utils.Permissions['r'] | fs_utils.Permissions['w'],
-                    fs_utils.PermissionsUsers(7))
+        file1.chmod(Permissions['r'] | Permissions['w'],
+                    PermissionsUsers(7))
     with TestRun.step("Log home directory content"):
         for item in dir_content:
             TestRun.LOGGER.info(f"Item {str(item)} - {type(item).__name__}")
     with TestRun.step("Remove file"):
-        fs_utils.remove(file1.full_path, True)
+        remove(file1.full_path, True)
 
 
 @pytest.mark.require_disk("cache1", DiskTypeSet([DiskType.optane, DiskType.nand]))

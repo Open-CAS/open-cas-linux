@@ -9,11 +9,11 @@ import pytest
 from api.cas import casadm, casadm_parser, cli, cli_messages
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils, disk_utils
-from test_tools.disk_utils import Filesystem
+from test_tools.disk_tools import get_block_size, create_partitions
+from test_tools.fs_tools import Filesystem, create_random_test_file, check_if_file_exists
 from test_utils.filesystem.file import File
 from test_utils.filesystem.symlink import Symlink
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 
 mount_point, mount_point2 = "/mnt/cas", "/mnt/cas2"
 test_file_path = f"{mount_point}/test_file"
@@ -46,7 +46,7 @@ def test_load_cache_with_mounted_core():
         core.mount(mount_point)
 
     with TestRun.step(f"Create test file in mount point of exported object and check its md5 sum."):
-        test_file = fs_utils.create_random_test_file(test_file_path)
+        test_file = create_random_test_file(test_file_path)
         test_file_md5_before = test_file.md5sum()
 
     with TestRun.step("Unmount core device."):
@@ -110,8 +110,8 @@ def test_stop_cache_with_mounted_partition():
         core2 = cache.add_core(core_dev2)
 
     with TestRun.step("Create partitions on one exported object."):
-        core.block_size = Size(disk_utils.get_block_size(core.get_device_id()))
-        disk_utils.create_partitions(core, 2 * [Size(4, Unit.GibiByte)])
+        core.block_size = Size(get_block_size(core.get_device_id()))
+        create_partitions(core, 2 * [Size(4, Unit.GibiByte)])
         fs_part = core.partitions[0]
 
     with TestRun.step("Create xfs filesystems on one exported object partition "
@@ -124,7 +124,7 @@ def test_stop_cache_with_mounted_partition():
         core2.mount(mount_point2)
 
     with TestRun.step("Ensure /etc/mtab exists."):
-        if not fs_utils.check_if_file_exists("/etc/mtab"):
+        if not check_if_file_exists("/etc/mtab"):
             Symlink.create_symlink("/proc/self/mounts", "/etc/mtab")
 
     with TestRun.step("Try to remove the core with partitions from cache."):
@@ -185,7 +185,7 @@ def test_stop_cache_with_mounted_partition_no_mtab():
         core.mount(mount_point)
 
     with TestRun.step("Move /etc/mtab"):
-        if fs_utils.check_if_file_exists("/etc/mtab"):
+        if check_if_file_exists("/etc/mtab"):
             mtab = File("/etc/mtab")
         else:
             mtab = Symlink.create_symlink("/proc/self/mounts", "/etc/mtab")

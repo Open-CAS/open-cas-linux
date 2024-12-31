@@ -8,15 +8,13 @@ import pytest
 
 from api.cas.cas_module import CasModule
 from core.test_run import TestRun
-from test_utils.size import Unit
-from test_utils.os_utils import (allocate_memory,
-                                 disable_memory_affecting_functions,
-                                 drop_caches,
-                                 get_mem_free,
+from type_def.size import Unit
+from test_tools.os_tools import (drop_caches,
                                  is_kernel_module_loaded,
                                  load_kernel_module,
                                  unload_kernel_module,
                                  )
+from test_tools.memory import disable_memory_affecting_functions, get_mem_free, allocate_memory
 
 
 @pytest.mark.os_dependent

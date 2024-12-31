@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -9,8 +10,8 @@ from api.cas import casadm
 from api.cas.cache_config import CacheMode
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.os_utils import Udev
-from test_utils.size import Unit, Size
+from test_tools.udev import Udev
+from type_def.size import Unit, Size
 from test_tools.dd import Dd
 from test_tools.iostat import IOstatBasic
 
@@ -62,7 +63,7 @@ def test_ci_read(cache_mode):
         dd.run()
 
     with TestRun.step("Collect iostat"):
-        iostat = IOstatBasic.get_iostat_list([cache_device.parent_device])
+        iostat = IOstatBasic.get_iostat_list([cache_device.parent_device.get_device_id()])
         read_cache_1 = iostat[0].total_reads
 
     with TestRun.step("Generate cache hits using reads"):
@@ -77,7 +78,7 @@ def test_ci_read(cache_mode):
         dd.run()
 
     with TestRun.step("Collect iostat"):
-        iostat = IOstatBasic.get_iostat_list([cache_device.parent_device])
+        iostat = IOstatBasic.get_iostat_list([cache_device.parent_device.get_device_id()])
         read_cache_2 = iostat[0].total_reads
 
     with TestRun.step("Stop cache"):
@@ -117,10 +118,10 @@ def test_ci_write_around_write():
         casadm.add_core(cache, core_device)
 
     with TestRun.step("Collect iostat before I/O"):
-        iostat_core = IOstatBasic.get_iostat_list([core_device.parent_device])
+        iostat_core = IOstatBasic.get_iostat_list([core_device.parent_device.get_device_id()])
         write_core_0 = iostat_core[0].total_writes
 
-        iostat_cache = IOstatBasic.get_iostat_list([cache_device.parent_device])
+        iostat_cache = IOstatBasic.get_iostat_list([cache_device.parent_device.get_device_id()])
         write_cache_0 = iostat_cache[0].total_writes
 
     with TestRun.step("Submit writes to exported object"):
@@ -136,11 +137,11 @@ def test_ci_write_around_write():
         dd.run()
 
     with TestRun.step("Collect iostat"):
-        iostat_core = IOstatBasic.get_iostat_list([core_device.parent_device])
+        iostat_core = IOstatBasic.get_iostat_list([core_device.parent_device.get_device_id()])
         write_core_1 = iostat_core[0].total_writes
         read_core_1 = iostat_core[0].total_reads
 
-        iostat_cache = IOstatBasic.get_iostat_list([cache_device.parent_device])
+        iostat_cache = IOstatBasic.get_iostat_list([cache_device.parent_device.get_device_id()])
         write_cache_1 = iostat_cache[0].total_writes
         read_cache_1 = iostat_cache[0].total_reads
 
@@ -156,10 +157,10 @@ def test_ci_write_around_write():
         dd.run()
 
     with TestRun.step("Collect iostat"):
-        iostat_core = IOstatBasic.get_iostat_list([core_device.parent_device])
+        iostat_core = IOstatBasic.get_iostat_list([core_device.parent_device.get_device_id()])
         read_core_2 = iostat_core[0].total_reads
 
-        iostat_cache = IOstatBasic.get_iostat_list([cache_device.parent_device])
+        iostat_cache = IOstatBasic.get_iostat_list([cache_device.parent_device.get_device_id()])
         read_cache_2 = iostat_cache[0].total_reads
 
     with TestRun.step("Stop cache"):
@@ -221,10 +222,10 @@ def test_ci_write_through_write():
         casadm.add_core(cache, core_device)
 
     with TestRun.step("Collect iostat before I/O"):
-        iostat_core = IOstatBasic.get_iostat_list([core_device.parent_device])
+        iostat_core = IOstatBasic.get_iostat_list([core_device.parent_device.get_device_id()])
         write_core_0 = iostat_core[0].total_writes
 
-        iostat_cache = IOstatBasic.get_iostat_list([cache_device.parent_device])
+        iostat_cache = IOstatBasic.get_iostat_list([cache_device.parent_device.get_device_id()])
         write_cache_0 = iostat_cache[0].total_writes
 
     with TestRun.step("Insert data into the cache using writes"):
@@ -241,11 +242,11 @@ def test_ci_write_through_write():
         dd.run()
 
     with TestRun.step("Collect iostat"):
-        iostat_core = IOstatBasic.get_iostat_list([core_device.parent_device])
+        iostat_core = IOstatBasic.get_iostat_list([core_device.parent_device.get_device_id()])
         write_core_1 = iostat_core[0].total_writes
         read_core_1 = iostat_core[0].total_reads
 
-        iostat_cache = IOstatBasic.get_iostat_list([cache_device.parent_device])
+        iostat_cache = IOstatBasic.get_iostat_list([cache_device.parent_device.get_device_id()])
         write_cache_1 = iostat_cache[0].total_writes
         read_cache_1 = iostat_cache[0].total_reads
 
@@ -262,10 +263,10 @@ def test_ci_write_through_write():
         dd.run()
 
     with TestRun.step("Collect iostat"):
-        iostat_core = IOstatBasic.get_iostat_list([core_device.parent_device])
+        iostat_core = IOstatBasic.get_iostat_list([core_device.parent_device.get_device_id()])
         read_core_2 = iostat_core[0].total_reads
 
-        iostat_cache = IOstatBasic.get_iostat_list([cache_device.parent_device])
+        iostat_cache = IOstatBasic.get_iostat_list([cache_device.parent_device.get_device_id()])
         read_cache_2 = iostat_cache[0].total_reads
 
     with TestRun.step("Stop cache"):

@@ -1,22 +1,23 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import pytest
+
 from collections import namedtuple
 from math import isclose
-
-import pytest
 
 from api.cas import ioclass_config, casadm
 from api.cas.cache_config import CacheMode, CacheLineSize
 from api.cas.ioclass_config import IoClass, default_config_file_path
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
-from test_utils.os_utils import sync, Udev
-from test_utils.size import Unit
+from test_tools.fs_tools import Filesystem, create_directory, move
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
+from type_def.size import Unit
 from tests.io_class.io_class_common import (
     prepare,
     mountpoint,
@@ -67,7 +68,7 @@ def test_ioclass_repart(io_class_size_multiplication):
         ]
 
         for io_class in io_classes:
-            fs_utils.create_directory(io_class.dir_path, parents=True)
+            create_directory(io_class.dir_path, parents=True)
 
     with TestRun.step("Remove old io class config"):
         ioclass_config.remove_ioclass_config()
@@ -123,7 +124,7 @@ def test_ioclass_repart(io_class_size_multiplication):
 
     with TestRun.step("Force repart - move files to created directories and read theirs contents"):
         for i, io_class in enumerate(io_classes):
-            fs_utils.move(source=f"{mountpoint}/{i}", destination=io_class.dir_path)
+            move(source=f"{mountpoint}/{i}", destination=io_class.dir_path)
             run_io_dir_read(f"{io_class.dir_path}/{i}")
 
     with TestRun.step("Check if each ioclass reached it's occupancy limit"):

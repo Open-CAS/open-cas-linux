@@ -1,10 +1,10 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import time
-
 import pytest
 
 from api.cas import casadm
@@ -18,9 +18,9 @@ from api.cas.cache_config import (
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
-from test_utils.os_utils import Udev
-from test_utils.size import Size, Unit
-from test_utils.time import Time
+from test_tools.udev import Udev
+from type_def.size import Size, Unit
+from type_def.time import Time
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

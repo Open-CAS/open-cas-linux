@@ -9,8 +9,9 @@ import os
 from core.test_run import TestRun
 from api.cas import cas_module
 from api.cas.version import get_installed_cas_version
-from test_utils import os_utils, git
-from test_utils.output import CmdException
+from test_tools import git
+from connection.utils.output import CmdException
+from test_tools.os_tools import is_kernel_module_loaded
 
 
 def rsync_opencas_sources():
@@ -98,7 +99,7 @@ def reinstall_opencas(version: str = ""):
 def check_if_installed(version: str = ""):
     TestRun.LOGGER.info("Check if Open CAS Linux is installed")
     output = TestRun.executor.run("which casadm")
-    modules_loaded = os_utils.is_kernel_module_loaded(cas_module.CasModule.cache.value)
+    modules_loaded = is_kernel_module_loaded(cas_module.CasModule.cache.value)
 
     if output.exit_code != 0 or not modules_loaded:
         TestRun.LOGGER.info("CAS is not installed")

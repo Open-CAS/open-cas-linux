@@ -1,19 +1,19 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
+
 from collections import namedtuple
 from math import isclose
 
-
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from api.cas.ioclass_config import IoClass, default_config_file_path
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem, create_directory
 from core.test_run import TestRun
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 from .io_class_common import (
     prepare,
     mountpoint,
@@ -58,7 +58,7 @@ def test_io_class_pinning_eviction():
         ]
 
         for io_class in io_classes:
-            fs_utils.create_directory(io_class.dir_path, parents=True)
+            create_directory(io_class.dir_path, parents=True)
 
     with TestRun.step("Remove old config"):
         ioclass_config.remove_ioclass_config()
@@ -152,7 +152,7 @@ def test_pinned_ioclasses_eviction():
         ]
 
         for io_class in io_classes:
-            fs_utils.create_directory(io_class.dir_path, parents=True)
+            create_directory(io_class.dir_path, parents=True)
 
     with TestRun.step("Remove old config"):
         ioclass_config.remove_ioclass_config()

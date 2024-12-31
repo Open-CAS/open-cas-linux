@@ -4,10 +4,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-
 import os
 
-from test_utils.git import get_repo_files
+from test_tools.git import get_repo_files
 from api.cas.installer import (
     clean_opencas_repo,
     build_opencas,
@@ -15,7 +14,7 @@ from api.cas.installer import (
     rsync_opencas_sources,
 )
 from core.test_run import TestRun
-from test_tools.fs_utils import FilesPermissions, find_all_items
+from test_tools.fs_tools import FilesPermissions, find_all_items
 
 
 repo_files_perms_exceptions = {

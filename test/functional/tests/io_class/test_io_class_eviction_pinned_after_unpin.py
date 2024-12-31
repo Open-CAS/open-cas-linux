@@ -1,10 +1,12 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-from collections import namedtuple
 import pytest
+
+from collections import namedtuple
 
 from api.cas.ioclass_config import default_config_file_path
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
@@ -12,8 +14,9 @@ from core.test_run import TestRun
 from api.cas.cache_config import CacheMode, CleaningPolicy, SeqCutOffPolicy
 from .io_class_common import ioclass_config, get_io_class_occupancy, run_io_dir
 from api.cas import casadm
-from test_utils.os_utils import sync, Udev, drop_caches
-from test_utils.size import Unit, Size
+from test_tools.os_tools import sync, drop_caches
+from test_tools.udev import Udev
+from type_def.size import Unit, Size
 
 
 cache_size = Size(100, Unit.MiB)

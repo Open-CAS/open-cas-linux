@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -12,10 +13,11 @@ from api.cas.cache_config import (CleaningPolicy,
                                   FlushParametersAlru,
                                   Time,
                                   FlushParametersAcp)
+from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
-from test_tools.fio.fio_param import *
-from test_utils.size import Size, Unit
+from test_tools.fio.fio_param import IoEngine, ReadWrite, CpusAllowedPolicy
+from type_def.size import Size, Unit
 
 
 @pytest.mark.parametrizex("cores_amount", [1, 4])

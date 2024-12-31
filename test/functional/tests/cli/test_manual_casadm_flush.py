@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -8,14 +9,14 @@ import time
 
 from core.test_run_utils import TestRun
 from storage_devices.device import Device
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CleaningPolicy
-from test_utils.os_utils import Udev
+from test_tools.udev import Udev
 
 
 @pytest.mark.CI

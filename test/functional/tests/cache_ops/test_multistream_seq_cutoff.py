@@ -21,12 +21,12 @@ from api.cas.casadm_params import StatsFilter
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskTypeLowerThan, DiskType
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
-from test_utils.os_utils import Udev
-from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from test_tools.udev import Udev
+from connection.utils.output import CmdException
+from type_def.size import Size, Unit
 
 random_thresholds = random.sample(range(1028, 1024**2, 4), 3)
 random_stream_numbers = random.sample(range(2, 128), 3)

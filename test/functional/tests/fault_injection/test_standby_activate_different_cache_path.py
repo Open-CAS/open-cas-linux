@@ -11,12 +11,12 @@ from api.cas.cli import standby_activate_cmd
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.filesystem.symlink import Symlink
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 from api.cas.cache_config import CacheLineSize
 from api.cas.cache import CacheStatus
 from test_tools.dd import Dd
-from test_tools.fs_utils import check_if_symlink_exists
-from test_utils.os_utils import sync
+from test_tools.fs_tools import check_if_symlink_exists
+from test_tools.os_tools import sync
 
 
 @pytest.mark.CI

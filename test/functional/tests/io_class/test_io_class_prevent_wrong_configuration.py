@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -9,9 +10,9 @@ from api.cas import ioclass_config, cli_messages
 from api.cas.ioclass_config import IoClass
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
-from test_utils.output import CmdException
-from test_utils.size import Unit, Size
+from connection.utils.output import CmdException
+from test_tools.fs_tools import read_file, write_file
+from type_def.size import Unit, Size
 from tests.io_class.io_class_common import prepare, ioclass_config_path
 
 headerless_configuration = "1,unclassified,22,1.00"
@@ -86,7 +87,7 @@ def test_io_class_prevent_wrong_configuration():
             f"{IoClass.default_header()}\n{loaded_io_classes_str}"
         )
 
-        config_io_classes = IoClass.csv_to_list(fs_utils.read_file(ioclass_config_path))
+        config_io_classes = IoClass.csv_to_list(read_file(ioclass_config_path))
         if not IoClass.compare_ioclass_lists(config_io_classes, loaded_io_classes):
             TestRun.fail("Default IO class configuration not loaded correctly.")
 
@@ -98,7 +99,7 @@ def test_io_class_prevent_wrong_configuration():
             f"Preparing headerless configuration file with following content:\n"
             f"{headerless_configuration}"
         )
-        fs_utils.write_file(ioclass_config_path, headerless_configuration)
+        write_file(ioclass_config_path, headerless_configuration)
         try_load_malformed_config(
             cache,
             config_io_classes,
@@ -114,7 +115,7 @@ def test_io_class_prevent_wrong_configuration():
             TestRun.LOGGER.info(
                 f"Testing following header with default IO class:\n" f"{config_content}"
             )
-            fs_utils.write_file(ioclass_config_path, config_content)
+            write_file(ioclass_config_path, config_content)
             try_load_malformed_config(cache, config_io_classes, expected_err_msg=err_message)
 
     with TestRun.step(
@@ -123,7 +124,7 @@ def test_io_class_prevent_wrong_configuration():
     ):
         config_content = f"{IoClass.default_header()}\n{double_io_class_configuration}"
         TestRun.LOGGER.info(f"Testing following configuration file:\n{config_content}")
-        fs_utils.write_file(ioclass_config_path, config_content)
+        write_file(ioclass_config_path, config_content)
         try_load_malformed_config(
             cache,
             config_io_classes,
@@ -139,7 +140,7 @@ def test_io_class_prevent_wrong_configuration():
             TestRun.LOGGER.info(
                 f"Testing following header with default IO class:\n{config_content}"
             )
-            fs_utils.write_file(ioclass_config_path, config_content)
+            write_file(ioclass_config_path, config_content)
             try_load_malformed_config(cache, config_io_classes, expected_err_msg=err_message)
 
 

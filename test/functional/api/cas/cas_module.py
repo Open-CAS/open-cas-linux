@@ -6,8 +6,7 @@
 
 from enum import Enum
 from core.test_run import TestRun
-from test_utils import os_utils
-from test_utils.os_utils import ModuleRemoveMethod
+from test_tools.os_tools import unload_kernel_module, load_kernel_module
 
 
 class CasModule(Enum):
@@ -15,12 +14,12 @@ class CasModule(Enum):
 
 
 def reload_all_cas_modules():
-    os_utils.unload_kernel_module(CasModule.cache.value, ModuleRemoveMethod.modprobe)
-    os_utils.load_kernel_module(CasModule.cache.value)
+    unload_kernel_module(CasModule.cache.value)
+    load_kernel_module(CasModule.cache.value)
 
 
 def unload_all_cas_modules():
-    os_utils.unload_kernel_module(CasModule.cache.value, os_utils.ModuleRemoveMethod.rmmod)
+    unload_kernel_module(CasModule.cache.value)
 
 
 def is_cas_management_dev_present():

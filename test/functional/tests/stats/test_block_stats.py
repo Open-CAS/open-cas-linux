@@ -5,7 +5,6 @@
 #
 
 import json
-
 import pytest
 
 from api.cas import casadm
@@ -15,8 +14,8 @@ from api.cas.statistics import get_stats_dict, get_stat_value, OperationType
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
-from test_utils.os_utils import Udev
-from test_utils.size import Size, Unit
+from test_tools.udev import Udev
+from type_def.size import Size, Unit
 
 iterations = 10
 dd_block_size = Size(1, Unit.Blocks4096)

@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -10,8 +11,9 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from test_utils.os_utils import sync, Udev, drop_caches
-from test_utils.size import Unit, Size
+from test_tools.os_tools import sync, drop_caches
+from test_tools.udev import Udev
+from type_def.size import Unit, Size
 from tests.io_class.io_class_common import prepare
 
 

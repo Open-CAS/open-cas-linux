@@ -9,7 +9,8 @@ from time import sleep
 
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, ErrorFilter
-from test_tools.device_mapper import ErrorDevice, DmTable
+from test_tools.device_mapper import DmTable
+from storage_devices.error_device import ErrorDevice
 from core.test_run import TestRun
 from api.cas import casadm
 from api.cas.cache_config import (
@@ -21,7 +22,7 @@ from api.cas.cache_config import (
 )
 from storage_devices.disk import DiskTypeSet, DiskType
 from test_utils.io_stats import IoStats
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)

@@ -13,12 +13,12 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, CpusAllowedPolicy
-from test_utils.os_utils import (
+from test_tools.os_tools import (
     set_wbt_lat,
     get_number_of_processors_from_cpuinfo,
     get_dut_cpu_physical_cores,
 )
-from test_utils.size import Unit, Size
+from type_def.size import Unit, Size
 
 
 # TODO: for disks other than Intel Optane, fio ramp is needed before fio tests on raw disk

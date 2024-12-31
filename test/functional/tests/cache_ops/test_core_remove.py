@@ -5,15 +5,14 @@
 #
 
 import random
-
 import pytest
 
 from api.cas import casadm
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeLowerThan, DiskTypeSet
-from test_tools.disk_utils import Filesystem
-from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from test_tools.fs_tools import Filesystem
+from connection.utils.output import CmdException
+from type_def.size import Size, Unit
 
 mount_point = "/mnt/cas"
 cores_amount = 3

@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -8,9 +9,9 @@ import pytest
 from api.cas import casadm
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.os_utils import (get_number_of_processors_from_cpuinfo,
+from test_tools.os_tools import (get_number_of_processors_from_cpuinfo,
                                  get_number_of_processes)
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 
 cleaning_threads_expected = 1
 management_thread_expected = 1

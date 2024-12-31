@@ -25,14 +25,15 @@ from api.cas.statistics import CacheStats
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_utils.filesystem.file import File
-from test_utils.os_utils import Udev, sync
-from test_utils.output import CmdException
-from test_utils.size import Size, Unit
-from test_utils.time import Time
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
+from connection.utils.output import CmdException
+from type_def.size import Size, Unit
+from type_def.time import Time
 
 
 @pytest.mark.CI

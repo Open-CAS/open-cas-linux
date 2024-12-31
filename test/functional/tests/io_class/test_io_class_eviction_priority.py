@@ -1,16 +1,16 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
+
+import pytest
 
 from collections import namedtuple
 from math import isclose
 
-import pytest
-
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem, create_directory
 from .io_class_common import *
 
 
@@ -50,7 +50,7 @@ def test_io_class_eviction_priority():
             IoclassConfig(4, 1, 1.00, f"{mountpoint}/D"),
         ]
         for io_class in io_classes:
-            fs_utils.create_directory(io_class.dir_path, parents=True)
+            create_directory(io_class.dir_path, parents=True)
 
     with TestRun.step("Adding io classes for all dirs"):
         for io_class in io_classes:

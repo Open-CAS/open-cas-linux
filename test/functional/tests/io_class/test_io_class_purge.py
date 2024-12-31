@@ -4,19 +4,18 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-from collections import namedtuple
-
 import pytest
 
+from collections import namedtuple
+
 from api.cas import ioclass_config, casadm
-from api.cas.statistics import IoClassUsageStats
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
-from test_utils.os_utils import drop_caches, DropCachesMode, sync, Udev
-from test_utils.size import Unit, Size
+from test_tools.fs_tools import Filesystem, create_directory
+from test_tools.os_tools import drop_caches, DropCachesMode, sync
+from test_tools.udev import Udev
+from type_def.size import Unit, Size
 from tests.io_class.io_class_common import prepare, mountpoint, ioclass_config_path
 
 
@@ -56,7 +55,7 @@ def test_ioclass_usage_sum():
         ]
 
         for io_class in io_classes:
-            fs_utils.create_directory(io_class.dir_path, parents=True)
+            create_directory(io_class.dir_path, parents=True)
 
     with TestRun.step("Add io classes for all dirs"):
         ioclass_config.remove_ioclass_config()

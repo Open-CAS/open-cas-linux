@@ -1,26 +1,28 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import random
 import time
-from itertools import permutations
-
 import pytest
+
+from itertools import permutations
 
 from api.cas import ioclass_config, casadm
 from api.cas.ioclass_config import IoClass
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
 from test_tools.dd import Dd
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem, create_directory, remove, \
+    replace_first_pattern_occurrence
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_utils.filesystem.file import File
-from test_utils.os_utils import sync, Udev
-from test_utils.size import Size, Unit
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
+from type_def.size import Size, Unit
 from tests.io_class.io_class_common import prepare, ioclass_config_path, mountpoint
 
 
@@ -371,7 +373,7 @@ def test_ioclass_metadata(filesystem):
 
     with TestRun.step(f"Create directory {test_dir_path}."):
         requests_to_metadata_before = requests_to_metadata_after
-        fs_utils.create_directory(path=test_dir_path)
+        create_directory(path=test_dir_path)
 
         TestRun.LOGGER.info(f"Moving test files into {test_dir_path}")
         for file in files:
@@ -386,7 +388,7 @@ def test_ioclass_metadata(filesystem):
             TestRun.fail("No requests to metadata while moving files!")
 
     with TestRun.step(f"Remove {test_dir_path}."):
-        fs_utils.remove(path=test_dir_path, force=True, recursive=True)
+        remove(path=test_dir_path, force=True, recursive=True)
 
     with TestRun.step("Check requests to metadata."):
         requests_to_metadata_after = cache.get_io_class_statistics(
@@ -475,7 +477,7 @@ def test_ioclass_id_as_condition():
     ):
         core.create_filesystem(filesystem)
         core.mount(mountpoint)
-        fs_utils.create_directory(base_dir_path)
+        create_directory(base_dir_path)
         sync()
         # CAS needs some time to resolve directory to inode
         time.sleep(ioclass_config.MAX_CLASSIFICATION_DELAY.seconds)
@@ -617,7 +619,7 @@ def test_ioclass_conditions_or():
         core.create_filesystem(filesystem)
         core.mount(mountpoint)
         for i in range(1, 6):
-            fs_utils.create_directory(f"{mountpoint}/dir{i}")
+            create_directory(f"{mountpoint}/dir{i}")
         sync()
 
     with TestRun.step("Perform IO fulfilling each condition and check if occupancy raises."):
@@ -744,7 +746,7 @@ def test_ioclass_effective_ioclass():
     ):
         core.create_filesystem(filesystem)
         core.mount(mountpoint)
-        fs_utils.create_directory(test_dir)
+        create_directory(test_dir)
         sync()
 
     for i, permutation in TestRun.iteration(enumerate(permutations(range(1, 5)), start=1)):
@@ -830,7 +832,7 @@ def add_done_to_second_non_exclusive_condition(rules, permutation, cache):
         if non_exclusive_conditions == 2:
             break
         second_class_id += 1
-    fs_utils.replace_first_pattern_occurrence(ioclass_config_path, rules[idx], f"{rules[idx]}&done")
+    replace_first_pattern_occurrence(ioclass_config_path, rules[idx], f"{rules[idx]}&done")
     sync()
     casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
     return second_class_id

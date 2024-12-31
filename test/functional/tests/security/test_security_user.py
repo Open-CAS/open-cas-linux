@@ -12,11 +12,10 @@ from api.cas.casadm_params import OutputFormat
 from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
-from test_utils.os_utils import create_user, check_if_user_exists
-from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from test_tools.fs_tools import Filesystem, ls_item, parse_ls_output
+from test_tools.os_tools import create_user, check_if_user_exists
+from connection.utils.output import CmdException
+from type_def.size import Size, Unit
 
 mount_point = "/mnt/cas"
 system_casadm_bin_path = "/sbin/casadm"
@@ -57,12 +56,12 @@ def test_user_cli():
 
     with TestRun.step(f"Copy casadm bin from {system_casadm_bin_path} "
                       f"to {user_casadm_bin_dest_path}."):
-        casadm_bin = fs_utils.parse_ls_output(fs_utils.ls_item(f"{system_casadm_bin_path}"))[0]
+        casadm_bin = parse_ls_output(ls_item(f"{system_casadm_bin_path}"))[0]
         casadm_bin_copy = casadm_bin.copy(user_casadm_bin_dest_path, True)
         casadm_bin_copy.chmod_numerical(777)
 
     with TestRun.step("Copy IO class config."):
-        io_conf = fs_utils.parse_ls_output(fs_utils.ls_item(f"{ioclass_config_path}"))[0]
+        io_conf = parse_ls_output(ls_item(f"{ioclass_config_path}"))[0]
         io_conf_copy = io_conf.copy(ioclass_config_copy_path, force=True)
 
     with TestRun.step("Unmount core."):
@@ -412,7 +411,7 @@ def test_user_service():
 
     with TestRun.step(f"Copy casadm bin from {system_casadm_bin_path} "
                       f"to {user_casadm_bin_dest_path}."):
-        casadm_bin = fs_utils.parse_ls_output(fs_utils.ls_item(f"{system_casadm_bin_path}"))[0]
+        casadm_bin = parse_ls_output(ls_item(f"{system_casadm_bin_path}"))[0]
         casadm_bin_copy = casadm_bin.copy(user_casadm_bin_dest_path, True)
         casadm_bin_copy.chmod_numerical(777)
 

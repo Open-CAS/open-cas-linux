@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-from time import sleep
 import pytest
 
 from api.cas import casadm
@@ -22,15 +21,13 @@ from storage_devices.disk import DiskType, DiskTypeSet
 from storage_devices.drbd import Drbd
 from storage_devices.raid import Raid, RaidConfiguration, MetadataVariant, Level
 from test_tools.dd import Dd
-from test_tools.drbdadm import Drbdadm
-from test_tools.disk_utils import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite
-from test_tools.fs_utils import readlink
+from test_tools.fs_tools import readlink, Filesystem, create_directory
 from test_utils.drbd import Resource, Node
-from test_utils.os_utils import sync, Udev
-from test_utils.size import Size, Unit
-from test_tools import fs_utils
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
+from type_def.size import Size, Unit
 
 
 cache_id = 5
@@ -147,7 +144,7 @@ def test_functional_activate_twice_round_trip(filesystem):
         primary_node.cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
         if filesystem:
             TestRun.executor.run(f"rm -rf {mountpoint}")
-            fs_utils.create_directory(path=mountpoint)
+            create_directory(path=mountpoint)
             core.create_filesystem(filesystem)
             core.mount(mountpoint)
 
@@ -318,7 +315,7 @@ def test_functional_activate_twice_new_host(filesystem):
         primary_node.cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
         if filesystem:
             TestRun.executor.run(f"rm -rf {mountpoint}")
-            fs_utils.create_directory(path=mountpoint)
+            create_directory(path=mountpoint)
             core.create_filesystem(filesystem)
             core.mount(mountpoint)
 
@@ -494,7 +491,7 @@ def failover_sequence(standby_node, drbd_resource, filesystem, core):
     if filesystem:
         with TestRun.use_dut(standby_node), TestRun.step(f"Mount core"):
             TestRun.executor.run(f"rm -rf {mountpoint}")
-            fs_utils.create_directory(path=mountpoint)
+            create_directory(path=mountpoint)
             core.mount(mountpoint)
 
 

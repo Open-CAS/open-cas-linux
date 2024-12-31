@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -10,9 +11,9 @@ from api.cas.cache_config import CacheMode
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
 from storage_devices.partition import Partition
-from test_tools import fs_utils, disk_utils
-from test_tools.disk_utils import PartitionTable, Filesystem
-from test_utils.size import Size, Unit
+from test_tools.disk_tools import PartitionTable, create_partitions
+from test_tools.fs_tools import Filesystem, create_random_test_file
+from type_def.size import Size, Unit
 
 mount_point = "/mnt/cas"
 cores_number = 16
@@ -42,8 +43,8 @@ def test_cas_preserves_partitions(partition_table, filesystem, cache_mode):
         core_dev.create_partitions(core_sizes, partition_table)
 
     with TestRun.step("Create filesystem on core devices."):
-        for i in range(cores_number):
-            core_dev.partitions[i].create_filesystem(filesystem)
+        for part in core_dev.partitions:
+            part.create_filesystem(filesystem)
 
     with TestRun.step("Mount core devices and create test files."):
         files = []
@@ -51,7 +52,7 @@ def test_cas_preserves_partitions(partition_table, filesystem, cache_mode):
             mount_path = f"{mount_point}{i}"
             core.mount(mount_path)
             test_file_path = f"{mount_path}/test_file"
-            files.append(fs_utils.create_random_test_file(test_file_path))
+            files.append(create_random_test_file(test_file_path))
 
     with TestRun.step("Check md5 sums of test files."):
         test_files_md5sums = []
@@ -120,7 +121,7 @@ def test_partition_create_cas(partition_table, filesystem, cache_mode):
     with TestRun.step("Create partitions on exported device."):
         core_sizes = [Size(1, Unit.GibiByte)] * cores_number
         core.block_size = core_dev.block_size
-        disk_utils.create_partitions(core, core_sizes, partition_table)
+        create_partitions(core, core_sizes, partition_table)
 
     with TestRun.step("Create filesystem on core devices."):
         for part in core.partitions:
@@ -132,7 +133,7 @@ def test_partition_create_cas(partition_table, filesystem, cache_mode):
             mount_path = f"{mount_point}{i}"
             part.mount(mount_path)
             test_file_path = f"{mount_path}/test_file"
-            files.append(fs_utils.create_random_test_file(test_file_path))
+            files.append(create_random_test_file(test_file_path))
 
     with TestRun.step("Check md5 sums of test files."):
         test_files_md5sums = []

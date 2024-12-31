@@ -14,11 +14,12 @@ from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_utils.filesystem.file import File
-from test_tools.disk_utils import Filesystem
-from test_utils import fstab
+from test_tools.fs_tools import Filesystem
+from test_tools import fstab
 from test_tools.dd import Dd
-from test_utils.size import Unit, Size
-from test_utils.os_utils import sync, Udev
+from type_def.size import Unit, Size
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
 from test_utils.emergency_escape import EmergencyEscape
 from api.cas.cas_service import set_cas_service_timeout, clear_cas_service_timeout
 
@@ -221,7 +222,7 @@ def test_cas_startup_lazy():
 
         core_pool_paths = {c["device_path"] for c in core_pool_list}
         if core_pool_paths != expected_core_pool_paths:
-            TestRun.error(
+            TestRun.LOGGER.error(
                 f"Expected the following devices in core pool "
                 f"{expected_core_pool_paths}. Got {core_pool_paths}"
             )
@@ -230,7 +231,7 @@ def test_cas_startup_lazy():
 
         caches_paths = {c["device_path"] for c in caches_list}
         if caches_paths != expected_caches_paths:
-            TestRun.error(
+            TestRun.LOGGER.error(
                 f"Expected the following devices as caches "
                 f"{expected_caches_paths}. Got {caches_paths}"
             )
@@ -239,7 +240,7 @@ def test_cas_startup_lazy():
 
         cores_paths = {c["device_path"] for c in cores_list}
         if cores_paths != expected_cores_paths:
-            TestRun.error(
+            TestRun.LOGGER.error(
                 f"Expected the following devices as cores "
                 f"{expected_caches_paths}. Got {cores_paths}"
             )
@@ -446,14 +447,14 @@ def test_failover_config_startup():
         cores_list = get_cas_devices_dict()["cores"].values()
 
         if len(core_pool_list) != 0:
-            TestRun.error(f"No cores expected in core pool. Got {core_pool_list}")
+            TestRun.LOGGER.error(f"No cores expected in core pool. Got {core_pool_list}")
         else:
             TestRun.LOGGER.info("Core pool is ok")
 
         expected_caches_paths = set([active_cache_path, standby_cache_path])
         caches_paths = {c["device"] for c in caches_list}
         if caches_paths != expected_caches_paths:
-            TestRun.error(
+            TestRun.LOGGER.error(
                 f"Expected the following devices as caches "
                 f"{expected_caches_paths}. Got {caches_paths}"
             )
@@ -463,7 +464,7 @@ def test_failover_config_startup():
         expected_core_paths = set([active_core_path])
         cores_paths = {c["device"] for c in cores_list}
         if cores_paths != expected_core_paths:
-            TestRun.error(
+            TestRun.LOGGER.error(
                 f"Expected the following devices as cores "
                 f"{expected_core_paths}. Got {cores_paths}"
             )

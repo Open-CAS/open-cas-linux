@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -11,9 +12,8 @@ from api.cas.cache_config import CacheMode
 from api.cas.init_config import InitConfig
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
-from test_utils.size import Size, Unit
+from test_tools.fs_tools import Filesystem, create_random_test_file
+from type_def.size import Size, Unit
 
 iterations_per_config = 50
 cas_conf_path = "/etc/opencas/opencas.conf"
@@ -293,7 +293,7 @@ def prepare_with_file_creation(config):
     core = cache.add_core(core_dev)
     core.create_filesystem(Filesystem.ext3)
     core.mount(mount_point)
-    file = fs_utils.create_random_test_file(test_file_path)
+    file = create_random_test_file(test_file_path)
     file_md5sum = file.md5sum()
     core.unmount()
     return cache, core, file, file_md5sum

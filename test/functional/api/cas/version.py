@@ -6,9 +6,9 @@
 
 import re
 
-from test_utils import git
+from test_tools import git
 from core.test_run import TestRun
-from test_utils.output import CmdException
+from connection.utils.output import CmdException
 
 
 class CasVersion:
@@ -43,7 +43,7 @@ class CasVersion:
 
 
 def get_available_cas_versions():
-    release_tags = git.get_release_tags()
+    release_tags = git.get_tags()
 
     versions = [CasVersion.from_git_tag(tag) for tag in release_tags]
 

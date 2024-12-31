@@ -1,22 +1,21 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import os
-
 import pytest
 
 from api.cas import casadm, cli
 from api.cas.cache_config import CacheMode, CacheModeTrait, CleaningPolicy, SeqCutOffPolicy
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.disk_utils import Filesystem
-from test_tools.fs_utils import readlink
-from test_utils import os_utils
-from test_utils.os_utils import Udev, DropCachesMode
-from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from test_tools.fs_tools import readlink, Filesystem
+from test_tools.os_tools import DropCachesMode, sync, drop_caches
+from test_tools.udev import Udev
+from connection.utils.output import CmdException
+from type_def.size import Size, Unit
 from tests.lazy_writes.recovery.recovery_tests_methods import create_test_files, copy_file, \
     compare_files, power_cycle_dut
 
@@ -62,13 +61,13 @@ def test_recovery_flush_reset_raw(cache_mode):
                   direct="oflag")
 
     with TestRun.step("Sync and flush buffers."):
-        os_utils.sync()
+        sync()
         output = TestRun.executor.run(f"hdparm -f {core.path}")
         if output.exit_code != 0:
             raise CmdException("Error during hdparm", output)
 
     with TestRun.step("Trigger flush."):
-        os_utils.drop_caches(DropCachesMode.ALL)
+        drop_caches(DropCachesMode.ALL)
         TestRun.executor.run_in_background(cli.flush_cache_cmd(f"{cache.cache_id}"))
 
     with TestRun.step("Hard reset DUT during data flushing."):
@@ -125,7 +124,7 @@ def test_recovery_flush_reset_fs(cache_mode, fs):
         cache_device = cache_disk.partitions[0]
         core_device = core_disk.partitions[0]
 
-    with TestRun.step(f"Create {fs} filesystem on core."):
+    with TestRun.step(f"Create {fs} filesystem on core device."):
         core_device.create_filesystem(fs)
 
     with TestRun.step("Create test files."):
@@ -151,7 +150,7 @@ def test_recovery_flush_reset_fs(cache_mode, fs):
         core.unmount()
 
     with TestRun.step("Trigger flush."):
-        os_utils.drop_caches(DropCachesMode.ALL)
+        drop_caches(DropCachesMode.ALL)
         TestRun.executor.run_in_background(cli.flush_cache_cmd(f"{cache.cache_id}"))
 
     with TestRun.step("Hard reset DUT during data flushing."):

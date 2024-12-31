@@ -12,12 +12,12 @@ from api.cas import casadm, cli_messages, cli
 from api.cas.cache_config import CacheMode, CleaningPolicy
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.disk_utils import get_device_filesystem_type, Filesystem
+from test_tools.fs_tools import Filesystem, get_device_filesystem_type
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
-from test_utils.disk_finder import get_system_disks
-from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from test_tools.disk_finder import get_system_disks
+from connection.utils.output import CmdException
+from type_def.size import Size, Unit
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

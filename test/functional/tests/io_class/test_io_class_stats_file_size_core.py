@@ -13,12 +13,11 @@ from api.cas.cache_config import CacheMode, CleaningPolicy, SeqCutOffPolicy
 from api.cas.ioclass_config import IoClass
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools import fs_utils
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem, remove, read_file
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
-from test_utils.os_utils import sync, drop_caches
-from test_utils.size import Size, Unit
+from test_tools.os_tools import sync, drop_caches
+from type_def.size import Size, Unit
 from tests.io_class.io_class_common import template_config_path
 
 
@@ -83,7 +82,7 @@ def test_io_class_stats_file_size_core_fs(cache_mode: CacheMode, filesystem: Fil
             issued_reqs_no = \
                 result[0].write_requests_number() + result[0].read_requests_number()
             check_statistics(cache, core, io_classes, io_class, issued_reqs_no)
-            fs_utils.remove(f"{core.mount_point}/*", force=True, recursive=True)
+            remove(f"{core.mount_point}/*", force=True, recursive=True)
 
             size_min = size + Size(512, Unit.Byte)
 
@@ -140,7 +139,7 @@ def test_io_class_stats_file_size_core_direct(cache_mode: CacheMode):
             issued_reqs_no = \
                 result[0].write_requests_number() + result[0].read_requests_number()
             check_statistics(cache, core, io_classes, io_class_direct, issued_reqs_no)
-            fs_utils.remove(f"{core.path}/*", force=True, recursive=True)
+            remove(f"{core.path}/*", force=True, recursive=True)
 
             size_min = size + Size(512, Unit.Byte)
 
@@ -191,7 +190,7 @@ def check_statistics(cache, core, io_classes, tested_io_class, issued_reqs_no):
 
 
 def prepare_io_classes(cache):
-    template_io_classes = IoClass.csv_to_list(fs_utils.read_file(template_config_path))
+    template_io_classes = IoClass.csv_to_list(read_file(template_config_path))
     test_io_classes = []
 
     for io_class in template_io_classes:

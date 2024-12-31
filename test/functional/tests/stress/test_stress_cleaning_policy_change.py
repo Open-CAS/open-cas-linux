@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -14,9 +15,9 @@ from api.cas.cache_config import (
 )
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
-from test_tools.disk_utils import Filesystem
-from test_utils.size import Size, Unit
-from test_utils.os_utils import Udev
+from test_tools.fs_tools import Filesystem
+from type_def.size import Size, Unit
+from test_tools.udev import Udev
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 

@@ -5,6 +5,7 @@
 #
 
 import pytest
+
 from datetime import timedelta
 
 from api.cas import casadm
@@ -13,13 +14,13 @@ from api.cas.cli import stop_cmd
 from core.test_run import TestRun
 from storage_devices.device import Device
 from storage_devices.disk import DiskType, DiskTypeLowerThan, DiskTypeSet
-from test_tools.disk_utils import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
-from test_tools.fs_utils import remove
+from test_tools.fs_tools import remove, Filesystem
 from test_utils.filesystem.file import File
-from test_utils.os_utils import sync, Udev
-from test_utils.size import Size, Unit
+from test_tools.os_tools import sync
+from test_tools.udev import Udev
+from type_def.size import Size, Unit
 
 file_size = Size(640, Unit.GiB)
 required_disk_size = file_size * 1.02

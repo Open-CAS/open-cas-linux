@@ -1,17 +1,17 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import time
-
 import pytest
 
 from api.cas import casadm, cli, cli_messages
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_utils.output import CmdException
-from test_utils.size import Size, Unit
+from connection.utils.output import CmdException
+from type_def.size import Size, Unit
 
 log_path = "/var/log/opencas.log"
 wait_long_time = 180

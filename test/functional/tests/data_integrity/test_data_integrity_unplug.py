@@ -19,10 +19,10 @@ from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from storage_devices.ramdisk import RamDisk
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite
-from test_utils.asynchronous import start_async_func
+from connection.utils.asynchronous import start_async_func
 from test_utils.filesystem.directory import Directory
-from test_utils.output import CmdException
-from test_utils.size import Unit, Size
+from connection.utils.output import CmdException
+from type_def.size import Unit, Size
 
 ram_disk, tmp_dir, fio_seed = None, None, None
 num_jobs = 8

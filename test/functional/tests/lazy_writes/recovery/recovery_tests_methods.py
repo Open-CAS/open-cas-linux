@@ -1,20 +1,21 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 from datetime import timedelta
 
+from test_tools.common.wait import wait
 from core.test_run import TestRun
-from test_tools import fs_utils
 from test_tools.dd import Dd
-from test_utils import os_utils
+from test_tools.fs_tools import create_random_test_file
 from test_utils.filesystem.file import File
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 def create_test_files(test_file_size):
-    source_file = fs_utils.create_random_test_file("/tmp/source_test_file", test_file_size)
+    source_file = create_random_test_file("/tmp/source_test_file", test_file_size)
     target_file = File.create_file("/tmp/target_test_file")
     return source_file, target_file
 
@@ -47,8 +48,10 @@ def power_cycle_dut(wait_for_flush_begin=False, core_device=None):
             raise Exception("Core device is None.")
         TestRun.LOGGER.info("Waiting for flushing to begin...")
         core_writes_before = core_device.get_io_stats().sectors_written
-        os_utils.wait(lambda: core_writes_before < core_device.get_io_stats().sectors_written,
-                      timedelta(minutes=3),
-                      timedelta(milliseconds=100))
+        wait(
+            lambda: core_writes_before < core_device.get_io_stats().sectors_written,
+            timedelta(minutes=3),
+            timedelta(milliseconds=100)
+        )
     power_control = TestRun.plugin_manager.get_plugin('power_control')
     power_control.power_cycle()

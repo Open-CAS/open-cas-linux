@@ -1,39 +1,32 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
-import time
-import random
+
 from datetime import timedelta
 
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools import fs_utils
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_tools.iostat import IOstatExtended
-from test_utils.os_utils import (
+from test_tools.os_tools import (
     kill_all_io,
     set_wbt_lat,
     get_wbt_lat,
-    get_dut_cpu_number,
-    wait,
 )
+from test_tools.common.wait import wait
 from api.cas import casadm
 from api.cas.cache_config import (
     CacheMode,
-    CacheModeTrait,
     CleaningPolicy,
-    FlushParametersAcp,
     SeqCutOffPolicy,
     CacheLineSize,
-    Time,
 )
-from test_tools.blktrace import BlkTrace, BlkTraceMask, ActionKind, RwbsKind
-
 
 runtime = timedelta(days=30)
 
@@ -49,8 +42,8 @@ def test_wb_throttling():
         description: |
           Fill cache with data, run intensive IO (rwmix=74) with occasional trims.
         pass_criteria:
-          - Hang task did not occurred
-          - System did not crashed
+          - Hang task did not occur
+          - System did not crash
     """
     with TestRun.step("Prepare devices."):
         cache_device = TestRun.disks["cache"]
@@ -98,10 +91,14 @@ def test_wb_throttling():
     with TestRun.step("Wait for IO processes to finish and print debug informations"):
         sleep_interval = timedelta(seconds=5)
         eta = runtime
-        while eta.total_seconds() > 0:
+        while int(eta.total_seconds()) > 0:
             # Instead of explicit sleeping with `time.sleep()` iostat is used for waiting
             iostat = IOstatExtended.get_iostat_list(
-                [core, cache_device, core_device],
+                [
+                    core.get_device_id(),
+                    cache_device.get_device_id(),
+                    core_device.get_device_id()
+                ],
                 since_boot=False,
                 interval=int(sleep_interval.total_seconds()),
             )

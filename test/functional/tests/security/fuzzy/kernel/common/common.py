@@ -3,19 +3,20 @@
 # Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
+
 import base64
 import os
 import posixpath
+import yaml
+
 from collections import namedtuple
 from typing import List
-
-import yaml
 
 from api.cas import casadm
 from api.cas.cache_config import CacheMode, CacheLineSize, KernelParameters, CleaningPolicy
 from core.test_run import TestRun
-from test_tools.disk_utils import Filesystem
-from test_utils.size import Size, Unit
+from test_tools.fs_tools import Filesystem
+from type_def.size import Size, Unit
 
 
 def get_fuzz_config(config_name: str):

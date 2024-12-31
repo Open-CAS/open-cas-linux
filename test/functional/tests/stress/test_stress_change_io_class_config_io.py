@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -15,11 +16,11 @@ from api.cas.cache_config import CacheMode
 from api.cas.ioclass_config import IoClass
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine
-from test_utils.asynchronous import start_async_func
-from test_utils.size import Size, Unit
+from connection.utils.asynchronous import start_async_func
+from type_def.size import Size, Unit
 from tests.io_class.io_class_common import generate_and_load_random_io_class_config
 
 

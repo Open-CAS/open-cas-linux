@@ -1,10 +1,10 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import os
-
 import pytest
 
 from api.cas import casadm
@@ -12,14 +12,13 @@ from api.cas.cache_config import CacheMode, CacheModeTrait, CacheLineSize, Clean
     FlushParametersAcp
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
-from test_tools.disk_utils import Filesystem
+from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
-from test_utils import os_utils
 from test_utils.filesystem.file import File
-from test_utils.os_utils import DropCachesMode
-from test_utils.size import Size, Unit
-from test_utils.time import Time
+from test_tools.os_tools import DropCachesMode, drop_caches, sync
+from type_def.size import Size, Unit
+from type_def.time import Time
 from tests.lazy_writes.recovery.recovery_tests_methods import power_cycle_dut
 
 test_file_size = Size(300, Unit.MebiByte)
@@ -63,7 +62,7 @@ def test_recovery_all_options(cache_mode, cache_line_size, cleaning_policy, file
     with TestRun.step("Mount core device."):
         core_device.mount(mount_point)
         file_operation(test_file.full_path, other_pattern, ReadWrite.write)
-        os_utils.drop_caches(DropCachesMode.ALL)
+        drop_caches(DropCachesMode.ALL)
 
     with TestRun.step("Unmount core device."):
         core_device.unmount()
@@ -85,9 +84,9 @@ def test_recovery_all_options(cache_mode, cache_line_size, cleaning_policy, file
         cache.set_cache_mode(CacheMode.WT, flush=False)
 
     with TestRun.step("Reset platform."):
-        os_utils.sync()
+        sync()
         core.unmount()
-        os_utils.drop_caches(DropCachesMode.ALL)
+        drop_caches(DropCachesMode.ALL)
         TestRun.LOGGER.info(f"Number of dirty blocks in cache: {cache.get_dirty_blocks()}")
         power_cycle_dut()
 

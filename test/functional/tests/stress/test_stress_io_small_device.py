@@ -1,9 +1,11 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
+
 from datetime import timedelta
 
 from api.cas import casadm, casadm_parser
@@ -12,7 +14,7 @@ from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeLowerThan, DiskTypeSet
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import CpusAllowedPolicy, IoEngine, ReadWrite
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 
 stress_time = timedelta(minutes=30)
 

@@ -1,12 +1,14 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
+
+import pytest
 
 from datetime import timedelta
 from time import sleep
 
-import pytest
 from api.cas import casadm, cli
 from api.cas.cache_config import CacheMode, CleaningPolicy, SeqCutOffPolicy
 from api.cas.progress_bar import check_progress_bar
@@ -14,7 +16,7 @@ from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

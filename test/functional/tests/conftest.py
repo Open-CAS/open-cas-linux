@@ -20,20 +20,20 @@ from core.test_run import Blocked
 from core.test_run_utils import TestRun
 from api.cas import installer
 from api.cas import casadm
-from test_utils import git
 from api.cas.cas_service import opencas_drop_in_directory
 from storage_devices.raid import Raid
 from storage_devices.ramdisk import RamDisk
-from test_utils.os_utils import Udev, kill_all_io
-from test_utils.disk_finder import get_disk_serial_number
-from test_tools.disk_utils import PartitionTable, create_partition_table
+from test_tools.os_tools import kill_all_io
+from test_tools.udev import Udev
+from test_tools.disk_tools import PartitionTable, create_partition_table
 from test_tools.device_mapper import DeviceMapper
 from test_tools.mdadm import Mdadm
-from test_tools.fs_utils import remove
-from test_tools import initramfs
+from test_tools.fs_tools import remove
+from test_tools import initramfs, git
 from log.logger import create_log, Log
-from test_utils.singleton import Singleton
+from test_utils.common.singleton import Singleton
 from storage_devices.lvm import Lvm, LvmConfiguration
+from storage_devices.disk import Disk
 
 
 def pytest_addoption(parser):
@@ -185,7 +185,7 @@ def base_prepare(item):
 
         RamDisk.remove_all()
         for disk in TestRun.disks.values():
-            disk_serial = get_disk_serial_number(disk.path)
+            disk_serial = Disk.get_disk_serial_number(disk.path)
             if disk.serial_number and disk.serial_number != disk_serial:
                 raise Exception(
                     f"Serial for {disk.path} doesn't match the one from the config."
