@@ -59,7 +59,7 @@ def get_cores(cache_id: int) -> list:
     cores_dict = get_cas_devices_dict()["cores"].values()
 
     def is_active(core):
-        return CoreStatus[core["status"].lower()] == CoreStatus.active
+        return core["status"] == CoreStatus.active
 
     return [
         Core(core["device_path"], core["cache_id"])
@@ -74,7 +74,7 @@ def get_inactive_cores(cache_id: int) -> list:
     cores_dict = get_cas_devices_dict()["cores"].values()
 
     def is_inactive(core):
-        return CoreStatus[core["status"].lower()] == CoreStatus.inactive
+        return core["status"] == CoreStatus.inactive
 
     return [
         Core(core["device_path"], core["cache_id"])
@@ -89,7 +89,7 @@ def get_detached_cores(cache_id: int) -> list:
     cores_dict = get_cas_devices_dict()["cores"].values()
 
     def is_detached(core):
-        return CoreStatus[core["status"].lower()] == CoreStatus.detached
+        return core["status"] == CoreStatus.detached
 
     return [
         Core(core["device_path"], core["cache_id"])
@@ -110,15 +110,17 @@ def get_cas_devices_dict() -> dict:
             params = [
                 ("id", cache_id),
                 ("device_path", device["disk"]),
-                ("status", device["status"]),
+                ("status", CacheStatus(device["status"].lower())),
             ]
             devices["caches"][cache_id] = dict([(key, value) for key, value in params])
 
         elif device["type"] == "core":
             params = [
                 ("cache_id", cache_id),
+                ("core_id", (int(device["id"]) if device["id"] != "-" else device["id"])),
                 ("device_path", device["disk"]),
-                ("status", device["status"]),
+                ("status", CoreStatus(device["status"].lower())),
+                ("exp_obj", device["device"]),
             ]
             if core_pool:
                 params.append(("core_pool", device))
