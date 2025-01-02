@@ -136,6 +136,8 @@ def pytest_runtest_setup(item):
         TestRun.dut.plugin_manager = TestRun.plugin_manager
         TestRun.dut.executor = TestRun.executor
         TestRun.TEST_RUN_DATA_PATH = TEST_RUN_DATA_PATH
+        TestRun.dut.cache_list = []
+        TestRun.dut.core_list = []
         TestRun.duts.append(TestRun.dut)
 
         base_prepare(item)
