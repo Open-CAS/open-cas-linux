@@ -1,14 +1,14 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import csv
+
 from datetime import timedelta
 from enum import Enum
 from typing import List
-
 from api.cas import casadm
 from api.cas.casadm_params import StatsFilter
 from type_def.size import Size, Unit
@@ -22,6 +22,7 @@ class UnitType(Enum):
     kibibyte = "[KiB]"
     gibibyte = "[GiB]"
     seconds = "[s]"
+    byte = "[B]"
 
     def __str__(self):
         return self.value
