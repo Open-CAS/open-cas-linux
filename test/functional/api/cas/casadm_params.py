@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -26,7 +26,7 @@ class OutputFormat(Enum):
 
 class StatsFilter(Enum):
     all = "all"
-    conf = "configuration"
+    conf = "config"
     usage = "usage"
     req = "request"
     blk = "block"
