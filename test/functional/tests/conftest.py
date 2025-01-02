@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2023-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -28,12 +28,15 @@ from test_tools.udev import Udev
 from test_tools.disk_tools import PartitionTable, create_partition_table
 from test_tools.device_mapper import DeviceMapper
 from test_tools.mdadm import Mdadm
-from test_tools.fs_tools import remove
+from test_tools.fs_tools import remove, check_if_directory_exists, create_directory
 from test_tools import initramfs, git
 from log.logger import create_log, Log
 from test_utils.common.singleton import Singleton
 from storage_devices.lvm import Lvm, LvmConfiguration
 from storage_devices.disk import Disk
+
+
+TEST_RUN_DATA_PATH = "/tmp/open_cas_test_data"
 
 
 def pytest_addoption(parser):
@@ -132,6 +135,7 @@ def pytest_runtest_setup(item):
         TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
         TestRun.dut.plugin_manager = TestRun.plugin_manager
         TestRun.dut.executor = TestRun.executor
+        TestRun.TEST_RUN_DATA_PATH = TEST_RUN_DATA_PATH
         TestRun.duts.append(TestRun.dut)
 
         base_prepare(item)
@@ -184,6 +188,16 @@ def base_prepare(item):
                         Udev.settle()
 
         RamDisk.remove_all()
+
+        if check_if_directory_exists(path=TEST_RUN_DATA_PATH):
+            remove(
+                path=posixpath.join(TEST_RUN_DATA_PATH, "*"),
+                force=True,
+                recursive=True,
+            )
+        else:
+            create_directory(path=TEST_RUN_DATA_PATH)
+
         for disk in TestRun.disks.values():
             disk_serial = Disk.get_disk_serial_number(disk.path)
             if disk.serial_number and disk.serial_number != disk_serial:
@@ -250,6 +264,14 @@ def pytest_runtest_teardown():
 
                 DeviceMapper.remove_all()
                 RamDisk.remove_all()
+
+                if check_if_directory_exists(path=TEST_RUN_DATA_PATH):
+                    remove(
+                        path=posixpath.join(TEST_RUN_DATA_PATH, "*"),
+                        force=True,
+                        recursive=True,
+                    )
+
         except Exception as ex:
             TestRun.LOGGER.warning(
                 f"Exception occurred during platform cleanup.\n"
