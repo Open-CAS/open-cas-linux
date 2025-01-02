@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -17,7 +17,7 @@ from core.test_run import TestRun
 from test_tools.fs_tools import write_file
 from test_tools.os_tools import get_kernel_version
 
-default_config_file_path = "/tmp/opencas_ioclass.conf"
+default_config_file_path = TestRun.TEST_RUN_DATA_PATH + "/opencas_ioclass.conf"
 
 MAX_IO_CLASS_ID = 32
 MAX_IO_CLASS_PRIORITY = 255
