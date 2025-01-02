@@ -41,16 +41,21 @@ class Core(Device):
 
     def __get_core_info(self) -> dict | None:
         core_dicts = get_cas_devices_dict()["cores"].values()
-        return next(
-            iter(
-                [
-                    core
-                    for core in core_dicts
-                    if core["cache_id"] == self.cache_id
-                    and core["device_path"] == self.core_device.path
-                ]
-            )
-        )
+        # for core
+        core_device = [
+            core
+            for core in core_dicts
+            if core["cache_id"] == self.cache_id and core["device_path"] == self.core_device.path
+        ]
+        if core_device:
+            return core_device[0]
+
+        # for core pool
+        core_pool_dicts = get_cas_devices_dict()["core_pool"].values()
+        core_pool_device = [
+            core for core in core_pool_dicts if core["device_path"] == self.core_device.path
+        ]
+        return core_pool_device[0]
 
     def create_filesystem(self, fs_type: Filesystem, force=True, blocksize=None):
         super().create_filesystem(fs_type, force, blocksize)
