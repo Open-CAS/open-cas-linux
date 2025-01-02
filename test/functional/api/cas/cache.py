@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -195,7 +195,7 @@ class Cache:
         return casadm.set_param_promotion_nhit(
             self.cache_id,
             threshold=promotion_params_nhit.threshold,
-            trigger=promotion_params_nhit.trigger
+            trigger=promotion_params_nhit.trigger,
         )
 
     def get_cache_config(self) -> CacheConfig:
@@ -208,7 +208,7 @@ class Cache:
     def standby_detach(self, shortcut: bool = False) -> Output:
         return casadm.standby_detach_cache(cache_id=self.cache_id, shortcut=shortcut)
 
-    def standby_activate(self, device, shortcut: bool = False) -> Output:
+    def standby_activate(self, device: Device, shortcut: bool = False) -> Output:
         return casadm.standby_activate_cache(
             cache_id=self.cache_id, cache_dev=device, shortcut=shortcut
         )
