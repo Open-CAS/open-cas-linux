@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -48,6 +48,7 @@ def start_cache(
     )
     _cache_id = str(cache_id) if cache_id is not None else None
     _cache_mode = cache_mode.name.lower() if cache_mode else None
+
     output = TestRun.executor.run(
         start_cmd(
             cache_dev=cache_dev.path,
@@ -59,33 +60,67 @@ def start_cache(
             shortcut=shortcut,
         )
     )
+
     if output.exit_code != 0:
         raise CmdException("Failed to start cache.", output)
-    return Cache(cache_dev)
+
+    if not _cache_id:
+        from api.cas.casadm_parser import get_caches
+
+        cache_list = get_caches()
+        # compare path of old and new caches, returning the only one created now.
+        # This will be needed in case cache_id not present in cli command
+
+        new_cache = next(cache for cache in cache_list if cache.cache_device.path == cache_dev.path)
+        _cache_id = new_cache.cache_id
+
+    cache = Cache(cache_id=int(_cache_id), device=cache_dev, cache_line_size=_cache_line_size)
+    TestRun.dut.cache_list.append(cache)
+    return cache
 
 
 def load_cache(device: Device, shortcut: bool = False) -> Cache:
+    from api.cas.casadm_parser import get_caches
+
+    caches_before_load = get_caches()
     output = TestRun.executor.run(load_cmd(cache_dev=device.path, shortcut=shortcut))
+
     if output.exit_code != 0:
         raise CmdException("Failed to load cache.", output)
-    return Cache(device)
+
+    caches_after_load = get_caches()
+    new_cache = next(cache for cache in caches_after_load if cache not in caches_before_load)
+    cache = Cache(cache_id=new_cache.cache_id, device=new_cache.cache_device)
+    TestRun.dut.cache_list.append(cache)
+    return cache
 
 
-def attach_cache(cache_id: int, device: Device, force: bool, shortcut: bool = False) -> Output:
+def attach_cache(
+    cache_id: int, device: Device, force: bool = False, shortcut: bool = False
+) -> Output:
     output = TestRun.executor.run(
         attach_cache_cmd(
             cache_dev=device.path, cache_id=str(cache_id), force=force, shortcut=shortcut
         )
     )
+
     if output.exit_code != 0:
         raise CmdException("Failed to attach cache.", output)
+
+    attached_cache = next(cache for cache in TestRun.dut.cache_list if cache.cache_id == cache_id)
+    attached_cache.cache_device = device
+
     return output
 
 
 def detach_cache(cache_id: int, shortcut: bool = False) -> Output:
     output = TestRun.executor.run(detach_cache_cmd(cache_id=str(cache_id), shortcut=shortcut))
+
     if output.exit_code != 0:
         raise CmdException("Failed to detach cache.", output)
+
+    detached_cache = next(cache for cache in TestRun.dut.cache_list if cache.cache_id == cache_id)
+    detached_cache.cache_device = None
     return output
 
 
@@ -93,8 +128,16 @@ def stop_cache(cache_id: int, no_data_flush: bool = False, shortcut: bool = Fals
     output = TestRun.executor.run(
         stop_cmd(cache_id=str(cache_id), no_data_flush=no_data_flush, shortcut=shortcut)
     )
+
     if output.exit_code != 0:
         raise CmdException("Failed to stop cache.", output)
+
+    TestRun.dut.cache_list = [
+        cache for cache in TestRun.dut.cache_list if cache.cache_id != cache_id
+    ]
+
+    TestRun.dut.core_list = [core for core in TestRun.dut.core_list if core.cache_id != cache_id]
+
     return output
 
 
@@ -192,7 +235,7 @@ def set_param_promotion(cache_id: int, policy: PromotionPolicy, shortcut: bool =
 
 
 def set_param_promotion_nhit(
-        cache_id: int, threshold: int = None, trigger: int = None, shortcut: bool = False
+    cache_id: int, threshold: int = None, trigger: int = None, shortcut: bool = False
 ) -> Output:
     _threshold = str(threshold) if threshold is not None else None
     _trigger = str(trigger) if trigger is not None else None
@@ -267,7 +310,7 @@ def get_param_cleaning_acp(
 
 
 def get_param_promotion(
-        cache_id: int, output_format: OutputFormat = None, shortcut: bool = False
+    cache_id: int, output_format: OutputFormat = None, shortcut: bool = False
 ) -> Output:
     _output_format = output_format.name if output_format else None
     output = TestRun.executor.run(
@@ -281,7 +324,7 @@ def get_param_promotion(
 
 
 def get_param_promotion_nhit(
-        cache_id: int, output_format: OutputFormat = None, shortcut: bool = False
+    cache_id: int, output_format: OutputFormat = None, shortcut: bool = False
 ) -> Output:
     _output_format = output_format.name if output_format else None
     output = TestRun.executor.run(
@@ -325,7 +368,11 @@ def add_core(cache: Cache, core_dev: Device, core_id: int = None, shortcut: bool
     )
     if output.exit_code != 0:
         raise CmdException("Failed to add core.", output)
-    return Core(core_dev.path, cache.cache_id)
+
+    core = Core(core_dev.path, cache.cache_id)
+    TestRun.dut.core_list.append(core)
+
+    return core
 
 
 def remove_core(cache_id: int, core_id: int, force: bool = False, shortcut: bool = False) -> Output:
@@ -336,6 +383,12 @@ def remove_core(cache_id: int, core_id: int, force: bool = False, shortcut: bool
     )
     if output.exit_code != 0:
         raise CmdException("Failed to remove core.", output)
+
+    TestRun.dut.core_list = [
+        core
+        for core in TestRun.dut.core_list
+        if core.cache_id != cache_id or core.core_id != core_id
+    ]
     return output
 
 
@@ -485,22 +538,41 @@ def standby_init(
             shortcut=shortcut,
         )
     )
+
     if output.exit_code != 0:
         raise CmdException("Failed to init standby cache.", output)
-    return Cache(cache_dev)
+    return Cache(cache_id=cache_id, device=cache_dev)
 
 
 def standby_load(cache_dev: Device, shortcut: bool = False) -> Cache:
+    from api.cas.casadm_parser import get_caches
+
+    caches_before_load = get_caches()
     output = TestRun.executor.run(standby_load_cmd(cache_dev=cache_dev.path, shortcut=shortcut))
+
     if output.exit_code != 0:
-        raise CmdException("Failed to load standby cache.", output)
-    return Cache(cache_dev)
+        raise CmdException("Failed to load cache.", output)
+    caches_after_load = get_caches()
+    # compare ids of old and new caches, returning the only one created now
+    new_cache = next(
+        cache
+        for cache in caches_after_load
+        if cache.cache_id not in [cache.cache_id for cache in caches_before_load]
+    )
+    cache = Cache(cache_id=new_cache.cache_id, device=new_cache.cache_device)
+    TestRun.dut.cache_list.append(cache)
+
+    return cache
 
 
 def standby_detach_cache(cache_id: int, shortcut: bool = False) -> Output:
     output = TestRun.executor.run(standby_detach_cmd(cache_id=str(cache_id), shortcut=shortcut))
     if output.exit_code != 0:
         raise CmdException("Failed to detach standby cache.", output)
+
+    detached_cache = next(cache for cache in TestRun.dut.cache_list if cache.cache_id == cache_id)
+    detached_cache.cache_device = None
+
     return output
 
 
@@ -510,6 +582,10 @@ def standby_activate_cache(cache_dev: Device, cache_id: int, shortcut: bool = Fa
     )
     if output.exit_code != 0:
         raise CmdException("Failed to activate standby cache.", output)
+
+    activated_cache = next(cache for cache in TestRun.dut.cache_list if cache.cache_id == cache_id)
+    activated_cache.cache_device = cache_dev
+
     return output
 
 
