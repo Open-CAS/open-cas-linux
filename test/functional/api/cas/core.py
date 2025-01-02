@@ -85,8 +85,8 @@ class Core(Device):
             percentage_val=percentage_val,
         )
 
-    def get_status(self):
-        return CoreStatus[self.__get_core_info()["status"].lower()]
+    def get_status(self) -> CoreStatus:
+        return self.__get_core_info()["status"]
 
     def get_seq_cut_off_parameters(self):
         return get_seq_cut_off_parameters(self.cache_id, self.core_id)
