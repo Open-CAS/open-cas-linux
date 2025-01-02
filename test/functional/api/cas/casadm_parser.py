@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -14,6 +14,7 @@ from typing import List
 from api.cas import casadm
 from api.cas.cache_config import *
 from api.cas.casadm_params import *
+from api.cas.core_config import CoreStatus
 from api.cas.ioclass_config import IoClass
 from api.cas.version import CasVersion
 from core.test_run_utils import TestRun
@@ -54,7 +55,7 @@ def get_caches() -> list:
 
 
 def get_cores(cache_id: int) -> list:
-    from api.cas.core import Core, CoreStatus
+    from api.cas.core import Core
 
     cores_dict = get_cas_devices_dict()["cores"].values()
 
@@ -69,7 +70,7 @@ def get_cores(cache_id: int) -> list:
 
 
 def get_inactive_cores(cache_id: int) -> list:
-    from api.cas.core import Core, CoreStatus
+    from api.cas.core import Core
 
     cores_dict = get_cas_devices_dict()["cores"].values()
 
@@ -84,7 +85,7 @@ def get_inactive_cores(cache_id: int) -> list:
 
 
 def get_detached_cores(cache_id: int) -> list:
-    from api.cas.core import Core, CoreStatus
+    from api.cas.core import Core
 
     cores_dict = get_cas_devices_dict()["cores"].values()
 
