@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2024-2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -232,6 +232,12 @@ malformed_io_class_header = [
 ]
 
 unexpected_cls_option = [r"Option '--cache-line-size \(-x\)' is not allowed"]
+
+attach_not_enough_memory = [
+    r"Not enough free RAM\.\nYou need at least \d+.\d+GB to attach a device to cache "
+    r"with cache line size equal \d+kB.\n"
+    r"Try with greater cache line size\."
+]
 
 
 def check_stderr_msg(output: Output, expected_messages, negate=False):
