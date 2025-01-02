@@ -13,24 +13,26 @@ from test_tools.os_tools import sync
 
 
 class Cache:
-    def __init__(self, device: Device, cache_id: int = None) -> None:
-        self.cache_device = device
-        self.cache_id = cache_id if cache_id else self.__get_cache_id()
-        self.__cache_line_size = None
+    def __init__(
+        self, cache_id: int, device: Device = None, cache_line_size: CacheLineSize = None
+    ) -> None:
+        self.cache_id = cache_id
+        self.cache_device = device if device else self.__get_cache_device()
+        self.__cache_line_size = cache_line_size
 
-    def __get_cache_id(self) -> int:
-        device_path = self.__get_cache_device_path()
-
+    def __get_cache_device(self) -> Device | None:
         caches_dict = get_cas_devices_dict()["caches"]
+        cache = next(
+            iter([cache for cache in caches_dict.values() if cache["id"] == self.cache_id])
+        )
 
-        for cache in caches_dict.values():
-            if cache["device_path"] == device_path:
-                return int(cache["id"])
+        if not cache:
+            return None
 
-        raise Exception(f"There is no cache started on {device_path}")
+        if cache["device_path"] is "-":
+            return None
 
-    def __get_cache_device_path(self) -> str:
-        return self.cache_device.path if self.cache_device is not None else "-"
+        return Device(path=cache["device_path"])
 
     def get_core_devices(self) -> list:
         return get_cores(self.cache_id)
