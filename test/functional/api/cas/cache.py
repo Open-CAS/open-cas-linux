@@ -4,12 +4,33 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-from api.cas.casadm_parser import *
+from datetime import timedelta
+from typing import List
+
+from api.cas import casadm
+from api.cas.cache_config import (
+    CacheLineSize,
+    CleaningPolicy,
+    CacheStatus,
+    CacheMode,
+    FlushParametersAlru,
+    FlushParametersAcp,
+    SeqCutOffParameters,
+    SeqCutOffPolicy,
+    PromotionPolicy,
+    PromotionParametersNhit,
+    CacheConfig,
+)
+from api.cas.casadm_params import StatsFilter
+from api.cas.casadm_parser import (get_cas_devices_dict, get_cores, get_flush_parameters_alru,
+                                   get_flush_parameters_acp, get_io_class_list)
 from api.cas.core import Core
 from api.cas.dmesg import get_metadata_size_on_device
 from api.cas.statistics import CacheStats, CacheIoClassStats
 from connection.utils.output import Output
+from storage_devices.device import Device
 from test_tools.os_tools import sync
+from type_def.size import Size
 
 
 class Cache:
