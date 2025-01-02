@@ -215,5 +215,13 @@ class Cache:
             cache_id=self.cache_id, cache_dev=device, shortcut=shortcut
         )
 
+    def attach(self, device: Device, force: bool = False) -> Output:
+        cmd_output = casadm.attach_cache(cache_id=self.cache_id, device=device, force=force)
+        return cmd_output
+
+    def detach(self) -> Output:
+        cmd_output = casadm.detach_cache(cache_id=self.cache_id)
+        return cmd_output
+
     def has_volatile_metadata(self) -> bool:
         return self.get_metadata_size_on_disk() == Size.zero()
