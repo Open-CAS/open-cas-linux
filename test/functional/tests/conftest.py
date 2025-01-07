@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2023-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -77,6 +77,7 @@ def pytest_runtest_setup(item):
 
     test_name = item.name.split("[")[0]
     TestRun.LOGGER = create_log(item.config.getoption("--log-path"), test_name)
+    TestRun.LOGGER.unique_test_identifier = f"TEST__{item.name}__random_seed_{TestRun.random_seed}"
 
     duts = item.config.getoption("--dut-config")
     required_duts = next(item.iter_markers(name="multidut"), None)
@@ -121,6 +122,8 @@ def pytest_runtest_setup(item):
             raise Exception(
                 f"Exception occurred during test setup:\n{str(ex)}\n{traceback.format_exc()}"
             )
+
+        TestRun.LOGGER.print_test_identifier_to_logs()
 
         TestRun.usr = Opencas(
             repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
