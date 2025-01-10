@@ -34,6 +34,7 @@ from log.logger import create_log, Log
 from test_utils.common.singleton import Singleton
 from storage_devices.lvm import Lvm, LvmConfiguration
 from storage_devices.disk import Disk
+from storage_devices.drbd import Drbd
 
 
 TEST_RUN_DATA_PATH = "/tmp/open_cas_test_data"
@@ -320,8 +321,6 @@ def unmount_cas_devices():
 
 
 def __drbd_cleanup():
-    from storage_devices.drbd import Drbd
-
     Drbd.down_all()
     # If drbd instance had been configured on top of the CAS, the previous attempt to stop
     # failed. As drbd has been stopped try to stop CAS one more time.
