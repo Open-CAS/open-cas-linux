@@ -321,7 +321,7 @@ def __drbd_cleanup():
     from storage_devices.drbd import Drbd
 
     Drbd.down_all()
-    # If drbd instance had been configured on top of the CAS, the previos attempt to stop
+    # If drbd instance had been configured on top of the CAS, the previous attempt to stop
     # failed. As drbd has been stopped try to stop CAS one more time.
     if installer.check_if_installed():
         casadm.stop_all_caches()
