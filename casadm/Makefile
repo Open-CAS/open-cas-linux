@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2012-2022 Intel Corporation
+# Copyright(c) 2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -121,7 +122,7 @@ LDFLAGS    = -z noexecstack -z relro -z now -pie -pthread -lm
 # Targets
 #
 
-all: sync
+all: sync manpage
 	$(MAKE) build
 
 build: $(TARGETS)
@@ -156,10 +157,14 @@ endif
 
 -include $(addprefix $(OBJDIR),$(OBJS:.o=.d))
 
+manpage:
+	gzip -k $(TARGET).8
+
 clean:
 	@echo "  CLEAN "
 	@rm -f *.a $(TARGETS)
 	@rm -f $(shell find -name \*.d) $(shell find -name \*.o)
+	@rm -f $(TARGET).8.gz
 
 distclean: clean
 
@@ -168,11 +173,12 @@ install: install_files
 install_files:
 	@echo "Installing casadm"
 	@install -m 755 -D $(TARGET) $(DESTDIR)$(BINARY_PATH)/$(TARGET)
-	@install -m 644 -D $(TARGET).8 $(DESTDIR)/usr/share/man/man8/$(TARGET).8
+	@install -m 644 -D $(TARGET).8.gz $(DESTDIR)/usr/share/man/man8/$(TARGET).8.gz
+	@mandb -q
 
 uninstall:
 	@echo "Uninstalling casadm"
 	$(call remove-file,$(DESTDIR)$(BINARY_PATH)/$(TARGET))
-	$(call remove-file,$(DESTDIR)/usr/share/man/man8/$(TARGET).8)
+	$(call remove-file,$(DESTDIR)/usr/share/man/man8/$(TARGET).8.gz)
 
 .PHONY: clean distclean all sync build install uninstall
