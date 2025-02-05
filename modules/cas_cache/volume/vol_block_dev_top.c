@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies Co., Ltd.
+* Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -131,6 +131,36 @@ static int blkdev_core_set_geometry(struct cas_disk *dsk, void *private)
 	blkdev_set_discard_properties(cache, exp_q, core_bd, sectors);
 
 	cas_queue_set_nonrot(exp_q);
+
+	return 0;
+}
+
+static int blkdev_core_set_queue_limits(struct cas_disk *dsk, void *private,
+		cas_queue_limits_t *lim)
+{
+	ocf_core_t core = private;
+	ocf_cache_t cache = ocf_core_get_cache(core);
+	ocf_volume_t core_vol = ocf_core_get_volume(core);
+	struct bd_object *bd_core_vol;
+	struct request_queue *core_q;
+	bool flush, fua;
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+
+	bd_core_vol = bd_object(core_vol);
+	core_q = cas_disk_get_queue(bd_core_vol->dsk);
+
+	flush = (CAS_CHECK_QUEUE_FLUSH(core_q) ||
+			cache_priv->device_properties.flush);
+	fua = (CAS_CHECK_QUEUE_FUA(core_q) ||
+			cache_priv->device_properties.fua);
+
+	memset(lim, 0, sizeof(cas_queue_limits_t));
+
+	if (flush)
+		CAS_SET_QUEUE_LIMIT(lim, CAS_BLK_FEAT_WRITE_CACHE);
+
+	if (fua)
+		CAS_SET_QUEUE_LIMIT(lim, CAS_BLK_FEAT_FUA);
 
 	return 0;
 }
@@ -429,6 +459,7 @@ static void blkdev_core_submit_bio(struct cas_disk *dsk,
 
 static struct cas_exp_obj_ops kcas_core_exp_obj_ops = {
 	.set_geometry = blkdev_core_set_geometry,
+	.set_queue_limits = blkdev_core_set_queue_limits,
 	.submit_bio = blkdev_core_submit_bio,
 };
 
@@ -471,6 +502,37 @@ static int blkdev_cache_set_geometry(struct cas_disk *dsk, void *private)
 	return 0;
 }
 
+static int blkdev_cache_set_queue_limits(struct cas_disk *dsk, void *private,
+		cas_queue_limits_t *lim)
+{
+	ocf_cache_t cache;
+	ocf_volume_t volume;
+	struct bd_object *bvol;
+	struct request_queue *cache_q;
+	struct block_device *bd;
+
+	BUG_ON(!private);
+	cache = private;
+	volume = ocf_cache_get_volume(cache);
+
+	bvol = bd_object(volume);
+
+	bd = cas_disk_get_blkdev(bvol->dsk);
+	BUG_ON(!bd);
+
+	cache_q = bd->bd_disk->queue;
+
+	memset(lim, 0, sizeof(cas_queue_limits_t));
+
+	if (CAS_CHECK_QUEUE_FLUSH(cache_q))
+		CAS_SET_QUEUE_LIMIT(lim, CAS_BLK_FEAT_WRITE_CACHE);
+
+	if (CAS_CHECK_QUEUE_FUA(cache_q))
+		CAS_SET_QUEUE_LIMIT(lim, CAS_BLK_FEAT_FUA);
+
+	return 0;
+}
+
 static void blkdev_cache_submit_bio(struct cas_disk *dsk,
 		struct bio *bio, void *private)
 {
@@ -486,6 +548,7 @@ static void blkdev_cache_submit_bio(struct cas_disk *dsk,
 
 static struct cas_exp_obj_ops kcas_cache_exp_obj_ops = {
 	.set_geometry = blkdev_cache_set_geometry,
+	.set_queue_limits = blkdev_cache_set_queue_limits,
 	.submit_bio = blkdev_cache_submit_bio,
 };
 

@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -40,7 +40,6 @@
 #include <linux/mm.h>
 #include <linux/blk-mq.h>
 #include <linux/ktime.h>
-#include "exp_obj.h"
 
 #include "generated_defines.h"
 
