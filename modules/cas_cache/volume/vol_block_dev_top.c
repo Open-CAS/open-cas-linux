@@ -129,7 +129,7 @@ static int blkdev_core_set_geometry(struct cas_disk *dsk, void *private)
 
 	blkdev_set_discard_properties(cache, exp_q, core_bd, sectors);
 
-	exp_q->queue_flags |= (1 << QUEUE_FLAG_NONROT);
+	cas_queue_set_nonrot(exp_q);
 
 	return 0;
 }
