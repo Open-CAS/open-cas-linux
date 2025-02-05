@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2019-2021 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -29,8 +29,8 @@
 	trace_printk(format, ##__VA_ARGS__)
 
 #else
-#define CAS_CLS_DEBUG_MSG(format, ...)
-#define CAS_CLS_DEBUG_TRACE(format, ...)
+#define CAS_CLS_DEBUG_MSG(format, ...) ({})
+#define CAS_CLS_DEBUG_TRACE(format, ...) ({})
 #endif
 
 /* Done condition test - always accepts and stops evaluation */
