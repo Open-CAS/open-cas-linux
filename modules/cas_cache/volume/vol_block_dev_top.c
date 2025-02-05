@@ -63,13 +63,14 @@ static void blkdev_set_discard_properties(ocf_cache_t cache,
 
 	CAS_SET_DISCARD_ZEROES_DATA(exp_q->limits, 0);
 	if (core_q && cas_has_discard_support(core_bd)) {
-		blk_queue_max_discard_sectors(exp_q, core_q->limits.max_discard_sectors);
+		cas_queue_max_discard_sectors(exp_q,
+				core_q->limits.max_discard_sectors);
 		exp_q->limits.discard_alignment =
 			bdev_discard_alignment(core_bd);
 		exp_q->limits.discard_granularity =
 			core_q->limits.discard_granularity;
 	} else {
-		blk_queue_max_discard_sectors(exp_q,
+		cas_queue_max_discard_sectors(exp_q,
 				min((uint64_t)core_sectors, (uint64_t)UINT_MAX));
 		exp_q->limits.discard_granularity = ocf_cache_get_line_size(cache);
 		exp_q->limits.discard_alignment = 0;
