@@ -1,17 +1,17 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 from datetime import timedelta
 from typing import List
-from enum import Enum
 
 from api.cas import casadm
 from api.cas.cache_config import SeqCutOffParameters, SeqCutOffPolicy
 from api.cas.casadm_params import StatsFilter
-from api.cas.casadm_parser import get_seq_cut_off_parameters, get_core_info_for_cache_by_path
+from api.cas.casadm_parser import get_seq_cut_off_parameters, get_cas_devices_dict
+from api.cas.core_config import CoreStatus
 from api.cas.statistics import CoreStats, CoreIoClassStats
 from core.test_run_utils import TestRun
 from storage_devices.device import Device
@@ -19,13 +19,6 @@ from test_tools.fs_tools import Filesystem, ls_item
 from test_tools.os_tools import sync
 from test_tools.common.wait import wait
 from type_def.size import Unit, Size
-
-
-class CoreStatus(Enum):
-    empty = 0
-    active = 1
-    inactive = 2
-    detached = 3
 
 
 SEQ_CUTOFF_THRESHOLD_MAX = Size(4194181, Unit.KibiByte)
@@ -46,9 +39,23 @@ class Core(Device):
         self.partitions = []
         self.block_size = None
 
-    def __get_core_info(self):
-        return get_core_info_for_cache_by_path(core_disk_path=self.core_device.path,
-                                               target_cache_id=self.cache_id)
+    def __get_core_info(self) -> dict | None:
+        core_dicts = get_cas_devices_dict()["cores"].values()
+        # for core
+        core_device = [
+            core
+            for core in core_dicts
+            if core["cache_id"] == self.cache_id and core["device_path"] == self.core_device.path
+        ]
+        if core_device:
+            return core_device[0]
+
+        # for core pool
+        core_pool_dicts = get_cas_devices_dict()["core_pool"].values()
+        core_pool_device = [
+            core for core in core_pool_dicts if core["device_path"] == self.core_device.path
+        ]
+        return core_pool_device[0]
 
     def create_filesystem(self, fs_type: Filesystem, force=True, blocksize=None):
         super().create_filesystem(fs_type, force, blocksize)
@@ -78,8 +85,8 @@ class Core(Device):
             percentage_val=percentage_val,
         )
 
-    def get_status(self):
-        return CoreStatus[self.__get_core_info()["status"].lower()]
+    def get_status(self) -> CoreStatus:
+        return self.__get_core_info()["status"]
 
     def get_seq_cut_off_parameters(self):
         return get_seq_cut_off_parameters(self.cache_id, self.core_id)
