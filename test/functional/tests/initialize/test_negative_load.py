@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -57,7 +57,7 @@ def test_load_occupied_id():
         if caches[0].cache_id != 1:
             TestRun.LOGGER.error("Wrong cache id.")
 
-        cores = caches[0].get_core_devices()
+        cores = caches[0].get_cores()
         if len(cores) != 0:
             TestRun.LOGGER.error("Inappropriate number of cores after load!")
 
