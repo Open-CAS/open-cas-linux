@@ -11,8 +11,14 @@
 tags
 Module.symvers
 Module.markers
+*.mod
 *.mod.c
+*.out
 modules.order
 __pycache__/
 *.py[cod]
 *$py.class
+
+casadm/casadm
+modules/include/ocf
+modules/generated_defines.h
