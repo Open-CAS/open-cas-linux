@@ -6,8 +6,8 @@
 
 import re
 
-from core.test_run import TestRun
 from connection.utils.output import Output
+from core.test_run import TestRun
 
 load_inactive_core_missing = [
     r"WARNING: Can not resolve path to core \d+ from cache \d+\. By-id path will be shown for that "
@@ -17,9 +17,16 @@ load_inactive_core_missing = [
 
 start_cache_with_existing_metadata = [
     r"Error inserting cache \d+",
-    r"Old metadata found on device\.",
+    r"Old metadata found on device",
     r"Please load cache metadata using --load option or use --force to",
     r" discard on-disk metadata and start fresh cache instance\.",
+]
+
+attach_cache_with_existing_metadata = [
+    r"Error inserting cache \d+",
+    r"Old metadata found on device",
+    r"Please attach another device or use --force to discard on-disk metadata",
+    r" and attach this device to cache instance\.",
 ]
 
 start_cache_on_already_used_dev = [
