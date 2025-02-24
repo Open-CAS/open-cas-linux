@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -1025,6 +1025,22 @@ static int _start_cache(uint16_t cache_id, unsigned int cache_init,
 				cache_device);
 			} else {
 				print_err(cmd.ext_err_code);
+				if (OCF_ERR_METADATA_FOUND == cmd.ext_err_code) {
+					/* print instructions specific for start/attach */
+					if (start) {
+						cas_printf(LOG_ERR,
+							"Please load cache metadata using --load"
+							" option or use --force to\n discard on-disk"
+							" metadata and start fresh cache instance.\n"
+						);
+					} else {
+						cas_printf(LOG_ERR,
+							"Please attach another device or use --force"
+							" to discard on-disk metadata\n"
+							" and attach this device to cache instance.\n"
+						);
+					}
+				}
 			}
 			return FAILURE;
 		}
