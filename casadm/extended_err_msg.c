@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -151,9 +151,7 @@ struct {
 	},
 	{
 		OCF_ERR_METADATA_FOUND,
-		"Old metadata found on device.\nPlease load cache metadata using --load"
-		" option or use --force to\n discard on-disk metadata and"
-		" start fresh cache instance.\n"
+		"Old metadata found on device"
 	},
 	{
 		OCF_ERR_SUPERBLOCK_MISMATCH,
