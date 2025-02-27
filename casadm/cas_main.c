@@ -2237,7 +2237,7 @@ static cli_command cas_commands[] = {
 			.options = attach_cache_options,
 			.command_handle_opts = start_cache_command_handle_option,
 			.handle = handle_cache_attach,
-			.flags = (CLI_SU_REQUIRED | CLI_COMMAND_BLOCKED),
+			.flags = CLI_SU_REQUIRED,
 			.help = NULL,
 		},
 		{
@@ -2247,7 +2247,7 @@ static cli_command cas_commands[] = {
 			.options = detach_options,
 			.command_handle_opts = command_handle_option,
 			.handle = handle_cache_detach,
-			.flags = (CLI_SU_REQUIRED | CLI_COMMAND_BLOCKED),
+			.flags = CLI_SU_REQUIRED,
 			.help = NULL,
 		},
 		{
