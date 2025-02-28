@@ -6,7 +6,6 @@
 
 import pytest
 
-from api.cas import casadm
 from api.cas.cli_help_messages import *
 from api.cas.cli_messages import check_stderr_msg, check_stdout_msg
 from core.test_run import TestRun
@@ -16,83 +15,47 @@ from core.test_run import TestRun
 def test_cli_help(shortcut):
     """
     title: Test for 'help' command.
-    description: Test if help for commands displays.
+    description: |
+        Verifies that running command with 'help' param displays correct message for each
+        available command.
     pass_criteria:
-      - Proper help displays for every command.
+      - Proper help message is displayed for every command.
+      - Proper help message is displayed after running command with wrong param.
     """
-    TestRun.LOGGER.info("Run 'help' for every 'casadm' command.")
-    output = casadm.help(shortcut)
-    check_stdout_msg(output, casadm_help)
+    check_list_cmd = [
+        (" -S", " --start-cache", start_cache_help),
+        (None, " --attach-cache", attach_cache_help),
+        (None, " --detach-cache", detach_cache_help),
+        (" -T", " --stop-cache", stop_cache_help),
+        (" -X", " --set-param", set_params_help),
+        (" -G", " --get-param", get_params_help),
+        (" -Q", " --set-cache-mode", set_cache_mode_help),
+        (" -A", " --add-core", add_core_help),
+        (" -R", " --remove-core", remove_core_help),
+        (None, " --remove-inactive", remove_inactive_help),
+        (None, " --remove-detached", remove_detached_help),
+        (" -L", " --list-caches", list_caches_help),
+        (" -P", " --stats", stats_help),
+        (" -Z", " --reset-counters", reset_counters_help),
+        (" -F", " --flush-cache", flush_cache_help),
+        (" -C", " --io-class", ioclass_help),
+        (" -V", " --version", version_help),
+        # (None, " --standby", standby_help),
+        (" -H", " --help", help_help),
+        (None, " --zero-metadata", zero_metadata_help),
+    ]
+    help = " -H" if shortcut else " --help"
 
-    output = TestRun.executor.run("casadm" + (" -S" if shortcut else " --start-cache")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, start_cache_help)
+    with TestRun.step("Run 'help' for every 'casadm' command and check output"):
+        for cmds in check_list_cmd:
+            cmd = cmds[0] if shortcut else cmds[1]
 
-    output = TestRun.executor.run("casadm" + (" -T" if shortcut else " --stop-cache")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, stop_cache_help)
+            if cmd:
+                output = TestRun.executor.run("casadm" + cmd + help)
+                check_stdout_msg(output, cmds[-1])
 
-    output = TestRun.executor.run("casadm" + (" -X" if shortcut else " --set-param")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, set_params_help)
-
-    output = TestRun.executor.run("casadm" + (" -G" if shortcut else " --get-param")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, get_params_help)
-
-    output = TestRun.executor.run("casadm" + (" -Q" if shortcut else " --set-cache-mode")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, set_cache_mode_help)
-
-    output = TestRun.executor.run("casadm" + (" -A" if shortcut else " --add-core")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, add_core_help)
-
-    output = TestRun.executor.run("casadm" + (" -R" if shortcut else " --remove-core")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, remove_core_help)
-
-    output = TestRun.executor.run("casadm" + " --remove-detached"
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, remove_detached_help)
-
-    output = TestRun.executor.run("casadm" + (" -L" if shortcut else " --list-caches")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, list_caches_help)
-
-    output = TestRun.executor.run("casadm" + (" -P" if shortcut else " --stats")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, stats_help)
-
-    output = TestRun.executor.run("casadm" + (" -Z" if shortcut else " --reset-counters")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, reset_counters_help)
-
-    output = TestRun.executor.run("casadm" + (" -F" if shortcut else " --flush-cache")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, flush_cache_help)
-
-    output = TestRun.executor.run("casadm" + (" -C" if shortcut else " --io-class")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, ioclass_help)
-
-    output = TestRun.executor.run("casadm" + (" -V" if shortcut else " --version")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, version_help)
-
-    output = TestRun.executor.run("casadm" + (" -H" if shortcut else " --help")
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, help_help)
-
-    output = TestRun.executor.run("casadm" + " --standby"
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, standby_help)
-
-    output = TestRun.executor.run("casadm" + " --zero-metadata"
-                                  + (" -H" if shortcut else " --help"))
-    check_stdout_msg(output, zero_metadata_help)
-
-    output = TestRun.executor.run("casadm" + (" -Y" if shortcut else " --yell")
-                                  + (" -H" if shortcut else " --help"))
-    check_stderr_msg(output, unrecognized_stderr)
-    check_stdout_msg(output, unrecognized_stdout)
+    with TestRun.step("Run 'help' for command that doesn`t exist and check output"):
+        cmd = " -Y" if shortcut else " --yell"
+        output = TestRun.executor.run("casadm" + cmd + help)
+        check_stderr_msg(output, unrecognized_stderr)
+        check_stdout_msg(output, unrecognized_stdout)
