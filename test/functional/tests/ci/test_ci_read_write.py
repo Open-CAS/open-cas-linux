@@ -30,7 +30,7 @@ def test_ci_read(cache_mode):
       - Reads are cached
     """
 
-    with TestRun.step("Prepare partitions"):
+    with TestRun.step("Prepare cache and core devices"):
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
 
@@ -104,7 +104,7 @@ def test_ci_write_around_write():
       - Writes are not cached
       - After inserting writes to core, data is read from core and not from cache
     """
-    with TestRun.step("Prepare partitions"):
+    with TestRun.step("Prepare cache and core devices"):
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
 
@@ -216,7 +216,7 @@ def test_ci_write_through_write():
           - Writes are inserted to cache and core
           - Reads are not cached
     """
-    with TestRun.step("Prepare partitions"):
+    with TestRun.step("Prepare cache and core devices"):
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
 

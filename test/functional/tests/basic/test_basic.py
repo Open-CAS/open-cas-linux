@@ -69,7 +69,6 @@ def test_negative_start_cache():
 
     with TestRun.step("Prepare cache device"):
         cache_dev = TestRun.disks["cache"]
-
         cache_dev.create_partitions([Size(2, Unit.GibiByte)] * 2)
 
         cache_dev_1 = cache_dev.partitions[0]

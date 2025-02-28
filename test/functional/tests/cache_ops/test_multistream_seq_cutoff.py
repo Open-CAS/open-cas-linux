@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -219,9 +219,11 @@ def test_multistream_seq_cutoff_stress_fs(streams_seq_rand, filesystem, cache_mo
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step("Create filesystem on core device"):
+    with TestRun.step("Prepare cache and core devices"):
         cache_disk = TestRun.disks["cache"]
         core_disk = TestRun.disks["core"]
+
+    with TestRun.step("Create filesystem on core device"):
         core_disk.create_filesystem(filesystem)
 
     with TestRun.step("Start cache and add core"):

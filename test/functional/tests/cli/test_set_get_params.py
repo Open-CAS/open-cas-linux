@@ -48,13 +48,29 @@ def test_set_get_seq_cutoff_params(cache_mode):
     """
 
     with TestRun.step("Partition cache and core devices"):
-        cache_dev, core_dev = storage_prepare()
+        cache_dev = TestRun.disks["cache"]
+        cache_parts = [Size(1, Unit.GibiByte)] * caches_count
+        cache_dev.create_partitions(cache_parts)
+
+        core_dev = TestRun.disks["core"]
+        core_parts = [Size(2, Unit.GibiByte)] * cores_per_cache * caches_count
+        core_dev.create_partitions(core_parts)
 
     with TestRun.step(
         f"Start {caches_count} caches in {cache_mode} cache mode "
         f"and add {cores_per_cache} cores per cache"
     ):
-        caches, cores = cache_prepare(cache_mode, cache_dev, core_dev)
+        caches = [
+            casadm.start_cache(part, cache_mode, force=True) for part in cache_dev.partitions
+        ]
+
+        cores = [
+            [
+                caches[i].add_core(
+                    core_dev.partitions[i * cores_per_cache + j]
+                ) for j in range(cores_per_cache)
+            ] for i in range(caches_count)
+        ]
 
     with TestRun.step("Check sequential cutoff default parameters"):
         default_seq_cutoff_params = SeqCutOffParameters.default_seq_cut_off_params()
@@ -130,13 +146,25 @@ def test_set_get_cleaning_params(cache_mode, cleaning_policy):
     """
 
     with TestRun.step("Partition cache and core devices"):
-        cache_dev, core_dev = storage_prepare()
+        cache_dev = TestRun.disks["cache"]
+        cache_parts = [Size(1, Unit.GibiByte)] * caches_count
+        cache_dev.create_partitions(cache_parts)
+
+        core_dev = TestRun.disks["core"]
+        core_parts = [Size(2, Unit.GibiByte)] * cores_per_cache * caches_count
+        core_dev.create_partitions(core_parts)
 
     with TestRun.step(
         f"Start {caches_count} caches in {cache_mode} cache mode "
         f"and add {cores_per_cache} cores per cache"
     ):
-        caches, cores = cache_prepare(cache_mode, cache_dev, core_dev)
+        caches = [
+            casadm.start_cache(part, cache_mode, force=True) for part in cache_dev.partitions
+        ]
+
+        for i in range(caches_count):
+            for j in range(cores_per_cache):
+                caches[i].add_core(core_dev.partitions[i * cores_per_cache + j])
 
     with TestRun.step(f"Set cleaning policy to {cleaning_policy}"):
         if cleaning_policy != CleaningPolicy.DEFAULT:
@@ -203,32 +231,6 @@ def test_set_get_cleaning_params(cache_mode, cleaning_policy):
                 check_cleaning_parameters(
                     caches[i], cleaning_policy, cleaning_params[i]
                 )
-
-
-def storage_prepare():
-    cache_dev = TestRun.disks["cache"]
-    cache_parts = [Size(1, Unit.GibiByte)] * caches_count
-    cache_dev.create_partitions(cache_parts)
-    core_dev = TestRun.disks["core"]
-    core_parts = [Size(2, Unit.GibiByte)] * cores_per_cache * caches_count
-    core_dev.create_partitions(core_parts)
-
-    return cache_dev, core_dev
-
-
-def cache_prepare(cache_mode, cache_dev, core_dev):
-    caches = []
-    for i in range(caches_count):
-        caches.append(
-            casadm.start_cache(cache_dev.partitions[i], cache_mode, force=True)
-        )
-    cores = [[] for i in range(caches_count)]
-    for i in range(caches_count):
-        for j in range(cores_per_cache):
-            core_partition_nr = i * cores_per_cache + j
-            cores[i].append(caches[i].add_core(core_dev.partitions[core_partition_nr]))
-
-    return caches, cores
 
 
 def new_seq_cutoff_parameters_random_values():

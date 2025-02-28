@@ -33,7 +33,11 @@ def test_zero_metadata_negative_cases():
       - Load cache command failed after successfully zeroing metadata on the cache device.
     """
     with TestRun.step("Prepare cache and core devices."):
-        cache_dev, core_dev, cache_disk = prepare_devices()
+        cache_disk = TestRun.disks['cache']
+        cache_disk.create_partitions([Size(100, Unit.MebiByte)])
+        cache_dev = cache_disk.partitions[0]
+        core_disk = TestRun.disks['core']
+        core_disk.create_partitions([Size(5, Unit.GibiByte)])
 
     with TestRun.step("Start cache."):
         casadm.start_cache(cache_dev, force=True)
@@ -93,7 +97,11 @@ def test_zero_metadata_filesystem(filesystem):
     """
     mount_point = "/mnt"
     with TestRun.step("Prepare devices."):
-        cache_dev, core_disk, cache_disk = prepare_devices()
+        cache_disk = TestRun.disks['cache']
+        cache_disk.create_partitions([Size(100, Unit.MebiByte)])
+        cache_dev = cache_disk.partitions[0]
+        core_disk = TestRun.disks['core']
+        core_disk.create_partitions([Size(5, Unit.GibiByte)])
 
     with TestRun.step("Create filesystem on core device."):
         core_disk.create_filesystem(filesystem)
@@ -139,7 +147,11 @@ def test_zero_metadata_dirty_data():
       - Cache started successfully after zeroing metadata on cache with dirty data.
     """
     with TestRun.step("Prepare cache and core devices."):
-        cache_dev, core_disk, cache_disk = prepare_devices()
+        cache_disk = TestRun.disks['cache']
+        cache_disk.create_partitions([Size(100, Unit.MebiByte)])
+        cache_dev = cache_disk.partitions[0]
+        core_disk = TestRun.disks['core']
+        core_disk.create_partitions([Size(5, Unit.GibiByte)])
 
     with TestRun.step("Start cache."):
         cache = casadm.start_cache(cache_dev, CacheMode.WB, force=True)
@@ -204,7 +216,11 @@ def test_zero_metadata_dirty_shutdown():
       - Cache started successfully after dirty shutdown and zeroing metadata on cache.
     """
     with TestRun.step("Prepare cache and core devices."):
-        cache_dev, core_disk, cache_disk = prepare_devices()
+        cache_disk = TestRun.disks['cache']
+        cache_disk.create_partitions([Size(100, Unit.MebiByte)])
+        cache_dev = cache_disk.partitions[0]
+        core_disk = TestRun.disks['core']
+        core_disk.create_partitions([Size(5, Unit.GibiByte)])
 
     with TestRun.step("Start cache."):
         cache = casadm.start_cache(cache_dev, CacheMode.WT, force=True)
@@ -251,13 +267,3 @@ def test_zero_metadata_dirty_shutdown():
             TestRun.LOGGER.info("Cache started successfully.")
         except CmdException:
             TestRun.LOGGER.error("Start cache failed.")
-
-
-def prepare_devices():
-    cache_disk = TestRun.disks['cache']
-    cache_disk.create_partitions([Size(100, Unit.MebiByte)])
-    cache_part = cache_disk.partitions[0]
-    core_disk = TestRun.disks['core']
-    core_disk.create_partitions([Size(5, Unit.GibiByte)])
-
-    return cache_part, core_disk, cache_disk
