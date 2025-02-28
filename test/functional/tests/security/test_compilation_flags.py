@@ -1,10 +1,10 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-import os
+import posixpath
 import re
 import pytest
 
@@ -25,9 +25,9 @@ def test_checksec():
             Full RELRO  Canary found  NX enabled  PIE enabled  No RPATH  No RUNPATH  /sbin/casadm.
     """
     with TestRun.step("Prepare checksec script"):
-        checksec_path = os.path.join(
+        checksec_path = posixpath.join(
             TestRun.usr.working_dir,
-            "test/functional/test-framework/test_tools/checksec.sh"
+            "test/functional/test-framework/scripts/checksec.sh"
         )
         checksec = FsItem(checksec_path)
         checksec.chmod(Permissions.x, PermissionsUsers.u, PermissionSign.add)
