@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -2405,7 +2405,8 @@ static int cache_mngt_check_bdev(struct ocf_mngt_cache_device_config *cfg,
 			printk(KERN_WARNING "New cache device block properties "
 					"differ from the previous one.\n");
 		}
-		if (tmp_limits.misaligned) {
+
+		if (cas_queue_limits_is_misaligned(&tmp_limits)) {
 			reattach_properties_diff = true;
 			printk(KERN_WARNING "New cache device block interval "
 					"doesn't line up with the previous one.\n");

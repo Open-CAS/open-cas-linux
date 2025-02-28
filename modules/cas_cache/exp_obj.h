@@ -1,11 +1,12 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #ifndef __CASDISK_EXP_OBJ_H__
 #define __CASDISK_EXP_OBJ_H__
 
+#include "linux_kernel_version.h"
 #include <linux/fs.h>
 
 struct cas_disk;
@@ -16,6 +17,12 @@ struct cas_exp_obj_ops {
 	 *	Could be NULL.
 	 */
 	int (*set_geometry)(struct cas_disk *dsk, void *private);
+
+	/**
+	 * @brief Set queue limits of exported object (top) block device.
+	 */
+	int (*set_queue_limits)(struct cas_disk *dsk, void *private,
+			cas_queue_limits_t *lim);
 
 	/**
 	 * @brief submit_bio of exported object (top) block device.
