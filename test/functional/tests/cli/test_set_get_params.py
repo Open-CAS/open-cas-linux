@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -36,15 +36,15 @@ number_of_checks = 10
 @pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_set_get_seqcutoff_params(cache_mode):
+def test_set_get_seq_cutoff_params(cache_mode):
     """
-        title: Test for setting and reading sequential cut-off parameters.
-        description: |
-          Verify that it is possible to set and read all available sequential cut-off
-          parameters using casadm --set-param and --get-param options.
-        pass_criteria:
-          - All sequential cut-off parameters are set to given values.
-          - All sequential cut-off parameters displays proper values.
+    title: Test for setting and reading sequential cutoff parameters.
+    description: |
+        Verify that it is possible to set and read all available sequential cutoff
+        parameters using casadm --set-param and --get-param options.
+    pass_criteria:
+      - All sequential cutoff parameters are set to given values.
+      - All sequential cutoff parameters displays proper values.
     """
 
     with TestRun.step("Partition cache and core devices"):
@@ -56,60 +56,60 @@ def test_set_get_seqcutoff_params(cache_mode):
     ):
         caches, cores = cache_prepare(cache_mode, cache_dev, core_dev)
 
-    with TestRun.step("Check sequential cut-off default parameters"):
-        default_seqcutoff_params = SeqCutOffParameters.default_seq_cut_off_params()
+    with TestRun.step("Check sequential cutoff default parameters"):
+        default_seq_cutoff_params = SeqCutOffParameters.default_seq_cut_off_params()
         for i in range(caches_count):
             for j in range(cores_per_cache):
-                check_seqcutoff_parameters(cores[i][j], default_seqcutoff_params)
+                check_seq_cutoff_parameters(cores[i][j], default_seq_cutoff_params)
 
     with TestRun.step(
-        "Set new random values for sequential cut-off parameters for one core only"
+        "Set new random values for sequential cutoff parameters for one core only"
     ):
         for check in range(number_of_checks):
-            random_seqcutoff_params = new_seqcutoff_parameters_random_values()
-            cores[0][0].set_seq_cutoff_parameters(random_seqcutoff_params)
+            random_seq_cutoff_params = new_seq_cutoff_parameters_random_values()
+            cores[0][0].set_seq_cutoff_parameters(random_seq_cutoff_params)
 
             # Check changed parameters for first core:
-            check_seqcutoff_parameters(cores[0][0], random_seqcutoff_params)
+            check_seq_cutoff_parameters(cores[0][0], random_seq_cutoff_params)
 
             # Check default parameters for other cores:
             for j in range(1, cores_per_cache):
-                check_seqcutoff_parameters(cores[0][j], default_seqcutoff_params)
+                check_seq_cutoff_parameters(cores[0][j], default_seq_cutoff_params)
             for i in range(1, caches_count):
                 for j in range(cores_per_cache):
-                    check_seqcutoff_parameters(cores[i][j], default_seqcutoff_params)
+                    check_seq_cutoff_parameters(cores[i][j], default_seq_cutoff_params)
 
     with TestRun.step(
-        "Set new random values for sequential cut-off parameters "
+        "Set new random values for sequential cutoff parameters "
         "for all cores within given cache instance"
     ):
         for check in range(number_of_checks):
-            random_seqcutoff_params = new_seqcutoff_parameters_random_values()
-            caches[0].set_seq_cutoff_parameters(random_seqcutoff_params)
+            random_seq_cutoff_params = new_seq_cutoff_parameters_random_values()
+            caches[0].set_seq_cutoff_parameters(random_seq_cutoff_params)
 
             # Check changed parameters for first cache instance:
             for j in range(cores_per_cache):
-                check_seqcutoff_parameters(cores[0][j], random_seqcutoff_params)
+                check_seq_cutoff_parameters(cores[0][j], random_seq_cutoff_params)
 
             # Check default parameters for other cache instances:
             for i in range(1, caches_count):
                 for j in range(cores_per_cache):
-                    check_seqcutoff_parameters(cores[i][j], default_seqcutoff_params)
+                    check_seq_cutoff_parameters(cores[i][j], default_seq_cutoff_params)
 
     with TestRun.step(
-        "Set new random values for sequential cut-off parameters for all cores"
+        "Set new random values for sequential cutoff parameters for all cores"
     ):
         for check in range(number_of_checks):
-            seqcutoff_params = []
+            seq_cutoff_params = []
             for i in range(caches_count):
                 for j in range(cores_per_cache):
-                    random_seqcutoff_params = new_seqcutoff_parameters_random_values()
-                    seqcutoff_params.append(random_seqcutoff_params)
-                    cores[i][j].set_seq_cutoff_parameters(random_seqcutoff_params)
+                    random_seq_cutoff_params = new_seq_cutoff_parameters_random_values()
+                    seq_cutoff_params.append(random_seq_cutoff_params)
+                    cores[i][j].set_seq_cutoff_parameters(random_seq_cutoff_params)
             for i in range(caches_count):
                 for j in range(cores_per_cache):
-                    check_seqcutoff_parameters(
-                        cores[i][j], seqcutoff_params[i * cores_per_cache + j]
+                    check_seq_cutoff_parameters(
+                        cores[i][j], seq_cutoff_params[i * cores_per_cache + j]
                     )
 
 
@@ -119,14 +119,14 @@ def test_set_get_seqcutoff_params(cache_mode):
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_set_get_cleaning_params(cache_mode, cleaning_policy):
     """
-        title: Test for setting and reading cleaning parameters.
-        description: |
-          Verify that it is possible to set and read all available cleaning
-          parameters for all cleaning policies using casadm --set-param and
-          --get-param options.
-        pass_criteria:
-          - All cleaning parameters are set to given values.
-          - All cleaning parameters displays proper values.
+    title: Test for setting and reading cleaning parameters.
+    description: |
+        Verify that it is possible to set and read all available cleaning
+        parameters for all cleaning policies using casadm --set-param and
+        --get-param options.
+    pass_criteria:
+      - All cleaning parameters are set to given values.
+      - All cleaning parameters displays proper values.
     """
 
     with TestRun.step("Partition cache and core devices"):
@@ -231,7 +231,7 @@ def cache_prepare(cache_mode, cache_dev, core_dev):
     return caches, cores
 
 
-def new_seqcutoff_parameters_random_values():
+def new_seq_cutoff_parameters_random_values():
     return SeqCutOffParameters(
         threshold=Size(random.randrange(1, 1000000), Unit.KibiByte),
         policy=random.choice(list(SeqCutOffPolicy)),
@@ -275,27 +275,27 @@ def new_cleaning_parameters_random_values(cleaning_policy):
     return cleaning_params
 
 
-def check_seqcutoff_parameters(core, seqcutoff_params):
-    current_seqcutoff_params = core.get_seq_cut_off_parameters()
+def check_seq_cutoff_parameters(core, seq_cutoff_params):
+    current_seq_cutoff_params = core.get_seq_cut_off_parameters()
     failed_params = ""
-    if current_seqcutoff_params.threshold != seqcutoff_params.threshold:
+    if current_seq_cutoff_params.threshold != seq_cutoff_params.threshold:
         failed_params += (
-            f"Threshold is {current_seqcutoff_params.threshold}, "
-            f"should be {seqcutoff_params.threshold}\n"
+            f"Threshold is {current_seq_cutoff_params.threshold}, "
+            f"should be {seq_cutoff_params.threshold}\n"
         )
-    if current_seqcutoff_params.policy != seqcutoff_params.policy:
+    if current_seq_cutoff_params.policy != seq_cutoff_params.policy:
         failed_params += (
-            f"Policy is {current_seqcutoff_params.policy}, "
-            f"should be {seqcutoff_params.policy}\n"
+            f"Policy is {current_seq_cutoff_params.policy}, "
+            f"should be {seq_cutoff_params.policy}\n"
         )
-    if current_seqcutoff_params.promotion_count != seqcutoff_params.promotion_count:
+    if current_seq_cutoff_params.promotion_count != seq_cutoff_params.promotion_count:
         failed_params += (
-            f"Promotion count is {current_seqcutoff_params.promotion_count}, "
-            f"should be {seqcutoff_params.promotion_count}\n"
+            f"Promotion count is {current_seq_cutoff_params.promotion_count}, "
+            f"should be {seq_cutoff_params.promotion_count}\n"
         )
     if failed_params:
         TestRun.LOGGER.error(
-            f"Sequential cut-off parameters are not correct "
+            f"Sequential cutoff parameters are not correct "
             f"for {core.path}:\n{failed_params}"
         )
 
@@ -306,12 +306,12 @@ def check_cleaning_parameters(cache, cleaning_policy, cleaning_params):
         failed_params = ""
         if current_cleaning_params.wake_up_time != cleaning_params.wake_up_time:
             failed_params += (
-                f"Wake Up time is {current_cleaning_params.wake_up_time}, "
+                f"Wake up time is {current_cleaning_params.wake_up_time}, "
                 f"should be {cleaning_params.wake_up_time}\n"
             )
         if current_cleaning_params.staleness_time != cleaning_params.staleness_time:
             failed_params += (
-                f"Staleness Time is {current_cleaning_params.staleness_time}, "
+                f"Staleness time is {current_cleaning_params.staleness_time}, "
                 f"should be {cleaning_params.staleness_time}\n"
             )
         if (
@@ -319,7 +319,7 @@ def check_cleaning_parameters(cache, cleaning_policy, cleaning_params):
             != cleaning_params.flush_max_buffers
         ):
             failed_params += (
-                f"Flush Max Buffers is {current_cleaning_params.flush_max_buffers}, "
+                f"Flush max buffers is {current_cleaning_params.flush_max_buffers}, "
                 f"should be {cleaning_params.flush_max_buffers}\n"
             )
         if (
@@ -327,7 +327,7 @@ def check_cleaning_parameters(cache, cleaning_policy, cleaning_params):
             != cleaning_params.activity_threshold
         ):
             failed_params += (
-                f"Activity Threshold is {current_cleaning_params.activity_threshold}, "
+                f"Activity threshold is {current_cleaning_params.activity_threshold}, "
                 f"should be {cleaning_params.activity_threshold}\n"
             )
         if failed_params:
@@ -341,7 +341,7 @@ def check_cleaning_parameters(cache, cleaning_policy, cleaning_params):
         failed_params = ""
         if current_cleaning_params.wake_up_time != cleaning_params.wake_up_time:
             failed_params += (
-                f"Wake Up time is {current_cleaning_params.wake_up_time}, "
+                f"Wake up time is {current_cleaning_params.wake_up_time}, "
                 f"should be {cleaning_params.wake_up_time}\n"
             )
         if (
@@ -349,7 +349,7 @@ def check_cleaning_parameters(cache, cleaning_policy, cleaning_params):
             != cleaning_params.flush_max_buffers
         ):
             failed_params += (
-                f"Flush Max Buffers is {current_cleaning_params.flush_max_buffers}, "
+                f"Flush max buffers is {current_cleaning_params.flush_max_buffers}, "
                 f"should be {cleaning_params.flush_max_buffers}\n"
             )
         if failed_params:

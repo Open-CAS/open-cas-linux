@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -153,7 +153,7 @@ def test_concurrent_caches_flush(cache_mode: CacheMode):
     """
     title: Flush multiple caches simultaneously.
     description: |
-        CAS should successfully flush multiple caches if there is already other flush in progress.
+        Check for flushing multiple caches if there is already other flush in progress.
     pass_criteria:
       - No system crash.
       - Flush for each cache should finish successfully.

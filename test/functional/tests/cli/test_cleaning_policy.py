@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -23,14 +23,14 @@ from test_tools.udev import Udev
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_cleaning_policy():
     """
-    Title: test_cleaning_policy
+    Title: Basic test for cleaning policy
     description: |
-        The test is to see if dirty data will be removed from the Cache after changing the
-        cleaning policy from NOP to one that expects a flush.
+        Verify cleaning behaviour after changing cleaning policy from NOP
+        to one that expects a flush.
     pass_criteria:
-        - Cache is successfully populated with dirty data
-        - Cleaning policy is changed successfully
-        - There is no dirty data after the policy change
+      - Cache is successfully populated with dirty data
+      - Cleaning policy is changed successfully
+      - There is no dirty data after the policy change
     """
     wait_time = 60
 

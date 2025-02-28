@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -24,9 +24,10 @@ from test_tools.udev import Udev
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_cleaning_policy():
     """
-    Title: test manual casadm flush
-    description: | The test is to see if dirty data will be removed from the Cache
-    or Core after using the casadm command with the corresponding parameter.
+    title: Test for manual cache and core flushing
+    description: |
+        The test is to see if dirty data will be removed from the cache
+        or core after using the casadm command with the corresponding parameter.
     pass_criteria:
         - Cache and core are filled with dirty data.
         - After cache and core flush dirty data are cleared.
