@@ -28,11 +28,22 @@ def test_seq_cutoff_default_params():
       - "Full" shall be default sequential cutoff policy
       - There shall be default 1MiB (1024kiB) value for sequential cutoff threshold
     """
-    with TestRun.step("Test prepare (start cache and add core)"):
-        cache, cores = prepare()
+    with TestRun.step("Prepare cache and core devices"):
+        cache_device = TestRun.disks['cache']
+        core_device = TestRun.disks['core']
+
+        cache_device.create_partitions([Size(500, Unit.MebiByte)])
+        core_device.create_partitions([Size(1, Unit.GibiByte)])
+
+        cache_part = cache_device.partitions[0]
+        core_part = core_device.partitions[0]
+
+    with TestRun.step("Start cache and add core"):
+        cache = casadm.start_cache(cache_part, force=True)
+        core = cache.add_core(core_dev=core_part)
 
     with TestRun.step("Getting sequential cutoff parameters"):
-        params = cores[0].get_seq_cut_off_parameters()
+        params = core.get_seq_cut_off_parameters()
 
     with TestRun.step("Check if proper sequential cutoff policy is set as a default"):
         if params.policy != SeqCutOffPolicy.DEFAULT:
@@ -59,8 +70,18 @@ def test_seq_cutoff_set_get_policy_core(policy):
       - Sequential cutoff policy obtained from get-param command for the second core must be
         proper default value
     """
-    with TestRun.step("Test prepare (start cache and add 2 cores)"):
-        cache, cores = prepare(cores_count=2)
+    with TestRun.step("Prepare cache and core devices"):
+        cache_device = TestRun.disks['cache']
+        core_device = TestRun.disks['core']
+
+        cache_device.create_partitions([Size(500, Unit.MebiByte)])
+        core_device.create_partitions([Size(1, Unit.GibiByte)] * 2)
+
+        cache_part = cache_device.partitions[0]
+
+    with TestRun.step("Start cache and add cores"):
+        cache = casadm.start_cache(cache_part, force=True)
+        cores = [cache.add_core(core_dev=part) for part in core_device.partitions]
 
     with TestRun.step(f"Setting core sequential cutoff policy mode to {policy}"):
         cores[0].set_seq_cutoff_policy(policy)
@@ -91,8 +112,18 @@ def test_seq_cutoff_set_get_policy_cache(policy):
       - Sequential cutoff policy obtained from get-param command for each of 3 cores must be the
         same as the one used in set-param command for cache
     """
-    with TestRun.step("Test prepare (start cache and add 3 cores)"):
-        cache, cores = prepare(cores_count=3)
+    with TestRun.step("Prepare cache and core devices"):
+        cache_device = TestRun.disks['cache']
+        core_device = TestRun.disks['core']
+
+        cache_device.create_partitions([Size(500, Unit.MebiByte)])
+        core_device.create_partitions([Size(1, Unit.GibiByte)] * 3)
+
+        cache_part = cache_device.partitions[0]
+
+    with TestRun.step("Start cache and add cores"):
+        cache = casadm.start_cache(cache_part, force=True)
+        cores = [cache.add_core(core_dev=part) for part in core_device.partitions]
 
     with TestRun.step(f"Setting sequential cutoff policy mode {policy} for cache"):
         cache.set_seq_cutoff_policy(policy)
@@ -117,11 +148,21 @@ def test_seq_cutoff_policy_load():
       - Sequential cutoff policy obtained from get-param command after cache load
         must be the same as the one used in set-param command before cache stop
       - Sequential cutoff policy loaded for the last core should be the default one
-"""
-    with TestRun.step(f"Test prepare (start cache and add {len(SeqCutOffPolicy) + 1} cores)"):
-        # Create as many cores as many possible policies including default one
-        cache, cores = prepare(cores_count=len(SeqCutOffPolicy) + 1)
-        policies = [policy for policy in SeqCutOffPolicy]
+    """
+    policies = [policy for policy in SeqCutOffPolicy]
+
+    with TestRun.step("Prepare cache and core devices"):
+        cache_device = TestRun.disks['cache']
+        core_device = TestRun.disks['core']
+
+        cache_device.create_partitions([Size(500, Unit.MebiByte)])
+        core_device.create_partitions([Size(1, Unit.GibiByte)] * (len(SeqCutOffPolicy) + 1))
+
+        cache_part = cache_device.partitions[0]
+
+    with TestRun.step("Start cache and add cores"):
+        cache = casadm.start_cache(cache_part, force=True)
+        cores = [cache.add_core(core_dev=part) for part in core_device.partitions]
 
     for i, core in TestRun.iteration(
             enumerate(cores[:-1]),
@@ -171,14 +212,26 @@ def test_seq_cutoff_set_invalid_threshold(threshold):
     pass_criteria:
       - Setting invalid sequential cutoff threshold should be blocked
     """
-    with TestRun.step("Test prepare (start cache and add core)"):
-        cache, cores = prepare()
-        _threshold = Size(threshold, Unit.KibiByte)
+    _threshold = Size(threshold, Unit.KibiByte)
+
+    with TestRun.step("Prepare cache and core devices"):
+        cache_device = TestRun.disks['cache']
+        core_device = TestRun.disks['core']
+
+        cache_device.create_partitions([Size(500, Unit.MebiByte)])
+        core_device.create_partitions([Size(1, Unit.GibiByte)])
+
+        cache_part = cache_device.partitions[0]
+        core_part = core_device.partitions[0]
+
+    with TestRun.step("Start cache and add core"):
+        cache = casadm.start_cache(cache_part, force=True)
+        core = cache.add_core(core_dev=core_part)
 
     with TestRun.step(f"Setting cache sequential cutoff threshold to out of range value: "
                       f"{_threshold}"):
         command = set_param_cutoff_cmd(
-            cache_id=str(cache.cache_id), core_id=str(cores[0].core_id),
+            cache_id=str(cache.cache_id), core_id=str(core.core_id),
             threshold=str(int(_threshold.get_value(Unit.KiloByte))))
         output = TestRun.executor.run_expect_fail(command)
         if "Invalid sequential cutoff threshold, must be in the range 1-4194181"\
@@ -188,7 +241,7 @@ def test_seq_cutoff_set_invalid_threshold(threshold):
     with TestRun.step(f"Setting cache sequential cutoff threshold "
                       f"to value passed as a float"):
         command = set_param_cutoff_cmd(
-            cache_id=str(cache.cache_id), core_id=str(cores[0].core_id),
+            cache_id=str(cache.cache_id), core_id=str(core.core_id),
             threshold=str(_threshold.get_value(Unit.KiloByte)))
         output = TestRun.executor.run_expect_fail(command)
         if "Invalid sequential cutoff threshold, must be a correct unsigned decimal integer"\
@@ -208,18 +261,30 @@ def test_seq_cutoff_set_get_threshold(threshold):
       - Sequential cutoff threshold obtained from get-param command must be the same as
         the one used in set-param command
     """
-    with TestRun.step("Test prepare (start cache and add core)"):
-        cache, cores = prepare()
-        _threshold = Size(threshold, Unit.KibiByte)
+    _threshold = Size(threshold, Unit.KibiByte)
+
+    with TestRun.step("Prepare cache and core devices"):
+        cache_device = TestRun.disks['cache']
+        core_device = TestRun.disks['core']
+
+        cache_device.create_partitions([Size(500, Unit.MebiByte)])
+        core_device.create_partitions([Size(1, Unit.GibiByte)])
+
+        cache_part = cache_device.partitions[0]
+        core_part = core_device.partitions[0]
+
+    with TestRun.step("Start cache and add core"):
+        cache = casadm.start_cache(cache_part, force=True)
+        core = cache.add_core(core_dev=core_part)
 
     with TestRun.step(f"Setting cache sequential cutoff threshold to "
                       f"{_threshold}"):
-        cores[0].set_seq_cutoff_threshold(_threshold)
+        core.set_seq_cutoff_threshold(_threshold)
 
     with TestRun.step("Check if proper sequential cutoff threshold was set"):
-        if cores[0].get_seq_cut_off_threshold() != _threshold:
+        if core.get_seq_cut_off_threshold() != _threshold:
             TestRun.fail(f"Wrong sequential cutoff threshold set: "
-                         f"{cores[0].get_seq_cut_off_threshold()} "
+                         f"{core.get_seq_cut_off_threshold()} "
                          f"should be {_threshold}")
 
 
@@ -235,13 +300,25 @@ def test_seq_cutoff_threshold_load(threshold):
       - Sequential cutoff threshold obtained from get-param command after cache load
         must be the same as the one used in set-param command before cache stop
     """
-    with TestRun.step("Test prepare (start cache and add core)"):
-        cache, cores = prepare()
-        _threshold = Size(threshold, Unit.KibiByte)
+    _threshold = Size(threshold, Unit.KibiByte)
+
+    with TestRun.step("Prepare cache and core devices"):
+        cache_device = TestRun.disks['cache']
+        core_device = TestRun.disks['core']
+
+        cache_device.create_partitions([Size(500, Unit.MebiByte)])
+        core_device.create_partitions([Size(1, Unit.GibiByte)])
+
+        cache_part = cache_device.partitions[0]
+        core_part = core_device.partitions[0]
+
+    with TestRun.step("Start cache and add core"):
+        cache = casadm.start_cache(cache_part, force=True)
+        core = cache.add_core(core_dev=core_part)
 
     with TestRun.step(f"Setting cache sequential cutoff threshold to "
                       f"{_threshold}"):
-        cores[0].set_seq_cutoff_threshold(_threshold)
+        core.set_seq_cutoff_threshold(_threshold)
 
     with TestRun.step("Stopping cache"):
         cache.stop()
@@ -257,23 +334,3 @@ def test_seq_cutoff_threshold_load(threshold):
             TestRun.fail(f"Wrong sequential cutoff threshold set: "
                          f"{cores_load[0].get_seq_cut_off_threshold()} "
                          f"should be {_threshold}")
-
-
-def prepare(cores_count=1):
-    cache_device = TestRun.disks['cache']
-    core_device = TestRun.disks['core']
-    cache_device.create_partitions([Size(500, Unit.MebiByte)])
-    partitions = []
-    for x in range(cores_count):
-        partitions.append(Size(1, Unit.GibiByte))
-
-    core_device.create_partitions(partitions)
-    cache_part = cache_device.partitions[0]
-    core_parts = core_device.partitions
-    TestRun.LOGGER.info("Staring cache")
-    cache = casadm.start_cache(cache_part, force=True)
-    TestRun.LOGGER.info("Adding core devices")
-    core_list = []
-    for core_part in core_parts:
-        core_list.append(cache.add_core(core_dev=core_part))
-    return cache, core_list

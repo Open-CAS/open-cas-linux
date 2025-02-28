@@ -32,6 +32,8 @@ def test_cleaning_policy():
         - Cache and core are filled with dirty data.
         - After cache and core flush dirty data are cleared.
     """
+    cache_id = 1
+
     with TestRun.step("Prepare devices."):
         cache_disk = TestRun.disks["cache"]
         cache_disk.create_partitions([Size(1, Unit.GibiByte)])
@@ -40,7 +42,8 @@ def test_cleaning_policy():
         core_disk = TestRun.disks["core"]
         core_disk.create_partitions([Size(1, Unit.GibiByte)])
         core_dev = core_disk.partitions[0]
-        cache_id = 1
+
+    with TestRun.step("Disable udev"):
         Udev.disable()
 
     with TestRun.step("Start cache and set cleaning policy to NOP"):
