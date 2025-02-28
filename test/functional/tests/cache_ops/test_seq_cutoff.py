@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -40,15 +40,14 @@ class VerifyType(Enum):
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_seq_cutoff_multi_core(cache_mode, io_type, io_type_last, cache_line_size):
     """
-    title: Sequential cut-off tests during sequential and random IO 'always' policy with 4 cores
+    title: Functional sequential cutoff test with multiple cores
     description: |
-        Testing if amount of data written to cache after sequential writes for different
-        sequential cut-off thresholds on each core, while running sequential IO on 3 out of 4
-        cores and random IO against the last core, is correct.
+        Test checking if data is cached properly with sequential cutoff "always" policy
+        when sequential and random I/O is running to multiple cores.
     pass_criteria:
       - Amount of written blocks to cache is less or equal than amount set
-        with sequential cut-off threshold for three first cores.
-      - Amount of written blocks to cache is equal to io size run against last core.
+        with sequential cutoff threshold for three first cores.
+      - Amount of written blocks to cache is equal to I/O size run against last core.
     """
 
     with TestRun.step("Prepare cache and core devices"):
@@ -76,7 +75,7 @@ def test_seq_cutoff_multi_core(cache_mode, io_type, io_type_last, cache_line_siz
         )
         core_list = [cache.add_core(core_dev=core_part) for core_part in core_parts]
 
-    with TestRun.step("Set sequential cut-off parameters for all cores"):
+    with TestRun.step("Set sequential cutoff parameters for all cores"):
         writes_before_list = []
         fio_additional_size = Size(10, Unit.Blocks4096)
         thresholds_list = [
@@ -96,7 +95,7 @@ def test_seq_cutoff_multi_core(cache_mode, io_type, io_type_last, cache_line_siz
             core.set_seq_cutoff_policy(SeqCutOffPolicy.always)
             core.set_seq_cutoff_threshold(threshold)
 
-    with TestRun.step("Prepare sequential IO against first three cores"):
+    with TestRun.step("Prepare sequential I/O against first three cores"):
         block_size = Size(4, Unit.KibiByte)
         fio = Fio().create_command().io_engine(IoEngine.libaio).block_size(block_size).direct(True)
 
@@ -107,7 +106,7 @@ def test_seq_cutoff_multi_core(cache_mode, io_type, io_type_last, cache_line_siz
             fio_job.target(core.path)
             writes_before_list.append(core.get_statistics().block_stats.cache.writes)
 
-    with TestRun.step("Prepare random IO against the last core"):
+    with TestRun.step("Prepare random I/O against the last core"):
         fio_job = fio.add_job(f"core_{core_list[-1].core_id}")
         fio_job.size(io_sizes_list[-1])
         fio_job.read_write(io_type_last)
@@ -117,7 +116,7 @@ def test_seq_cutoff_multi_core(cache_mode, io_type, io_type_last, cache_line_siz
     with TestRun.step("Run fio against all cores"):
         fio.run()
 
-    with TestRun.step("Verify writes to cache count after IO"):
+    with TestRun.step("Verify writes to cache count after I/O"):
         margins = [
             min(block_size * (core.get_seq_cut_off_parameters().promotion_count - 1), threshold)
             for core, threshold in zip(core_list[:-1], thresholds_list[:-1])
@@ -159,17 +158,16 @@ def test_seq_cutoff_multi_core(cache_mode, io_type, io_type_last, cache_line_siz
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_seq_cutoff_multi_core_io_pinned(cache_mode, io_type, io_type_last, cache_line_size):
+def test_seq_cutoff_multi_core_cpu_pinned(cache_mode, io_type, io_type_last, cache_line_size):
     """
-    title: Sequential cut-off tests during sequential and random IO 'always' policy with 4 cores
+    title: Functional sequential cutoff test with multiple cores and cpu pinned I/O
     description: |
-        Testing if amount of data written to cache after sequential writes for different
-        sequential cut-off thresholds on each core, while running sequential IO, pinned,
-        on 3 out of 4 cores and random IO against the last core, is correct.
+        Test checking if data is cached properly with sequential cutoff "always" policy
+        when sequential and random cpu pinned I/O is running to multiple cores.
     pass_criteria:
       - Amount of written blocks to cache is less or equal than amount set
-        with sequential cut-off threshold for three first cores.
-      - Amount of written blocks to cache is equal to io size run against last core.
+        with sequential cutoff threshold for three first cores.
+      - Amount of written blocks to cache is equal to I/O size run against last core.
     """
 
     with TestRun.step("Partition cache and core devices"):
@@ -198,7 +196,7 @@ def test_seq_cutoff_multi_core_io_pinned(cache_mode, io_type, io_type_last, cach
         )
         core_list = [cache.add_core(core_dev=core_part) for core_part in core_parts]
 
-    with TestRun.step(f"Set sequential cut-off parameters for all cores"):
+    with TestRun.step("Set sequential cutoff parameters for all cores"):
         writes_before_list = []
         fio_additional_size = Size(10, Unit.Blocks4096)
         thresholds_list = [
@@ -218,7 +216,9 @@ def test_seq_cutoff_multi_core_io_pinned(cache_mode, io_type, io_type_last, cach
             core.set_seq_cutoff_policy(SeqCutOffPolicy.always)
             core.set_seq_cutoff_threshold(threshold)
 
-    with TestRun.step("Prepare sequential IO against first three cores"):
+    with TestRun.step(
+            "Prepare sequential I/O against first three cores and random I/O against the last one"
+    ):
         fio = (
             Fio()
             .create_command()
@@ -244,10 +244,10 @@ def test_seq_cutoff_multi_core_io_pinned(cache_mode, io_type, io_type_last, cach
         fio_job.target(core_list[-1].path)
         writes_before_list.append(core_list[-1].get_statistics().block_stats.cache.writes)
 
-    with TestRun.step("Running IO against all cores"):
+    with TestRun.step("Running I/O against all cores"):
         fio.run()
 
-    with TestRun.step("Verifying writes to cache count after IO"):
+    with TestRun.step("Verifying writes to cache count after I/O"):
         for core, writes, threshold, io_size in zip(
             core_list[:-1], writes_before_list[:-1], thresholds_list[:-1], io_sizes_list[:-1]
         ):
@@ -282,16 +282,14 @@ def test_seq_cutoff_multi_core_io_pinned(cache_mode, io_type, io_type_last, cach
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_seq_cutoff_thresh(cache_line_size, io_dir, policy, verify_type):
     """
-    title: Sequential cut-off tests for writes and reads for 'never', 'always' and 'full' policies
+    title: Functional test for sequential cutoff threshold parameter
     description: |
-        Testing if amount of data written to cache after sequential writes and reads for different
-        sequential cut-off policies with cache configured with different cache line size
-        is valid for sequential cut-off threshold parameter, assuming that cache occupancy
-        doesn't reach 100% during test.
+        Check if data is cached properly according to sequential cutoff policy and
+        threshold parameter
     pass_criteria:
-      - Amount of written blocks to cache is less or equal than amount set
-        with sequential cut-off parameter in case of 'always' policy.
-      - Amount of written blocks to cache is at least equal io size in case of 'never' and 'full'
+      - Amount of blocks written to cache is less than or equal to amount set
+        with sequential cutoff parameter in case of 'always' policy.
+      - Amount of blocks written to cache is at least equal to io size in case of 'never' and 'full'
         policy.
     """
 
@@ -326,13 +324,13 @@ def test_seq_cutoff_thresh(cache_line_size, io_dir, policy, verify_type):
         )
         io_size = (threshold + fio_additional_size).align_down(0x1000)
 
-    with TestRun.step(f"Setting cache sequential cut off policy mode to {policy}"):
+    with TestRun.step(f"Setting cache sequential cutoff policy mode to {policy}"):
         cache.set_seq_cutoff_policy(policy)
 
-    with TestRun.step(f"Setting cache sequential cut off policy threshold to {threshold}"):
+    with TestRun.step(f"Setting cache sequential cutoff policy threshold to {threshold}"):
         cache.set_seq_cutoff_threshold(threshold)
 
-    with TestRun.step("Prepare sequential IO against core"):
+    with TestRun.step("Prepare sequential I/O against core"):
         sync()
         writes_before = core.get_statistics().block_stats.cache.writes
         fio = (
@@ -364,16 +362,15 @@ def test_seq_cutoff_thresh(cache_line_size, io_dir, policy, verify_type):
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_seq_cutoff_thresh_fill(cache_line_size, io_dir):
     """
-    title: Sequential cut-off tests during writes and reads on full cache for 'full' policy
+    title: Functional test for sequential cutoff threshold parameter and 'full' policy
     description: |
-        Testing if amount of data written to cache after sequential io against fully occupied
-        cache for 'full' sequential cut-off policy with cache configured with different cache
-        line sizes is valid for sequential cut-off threshold parameter.
+        Check if data is cached properly according to sequential cutoff 'full' policy and given
+        threshold parameter
     pass_criteria:
       - Amount of written blocks to cache is big enough to fill cache when 'never' sequential
-        cut-off policy is set
+        cutoff policy is set
       - Amount of written blocks to cache is less or equal than amount set
-        with sequential cut-off parameter in case of 'full' policy.
+        with sequential cutoff parameter in case of 'full' policy.
     """
 
     with TestRun.step("Partition cache and core devices"):
@@ -407,10 +404,10 @@ def test_seq_cutoff_thresh_fill(cache_line_size, io_dir):
         )
         io_size = (threshold + fio_additional_size).align_down(0x1000)
 
-    with TestRun.step(f"Setting cache sequential cut off policy mode to {SeqCutOffPolicy.never}"):
+    with TestRun.step(f"Setting cache sequential cutoff policy mode to {SeqCutOffPolicy.never}"):
         cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
 
-    with TestRun.step("Prepare sequential IO against core"):
+    with TestRun.step("Prepare sequential I/O against core"):
         sync()
         fio = (
             Fio()
@@ -432,13 +429,13 @@ def test_seq_cutoff_thresh_fill(cache_line_size, io_dir):
                 f"Cache occupancy is too small: {occupancy_percentage}, expected at least 95%"
             )
 
-    with TestRun.step(f"Setting cache sequential cut off policy mode to {SeqCutOffPolicy.full}"):
+    with TestRun.step(f"Setting cache sequential cutoff policy mode to {SeqCutOffPolicy.full}"):
         cache.set_seq_cutoff_policy(SeqCutOffPolicy.full)
 
-    with TestRun.step(f"Setting cache sequential cut off policy threshold to {threshold}"):
+    with TestRun.step(f"Setting cache sequential cutoff policy threshold to {threshold}"):
         cache.set_seq_cutoff_threshold(threshold)
 
-    with TestRun.step(f"Running sequential IO ({io_dir})"):
+    with TestRun.step(f"Running sequential I/O ({io_dir})"):
         sync()
         writes_before = core.get_statistics().block_stats.cache.writes
         fio = (

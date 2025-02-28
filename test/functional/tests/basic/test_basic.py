@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -30,20 +30,20 @@ mountpoint = "/mnt"
 @pytest.mark.CI
 def test_cas_version():
     """
-    title: Test for CAS version
+    title: Test for version number
     description:
-        Check if CAS print version cmd returns consistent version with version file
+        Check if version printed by cmd returns value consistent with version file
     pass criteria:
-      - casadm version command succeeds
-      - versions from cmd and file in /var/lib/opencas/cas_version are consistent
+      - Version command succeeds
+      - Versions from cmd and file in /var/lib/opencas/cas_version are consistent
     """
 
-    with TestRun.step("Read cas version using casadm cmd"):
+    with TestRun.step("Read version using casadm cmd"):
         output = casadm.print_version(output_format=OutputFormat.csv)
         cmd_version = output.stdout
         cmd_cas_versions = [version.split(",")[1] for version in cmd_version.split("\n")[1:]]
 
-    with TestRun.step(f"Read cas version from {version_file_path} location"):
+    with TestRun.step(f"Read version from {version_file_path} location"):
         file_read = read_file(version_file_path).split("\n")
         file_cas_version = next(
             (line.split("=")[1] for line in file_read if "CAS_VERSION=" in line)
@@ -51,20 +51,20 @@ def test_cas_version():
 
     with TestRun.step("Compare cmd and file versions"):
         if not all(file_cas_version == cmd_cas_version for cmd_cas_version in cmd_cas_versions):
-            TestRun.LOGGER.error(f"Cmd and file versions doesn`t match")
+            TestRun.LOGGER.error(f"Cmd and file versions doesn't match")
 
 
 @pytest.mark.CI
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 def test_negative_start_cache():
     """
-    title: Test start cache negative on cache device
+    title: Negative test for starting cache
     description:
-        Check for negative cache start scenarios
+        Check starting cache using the same device or cache ID twice
     pass criteria:
       - Cache start succeeds
-      - Fails to start cache on the same device with another id
-      - Fails to start cache on another partition with the same id
+      - Starting cache on the same device with another ID fails
+      - Starting cache on another partition with the same ID fails
     """
 
     with TestRun.step("Prepare cache device"):

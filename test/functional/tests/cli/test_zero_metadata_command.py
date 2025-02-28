@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 import time
@@ -24,20 +24,19 @@ from type_def.size import Size, Unit
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_zero_metadata_negative_cases():
     """
-        title: Test for '--zero-metadata' negative cases.
-        description: |
-          Test for '--zero-metadata' scenarios with expected failures.
-        pass_criteria:
-          - Zeroing metadata without '--force' failed when run on cache.
-          - Zeroing metadata with '--force' failed when run on cache.
-          - Zeroing metadata failed when run on system drive.
-          - Load cache command failed after successfully zeroing metadata on the cache device.
+    title: Test for '--zero-metadata' negative cases.
+    description: Test for '--zero-metadata' scenarios with expected failures.
+    pass_criteria:
+      - Zeroing metadata without '--force' failed when run on cache.
+      - Zeroing metadata with '--force' failed when run on cache.
+      - Zeroing metadata failed when run on system drive.
+      - Load cache command failed after successfully zeroing metadata on the cache device.
     """
     with TestRun.step("Prepare cache and core devices."):
         cache_dev, core_dev, cache_disk = prepare_devices()
 
     with TestRun.step("Start cache."):
-        cache = casadm.start_cache(cache_dev, force=True)
+        casadm.start_cache(cache_dev, force=True)
 
     with TestRun.step("Try to zero metadata and validate error message."):
         try:
@@ -75,7 +74,7 @@ def test_zero_metadata_negative_cases():
 
     with TestRun.step("Load cache."):
         try:
-            cache = casadm.load_cache(cache_dev)
+            casadm.load_cache(cache_dev)
             TestRun.LOGGER.error("Loading cache should fail.")
         except CmdException:
             TestRun.LOGGER.info("Loading cache failed as expected.")
@@ -86,12 +85,11 @@ def test_zero_metadata_negative_cases():
 @pytest.mark.parametrizex("filesystem", Filesystem)
 def test_zero_metadata_filesystem(filesystem):
     """
-        title: Test for '--zero-metadata' and filesystem.
-        description: |
-          Test for '--zero-metadata' on drive with filesystem.
-        pass_criteria:
-          - Zeroing metadata on device with filesystem failed and not removed filesystem.
-          - Zeroing metadata on mounted device failed.
+    title: Test for '--zero-metadata' and filesystem.
+    description: Test for '--zero-metadata' on drive with filesystem.
+    pass_criteria:
+      - Zeroing metadata on device with filesystem failed and not removed filesystem.
+      - Zeroing metadata on mounted device failed.
     """
     mount_point = "/mnt"
     with TestRun.step("Prepare devices."):
@@ -131,14 +129,14 @@ def test_zero_metadata_filesystem(filesystem):
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_zero_metadata_dirty_data():
     """
-        title: Test for '--zero-metadata' and dirty data scenario.
-        description: |
-          Test for '--zero-metadata' with and without 'force' option if there are dirty data
-          on cache.
-        pass_criteria:
-          - Zeroing metadata without force failed on cache with dirty data.
-          - Zeroing metadata with force ran successfully on cache with dirty data.
-          - Cache started successfully after zeroing metadata on cache with dirty data.
+    title: Test for '--zero-metadata' and dirty data scenario.
+    description: |
+        Test for '--zero-metadata' with and without 'force' option if there are dirty data
+        on cache.
+    pass_criteria:
+      - Zeroing metadata without force failed on cache with dirty data.
+      - Zeroing metadata with force ran successfully on cache with dirty data.
+      - Cache started successfully after zeroing metadata on cache with dirty data.
     """
     with TestRun.step("Prepare cache and core devices."):
         cache_dev, core_disk, cache_disk = prepare_devices()
@@ -165,7 +163,7 @@ def test_zero_metadata_dirty_data():
 
     with TestRun.step("Start cache (expect to fail)."):
         try:
-            cache = casadm.start_cache(cache_dev, CacheMode.WB)
+            casadm.start_cache(cache_dev, CacheMode.WB)
         except CmdException:
             TestRun.LOGGER.info("Start cache failed as expected.")
 
@@ -186,7 +184,7 @@ def test_zero_metadata_dirty_data():
 
         with TestRun.step("Start cache without 'force' option."):
             try:
-                cache = casadm.start_cache(cache_dev, CacheMode.WB)
+                casadm.start_cache(cache_dev, CacheMode.WB)
                 TestRun.LOGGER.info("Cache started successfully.")
             except CmdException:
                 TestRun.LOGGER.error("Start cache failed.")
@@ -196,21 +194,21 @@ def test_zero_metadata_dirty_data():
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_zero_metadata_dirty_shutdown():
     """
-        title: Test for '--zero-metadata' and dirty shutdown scenario.
-        description: |
-          Test for '--zero-metadata' with and without 'force' option on cache which had been dirty
-          shut down before.
-        pass_criteria:
-          - Zeroing metadata without force failed on cache after dirty shutdown.
-          - Zeroing metadata with force ran successfully on cache after dirty shutdown.
-          - Cache started successfully after dirty shutdown and zeroing metadata on cache.
+    title: Test for '--zero-metadata' and dirty shutdown scenario.
+    description: |
+        Test for '--zero-metadata' with and without 'force' option on cache which had been dirty
+        shut down before.
+    pass_criteria:
+      - Zeroing metadata without force failed on cache after dirty shutdown.
+      - Zeroing metadata with force ran successfully on cache after dirty shutdown.
+      - Cache started successfully after dirty shutdown and zeroing metadata on cache.
     """
     with TestRun.step("Prepare cache and core devices."):
         cache_dev, core_disk, cache_disk = prepare_devices()
 
     with TestRun.step("Start cache."):
         cache = casadm.start_cache(cache_dev, CacheMode.WT, force=True)
-        core = cache.add_core(core_disk)
+        cache.add_core(core_disk)
 
     with TestRun.step("Unplug cache device."):
         cache_disk.unplug()
@@ -227,7 +225,7 @@ def test_zero_metadata_dirty_shutdown():
 
     with TestRun.step("Start cache (expect to fail)."):
         try:
-            cache = casadm.start_cache(cache_dev, CacheMode.WT)
+            casadm.start_cache(cache_dev, CacheMode.WT)
             TestRun.LOGGER.error("Starting cache should fail!")
         except CmdException:
             TestRun.LOGGER.info("Start cache failed as expected.")
@@ -249,7 +247,7 @@ def test_zero_metadata_dirty_shutdown():
 
     with TestRun.step("Start cache."):
         try:
-            cache = casadm.start_cache(cache_dev, CacheMode.WT)
+            casadm.start_cache(cache_dev, CacheMode.WT)
             TestRun.LOGGER.info("Cache started successfully.")
         except CmdException:
             TestRun.LOGGER.error("Start cache failed.")

@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2024-2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -44,8 +44,8 @@ def test_standby_neg_cli_params():
     """
     title: Verifying parameters for starting a standby cache instance
     description: |
-      Try executing the standby init command with required arguments missing or
-      disallowed arguments present.
+        Try executing the standby init command with required arguments missing or
+        disallowed arguments present.
     pass_criteria:
       - The execution is unsuccessful for all improper argument combinations
       - A proper error message is displayed for unsuccessful executions
@@ -272,8 +272,8 @@ def test_start_neg_cli_flags():
     """
     title: Blocking standby start command with mutually exclusive flags
     description: |
-       Try executing the standby start command with different combinations of mutually
-       exclusive flags.
+        Try executing the standby start command with different combinations of mutually
+        exclusive flags.
     pass_criteria:
       - The command execution is unsuccessful for commands with mutually exclusive flags
       - A proper error message is displayed
@@ -327,7 +327,7 @@ def test_activate_without_detach():
     """
     title: Activate cache without detach command.
     description: |
-       Try activate passive cache without detach command before activation.
+        Try to activate passive cache without detach command before activation.
     pass_criteria:
       - The activation is not possible
       - The cache remains in Standby state after unsuccessful activation
@@ -390,14 +390,14 @@ def test_activate_without_detach():
 @pytest.mark.require_disk("standby_cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 def test_activate_neg_cache_line_size():
     """
-       title: Blocking cache with mismatching cache line size activation.
-       description: |
-          Try restoring cache operations from a replicated cache that was initialized
-          with different cache line size than the original cache.
-       pass_criteria:
-         - The activation is cancelled
-         - The cache remains in Standby detached state after an unsuccessful activation
-         - A proper error message is displayed
+    title: Blocking cache with mismatching cache line size activation.
+    description: |
+        Try restoring cache operations from a replicated cache that was initialized
+        with different cache line size than the original cache.
+    pass_criteria:
+      - The activation is cancelled
+      - The cache remains in Standby detached state after an unsuccessful activation
+      - A proper error message is displayed
     """
 
     with TestRun.step("Prepare cache devices"):
@@ -593,7 +593,7 @@ def test_standby_init_with_preexisting_filesystem(filesystem):
 @pytest.mark.require_disk("core", DiskTypeLowerThan("caches"))
 def test_standby_activate_with_corepool():
     """
-    title: Activate standby cache instance with corepool
+    title: Activate standby cache instance with core pool
     description: |
         Activation of standby cache with core taken from core pool
     pass_criteria:
@@ -652,12 +652,12 @@ def test_standby_activate_with_corepool():
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 def test_standby_start_stop(cache_line_size):
     """
-        title: Start and stop a standby cache instance.
-        description: Test if cache can be started in standby state and stopped without activation.
-        pass_criteria:
-          - A cache exported object appears after starting a cache in standby state
-          - The data written to the cache exported object committed on the underlying cache device
-          - The cache exported object disappears after stopping the standby cache instance
+    title: Start and stop a standby cache instance.
+    description: Test if cache can be started in standby state and stopped without activation.
+    pass_criteria:
+      - A cache exported object appears after starting a cache in standby state
+      - The data written to the cache exported object committed on the underlying cache device
+      - The cache exported object disappears after stopping the standby cache instance
     """
     with TestRun.step("Prepare a cache device"):
         cache_size = Size(500, Unit.MebiByte)
