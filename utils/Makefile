@@ -24,8 +24,8 @@ endif
 all: manpage
 
 manpage:
-	gzip -k opencas.conf.5
-	gzip -k casctl.8
+	gzip -k -f opencas.conf.5
+	gzip -k -f casctl.8
 
 install: install_files
 ifeq (, $(PYTHON3))

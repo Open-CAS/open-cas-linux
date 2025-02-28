@@ -158,7 +158,7 @@ endif
 -include $(addprefix $(OBJDIR),$(OBJS:.o=.d))
 
 manpage:
-	gzip -k $(TARGET).8
+	gzip -k -f $(TARGET).8
 
 clean:
 	@echo "  CLEAN "
