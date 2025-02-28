@@ -9,6 +9,20 @@ import re
 from connection.utils.output import Output
 from core.test_run import TestRun
 
+
+attach_not_enough_memory = [
+    r"Not enough free RAM\.\nYou need at least \d+.\d+GB to attach a device to cache "
+    r"with cache line size equal \d+kB.\n"
+    r"Try with greater cache line size\."
+]
+
+attach_with_existing_metadata = [
+    r"Error inserting cache \d+",
+    r"Old metadata found on device",
+    r"Please attach another device or use --force to discard on-disk metadata",
+    r" and attach this device to cache instance\."
+]
+
 load_inactive_core_missing = [
     r"WARNING: Can not resolve path to core \d+ from cache \d+\. By-id path will be shown for that "
     r"core\.",

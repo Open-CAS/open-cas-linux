@@ -1,17 +1,25 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2023-2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import posixpath
 import pytest
+
+from datetime import timedelta
 
 from api.cas import casadm, casadm_parser, cli
 from api.cas.cache_config import CacheMode, CleaningPolicy, CacheModeTrait
 from api.cas.casadm_parser import wait_for_flushing
+from api.cas.cli import attach_cache_cmd
+from connection.utils.output import CmdException
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
+from storage_devices.nullblk import NullBlk
 from test_tools.dd import Dd
+from test_tools.fio.fio import Fio
+from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_tools.fs_tools import Filesystem, create_random_test_file
 from test_tools.os_tools import DropCachesMode, sync, drop_caches
 from test_tools.udev import Udev
@@ -446,7 +454,7 @@ def test_interrupt_cache_stop(cache_mode, filesystem):
             core.mount(mount_point)
 
         with TestRun.step(f"Create test file in mount point of exported object."):
-            test_file = create_test_file()
+            create_test_file()
 
         with TestRun.step("Get number of dirty data on exported object before interruption."):
             sync()
@@ -485,6 +493,144 @@ def test_interrupt_cache_stop(cache_mode, filesystem):
 
         with TestRun.step("Unmount core device."):
             core_part.unmount()
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.parametrizex("cache_mode", CacheMode)
+def test_interrupt_attach(cache_mode):
+    """
+    title: Test for attach interruption.
+    description: Validate handling interruption of cache attach.
+    pass_criteria:
+      - No crash during attach interruption.
+      - Cache attach completed successfully.
+      - No system crash.
+    """
+
+    with TestRun.step("Prepare cache and core devices"):
+        nullblk = NullBlk.create(size_gb=1500)
+        cache_dev = nullblk[0]
+        core_dev = TestRun.disks["core"]
+        core_dev.create_partitions([Size(2, Unit.GibiByte)])
+        core_dev = core_dev.partitions[0]
+
+    with TestRun.step("Start cache and add core"):
+        cache = casadm.start_cache(cache_dev, force=True, cache_mode=cache_mode)
+        cache.add_core(core_dev)
+
+    with TestRun.step(f"Change cache mode to {cache_mode}"):
+        cache.set_cache_mode(cache_mode)
+
+    with TestRun.step("Detach cache"):
+        cache.detach()
+
+    with TestRun.step("Start attaching cache in background"):
+        cache_attach_pid = TestRun.executor.run_in_background(
+            attach_cache_cmd(
+                cache_id=str(cache.cache_id),
+                cache_dev=cache_dev.path
+            )
+        )
+
+    with TestRun.step("Try to interrupt cache attaching"):
+        TestRun.executor.kill_process(cache_attach_pid)
+
+    with TestRun.step("Wait for cache attach to end"):
+        TestRun.executor.wait_cmd_finish(
+            cache_attach_pid, timeout=timedelta(minutes=10)
+        )
+
+    with TestRun.step("Verify if cache attach ended successfully"):
+        caches = casadm_parser.get_caches()
+        if len(caches) != 1:
+            TestRun.fail(f"Wrong amount of caches: {len(caches)}, expected: 1")
+        if caches[0].cache_device.path == cache_dev.path:
+            TestRun.LOGGER.info("Operation ended successfully")
+        else:
+            TestRun.fail(
+                "Cache attaching failed"
+                "expected behaviour: attach completed successfully"
+                "actual behaviour: attach interrupted"
+            )
+
+
+@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_detach_interrupt_cache_flush(filesystem, cache_mode):
+    """
+    title: Test for flush interruption using cache detach operation.
+    description: Validate handling detach during cache flush.
+    pass_criteria:
+      - No system crash.
+      - Detach operation doesn't stop cache flush.
+    """
+
+    with TestRun.step("Prepare cache and core devices"):
+        cache_dev = TestRun.disks["cache"]
+        cache_dev.create_partitions([Size(2, Unit.GibiByte)])
+        cache_dev = cache_dev.partitions[0]
+
+        core_dev = TestRun.disks["core"]
+        core_dev.create_partitions([Size(5, Unit.GibiByte)])
+        core_dev = core_dev.partitions[0]
+
+    with TestRun.step("Disable udev"):
+        Udev.disable()
+
+    with TestRun.step("Start cache"):
+        cache = casadm.start_cache(cache_dev, force=True, cache_mode=cache_mode)
+
+    with TestRun.step(f"Change cache mode to {cache_mode}"):
+        cache.set_cache_mode(cache_mode)
+
+    with TestRun.step(f"Add core device with {filesystem} filesystem and mount it"):
+        core_dev.create_filesystem(filesystem)
+        core = cache.add_core(core_dev)
+        core.mount(mount_point)
+
+    with TestRun.step("Populate cache with dirty data"):
+        fio = (
+            Fio()
+            .create_command()
+            .size(Size(4, Unit.GibiByte))
+            .read_write(ReadWrite.randrw)
+            .io_engine(IoEngine.libaio)
+            .block_size(Size(1, Unit.Blocks4096))
+            .target(posixpath.join(mount_point, "test_file"))
+        )
+        fio.run()
+
+        if cache.get_dirty_blocks() <= Size.zero():
+            TestRun.fail("Failed to populate cache with dirty data")
+        if core.get_dirty_blocks() <= Size.zero():
+            TestRun.fail("There is no dirty data on core")
+
+    with TestRun.step("Start flushing cache"):
+        flush_pid = TestRun.executor.run_in_background(
+            cli.flush_cache_cmd(str(cache.cache_id))
+        )
+
+    with TestRun.step("Interrupt cache flushing by cache detach"):
+        wait_for_flushing(cache, core)
+        percentage = casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
+        while percentage < 50:
+            percentage = casadm_parser.get_flushing_progress(
+                cache.cache_id, core.core_id
+            )
+
+    with TestRun.step("Detach cache"):
+        try:
+            cache.detach()
+            TestRun.fail("Cache detach during flush succeed, expected: fail")
+        except CmdException:
+            TestRun.LOGGER.info(
+                "Cache detach during flush failed, as expected"
+            )
+        TestRun.executor.wait_cmd_finish(flush_pid)
+        cache.detach()
 
 
 def prepare():
