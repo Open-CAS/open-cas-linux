@@ -1,6 +1,5 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -386,7 +385,6 @@ def test_cas_startup_negative_missing_cache():
 
 
 @pytest.mark.os_dependent
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd]))
 @pytest.mark.require_plugin("power_control")
@@ -492,7 +490,6 @@ def test_failover_config_startup():
 
 
 @pytest.mark.os_dependent
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 def test_failover_config_startup_negative():
     """

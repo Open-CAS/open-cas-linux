@@ -1,6 +1,5 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -15,7 +14,6 @@ from api.cas.cache_config import CacheStatus
 
 
 @pytest.mark.CI
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_standby_activate_the_same_cache_path():

@@ -1,6 +1,5 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -40,7 +39,6 @@ mountpoint = "/tmp/drbd_functional_test"
 test_file_path = f"{mountpoint}/test_file"
 
 
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("metadata_dev", DiskTypeSet([DiskType.nand]))
 @pytest.mark.require_disk("core_dev", DiskTypeSet([DiskType.hdd]))
 @pytest.mark.require_disk("raid_dev1", DiskTypeSet([DiskType.optane]))
@@ -225,7 +223,6 @@ def test_functional_activate_twice_round_trip(filesystem):
     TestRun.LOGGER.end_group()
 
 
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("metadata_dev", DiskTypeSet([DiskType.nand]))
 @pytest.mark.require_disk("core_dev", DiskTypeSet([DiskType.hdd]))
 @pytest.mark.require_disk("raid_dev1", DiskTypeSet([DiskType.optane]))

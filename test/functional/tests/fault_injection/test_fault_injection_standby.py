@@ -1,6 +1,5 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -24,7 +23,6 @@ offset = 1  # offset is expressed in the number of blocks
 
 
 @pytest.mark.CI
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_activate_corrupted():
@@ -82,7 +80,6 @@ def test_activate_corrupted():
 
 
 @pytest.mark.CI
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_load_corrupted():

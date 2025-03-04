@@ -1,6 +1,5 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -38,7 +37,6 @@ from api.cas.core import CoreStatus
 
 
 @pytest.mark.CI
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 def test_standby_neg_cli_params():
     """
@@ -108,7 +106,6 @@ def test_standby_neg_cli_params():
 
 
 @pytest.mark.CI
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 def test_activate_neg_cli_params():
     """
@@ -189,7 +186,6 @@ def test_activate_neg_cli_params():
 
 
 @pytest.mark.CI
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 def test_standby_neg_cli_management():
     """
@@ -266,7 +262,6 @@ def test_standby_neg_cli_management():
 
 
 @pytest.mark.CI
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 def test_start_neg_cli_flags():
     """
@@ -321,7 +316,6 @@ def test_start_neg_cli_flags():
 
 
 @pytest.mark.CI
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 def test_activate_without_detach():
     """
@@ -385,7 +379,6 @@ def test_activate_without_detach():
 
 
 @pytest.mark.CI
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("active_cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("standby_cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 def test_activate_neg_cache_line_size():
@@ -477,7 +470,6 @@ def test_activate_neg_cache_line_size():
 
 
 @pytest.mark.CI
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_standby_init_with_preexisting_metadata():
@@ -536,7 +528,6 @@ def test_standby_init_with_preexisting_metadata():
 
 
 @pytest.mark.CI
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("filesystem", Filesystem)
@@ -588,7 +579,6 @@ def test_standby_init_with_preexisting_filesystem(filesystem):
 
 
 @pytest.mark.CI
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("caches", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("caches"))
 def test_standby_activate_with_corepool():
@@ -647,7 +637,6 @@ def test_standby_activate_with_corepool():
 
 
 @pytest.mark.CI
-@pytest.mark.skip(reason="Standby mode is not supported")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 def test_standby_start_stop(cache_line_size):
