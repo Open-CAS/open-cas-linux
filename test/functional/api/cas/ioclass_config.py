@@ -185,6 +185,9 @@ class IoClass:
         elif rule in ["extension", "process_name", "file_name_prefix"]:
             allowed_chars = string.ascii_letters + string.digits
             rule += f":{''.join(random.choices(allowed_chars, k=random.randint(1, 10)))}"
+        elif rule == "io_direction":
+            direction = random.choice(["read", "write"])
+            rule += f":{direction}"
         if random.randrange(2):
             rule += "&done"
         return rule
