@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -20,12 +20,11 @@ from test_tools.dd import Dd
 @pytest.mark.parametrize("purge_target", ["cache", "core"])
 def test_purge(purge_target):
     """
-        title: Call purge without and with `--script` switch
-        description: |
-          Check if purge is called only when `--script` switch is used.
+        title: Basic test for purge command
+        description: Check purge command behaviour with and without '--script' flag
         pass_criteria:
-          - casadm returns an error when `--script` is missing
-          - cache is wiped when purge command is used properly
+          - Error returned when '--script' is missing
+          - Cache is wiped when purge command is used properly
     """
     with TestRun.step("Prepare devices"):
         cache_device = TestRun.disks["cache"]
@@ -41,7 +40,7 @@ def test_purge(purge_target):
         cache = casadm.start_cache(cache_device, force=True)
         core = casadm.add_core(cache, core_device)
 
-    with TestRun.step("Trigger IO to prepared cache instance"):
+    with TestRun.step("Trigger I/O to prepared cache instance"):
         dd = (
             Dd()
             .input("/dev/zero")
@@ -79,8 +78,3 @@ def test_purge(purge_target):
         if cache.get_statistics().usage_stats.occupancy.get_value() != 0:
             TestRun.fail(f"{cache.get_statistics().usage_stats.occupancy.get_value()}")
             TestRun.fail(f"Purge {purge_target} should invalidate all cache lines!")
-
-    with TestRun.step(
-        f"Stop cache"
-    ):
-        casadm.stop_all_caches()

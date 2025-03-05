@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -57,7 +57,7 @@ def test_multistream_seq_cutoff_functional(streams_number, threshold):
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Start cache in Write-Back"):
+    with TestRun.step(f"Start cache in Write-Back cache mode"):
         cache_disk = TestRun.disks["cache"]
         core_disk = TestRun.disks["core"]
         cache = casadm.start_cache(cache_disk, CacheMode.WB, force=True)
@@ -105,7 +105,7 @@ def test_multistream_seq_cutoff_functional(streams_number, threshold):
 
     with TestRun.step(
         "Write random number of 4k block requests to each stream and check if all "
-        "writes were sent in pass-through mode"
+        "writes were sent in pass-through"
     ):
         core_statistics_before = core.get_statistics([StatsFilter.req, StatsFilter.blk])
         random.shuffle(offsets)
@@ -170,7 +170,7 @@ def test_multistream_seq_cutoff_stress_raw(streams_seq_rand):
     with TestRun.step("Reset core statistics counters"):
         core.reset_counters()
 
-    with TestRun.step("Run FIO on core device"):
+    with TestRun.step("Run fio on core device"):
         stream_size = min(core_disk.size / 256, Size(256, Unit.MebiByte))
         sequential_streams = streams_seq_rand[0]
         random_streams = streams_seq_rand[1]
@@ -216,12 +216,14 @@ def test_multistream_seq_cutoff_stress_fs(streams_seq_rand, filesystem, cache_mo
         - No system crash
     """
 
-    with TestRun.step(f"Disable udev"):
+    with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step("Create filesystem on core device"):
+    with TestRun.step("Prepare cache and core devices"):
         cache_disk = TestRun.disks["cache"]
         core_disk = TestRun.disks["core"]
+
+    with TestRun.step("Create filesystem on core device"):
         core_disk.create_filesystem(filesystem)
 
     with TestRun.step("Start cache and add core"):
@@ -231,7 +233,7 @@ def test_multistream_seq_cutoff_stress_fs(streams_seq_rand, filesystem, cache_mo
     with TestRun.step("Mount core"):
         core.mount(mount_point=mount_point)
 
-    with TestRun.step(f"Set seq-cutoff policy to always and threshold to 20MiB"):
+    with TestRun.step("Set sequential cutoff policy to always and threshold to 20MiB"):
         core.set_seq_cutoff_policy(policy=SeqCutOffPolicy.always)
         core.set_seq_cutoff_threshold(threshold=Size(20, Unit.MebiByte))
 
@@ -279,7 +281,7 @@ def run_dd(target_path, count, seek):
     TestRun.LOGGER.info(f"dd command:\n{dd}")
     output = dd.run()
     if output.exit_code != 0:
-        raise CmdException("Error during IO", output)
+        raise CmdException("Error during I/O", output)
 
 
 def check_statistics(stats_before, stats_after, expected_pt_writes, expected_writes_to_cache):
