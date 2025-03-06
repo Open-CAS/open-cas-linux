@@ -221,6 +221,42 @@ static int _cas_cls_string_ctr(struct cas_classifier *cls,
 	return 0;
 }
 
+/* IO direction condition constructor. @data is expected to contain string
+ * translated to IO direction.
+ */
+static int _cas_cls_direction_ctr(struct cas_classifier *cls,
+		struct cas_cls_condition *c, char *data)
+{
+	uint64_t direction;
+	struct cas_cls_numeric *ctx;
+
+	if (!data) {
+		CAS_CLS_MSG(KERN_ERR, "Missing IO direction specifier\n");
+		return -EINVAL;
+	}
+
+	if (strncmp("read", data, 5) == 0) {
+		direction = READ;
+	} else if (strncmp("write", data, 6) == 0) {
+		direction = WRITE;
+	} else {
+		CAS_CLS_MSG(KERN_ERR, "Invalid IO direction specifier '%s'\n"
+			" allowed specifiers: 'read', 'write'\n", data);
+		return -EINVAL;
+	}
+
+	ctx = kmalloc(sizeof(*ctx), GFP_KERNEL);
+	if (!ctx)
+		return -ENOMEM;
+
+	ctx->operator = cas_cls_numeric_eq;
+	ctx->v_u64 = direction;
+
+	c->context = ctx;
+
+	return 0;
+}
+
 /* Unsigned int numeric test function */
 static cas_cls_eval_t _cas_cls_numeric_test_u(
 		struct cas_cls_condition *c, uint64_t val)
@@ -664,6 +700,14 @@ static cas_cls_eval_t _cas_cls_request_size_test(
 	return _cas_cls_numeric_test_u(c, CAS_BIO_BISIZE(io->bio));
 }
 
+/* Request IO direction test function */
+static cas_cls_eval_t _cas_cls_request_direction_test(
+		struct cas_classifier *cls, struct cas_cls_condition *c,
+		struct cas_cls_io *io, ocf_part_id_t part_id)
+{
+	return _cas_cls_numeric_test_u(c, bio_data_dir(io->bio));
+}
+
 /* Array of condition handlers */
 static struct cas_cls_condition_handler _handlers[] = {
 	{ "done", _cas_cls_done_test, _cas_cls_generic_ctr },
@@ -689,6 +733,8 @@ static struct cas_cls_condition_handler _handlers[] = {
 					_cas_cls_generic_dtr },
 	{ "request_size", _cas_cls_request_size_test, _cas_cls_numeric_ctr,
 					_cas_cls_generic_dtr },
+	{ "io_direction", _cas_cls_request_direction_test,
+			_cas_cls_direction_ctr,	_cas_cls_generic_dtr },
 #ifdef CAS_WLTH_SUPPORT
 	{ "wlth", _cas_cls_wlth_test, _cas_cls_numeric_ctr,
 			_cas_cls_generic_dtr},
@@ -757,7 +803,7 @@ static struct cas_cls_condition * _cas_cls_create_condition(
 	return c;
 }
 
-/* Read single codnition from text input and return cas_cls_condition
+/* Read single condition from text input and return cas_cls_condition
  * representation. *rule pointer is advanced to point to next condition.
  * Input @rule string is modified to speed up parsing (selected bytes are
  * overwritten with 0).
@@ -765,7 +811,7 @@ static struct cas_cls_condition * _cas_cls_create_condition(
  * *l_op contains logical operator from previous condition and gets overwritten
  * with operator read from currently parsed condition.
  *
- * Returns pointer to condition if successfull.
+ * Returns pointer to condition if successful.
  * Returns NULL if no more conditions in string.
  * Returns error pointer in case of syntax or runtime error.
  */
@@ -1050,9 +1096,11 @@ int cas_cls_rule_create(ocf_cache_t cache,
 		 return -ENOMEM;
 
 	r = _cas_cls_rule_create(cls, part_id, _rule);
-	if (IS_ERR(r))
+	if (IS_ERR(r)) {
+		CAS_CLS_DEBUG_MSG(
+			"Cannot create rule: %s => %d\n", rule, part_id);
 		ret = _cas_cls_rule_err_to_cass_err(PTR_ERR(r));
-	else {
+	} else {
 		CAS_CLS_DEBUG_MSG("Created rule: %s => %d\n", rule, part_id);
 		*cls_rule = r;
 		ret = 0;
