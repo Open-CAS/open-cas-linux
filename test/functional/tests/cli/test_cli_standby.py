@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2024-2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -44,8 +44,8 @@ def test_standby_neg_cli_params():
     """
     title: Verifying parameters for starting a standby cache instance
     description: |
-      Try executing the standby init command with required arguments missing or
-      disallowed arguments present.
+        Try executing the standby init command with required arguments missing or
+        disallowed arguments present.
     pass_criteria:
       - The execution is unsuccessful for all improper argument combinations
       - A proper error message is displayed for unsuccessful executions
@@ -120,11 +120,12 @@ def test_activate_neg_cli_params():
         -The execution is unsuccessful for all improper argument combinations
         -A proper error message is displayed for unsuccessful executions
     """
+    cache_id = 1
+
     with TestRun.step("Prepare the device for the cache."):
         cache_device = TestRun.disks["cache"]
         cache_device.create_partitions([Size(500, Unit.MebiByte)])
         cache_device = cache_device.partitions[0]
-        cache_id = 1
 
     with TestRun.step("Init standby cache"):
         cache_dev = Device(cache_device.path)
@@ -201,6 +202,8 @@ def test_standby_neg_cli_management():
       - The execution is successful for allowed management commands
       - A proper error message is displayed for unsuccessful executions
     """
+    cache_id = 1
+
     with TestRun.step("Prepare the device for the cache."):
         device = TestRun.disks["cache"]
         device.create_partitions([Size(500, Unit.MebiByte), Size(500, Unit.MebiByte)])
@@ -208,7 +211,6 @@ def test_standby_neg_cli_management():
         core_device = device.partitions[1]
 
     with TestRun.step("Prepare the standby instance"):
-        cache_id = 1
         cache = casadm.standby_init(
             cache_dev=cache_device, cache_id=cache_id,
             cache_line_size=CacheLineSize.LINE_32KiB, force=True
@@ -272,19 +274,19 @@ def test_start_neg_cli_flags():
     """
     title: Blocking standby start command with mutually exclusive flags
     description: |
-       Try executing the standby start command with different combinations of mutually
-       exclusive flags.
+        Try executing the standby start command with different combinations of mutually
+        exclusive flags.
     pass_criteria:
       - The command execution is unsuccessful for commands with mutually exclusive flags
       - A proper error message is displayed
     """
+    cache_id = 1
+    cache_line_size = 32
 
     with TestRun.step("Prepare the device for the cache."):
         cache_device = TestRun.disks["cache"]
         cache_device.create_partitions([Size(500, Unit.MebiByte)])
         cache_device = cache_device.partitions[0]
-        cache_id = 1
-        cache_line_size = 32
 
     with TestRun.step("Try to start standby cache with mutually exclusive parameters"):
         init_required_params = f' --cache-device {cache_device.path}' \
@@ -327,19 +329,19 @@ def test_activate_without_detach():
     """
     title: Activate cache without detach command.
     description: |
-       Try activate passive cache without detach command before activation.
+        Try to activate passive cache without detach command before activation.
     pass_criteria:
       - The activation is not possible
       - The cache remains in Standby state after unsuccessful activation
       - The cache exported object is present after an unsuccessful activation
     """
+    cache_id = 1
+    cache_exp_obj_name = f"cas-cache-{cache_id}"
 
     with TestRun.step("Prepare the device for the cache."):
         cache_dev = TestRun.disks["cache"]
         cache_dev.create_partitions([Size(500, Unit.MebiByte)])
         cache_dev = cache_dev.partitions[0]
-        cache_id = 1
-        cache_exp_obj_name = f"cas-cache-{cache_id}"
 
     with TestRun.step("Start cache instance."):
         cache = casadm.start_cache(cache_dev=cache_dev, cache_id=cache_id)
@@ -390,15 +392,18 @@ def test_activate_without_detach():
 @pytest.mark.require_disk("standby_cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 def test_activate_neg_cache_line_size():
     """
-       title: Blocking cache with mismatching cache line size activation.
-       description: |
-          Try restoring cache operations from a replicated cache that was initialized
-          with different cache line size than the original cache.
-       pass_criteria:
-         - The activation is cancelled
-         - The cache remains in Standby detached state after an unsuccessful activation
-         - A proper error message is displayed
+    title: Blocking cache with mismatching cache line size activation.
+    description: |
+        Try restoring cache operations from a replicated cache that was initialized
+        with different cache line size than the original cache.
+    pass_criteria:
+      - The activation is cancelled
+      - The cache remains in Standby detached state after an unsuccessful activation
+      - A proper error message is displayed
     """
+    cache_id = 1
+    active_cls, standby_cls = CacheLineSize.LINE_4KiB, CacheLineSize.LINE_16KiB
+    cache_exp_obj_name = f"cas-cache-{cache_id}"
 
     with TestRun.step("Prepare cache devices"):
         active_cache_dev = TestRun.disks["active_cache"]
@@ -407,73 +412,69 @@ def test_activate_neg_cache_line_size():
         standby_cache_dev = TestRun.disks["standby_cache"]
         standby_cache_dev.create_partitions([Size(500, Unit.MebiByte)])
         standby_cache_dev = standby_cache_dev.partitions[0]
-        cache_id = 1
-        active_cls, standby_cls = CacheLineSize.LINE_4KiB, CacheLineSize.LINE_16KiB
-        cache_exp_obj_name = f"cas-cache-{cache_id}"
 
-        with TestRun.step("Start active cache instance."):
-            active_cache = casadm.start_cache(cache_dev=active_cache_dev, cache_id=cache_id,
-                                              cache_line_size=active_cls)
+    with TestRun.step("Start active cache instance."):
+        active_cache = casadm.start_cache(cache_dev=active_cache_dev, cache_id=cache_id,
+                                          cache_line_size=active_cls)
 
-        with TestRun.step("Create dump file with cache metadata"):
-            with TestRun.step("Get metadata size"):
-                dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
-                md_size = dmesg.get_metadata_size_on_device(dmesg_out)
+    with TestRun.step("Get metadata size"):
+        dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
+        md_size = dmesg.get_metadata_size_on_device(dmesg_out)
 
-            with TestRun.step("Dump the metadata of the cache"):
-                dump_file_path = "/tmp/test_activate_corrupted.dump"
-                md_dump = File(dump_file_path)
-                md_dump.remove(force=True, ignore_errors=True)
-                dd_count = int(md_size / Size(1, Unit.MebiByte)) + 1
-                (
-                    Dd().input(active_cache_dev.path)
-                    .output(md_dump.full_path)
-                    .block_size(Size(1, Unit.MebiByte))
-                    .count(dd_count)
-                    .run()
-                )
-                md_dump.refresh_item()
+    with TestRun.step("Dump the metadata of the cache"):
+        dump_file_path = "/tmp/test_activate_corrupted.dump"
+        md_dump = File(dump_file_path)
+        md_dump.remove(force=True, ignore_errors=True)
+        dd_count = int(md_size / Size(1, Unit.MebiByte)) + 1
+        (
+            Dd().input(active_cache_dev.path)
+            .output(md_dump.full_path)
+            .block_size(Size(1, Unit.MebiByte))
+            .count(dd_count)
+            .run()
+        )
+        md_dump.refresh_item()
 
-        with TestRun.step("Stop cache instance."):
-            active_cache.stop()
+    with TestRun.step("Stop cache instance."):
+        active_cache.stop()
 
-        with TestRun.step("Start standby cache instance."):
-            standby_cache = casadm.standby_init(cache_dev=standby_cache_dev, cache_id=cache_id,
-                                                cache_line_size=standby_cls,
-                                                force=True)
+    with TestRun.step("Start standby cache instance."):
+        standby_cache = casadm.standby_init(cache_dev=standby_cache_dev, cache_id=cache_id,
+                                            cache_line_size=standby_cls,
+                                            force=True)
 
-        with TestRun.step("Verify if the cache exported object appeared in the system"):
-            output = TestRun.executor.run_expect_success(
-                f"ls -la /dev/ | grep {cache_exp_obj_name}"
-            )
-            if output.stdout[0] != "b":
-                TestRun.fail("The cache exported object is not a block device")
+    with TestRun.step("Verify if the cache exported object appeared in the system"):
+        output = TestRun.executor.run_expect_success(
+            f"ls -la /dev/ | grep {cache_exp_obj_name}"
+        )
+        if output.stdout[0] != "b":
+            TestRun.fail("The cache exported object is not a block device")
 
-        with TestRun.step("Detach standby cache instance"):
-            standby_cache.standby_detach()
+    with TestRun.step("Detach standby cache instance"):
+        standby_cache.standby_detach()
 
-        with TestRun.step(f"Copy changed metadata to the standby instance"):
-            Dd().input(md_dump.full_path).output(standby_cache_dev.path).run()
-            sync()
+    with TestRun.step(f"Copy changed metadata to the standby instance"):
+        Dd().input(md_dump.full_path).output(standby_cache_dev.path).run()
+        sync()
 
-        with TestRun.step("Try to activate cache instance"):
-            with pytest.raises(CmdException) as cmdExc:
-                output = standby_cache.standby_activate(standby_cache_dev)
-                if not check_stderr_msg(output, cache_line_size_mismatch):
-                    TestRun.LOGGER.error(
-                        f'Expected error message in format '
-                        f'"{cache_line_size_mismatch[0]}"'
-                        f'Got "{output.stderr}" instead.'
-                    )
-            assert "Failed to activate standby cache." in str(cmdExc.value)
-
-        with TestRun.step("Verify if cache is in standby detached state after failed activation"):
-            cache_status = standby_cache.get_status()
-            if cache_status != CacheStatus.standby_detached:
+    with TestRun.step("Try to activate cache instance"):
+        with pytest.raises(CmdException) as cmdExc:
+            output = standby_cache.standby_activate(standby_cache_dev)
+            if not check_stderr_msg(output, cache_line_size_mismatch):
                 TestRun.LOGGER.error(
-                    f'Expected Cache state: "{CacheStatus.standby.value}" '
-                    f'Got "{cache_status.value}" instead.'
+                    f'Expected error message in format '
+                    f'"{cache_line_size_mismatch[0]}"'
+                    f'Got "{output.stderr}" instead.'
                 )
+        assert "Failed to activate standby cache." in str(cmdExc.value)
+
+    with TestRun.step("Verify if cache is in standby detached state after failed activation"):
+        cache_status = standby_cache.get_status()
+        if cache_status != CacheStatus.standby_detached:
+            TestRun.LOGGER.error(
+                f'Expected Cache state: "{CacheStatus.standby.value}" '
+                f'Got "{cache_status.value}" instead.'
+            )
 
 
 @pytest.mark.CI
@@ -489,17 +490,18 @@ def test_standby_init_with_preexisting_metadata():
       - initialize cache without force flag fails and informative error message is printed
       - initialize cache with force flag succeeds and passive instance is present in system
     """
+    cache_line_size = CacheLineSize.LINE_32KiB
+    cache_id = 1
+
     with TestRun.step("Prepare device for cache"):
         cache_device = TestRun.disks["cache"]
         cache_device.create_partitions([Size(200, Unit.MebiByte)])
         cache_device = cache_device.partitions[0]
-        cls = CacheLineSize.LINE_32KiB
-        cache_id = 1
 
     with TestRun.step("Start standby cache instance"):
         cache = casadm.standby_init(
             cache_dev=cache_device,
-            cache_line_size=cls,
+            cache_line_size=cache_line_size,
             cache_id=cache_id,
             force=True,
         )
@@ -512,7 +514,7 @@ def test_standby_init_with_preexisting_metadata():
             standby_init_cmd(
                 cache_dev=cache_device.path,
                 cache_id=str(cache_id),
-                cache_line_size=str(int(cls.value.value / Unit.KibiByte.value)),
+                cache_line_size=str(int(cache_line_size.value.value / Unit.KibiByte.value)),
             )
         )
         if not check_stderr_msg(output, start_cache_with_existing_metadata):
@@ -524,7 +526,7 @@ def test_standby_init_with_preexisting_metadata():
     with TestRun.step("Try initialize cache with force flag"):
         casadm.standby_init(
             cache_dev=cache_device,
-            cache_line_size=cls,
+            cache_line_size=cache_line_size,
             cache_id=cache_id,
             force=True,
         )
@@ -549,12 +551,13 @@ def test_standby_init_with_preexisting_filesystem(filesystem):
       - initialize cache without force flag fails and informative error message is printed
       - initialize cache with force flag succeeds and passive instance is present in system
     """
+    cache_line_size = CacheLineSize.LINE_32KiB
+    cache_id = 1
+
     with TestRun.step("Prepare device for cache"):
         cache_device = TestRun.disks["cache"]
         cache_device.create_partitions([Size(200, Unit.MebiByte)])
         cache_device = cache_device.partitions[0]
-        cls = CacheLineSize.LINE_32KiB
-        cache_id = 1
 
     with TestRun.step("Create filesystem on cache device partition"):
         cache_device.create_filesystem(filesystem)
@@ -564,7 +567,7 @@ def test_standby_init_with_preexisting_filesystem(filesystem):
             standby_init_cmd(
                 cache_dev=cache_device.path,
                 cache_id=str(cache_id),
-                cache_line_size=str(int(cls.value.value / Unit.KibiByte.value)),
+                cache_line_size=str(int(cache_line_size.value.value / Unit.KibiByte.value)),
             )
         )
         if not check_stderr_msg(output, standby_init_with_existing_filesystem):
@@ -576,7 +579,7 @@ def test_standby_init_with_preexisting_filesystem(filesystem):
     with TestRun.step("Try initialize cache with force flag"):
         casadm.standby_init(
             cache_dev=cache_device,
-            cache_line_size=cls,
+            cache_line_size=cache_line_size,
             cache_id=cache_id,
             force=True,
         )
@@ -593,13 +596,18 @@ def test_standby_init_with_preexisting_filesystem(filesystem):
 @pytest.mark.require_disk("core", DiskTypeLowerThan("caches"))
 def test_standby_activate_with_corepool():
     """
-    title: Activate standby cache instance with corepool
+    title: Activate standby cache instance with core pool
     description: |
         Activation of standby cache with core taken from core pool
     pass_criteria:
-        - During activate metadata on the device match with metadata in DRAM
-        - Core is in active state after activate
+      - During activate metadata on the device match with metadata in DRAM
+      - Core is in active state after activate
     """
+    cache_id = 1
+    core_id = 1
+    cache_exp_obj_name = f"cas-cache-{cache_id}"
+    cache_line_size = CacheLineSize.LINE_16KiB
+
     with TestRun.step("Prepare cache and core devices"):
         caches_dev = TestRun.disks["caches"]
         caches_dev.create_partitions([Size(500, Unit.MebiByte), Size(500, Unit.MebiByte)])
@@ -609,13 +617,8 @@ def test_standby_activate_with_corepool():
         core_dev.create_partitions([Size(200, Unit.MebiByte)])
         core_dev = core_dev.partitions[0]
 
-        cache_id = 1
-        core_id = 1
-        cache_exp_obj_name = f"cas-cache-{cache_id}"
-        cls = CacheLineSize.LINE_16KiB
-
     with TestRun.step("Start regular cache instance"):
-        cache = casadm.start_cache(cache_dev=active_cache_dev, cache_line_size=cls,
+        cache = casadm.start_cache(cache_dev=active_cache_dev, cache_line_size=cache_line_size,
                                    cache_id=cache_id)
 
     with TestRun.step("Add core to regular cache instance"):
@@ -629,7 +632,7 @@ def test_standby_activate_with_corepool():
 
     with TestRun.step("Start standby cache instance."):
         standby_cache = casadm.standby_init(cache_dev=standby_cache_dev, cache_id=cache_id,
-                                            cache_line_size=cls,
+                                            cache_line_size=cache_line_size,
                                             force=True)
 
     with TestRun.step(f"Copy changed metadata to the standby instance"):
@@ -652,12 +655,12 @@ def test_standby_activate_with_corepool():
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 def test_standby_start_stop(cache_line_size):
     """
-        title: Start and stop a standby cache instance.
-        description: Test if cache can be started in standby state and stopped without activation.
-        pass_criteria:
-          - A cache exported object appears after starting a cache in standby state
-          - The data written to the cache exported object committed on the underlying cache device
-          - The cache exported object disappears after stopping the standby cache instance
+    title: Start and stop a standby cache instance.
+    description: Test if cache can be started in standby state and stopped without activation.
+    pass_criteria:
+      - A cache exported object appears after starting a cache in standby state
+      - The data written to the cache exported object committed on the underlying cache device
+      - The cache exported object disappears after stopping the standby cache instance
     """
     with TestRun.step("Prepare a cache device"):
         cache_size = Size(500, Unit.MebiByte)

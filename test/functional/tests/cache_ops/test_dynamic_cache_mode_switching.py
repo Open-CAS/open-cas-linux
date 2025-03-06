@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -46,7 +46,7 @@ def test_cache_stop_and_load(cache_mode):
     """
     title: Test for stopping and loading cache back with dynamic cache mode switching.
     description: |
-        Validate the ability of the CAS to switch cache modes at runtime and
+        Validate the ability to switch cache modes at runtime and
         check if all of them are working properly after switching and
         after stopping and reloading cache back.
         Check also other parameters consistency after reload.
@@ -138,10 +138,8 @@ def test_cache_stop_and_load(cache_mode):
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_cache_mode_switching_during_io(cache_mode_1, cache_mode_2, flush, io_mode):
     """
-    title: Test for dynamic cache mode switching during IO.
-    description: |
-        Validate the ability of CAS to switch cache modes
-        during working IO on CAS device.
+    title: Test for dynamic cache mode switching during I/O.
+    description: Validate the ability to switch cache modes during I/O on exported object.
     pass_criteria:
       - Cache mode is switched without errors.
     """
@@ -182,7 +180,7 @@ def test_cache_mode_switching_during_io(cache_mode_1, cache_mode_2, flush, io_mo
     ):
         cache.set_cache_mode(cache_mode=cache_mode_2, flush=flush)
 
-    with TestRun.step(f"Check if cache mode has switched properly during IO"):
+    with TestRun.step("Check if cache mode has switched properly during I/O"):
         cache_mode_after_switch = cache.get_cache_mode()
         if cache_mode_after_switch != cache_mode_2:
             TestRun.fail(
@@ -229,7 +227,7 @@ def run_io_and_verify(cache, core, io_mode):
             ):
                 TestRun.fail(
                     "Write-Back cache mode is not working properly! "
-                    "There should be some writes to CAS device and none to the core"
+                    "There should be some writes to exported object and none to the core"
                 )
         case CacheMode.PT:
             if (

@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -18,11 +18,11 @@ def test_remove_multilevel_core():
     """
     title: Test of the ability to remove a core used in a multilevel cache.
     description: |
-        Negative test if OpenCAS does not allow to remove a core when the related exported object
+        Negative test for removing a core when the related exported object
         is used as a core device for another cache instance.
     pass_criteria:
       - No system crash.
-      - OpenCAS does not allow removing a core used in a multilevel cache instance.
+      - Removing a core used in a multilevel cache instance is forbidden.
     """
 
     with TestRun.step("Prepare cache and core devices"):
