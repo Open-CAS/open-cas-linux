@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -44,6 +44,7 @@ parametrized_keywords = [
     "pid",
     "file_offset",
     "request_size",  # number - based
+    "io_direction",
 ]
 parameterless_keywords = ["metadata", "direct", "done"]
 
@@ -125,7 +126,7 @@ def __get_fuzzed_parameters(parameters):
     for index, param in enumerate(parameters):
         if index < TestRun.usr.fuzzy_iter_count // 10:
             param = param.decode("ascii", "ignore")
-            i = index % len(parametrized_keywords) + len(parameterless_keywords) + 1
+            i = index % (len(parametrized_keywords) + len(parameterless_keywords) + 1)
             match i:
                 case 1:
                     fuzzed_parameters.append(f"directory:{param}")
@@ -153,6 +154,8 @@ def __get_fuzzed_parameters(parameters):
                     fuzzed_parameters.append(f"direct{'' if i % 10 == 0 else param}")
                 case 13:
                     fuzzed_parameters.append(f"done{'' if i % 10 == 0 else param}")
+                case 14:
+                    fuzzed_parameters.append(f"io_direction:{param}")
                 case _:
                     fuzzed_parameters.append(param)
         else:
@@ -218,6 +221,8 @@ def __validate_single_condition(value: str):
     if condition_key in ["directory", "file_name_prefix", "extension", "process_name"]:
         if 0 < len(condition_value) <= 255:
             return True
+    elif condition_key == "io_direction":
+        return condition_value in ["read", "write"]
     elif condition_key in [
         "file_size",
         "io_class",
