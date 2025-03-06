@@ -18,6 +18,7 @@ modules.order
 __pycache__/
 *.py[cod]
 *$py.class
+*.gz
 
 casadm/casadm
 modules/include/ocf
