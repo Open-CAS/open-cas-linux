@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -65,10 +65,10 @@ def test_cleaning_policies_in_write_back(cleaning_policy: CleaningPolicy):
         cache.set_cleaning_policy(cleaning_policy=cleaning_policy)
         set_cleaning_policy_params(cache, cleaning_policy)
 
-    with TestRun.step("Check for running CAS cleaner"):
+    with TestRun.step("Check for running cleaner process"):
         output = TestRun.executor.run(f"pgrep {cas_cleaner_process_name}")
         if output.exit_code != 0:
-            TestRun.fail("CAS cleaner process is not running!")
+            TestRun.fail("Cleaner process is not running!")
 
     with TestRun.step(f"Add {cores_count} cores to the cache"):
         cores = [cache.add_core(partition) for partition in core_dev.partitions]
@@ -133,10 +133,10 @@ def test_cleaning_policies_in_write_through(cleaning_policy):
         cache.set_cleaning_policy(cleaning_policy=cleaning_policy)
         set_cleaning_policy_params(cache, cleaning_policy)
 
-    with TestRun.step("Check for running CAS cleaner"):
+    with TestRun.step("Check for running cleaner process"):
         output = TestRun.executor.run(f"pgrep {cas_cleaner_process_name}")
         if output.exit_code != 0:
-            TestRun.fail("CAS cleaner process is not running!")
+            TestRun.fail("Cleaner process is not running!")
 
     with TestRun.step(f"Add {cores_count} cores to the cache"):
         cores = [cache.add_core(partition) for partition in core_dev.partitions]
@@ -193,12 +193,12 @@ def set_cleaning_policy_params(cache, cleaning_policy):
 
                 if current_acp_params.wake_up_time != acp_params.wake_up_time:
                     failed_params += (
-                        f"Wake Up time is {current_acp_params.wake_up_time}, "
+                        f"Wake up time is {current_acp_params.wake_up_time}, "
                         f"should be {acp_params.wake_up_time}\n"
                     )
                 if current_acp_params.flush_max_buffers != acp_params.flush_max_buffers:
                     failed_params += (
-                        f"Flush Max Buffers is {current_acp_params.flush_max_buffers}, "
+                        f"Flush max buffers is {current_acp_params.flush_max_buffers}, "
                         f"should be {acp_params.flush_max_buffers}\n"
                     )
                 TestRun.LOGGER.error(f"ACP parameters did not switch properly:\n{failed_params}")
@@ -215,22 +215,22 @@ def set_cleaning_policy_params(cache, cleaning_policy):
                 failed_params = ""
                 if current_alru_params.wake_up_time != alru_params.wake_up_time:
                     failed_params += (
-                        f"Wake Up time is {current_alru_params.wake_up_time}, "
+                        f"Wake up time is {current_alru_params.wake_up_time}, "
                         f"should be {alru_params.wake_up_time}\n"
                     )
                 if current_alru_params.staleness_time != alru_params.staleness_time:
                     failed_params += (
-                        f"Staleness Time is {current_alru_params.staleness_time}, "
+                        f"Staleness time is {current_alru_params.staleness_time}, "
                         f"should be {alru_params.staleness_time}\n"
                     )
                 if current_alru_params.flush_max_buffers != alru_params.flush_max_buffers:
                     failed_params += (
-                        f"Flush Max Buffers is {current_alru_params.flush_max_buffers}, "
+                        f"Flush max buffers is {current_alru_params.flush_max_buffers}, "
                         f"should be {alru_params.flush_max_buffers}\n"
                     )
                 if current_alru_params.activity_threshold != alru_params.activity_threshold:
                     failed_params += (
-                        f"Activity Threshold is {current_alru_params.activity_threshold}, "
+                        f"Activity threshold is {current_alru_params.activity_threshold}, "
                         f"should be {alru_params.activity_threshold}\n"
                     )
                 TestRun.LOGGER.error(f"ALRU parameters did not switch properly:\n{failed_params}")
@@ -245,9 +245,9 @@ def check_cleaning_policy_operation(
         case CleaningPolicy.alru:
             if core_writes_before_wait_for_cleaning != Size.zero():
                 TestRun.LOGGER.error(
-                    "CAS cleaner started to clean dirty data right after IO! "
+                    "Cleaner process started to clean dirty data right after I/O! "
                     "According to ALRU parameters set in this test cleaner should "
-                    "wait 10 seconds after IO before cleaning dirty data"
+                    "wait 10 seconds after I/O before cleaning dirty data"
                 )
             if core_writes_after_wait_for_cleaning <= core_writes_before_wait_for_cleaning:
                 TestRun.LOGGER.error(
@@ -266,9 +266,9 @@ def check_cleaning_policy_operation(
         case CleaningPolicy.acp:
             if core_writes_before_wait_for_cleaning == Size.zero():
                 TestRun.LOGGER.error(
-                    "CAS cleaner did not start cleaning dirty data right after IO! "
+                    "Cleaner process did not start cleaning dirty data right after I/O! "
                     "According to ACP policy cleaner should start "
-                    "cleaning dirty data right after IO"
+                    "cleaning dirty data right after I/O"
                 )
             if core_writes_after_wait_for_cleaning <= core_writes_before_wait_for_cleaning:
                 TestRun.LOGGER.error(

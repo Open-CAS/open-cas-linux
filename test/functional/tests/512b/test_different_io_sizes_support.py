@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -28,11 +28,10 @@ block_sizes = [1, 2, 4, 5, 8, 16, 32, 64, 128]
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd, DiskType.nand]))
 def test_support_different_io_size(cache_mode):
     """
-    title: OpenCAS supports different IO sizes
-    description: |
-        OpenCAS supports IO of size in rage from 512b to 128K
+    title: Support for different I/O sizes
+    description: Verify support for I/O of size in rage from 512B to 128KiB
     pass_criteria:
-      - No IO errors
+      - No I/O errors
     """
 
     with TestRun.step("Prepare cache and core devices"):
@@ -47,7 +46,7 @@ def test_support_different_io_size(cache_mode):
         )
         core = cache.add_core(core_disk.partitions[0])
 
-    with TestRun.step("Load the default ioclass config file"):
+    with TestRun.step("Load the default io class config file"):
         cache.load_io_class(opencas_ioclass_conf_path)
 
     with TestRun.step("Create a filesystem on the core device and mount it"):

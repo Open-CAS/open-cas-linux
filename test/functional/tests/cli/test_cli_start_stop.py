@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -21,12 +21,12 @@ CORE_ID_RANGE = (0, 4095)
 @pytest.mark.parametrize("shortcut", [True, False])
 def test_cli_start_stop_default_id(shortcut):
     """
-        title: Test for starting a cache with a default ID - short and long command
-        description: |
-          Start a new cache with a default ID and then stop this cache.
-        pass_criteria:
-          - The cache has successfully started with default ID
-          - The cache has successfully stopped
+    title: Test for starting a cache with a default ID - short and long command
+    description: |
+        Start a new cache with a default ID and then stop this cache.
+    pass_criteria:
+      - The cache has successfully started with default ID
+      - The cache has successfully stopped
     """
     with TestRun.step("Prepare the device for the cache."):
         cache_device = TestRun.disks['cache']
@@ -62,12 +62,12 @@ def test_cli_start_stop_default_id(shortcut):
 @pytest.mark.parametrize("shortcut", [True, False])
 def test_cli_start_stop_custom_id(shortcut):
     """
-        title: Test for starting a cache with a custom ID - short and long command
-        description: |
-          Start a new cache with a random ID (from allowed pool) and then stop this cache.
-        pass_criteria:
-          - The cache has successfully started with a custom ID
-          - The cache has successfully stopped
+    title: Test for starting a cache with a custom ID - short and long command
+    description: |
+        Start a new cache with a random ID (from allowed pool) and then stop this cache.
+    pass_criteria:
+      - The cache has successfully started with a custom ID
+      - The cache has successfully stopped
     """
     with TestRun.step("Prepare the device for the cache."):
         cache_device = TestRun.disks['cache']
@@ -106,13 +106,13 @@ def test_cli_start_stop_custom_id(shortcut):
 @pytest.mark.parametrize("shortcut", [True, False])
 def test_cli_add_remove_default_id(shortcut):
     """
-        title: Test for adding and removing a core with a default ID - short and long command
-        description: |
-          Start a new cache and add a core to it without passing a core ID as an argument
-          and then remove this core from the cache.
-        pass_criteria:
-          - The core is added to the cache with a default ID
-          - The core is successfully removed from the cache
+    title: Test for adding and removing a core with a default ID - short and long command
+    description: |
+        Start a new cache and add a core to it without passing a core ID as an argument
+        and then remove this core from the cache.
+    pass_criteria:
+      - The core is added to the cache with a default ID
+      - The core is successfully removed from the cache
     """
     with TestRun.step("Prepare the devices."):
         cache_disk = TestRun.disks['cache']
@@ -157,13 +157,13 @@ def test_cli_add_remove_default_id(shortcut):
 @pytest.mark.parametrize("shortcut", [True, False])
 def test_cli_add_remove_custom_id(shortcut):
     """
-        title: Test for adding and removing a core with a custom ID - short and long command
-        description: |
-          Start a new cache and add a core to it with passing a random core ID
-          (from allowed pool) as an argument and then remove this core from the cache.
-        pass_criteria:
-          - The core is added to the cache with a default ID
-          - The core is successfully removed from the cache
+    title: Test for adding and removing a core with a custom ID - short and long command
+    description: |
+        Start a new cache and add a core to it with passing a random core ID
+        (from allowed pool) as an argument and then remove this core from the cache.
+    pass_criteria:
+      - The core is added to the cache with a default ID
+      - The core is successfully removed from the cache
     """
     with TestRun.step("Prepare the devices."):
         cache_disk = TestRun.disks['cache']
@@ -209,13 +209,13 @@ def test_cli_add_remove_custom_id(shortcut):
 @pytest.mark.parametrize("shortcut", [True, False])
 def test_cli_load_and_force(shortcut):
     """
-        title: Test if it is possible to use start command with 'load' and 'force' flag at once
-        description: |
-          Try to start cache with 'load' and 'force' options at the same time
-          and check if it is not possible to do
-        pass_criteria:
-          - Start cache command with both 'force' and 'load' options should fail
-          - Proper message should be received
+    title: Test if it is possible to use start command with 'load' and 'force' flag at once
+    description: |
+        Try to start cache with 'load' and 'force' options at the same time
+        and check if it is not possible to do
+    pass_criteria:
+      - Start cache command with both 'force' and 'load' options should fail
+      - Proper message should be received
     """
     with TestRun.step("Prepare cache."):
         cache_device = TestRun.disks['cache']

@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
+# Copyright(c) 2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -14,7 +15,7 @@ def test_cli_help_spelling():
     title: Spelling test for 'help' command
     description: Validates spelling of 'help' in CLI
     pass criteria:
-    - no spelling mistakes are found
+    - No spelling mistakes are found
     """
 
     cas_dictionary = os.path.join(TestRun.usr.repo_dir, "test", "functional", "resources")

@@ -1,13 +1,13 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
 
 from api.cas import casadm
-from api.cas.cache_config import CacheMode
+from api.cas.cache_config import CacheMode, CacheModeTrait
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.udev import Udev
@@ -20,19 +20,17 @@ dd_count = 100
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrize("cache_mode", [CacheMode.WT, CacheMode.WA, CacheMode.WB])
+@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.InsertRead))
 @pytest.mark.CI()
 def test_ci_read(cache_mode):
     """
-    title: Verification test for write mode: write around
-    description: Verify if write mode: write around, works as expected and cache only reads
-    and does not cache write
+    title: Verification test for caching reads in various cache modes
+    description: Check if reads are properly cached in various cache modes
     pass criteria:
-    - writes are not cached
-    - reads are cached
+      - Reads are cached
     """
 
-    with TestRun.step("Prepare partitions"):
+    with TestRun.step("Prepare cache and core devices"):
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
 
@@ -45,7 +43,7 @@ def test_ci_read(cache_mode):
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Start cache with cache_mode={cache_mode}"):
+    with TestRun.step(f"Start cache in {cache_mode} cache mode"):
         cache = casadm.start_cache(cache_dev=cache_device, cache_id=1, force=True,
                                    cache_mode=cache_mode)
         casadm.add_core(cache, core_device)
@@ -99,7 +97,14 @@ def test_ci_read(cache_mode):
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.CI()
 def test_ci_write_around_write():
-    with TestRun.step("Prepare partitions"):
+    """
+    title: Verification test for writes in Write-Around cache mode
+    description: Validate I/O statistics after writing to exported object in Write-Around cache mode
+    pass criteria:
+      - Writes are not cached
+      - After inserting writes to core, data is read from core and not from cache
+    """
+    with TestRun.step("Prepare cache and core devices"):
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
 
@@ -112,7 +117,7 @@ def test_ci_write_around_write():
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step("Start CAS Linux in Write Around mode"):
+    with TestRun.step("Start cache in Write-Around mode"):
         cache = casadm.start_cache(cache_dev=cache_device, cache_id=1, force=True,
                                    cache_mode=CacheMode.WA)
         casadm.add_core(cache, core_device)
@@ -183,14 +188,14 @@ def test_ci_write_around_write():
         else:
             TestRun.LOGGER.error(f"Writes to cache: {write_cache_delta_1} != 0")
 
-    with TestRun.step("Verify that reads propagated to core"):
+    with TestRun.step("Verify that data was read from core"):
         read_core_delta_2 = read_core_2 - read_core_1
         if read_core_delta_2 == data_write:
             TestRun.LOGGER.info(f"Reads from core: {read_core_delta_2} == {data_write}")
         else:
             TestRun.LOGGER.error(f"Reads from core: {read_core_delta_2} != {data_write}")
 
-    with TestRun.step("Verify that reads did not occur on cache"):
+    with TestRun.step("Verify that data was not read from cache"):
         read_cache_delta_2 = read_cache_2 - read_cache_1
         if read_cache_delta_2.value == 0:
             TestRun.LOGGER.info(f"Reads from cache: {read_cache_delta_2} == 0")
@@ -203,7 +208,15 @@ def test_ci_write_around_write():
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.CI()
 def test_ci_write_through_write():
-    with TestRun.step("Prepare partitions"):
+    """
+        title: Verification test for Write-Through cache mode
+        description: |
+            Validate if reads and writes are cached properly for cache in Write-Through mode
+        pass criteria:
+          - Writes are inserted to cache and core
+          - Reads are not cached
+    """
+    with TestRun.step("Prepare cache and core devices"):
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
 
@@ -216,7 +229,7 @@ def test_ci_write_through_write():
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step("Start CAS Linux in Write Through mode"):
+    with TestRun.step("Start cache in Write-Through mode"):
         cache = casadm.start_cache(cache_dev=cache_device, cache_id=1, force=True,
                                    cache_mode=CacheMode.WT)
         casadm.add_core(cache, core_device)
