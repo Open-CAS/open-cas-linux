@@ -2836,8 +2836,8 @@ int list_caches(unsigned int list_format, bool by_id_path)
 					sizeof(curr_cache->device))) {
 				cas_printf(LOG_WARNING,
 					"WARNING: Cannot resolve path to "
-					"cache. By-id path will be shown for "
-					"that cache.\n");
+					"cache %d. By-id path will be shown "
+					"for that cache.\n", curr_cache->id);
 			}
 		}
 
