@@ -2827,13 +2827,17 @@ int list_caches(unsigned int list_format, bool by_id_path)
 		char cache_ctrl_dev[MAX_STR_LEN] = "-";
 		float cache_flush_prog;
 		float core_flush_prog;
-		bool cache_device_detached;
+		bool cache_device_detached =
+			((curr_cache->state & (1 << ocf_cache_state_standby)) |
+			(curr_cache->state & (1 << ocf_cache_state_detached)));
 
-		if (!by_id_path && !curr_cache->standby_detached) {
+		if (!by_id_path && !cache_device_detached) {
 			if (get_dev_path(curr_cache->device, curr_cache->device,
 					sizeof(curr_cache->device))) {
-				cas_printf(LOG_WARNING, "WARNING: Cannot resolve path "
-					"to cache. By-id path will be shown for that cache.\n");
+				cas_printf(LOG_WARNING,
+					"WARNING: Cannot resolve path to "
+					"cache. By-id path will be shown for "
+					"that cache.\n");
 			}
 		}
 
@@ -2858,11 +2862,6 @@ int list_caches(unsigned int list_format, bool by_id_path)
 						cache_mode_to_name(curr_cache->mode));
 			}
 		}
-
-		cache_device_detached =
-			((curr_cache->state & (1 << ocf_cache_state_standby)) |
-			(curr_cache->state & (1 << ocf_cache_state_detached)))
-			;
 
 		fprintf(intermediate_file[1], TAG(TREE_BRANCH)
 			"%s,%u,%s,%s,%s,%s\n",
