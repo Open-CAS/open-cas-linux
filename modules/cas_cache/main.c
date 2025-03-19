@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -42,9 +43,58 @@ MODULE_PARM_DESC(seq_cut_off_mb,
 ocf_ctx_t cas_ctx;
 struct cas_module cas_module;
 
+static inline uint32_t involuntary_preemption_enabled(void)
+{
+	bool config_dynamic = IS_ENABLED(CONFIG_PREEMPT_DYNAMIC);
+	bool config_rt = IS_ENABLED(CONFIG_PREEMPT_RT);
+	bool config_preempt = IS_ENABLED(CONFIG_PREEMPT);
+	bool config_lazy = IS_ENABLED(CONFIG_PREEMPT_LAZY);
+	bool config_none = IS_ENABLED(CONFIG_PREEMPT_NONE);
+
+	if (!config_dynamic && !config_rt && !config_preempt && !config_lazy)
+		return false;
+
+	if (config_none)
+		return false;
+
+	if (config_rt || config_preempt || config_lazy) {
+		printk(KERN_ERR OCF_PREFIX_SHORT
+			"The kernel has been built with involuntary preemption "
+			"enabled.\nFailed to load Open CAS kernel module.\n");
+		return true;
+	}
+
+#ifdef CONFIG_PREEMPT_DYNAMIC
+	/* preempt_model_none() or preempt_model_voluntary() are not defined if
+	 * the kernel has been compiled without PREEMPT_DYNAMIC
+	 */
+	printk(KERN_WARNING OCF_PREFIX_SHORT
+		"The kernel has been compiled with preemption configurable\n"
+		"at boot time (PREEMPT_DYNAMIC=y). Open CAS doesn't support\n"
+		"kernels with involuntary preemption so make sure to set\n"
+		"\"preempt=\" to \"none\" or \"voluntary\" in the kernel"
+		" command line\n");
+
+	if (!preempt_model_none() && !preempt_model_voluntary()) {
+		printk(KERN_ERR OCF_PREFIX_SHORT
+			"The kernel has been booted with involuntary "
+			"preemption enabled.\nFailed to load Open CAS kernel "
+			"module.\n");
+		return true;
+	} else {
+		return false;
+	}
+#endif
+
+	return false;
+}
+
 static int __init cas_init_module(void)
 {
 	int result = 0;
+
+	if (involuntary_preemption_enabled())
+		return -ENOTSUP;
 
 	if (!writeback_queue_unblock_size || !max_writeback_queue_size) {
 		printk(KERN_ERR OCF_PREFIX_SHORT

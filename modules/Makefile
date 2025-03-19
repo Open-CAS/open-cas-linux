@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2012-2022 Intel Corporation
+# Copyright(c) 2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 # If $(M) is defined, we've been invoked from the
@@ -52,7 +53,11 @@ distclean: clean distsync
 
 install: install_files
 	@$(DEPMOD)
-	@$(MODPROBE) $(CACHE_MODULE)
+	@$(MODPROBE) $(CACHE_MODULE) || ( \
+		echo "See dmesg for more information" >&2 && \
+		rm -f $(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko && exit 1 \
+		)
+
 
 install_files:
 	@echo "Installing Open-CAS modules"
