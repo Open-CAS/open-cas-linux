@@ -248,11 +248,15 @@ static int blkdev_handle_data_single(struct bd_object *bvol, struct bio *bio,
 {
 	ocf_cache_t cache = ocf_volume_get_cache(bvol->front_volume);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
-	ocf_queue_t queue = cache_priv->io_queues[smp_processor_id()];
+	ocf_queue_t queue;
 	ocf_io_t io;
 	struct blk_data *data;
 	uint64_t flags = CAS_BIO_OP_FLAGS(bio);
 	int ret;
+
+	get_cpu();
+	queue = cache_priv->io_queues[smp_processor_id()];
+	put_cpu();
 
 	data = cas_alloc_blk_data(bio_segments(bio), GFP_NOIO);
 	if (!data) {
@@ -363,8 +367,12 @@ static void blkdev_handle_discard(struct bd_object *bvol, struct bio *bio)
 {
 	ocf_cache_t cache = ocf_volume_get_cache(bvol->front_volume);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
-	ocf_queue_t queue = cache_priv->io_queues[smp_processor_id()];
+	ocf_queue_t queue;
 	ocf_io_t io;
+
+	get_cpu();
+	queue = cache_priv->io_queues[smp_processor_id()];
+	put_cpu();
 
 	io = ocf_volume_new_io(bvol->front_volume, queue,
 			CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
@@ -411,8 +419,12 @@ static void blkdev_handle_flush(struct bd_object *bvol, struct bio *bio)
 {
 	ocf_cache_t cache = ocf_volume_get_cache(bvol->front_volume);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
-	ocf_queue_t queue = cache_priv->io_queues[smp_processor_id()];
+	ocf_queue_t queue;
 	ocf_io_t io;
+
+	get_cpu();
+	queue = cache_priv->io_queues[smp_processor_id()];
+	put_cpu();
 
 	io = ocf_volume_new_io(bvol->front_volume, queue, 0, 0, OCF_WRITE, 0,
 			CAS_SET_FLUSH(0));
