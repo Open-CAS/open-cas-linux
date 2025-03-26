@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -73,6 +73,7 @@ static int _cas_cleaner_thread(void *data)
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	struct cas_thread_info *info;
 	uint32_t ms;
+	ocf_queue_t queue;
 
 	BUG_ON(!c);
 
@@ -94,7 +95,10 @@ static int _cas_cleaner_thread(void *data)
 
 		atomic_set(&info->kicked, 0);
 		init_completion(&info->sync_compl);
-		ocf_cleaner_run(c, cache_priv->io_queues[smp_processor_id()]);
+		get_cpu();
+		queue = cache_priv->io_queues[smp_processor_id()];
+		put_cpu();
+		ocf_cleaner_run(c, queue);
 		wait_for_completion(&info->sync_compl);
 
 		/*

@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -208,8 +208,12 @@ void *cas_rpool_try_get(struct cas_reserve_pool *rpool_master, int *cpu)
 
 	CAS_DEBUG_TRACE();
 
+	get_cpu();
+
 	*cpu = smp_processor_id();
 	current_rpool = &rpool_master->rpools[*cpu];
+
+	put_cpu();
 
 	spin_lock_irqsave(&current_rpool->lock, flags);
 
