@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -283,7 +283,7 @@ def test_neg_udev_cache_load():
             TestRun.LOGGER.error(f"There is wrong number of caches. Expected: 1, actual: "
                                  f"{len(cas_devices['caches'])}")
         elif cas_devices["caches"][1]["device_path"] != cache_disk.partitions[0].path or \
-                CacheStatus[(cas_devices["caches"][1]["status"]).lower()] != CacheStatus.running:
+                cas_devices["caches"][1]["status"] != CacheStatus.running:
             TestRun.LOGGER.error(f"Cache did not load properly: {cas_devices['caches'][1]}")
         if len(cas_devices["cores"]) != 2:
             TestRun.LOGGER.error(f"There is wrong number of cores. Expected: 2, actual: "
@@ -294,7 +294,7 @@ def test_neg_udev_cache_load():
             correct_core_devices.append(core_disk.partitions[i].path)
         for core in cas_devices["cores"].values():
             if core["device_path"] not in correct_core_devices or \
-                    CoreStatus[core["status"].lower()] != CoreStatus.active or \
+                    core["status"] != CoreStatus.active or \
                     core["cache_id"] != 1:
                 TestRun.LOGGER.error(f"Core did not load correctly: {core}.")
 

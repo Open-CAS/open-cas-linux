@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -66,7 +66,7 @@ def test_stress_dirty_shutdown(cache_line_size, cache_mode, cleaning_policy):
 
         with TestRun.step("Reset platform."):
             power_control = TestRun.plugin_manager.get_plugin('power_control')
-            power_control.power_cycle()
+            power_control.power_cycle(wait_for_connection=True)
 
         with TestRun.step("Check configuration after load."):
             check_configuration(cleaning_policy, cache_mode, cache_line_size)
