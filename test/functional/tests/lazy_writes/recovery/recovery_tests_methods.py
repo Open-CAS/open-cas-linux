@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -54,4 +54,4 @@ def power_cycle_dut(wait_for_flush_begin=False, core_device=None):
             timedelta(milliseconds=100)
         )
     power_control = TestRun.plugin_manager.get_plugin('power_control')
-    power_control.power_cycle()
+    power_control.power_cycle(wait_for_connection=True)

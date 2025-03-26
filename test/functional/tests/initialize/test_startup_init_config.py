@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2024-2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -9,7 +9,8 @@ from datetime import timedelta
 
 from api.cas import casadm, casctl, casadm_parser
 from api.cas.casadm_parser import get_caches, get_cores, get_cas_devices_dict
-from api.cas.cache_config import CacheMode
+from api.cas.cache_config import CacheMode, CacheStatus
+from api.cas.core_config import CoreStatus
 from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
@@ -213,7 +214,7 @@ def test_cas_startup_lazy():
 
     with TestRun.step("Reboot DUT"):
         power_control = TestRun.plugin_manager.get_plugin("power_control")
-        power_control.power_cycle()
+        power_control.power_cycle(wait_for_connection=True)
 
     with TestRun.step("Verify if all the devices are initialized properly"):
         core_pool_list = get_cas_devices_dict()["core_pool"].values()
@@ -248,13 +249,13 @@ def test_cas_startup_lazy():
             TestRun.LOGGER.info("Core devices are ok")
 
         cores_states = {c["device_path"]: c["status"] for c in cores_list}
-        if cores_states[active_core_path] != "Active":
+        if cores_states[active_core_path] != CoreStatus.active:
             TestRun.LOGGER.error(
                 f"Core {active_core_path} should be Active "
                 f"but is {cores_states[active_core_path]} instead!"
             )
 
-        if cores_states[inactive_core_path] != "Inactive":
+        if cores_states[inactive_core_path] != CoreStatus.inactive:
             TestRun.LOGGER.error(
                 f"Core {inactive_core_path} should be Inactive "
                 f"but is {cores_states[inactive_core_path]} instead!"
@@ -472,19 +473,19 @@ def test_failover_config_startup():
             TestRun.LOGGER.info("Core devices are ok")
 
         cores_states = {c["device"]: c["status"] for c in cores_list}
-        if cores_states[active_core_path] != "Active":
+        if cores_states[active_core_path] != CoreStatus.active:
             TestRun.LOGGER.error(
                 f"Core {active_core_path} should be Active "
                 f"but is {cores_states[active_core_path]} instead!"
             )
 
         caches_states = {c["device"]: c["status"] for c in caches_list}
-        if caches_states[active_cache_path] != "Running":
+        if caches_states[active_cache_path] != CacheStatus.running:
             TestRun.LOGGER.error(
                 f"Cache {active_cache_path} should be Running "
                 f"but is {caches_states[active_cache_path]} instead!"
             )
-        if caches_states[standby_cache_path] != "Standby":
+        if caches_states[standby_cache_path] != CacheStatus.standby:
             TestRun.LOGGER.error(
                 f"Cache {standby_cache_path} should be Standby "
                 f"but is {caches_states[standby_cache_path]} instead!"
