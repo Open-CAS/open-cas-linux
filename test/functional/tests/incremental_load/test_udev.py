@@ -16,6 +16,7 @@ from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType
 from storage_devices.raid import RaidConfiguration, Raid, Level, MetadataVariant
+from test_tools.udev import Udev
 from type_def.size import Size, Unit
 
 
@@ -121,6 +122,7 @@ def test_udev_core():
 
     with TestRun.step("Plug cache disk."):
         cache_disk.plug_all()
+        Udev.settle()
 
     with TestRun.step("Check if core device is active and not in the core pool."):
         check_if_dev_in_core_pool(core_dev, False)
