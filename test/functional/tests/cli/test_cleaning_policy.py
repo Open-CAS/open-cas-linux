@@ -21,7 +21,7 @@ from test_tools.udev import Udev
 @pytest.mark.CI
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_cleaning_policy():
+def test_cleaning_policy_change():
     """
     Title: Basic test for cleaning policy
     description: |
