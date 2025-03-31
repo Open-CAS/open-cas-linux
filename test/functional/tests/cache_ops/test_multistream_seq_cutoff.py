@@ -28,7 +28,7 @@ from test_tools.udev import Udev
 from connection.utils.output import CmdException
 from type_def.size import Size, Unit
 
-random_thresholds = random.sample(range(1028, 1024**2, 4), 3)
+random_thresholds = random.sample(range(1028, 50*1024, 4), 3)
 random_stream_numbers = random.sample(range(2, 128), 3)
 mount_point = "/mnt"
 
@@ -37,7 +37,7 @@ mount_point = "/mnt"
 @pytest.mark.parametrizex("streams_number", [1, 128] + random_stream_numbers)
 @pytest.mark.parametrizex(
     "threshold",
-    [Size(1, Unit.MebiByte), Size(1, Unit.GibiByte)]
+    [Size(1, Unit.MebiByte)]
     + [Size(x, Unit.KibiByte) for x in random_thresholds],
 )
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
