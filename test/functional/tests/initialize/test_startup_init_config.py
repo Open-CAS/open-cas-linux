@@ -269,11 +269,11 @@ def test_cas_startup_negative_missing_core():
     """
     title: Test unsuccessful boot with CAS configuration
     description: |
-      Check that DUT doesn't boot sucesfully when using invalid CAS configuration
+      Check that DUT doesn't boot successfully when using invalid CAS configuration
     pass_criteria:
       - DUT enters emergency mode
     """
-    with TestRun.step("Create 2 cache partitions and 4 core partitons"):
+    with TestRun.step("Create 2 cache partitions and 4 core partitions"):
         cache_disk = TestRun.disks["cache"]
         core_disk = TestRun.disks["core"]
         cache_disk.create_partitions([Size(200, Unit.MebiByte)] * 2)
@@ -331,11 +331,11 @@ def test_cas_startup_negative_missing_cache():
     """
     title: Test unsuccessful boot with CAS configuration
     description: |
-      Check that DUT doesn't boot sucesfully when using invalid CAS configuration
+      Check that DUT doesn't boot successfully when using invalid CAS configuration
     pass_criteria:
       - DUT enters emergency mode
     """
-    with TestRun.step("Create 2 cache partitions and 4 core partitons"):
+    with TestRun.step("Create 2 cache partitions and 4 core partitions"):
         cache_disk = TestRun.disks["cache"]
         core_disk = TestRun.disks["core"]
         cache_disk.create_partitions([Size(200, Unit.MebiByte)] * 2)
