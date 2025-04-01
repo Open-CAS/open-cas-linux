@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -36,7 +36,8 @@ def test_io_class_pinning_eviction():
         Check Open CAS ability to prevent from eviction of pinned IoClass - stress test.
     pass_criteria:
         - IoClasses loaded successfully
-        - Pinned class occupies the same ammount of cache after each IO operation on different IoClass
+        - Pinned class occupies the same amount of cache after each IO operation on different
+          IO class
     """
 
     with TestRun.step("Prepare devices"):
@@ -119,7 +120,8 @@ def test_io_class_pinning_eviction():
             after_op_occupancy = get_io_class_occupancy(cache, pinned_io_class.id)
             if pinned_occupancy != after_op_occupancy:
                 TestRun.fail(
-                    f"Pinned IO class do not occupy all of their space. Expected:{pinned_occupancy} Actual:{after_op_occupancy}"
+                    f"Pinned IO class do not occupy all of their space.\nExpected:"
+                    f"{pinned_occupancy}\nActual:{after_op_occupancy}"
                 )
 
 
@@ -133,7 +135,8 @@ def test_pinned_ioclasses_eviction():
         into another pinned IoClass.
     pass_criteria:
         - IoClasses loaded successfully
-        - First pinned class occupies the same ammount of cache after IO operation on another pinned IoClass
+        - First pinned class occupies the same amount of cache after IO operation on another pinned
+          IO class
     """
 
     with TestRun.step("Prepare devices"):
