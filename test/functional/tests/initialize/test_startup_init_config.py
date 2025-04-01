@@ -375,7 +375,6 @@ def test_cas_startup_negative_missing_cache():
     with TestRun.step("Reboot DUT with emergency escape armed"):
         with escape:
             TestRun.executor.reboot()
-            TestRun.executor.wait_for_connection()
 
     with TestRun.step("Verify the DUT entered emergency mode"):
         dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout.split("\n")
