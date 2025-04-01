@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -244,5 +244,9 @@ def prepare_configuration(cache_mode, cache_line_size):
 
     with TestRun.step("Adding core device"):
         core = cache.add_core(core_dev=core_device.partitions[0])
+
+    with TestRun.step("Purge cache and reset statistics"):
+        cache.purge_cache()
+        cache.reset_counters()
 
     return cache, core, core_device.partitions[0]

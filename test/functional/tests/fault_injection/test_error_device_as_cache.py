@@ -1,5 +1,5 @@
 #
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -22,6 +22,7 @@ from api.cas.cache_config import (
 )
 from storage_devices.disk import DiskTypeSet, DiskType
 from test_utils.io_stats import IoStats
+from test_tools.udev import Udev
 from type_def.size import Size, Unit
 
 
@@ -63,6 +64,13 @@ def test_error_device_as_cache_clean_wt(cache_line_size):
     with TestRun.step(f"Add core"):
         core = cache.add_core(core_dev=core_device.partitions[0])
 
+    with TestRun.step("Disable udev"):
+        Udev.disable()
+
+    with TestRun.step("Purge cache and reset statistics"):
+        cache.purge_cache()
+        cache.reset_counters()
+
     with TestRun.step("Run fio against core to fill it with pattern"):
         fio = (
             Fio()
@@ -90,10 +98,16 @@ def test_error_device_as_cache_clean_wt(cache_line_size):
         metadata_size = cache.get_metadata_size_on_disk() + Size(1, Unit.MiB)
         cache.stop()
 
+    with TestRun.step("Enable udev"):
+        Udev.enable()
+
     with TestRun.step("Enable errors on cache device (after metadata area)"):
         error_device.change_table(
             error_table(start_lba=metadata_size, stop_lba=cache_part.size).fill_gaps(cache_part)
         )
+
+    with TestRun.step("Disable udev"):
+        Udev.disable()
 
     with TestRun.step("Load cache and reset counters"):
         cache = casadm.load_cache(error_device)
@@ -175,6 +189,13 @@ def test_error_device_as_cache_clean_wa(cache_line_size):
     with TestRun.step(f"Add core"):
         core = cache.add_core(core_dev=core_device.partitions[0])
 
+    with TestRun.step("Disable udev"):
+        Udev.disable()
+
+    with TestRun.step("Purge cache and reset statistics"):
+        cache.purge_cache()
+        cache.reset_counters()
+
     with TestRun.step("Run fio against core to fill it with pattern"):
         fio = (
             Fio()
@@ -200,10 +221,16 @@ def test_error_device_as_cache_clean_wa(cache_line_size):
         metadata_size = cache.get_metadata_size_on_disk() + Size(1, Unit.MiB)
         cache.stop()
 
+    with TestRun.step("Enable udev"):
+        Udev.enable()
+
     with TestRun.step("Enable errors on cache device (after metadata area)"):
         error_device.change_table(
             error_table(start_lba=metadata_size, stop_lba=cache_part.size).fill_gaps(cache_part)
         )
+
+    with TestRun.step("Disable udev"):
+        Udev.disable()
 
     with TestRun.step("Load cache and reset counters"):
         cache = casadm.load_cache(error_device)
@@ -288,6 +315,13 @@ def test_error_device_as_cache_dirty(cache_mode, cache_line_size):
     with TestRun.step(f"Add core"):
         cores = [cache.add_core(core_dev=core) for core in core_parts]
 
+    with TestRun.step("Disable udev"):
+        Udev.disable()
+
+    with TestRun.step("Purge cache and reset statistics"):
+        cache.purge_cache()
+        cache.reset_counters()
+
     with TestRun.step("Run io against the first core to fill it with pattern"):
         fio = (
             Fio()
@@ -314,11 +348,17 @@ def test_error_device_as_cache_dirty(cache_mode, cache_line_size):
     with TestRun.step("Stop cache"):
         cache.stop(no_data_flush=True)
 
+    with TestRun.step("Enable udev"):
+        Udev.enable()
+
     with TestRun.step("Enable errors on cache device (after metadata area)"):
         metadata_size = cache.get_metadata_size_on_disk() + Size(1, Unit.MiB)
         error_device.change_table(
             error_table(start_lba=metadata_size, stop_lba=cache_part.size).fill_gaps(cache_part)
         )
+
+    with TestRun.step("Disable udev"):
+        Udev.disable()
 
     with TestRun.step("Load cache and reset counters"):
         cache = casadm.load_cache(error_device)
