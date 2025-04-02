@@ -506,7 +506,8 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 			goto error_set_geometry;
 	}
 
-	if (cas_add_disk(gd))
+	result = cas_add_disk(gd);
+	if (result)
 		goto error_add_disk;
 
 	result = sysfs_create_group(&disk_to_dev(gd)->kobj, &device_attr_group);
