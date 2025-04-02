@@ -474,7 +474,7 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 			goto error_set_queue_limits;
 	}
 
-	result = cas_alloc_mq_disk(&gd, &queue, &exp_obj->tag_set,
+	result = cas_alloc_disk(&gd, &queue, &exp_obj->tag_set,
 			&queue_limits);
 	if (result) {
 		goto error_alloc_mq_disk;
@@ -506,7 +506,8 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 			goto error_set_geometry;
 	}
 
-	if (cas_add_disk(gd))
+	result = cas_add_disk(gd);
+	if (result)
 		goto error_add_disk;
 
 	result = sysfs_create_group(&disk_to_dev(gd)->kobj, &device_attr_group);
@@ -528,7 +529,7 @@ error_set_geometry:
 	exp_obj->private = NULL;
 	_cas_exp_obj_clear_dev_t(dsk);
 error_exp_obj_set_dev_t:
-	cas_cleanup_mq_disk(gd);
+	cas_cleanup_disk(gd);
 	exp_obj->gd = NULL;
 error_alloc_mq_disk:
 error_set_queue_limits:
