@@ -68,10 +68,13 @@ def start_cache(
         from api.cas.casadm_parser import get_caches
 
         cache_list = get_caches()
+        attached_cache_list = [cache for cache in cache_list if cache.cache_device is not None]
         # compare path of old and new caches, returning the only one created now.
         # This will be needed in case cache_id not present in cli command
 
-        new_cache = next(cache for cache in cache_list if cache.cache_device.path == cache_dev.path)
+        new_cache = next(
+            cache for cache in attached_cache_list if cache.cache_device.path == cache_dev.path
+        )
         _cache_id = new_cache.cache_id
 
     cache = Cache(cache_id=int(_cache_id), device=cache_dev, cache_line_size=_cache_line_size)
@@ -89,7 +92,8 @@ def load_cache(device: Device, shortcut: bool = False) -> Cache:
         raise CmdException("Failed to load cache.", output)
 
     caches_after_load = get_caches()
-    new_cache = next(cache for cache in caches_after_load if cache not in caches_before_load)
+    new_cache = next(cache for cache in caches_after_load if cache.cache_id not in
+                     [cache.cache_id for cache in caches_before_load])
     cache = Cache(cache_id=new_cache.cache_id, device=new_cache.cache_device)
     TestRun.dut.cache_list.append(cache)
     return cache
