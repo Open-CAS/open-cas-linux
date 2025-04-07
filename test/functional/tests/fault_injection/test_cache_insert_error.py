@@ -1,10 +1,11 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
+import math
 from api.cas import casadm
 from api.cas.cache_config import (
     CacheMode,
@@ -76,26 +77,18 @@ def test_cache_insert_error(cache_mode, block_size):
         if occupancy != 0:
             TestRun.fail(f"Occupancy is not zero, but {occupancy}")
 
-        # Convert cache writes from bytes to I/O count, assuming cache I/O is sent
-        # with cacheline granularity.
-        cache_writes_per_block = max(block_size.get_value() // int(cache_line_size), 1)
-        cache_writes = stats.block_stats.cache.writes / block_size * cache_writes_per_block
-
+        # Convert cache writes from bytes to I/O count.
+        # Cache errors are accounted with request granularity.
+        # Blocks are expressed with 4k granularity.
+        correction = int(math.ceil(Size(1, Unit.Blocks4096) / block_size))
+        cache_writes_upper = int(stats.block_stats.cache.writes / block_size)
+        cache_writes_lower = cache_writes_upper - correction + 1
         cache_errors = stats.error_stats.cache.total
 
-        # Cache error count is accurate, however cache writes is rounded up to 4K in OCF.
-        # Need to take this into account and round up cache errors accordingly for the
-        # comparison.
-        cache_writes_accuracy = max(Size(4, Unit.KibiByte) / block_size, 1)
-        rounded_cache_errors = (
-            (cache_errors + cache_writes_accuracy - 1)
-            // cache_writes_accuracy
-            * cache_writes_accuracy
-        )
-        if cache_writes != rounded_cache_errors:
+        if not cache_writes_lower <= cache_errors <= cache_writes_upper:
             TestRun.fail(
-                f"Cache errors ({rounded_cache_errors}) should equal to number of"
-                f" requests to cache ({cache_writes})"
+                f"Cache errors ({cache_errors}) should equal to number of"
+                f" requests to cache (range {cache_writes_lower}-{cache_writes_upper})"
             )
 
     if cache_mode not in CacheMode.with_traits(CacheModeTrait.LazyWrites):
@@ -147,9 +140,12 @@ def test_error_cache_verify_core(cache_mode, block_size):
 
 
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex(
+    "block_size", [start_size, Size(1024, Unit.Byte), Size(4, Unit.KibiByte), stop_size]
+)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_cache_write_lazy_insert_error(cache_mode):
+def test_cache_write_lazy_insert_error(cache_mode, block_size):
     """
     title: Cache insert test with error device for writes on lazy writes cache mode
     description: |
@@ -170,7 +166,7 @@ def test_cache_write_lazy_insert_error(cache_mode):
             .create_command()
             .io_engine(IoEngine.libaio)
             .size(core.size)
-            .blocksize_range([(start_size.get_value(), stop_size.get_value())])
+            .block_size(block_size)
             .read_write(ReadWrite.randwrite)
             .target(core)
             .continue_on_error(ErrorFilter.io)
@@ -188,13 +184,18 @@ def test_cache_write_lazy_insert_error(cache_mode):
         if occupancy != 0:
             TestRun.fail(f"Occupancy is not zero, but {occupancy}")
 
-        cache_writes = stats.block_stats.cache.writes / cache_line_size.value
+        # Convert cache writes from bytes to I/O count.
+        # Cache errors are accounted with request granularity.
+        # Blocks are expressed with 4k granularity.
+        correction = int(math.ceil(Size(1, Unit.Blocks4096) / block_size))
+        cache_writes_upper = int(stats.block_stats.cache.writes / block_size)
+        cache_writes_lower = cache_writes_upper - correction + 1
         cache_errors = stats.error_stats.cache.total
 
-        if cache_writes != cache_errors:
+        if not cache_writes_lower <= cache_errors <= cache_writes_upper:
             TestRun.fail(
-                f"Cache errors ({cache_errors}) should equal to number of requests to"
-                f" cache ({cache_writes})"
+                f"Cache errors ({cache_errors}) should equal to number of"
+                f" requests to cache (range {cache_writes_lower}-{cache_writes_upper})"
             )
 
         state = cache.get_status()
@@ -244,5 +245,9 @@ def prepare_configuration(cache_mode, cache_line_size):
 
     with TestRun.step("Adding core device"):
         core = cache.add_core(core_dev=core_device.partitions[0])
+
+    with TestRun.step("Purge cache and reset statistics"):
+        cache.purge_cache()
+        cache.reset_counters()
 
     return cache, core, core_device.partitions[0]
