@@ -51,7 +51,7 @@ def test_fault_power_reboot():
 
     with TestRun.step("Hard reset."):
         power_control = TestRun.plugin_manager.get_plugin('power_control')
-        power_control.power_cycle()
+        power_control.power_cycle(wait_for_connection=True)
 
     with TestRun.step("Start cache without re-initialization."):
         output = TestRun.executor.run_expect_fail(cli.start_cmd(

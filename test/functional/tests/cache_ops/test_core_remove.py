@@ -35,8 +35,8 @@ def test_remove_core_when_other_mounted_auto_numeration():
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
 
-        cache_device.create_partitions([Size(50, Unit.MebiByte)])
-        core_device.create_partitions([Size(200, Unit.MebiByte)] * cores_amount)
+        cache_device.create_partitions([Size(100, Unit.MebiByte)])
+        core_device.create_partitions([Size(300, Unit.MebiByte)] * cores_amount)
 
     with TestRun.step("Start cache"):
         cache = casadm.start_cache(cache_device.partitions[0], force=True)
@@ -75,8 +75,8 @@ def test_remove_core_when_other_mounted_custom_numeration():
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
 
-        cache_device.create_partitions([Size(50, Unit.MebiByte)])
-        core_device.create_partitions([Size(200, Unit.MebiByte)] * 3)
+        cache_device.create_partitions([Size(100, Unit.MebiByte)])
+        core_device.create_partitions([Size(300, Unit.MebiByte)] * 3)
 
     with TestRun.step("Start cache"):
         cache = casadm.start_cache(cache_device.partitions[0], force=True)
