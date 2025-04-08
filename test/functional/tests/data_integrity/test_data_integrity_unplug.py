@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -230,7 +230,7 @@ def gen_log(seqno_max):
             .set_param("write_iolog", f"{io_log_path}_{i}")
     fio.run()
 
-    r = re.compile(r"\S+\s+(read|write)\s+(\d+)\s+(\d+)")
+    r = re.compile(r"\S+\s+\S+\s+write\s+(\d+)\s+(\d+)")
     for j in range(num_jobs):
         log = f"{io_log_path}_{j}"
         nr = 0
@@ -238,7 +238,7 @@ def gen_log(seqno_max):
             m = r.match(line)
             if m:
                 if nr > max_log_seqno:
-                    block = int(m.group(2)) // block_size.value - j * job_workset_blocks
+                    block = int(m.group(1)) // block_size.value - j * job_workset_blocks
                     g_io_log[j][block] += [nr]
                 nr += 1
             if nr > seqno_max + 1:
