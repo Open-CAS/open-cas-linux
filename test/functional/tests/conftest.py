@@ -37,9 +37,6 @@ from storage_devices.disk import Disk
 from storage_devices.drbd import Drbd
 
 
-TEST_RUN_DATA_PATH = "/tmp/open_cas_test_data"
-
-
 def pytest_addoption(parser):
     TestRun.addoption(parser)
     parser.addoption("--dut-config", action="append", type=str)
@@ -139,7 +136,6 @@ def pytest_runtest_setup(item):
         TestRun.LOGGER.info(f"DUT info: {TestRun.dut}")
         TestRun.dut.plugin_manager = TestRun.plugin_manager
         TestRun.dut.executor = TestRun.executor
-        TestRun.TEST_RUN_DATA_PATH = TEST_RUN_DATA_PATH
         TestRun.dut.cache_list = []
         TestRun.dut.core_list = []
         TestRun.duts.append(TestRun.dut)
@@ -195,14 +191,14 @@ def base_prepare(item):
 
         RamDisk.remove_all()
 
-        if check_if_directory_exists(path=TEST_RUN_DATA_PATH):
+        if check_if_directory_exists(path=TestRun.TEST_RUN_DATA_PATH):
             remove(
-                path=posixpath.join(TEST_RUN_DATA_PATH, "*"),
+                path=posixpath.join(TestRun.TEST_RUN_DATA_PATH, "*"),
                 force=True,
                 recursive=True,
             )
         else:
-            create_directory(path=TEST_RUN_DATA_PATH)
+            create_directory(path=TestRun.TEST_RUN_DATA_PATH)
 
         for disk in TestRun.disks.values():
             disk_serial = Disk.get_disk_serial_number(disk.path)
@@ -271,9 +267,9 @@ def pytest_runtest_teardown():
                 DeviceMapper.remove_all()
                 RamDisk.remove_all()
 
-                if check_if_directory_exists(path=TEST_RUN_DATA_PATH):
+                if check_if_directory_exists(path=TestRun.TEST_RUN_DATA_PATH):
                     remove(
-                        path=posixpath.join(TEST_RUN_DATA_PATH, "*"),
+                        path=posixpath.join(TestRun.TEST_RUN_DATA_PATH, "*"),
                         force=True,
                         recursive=True,
                     )
