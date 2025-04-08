@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -16,7 +16,7 @@ from api.cas.cache_config import (
 )
 from api.cas.cli import start_cmd
 from core.test_run import TestRun
-from storage_devices.disk import DiskType, DiskTypeSet
+from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.peach_fuzzer.peach_fuzzer import PeachFuzzer
 from type_def.size import Unit, Size
 from tests.security.fuzzy.kernel.common.common import (
@@ -26,6 +26,7 @@ from tests.security.fuzzy.kernel.common.common import (
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("other", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 @pytest.mark.parametrizex("unaligned_io", UnalignedIo)
@@ -44,7 +45,8 @@ def test_fuzzy_start_cache_device(cache_mode, cache_line_size, unaligned_io, use
     cache_id = 1
 
     with TestRun.step("Create partitions on all devices"):
-        for disk in TestRun.dut.disks:
+        available_disks = [TestRun.disks["cache"], TestRun.disks["other"]]
+        for disk in available_disks:
             disk.create_partitions([Size(400, Unit.MebiByte)])
 
     with TestRun.step("Start and stop cache"):
@@ -61,12 +63,18 @@ def test_fuzzy_start_cache_device(cache_mode, cache_line_size, unaligned_io, use
         cache.stop()
 
     with TestRun.step("Prepare PeachFuzzer"):
-        disks_paths = [disk.path for disk in TestRun.dut.disks]
-        partitions_paths = [disk.partitions[0].path for disk in TestRun.dut.disks]
+        disks_paths = [disk.path for disk in available_disks]
+        partitions_paths = [disk.partitions[0].path for disk in available_disks]
         valid_values = disks_paths + partitions_paths
         # fuzz only partitions to speed up test
         fuzz_config = get_device_fuzz_config(partitions_paths)
+        # forbidden values are created to prevent starting cache on other disks connected to DUT
+        forbidden_values = [
+            disk.path for disk in TestRun.dut.disks if disk.path not in valid_values
+        ]
         valid_values = [path.encode("ascii") for path in valid_values]
+        forbidden_values = [path.encode("ascii") for path in forbidden_values]
+
         PeachFuzzer.generate_config(fuzz_config)
         base_cmd = start_cmd(
             cache_dev="{param}",
@@ -83,6 +91,11 @@ def test_fuzzy_start_cache_device(cache_mode, cache_line_size, unaligned_io, use
         enumerate(commands), f"Run command {TestRun.usr.fuzzy_iter_count} times"
     ):
         with TestRun.step(f"Iteration {index + 1}"):
+            if cmd.param in forbidden_values:
+                TestRun.LOGGER.warning(
+                    f"Iteration skipped due to the forbidden param value {cmd.param}."
+                )
+                continue
             output = run_cmd_and_validate(
                 cmd=cmd,
                 value_name="Device path",
