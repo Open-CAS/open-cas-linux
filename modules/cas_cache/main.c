@@ -65,9 +65,6 @@ static inline uint32_t involuntary_preemption_enabled(void)
 	}
 
 #ifdef CONFIG_PREEMPT_DYNAMIC
-	/* preempt_model_none() or preempt_model_voluntary() are not defined if
-	 * the kernel has been compiled without PREEMPT_DYNAMIC
-	 */
 	printk(KERN_WARNING OCF_PREFIX_SHORT
 		"The kernel has been compiled with preemption configurable\n"
 		"at boot time (PREEMPT_DYNAMIC=y). Open CAS doesn't support\n"
@@ -75,7 +72,7 @@ static inline uint32_t involuntary_preemption_enabled(void)
 		"\"preempt=\" to \"none\" or \"voluntary\" in the kernel"
 		" command line\n");
 
-	if (!preempt_model_none() && !preempt_model_voluntary()) {
+	if (!cas_preempt_model_none() && !cas_preempt_model_voluntary()) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
 			"The kernel has been booted with involuntary "
 			"preemption enabled.\nFailed to load Open CAS kernel "
