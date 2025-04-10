@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -56,6 +56,7 @@ def test_block_stats_write_miss(cache_mode: CacheMode):
         cores = [cache.add_core(part) for part in core_device.partitions]
 
     with TestRun.step("Reset cache stats"):
+        cache.purge_cache()
         cache.reset_counters()
 
     with TestRun.step("Write data in parts to exported objects and verify block statistics "
@@ -164,6 +165,7 @@ def test_block_stats_read_miss(cache_mode: CacheMode):
         cores = [cache.add_core(part) for part in core_device.partitions]
 
     with TestRun.step("Reset cache stats"):
+        cache.purge_cache()
         cache.reset_counters()
 
     with TestRun.step("Read data in parts from exported objects and verify block statistics "
