@@ -53,7 +53,7 @@ static cas_cls_eval_t _cas_cls_metadata_test(struct cas_classifier *cls,
 	if (PageAnon(io->page))
 		return cas_cls_eval_no;
 
-	if (PageSlab(io->page) || PageCompound(io->page)) {
+	if (PageSlab(io->page)) {
 		/* A filesystem issues IO on pages that does not belongs
 		 * to the file page cache. It means that it is a
 		 * part of metadata
@@ -61,7 +61,7 @@ static cas_cls_eval_t _cas_cls_metadata_test(struct cas_classifier *cls,
 		return cas_cls_eval_yes;
 	}
 
-	if (!io->page->mapping) {
+	if (!cas_page_mapping(io->page)) {
 		/* XFS case, page are allocated internally and do not
 		 * have references into inode
 		 */
@@ -1229,6 +1229,7 @@ static void _cas_cls_get_bio_context(struct bio *bio,
 	struct cas_cls_io *ctx)
 {
 	struct page *page = NULL;
+	struct address_space *mapping;
 
 	if (!bio)
 		return;
@@ -1246,13 +1247,14 @@ static void _cas_cls_get_bio_context(struct bio *bio,
 	if (PageAnon(page))
 		return;
 
-	if (PageSlab(page) || PageCompound(page))
+	if (PageSlab(page))
 		return;
 
-	if (!page->mapping)
+	mapping = cas_page_mapping(page);
+	if (!mapping)
 		return;
 
-	ctx->inode = page->mapping->host;
+	ctx->inode = mapping->host;
 
 	return;
 }
