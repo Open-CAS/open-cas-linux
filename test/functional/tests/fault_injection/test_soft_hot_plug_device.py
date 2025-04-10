@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -88,9 +88,6 @@ def test_soft_hot_unplug_cache(cache_mode):
                 f"There are some inconsistencies in error stats "
                 f"for {cache_mode} cache mode:\n{failed_errors}"
             )
-
-    with TestRun.step("Stop all caches"):
-        casadm.stop_all_caches()
 
     with TestRun.step("Plug back cache device"):
         cache_dev.plug_all()
