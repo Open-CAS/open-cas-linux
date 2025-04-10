@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024-2025 Huawei Technologies
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -9,6 +9,7 @@ import pytest
 from collections import namedtuple
 from math import isclose
 
+from api.cas.casadm_params import StatsFilter
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from api.cas.ioclass_config import IoClass, default_config_file_path
 from test_tools.fs_tools import Filesystem, create_directory
@@ -142,6 +143,7 @@ def test_pinned_ioclasses_eviction():
     with TestRun.step("Prepare devices"):
         cache, core = prepare(core_size=core_size, cache_size=cache_size)
         cache_line_count = cache.get_statistics().config_stats.cache_size
+        cache_free_block = cache.get_statistics(stat_filter=[StatsFilter.usage]).usage_stats.free
 
     with TestRun.step("Mount filesystem"):
         core.create_filesystem(Filesystem.xfs)
@@ -190,7 +192,7 @@ def test_pinned_ioclasses_eviction():
     with TestRun.step(f"Trigger IO to first pinned class directory"):
         run_io_dir(
             f"{io_classes[0].dir_path}/tmp_file",
-            int((io_classes[0].max_occupancy * cache_size) / Unit.Blocks4096),
+            int(io_classes[0].max_occupancy * cache_free_block.get_value(Unit.Blocks4096)),
         )
         first_io_pinned_occupancy = get_io_class_occupancy(cache, io_classes[0].id)
 
