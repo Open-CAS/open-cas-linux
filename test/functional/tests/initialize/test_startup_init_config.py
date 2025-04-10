@@ -338,12 +338,11 @@ def test_cas_startup_negative_missing_core():
 
     escape = EmergencyEscape()
     escape.add_escape_method_command("/usr/bin/rm /etc/opencas/opencas.conf")
-    set_cas_service_timeout(timedelta(seconds=10))
+    set_cas_service_timeout(timedelta(minutes=1))
 
     with TestRun.step("Reboot DUT with emergency escape armed"):
         with escape:
             TestRun.executor.reboot()
-            TestRun.executor.wait_for_connection()
 
     with TestRun.step("Verify the DUT entered emergency mode"):
         dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout.split("\n")
@@ -352,6 +351,10 @@ def test_cas_startup_negative_missing_core():
 
     clear_cas_service_timeout()
     InitConfig().create_default_init_config()
+
+    # required to fix services after test
+    with TestRun.step("Reboot platform"):
+        TestRun.executor.reboot()
 
 
 @pytest.mark.os_dependent
@@ -427,6 +430,10 @@ def test_cas_startup_negative_missing_cache():
 
     clear_cas_service_timeout()
     InitConfig().create_default_init_config()
+
+    # required to fix services after test
+    with TestRun.step("Reboot platform"):
+        TestRun.executor.reboot()
 
 
 @pytest.mark.os_dependent
