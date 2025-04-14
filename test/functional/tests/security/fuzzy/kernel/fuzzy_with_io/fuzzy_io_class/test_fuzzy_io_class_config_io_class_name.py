@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import posixpath
 import random
 import re
 import pytest
@@ -32,7 +33,7 @@ from tests.security.fuzzy.kernel.fuzzy_with_io.common.common import (
     mount_point,
 )
 
-io_class_file_path = "/root/Fuzzy/ioclass.csv"
+io_class_file_path = posixpath.join(TestRun.TEST_RUN_DATA_PATH, "ioclass.csv")
 parametrized_keywords = [
     "directory",
     "file_name_prefix",
@@ -218,8 +219,11 @@ def __validate_single_condition(value: str):
     if condition_key is None:
         return False
 
-    if condition_key in ["directory", "file_name_prefix", "extension", "process_name"]:
-        if 0 < len(condition_value) <= 255:
+    if condition_key in ["file_name_prefix", "extension", "process_name"]:
+        if 0 < len(condition_value) <= 256:
+            return True
+    if condition_key is "directory":
+        if 0 < len(condition_value) <= 1024:
             return True
     elif condition_key == "io_direction":
         return condition_value in ["read", "write"]

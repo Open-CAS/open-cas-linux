@@ -1,9 +1,10 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import posixpath
 import pytest
 
 from api.cas.cache_config import (
@@ -30,7 +31,7 @@ from tests.security.fuzzy.kernel.fuzzy_with_io.common.common import (
     mount_point,
 )
 
-io_class_file_path = "/root/Fuzzy/ioclass.csv"
+io_class_file_path = posixpath.join(TestRun.TEST_RUN_DATA_PATH, "ioclass.csv")
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
