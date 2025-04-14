@@ -139,6 +139,18 @@ generate_header() {
 	done
 }
 
+while (( $# )); do
+    	case "$1" in
+        	--with-json-api)
+		if ! grep json Makefile >/dev/null; then
+			sed -i '/^DIRS/ s/$/ json/' Makefile
+		fi
+		;;
+    	esac
+	shift
+done
+
+
 if [ -z "$1" ]; then
 	generate_config
 else
