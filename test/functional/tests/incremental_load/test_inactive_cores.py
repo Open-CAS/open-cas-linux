@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -8,7 +8,7 @@ import pytest
 
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
-from api.cas.casadm_parser import get_cas_devices_dict
+from api.cas.casadm_parser import get_cas_devices_dict, get_inactive_cores
 from api.cas.core import Core, CoreStatus
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
@@ -239,17 +239,3 @@ def test_core_inactive_stats_usage():
                 f"{cache_usage_stats.inactive_clean}\n"
                 f"Expected number of clean blocks percentage: {inactive_cores_clean_stats}"
             )
-
-
-def get_inactive_cores(cache_id: int) -> list:
-    cores_dict = get_cas_devices_dict()["cores"].values()
-
-    def is_active(core):
-
-        return CoreStatus[core["status"].lower()] == CoreStatus.inactive
-
-    return [
-        Core(core["device_path"], core["cache_id"])
-        for core in cores_dict
-        if is_active(core) and core["cache_id"] == cache_id
-    ]
