@@ -5,15 +5,16 @@
 #
 
 
-import pytest
 import random
 from ctypes import c_uint32
+
+import pytest
+
 from api.cas import casadm
 from api.cas.cache_config import SeqCutOffPolicy
-from api.cas.core import SEQ_CUTOFF_THRESHOLD_MAX, SEQ_CUT_OFF_THRESHOLD_DEFAULT
 from api.cas.casadm import set_param_cutoff_cmd
+from api.cas.core import SEQ_CUTOFF_THRESHOLD_MAX, SEQ_CUT_OFF_THRESHOLD_DEFAULT
 from core.test_run import TestRun
-
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from type_def.size import Size, Unit
 
@@ -179,7 +180,7 @@ def test_seq_cutoff_policy_load():
         loaded_cache = casadm.load_cache(cache.cache_device)
 
     with TestRun.step("Getting cores from loaded cache"):
-        cores = loaded_cache.get_core_devices()
+        cores = loaded_cache.get_cores()
 
     for i, core in TestRun.iteration(
             enumerate(cores[:-1]),
@@ -327,7 +328,7 @@ def test_seq_cutoff_threshold_load(threshold):
         loaded_cache = casadm.load_cache(cache.cache_device)
 
     with TestRun.step("Getting core from loaded cache"):
-        cores_load = loaded_cache.get_core_devices()
+        cores_load = loaded_cache.get_cores()
 
     with TestRun.step("Check if proper sequential cutoff policy was loaded"):
         if cores_load[0].get_seq_cut_off_threshold() != _threshold:

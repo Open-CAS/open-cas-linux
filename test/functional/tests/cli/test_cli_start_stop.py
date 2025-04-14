@@ -4,8 +4,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-import pytest
 from random import randint
+
+import pytest
 
 from api.cas import casadm, casadm_parser, cli_messages
 from api.cas.cli import start_cmd
@@ -126,9 +127,9 @@ def test_cli_add_remove_default_id(shortcut):
 
     with TestRun.step("Check if the core is added to the cache."):
         caches = casadm_parser.get_caches()
-        if len(caches[0].get_core_devices()) != 1:
+        if len(caches[0].get_cores()) != 1:
             TestRun.fail("One core should be present in the cache.")
-        if caches[0].get_core_devices()[0].path != core.path:
+        if caches[0].get_cores()[0].path != core.path:
             TestRun.fail("The core path should be equal to the path of the core added.")
 
     with TestRun.step("Remove the core from the cache."):
@@ -138,7 +139,7 @@ def test_cli_add_remove_default_id(shortcut):
         caches = casadm_parser.get_caches()
         if len(caches) != 1:
             TestRun.fail("One cache should be still present after removing the core.")
-        if len(caches[0].get_core_devices()) != 0:
+        if len(caches[0].get_cores()) != 0:
             TestRun.fail("No core device should be present after removing the core.")
 
     with TestRun.step("Stop the cache."):
@@ -179,9 +180,9 @@ def test_cli_add_remove_custom_id(shortcut):
 
     with TestRun.step("Check if the core is added to the cache."):
         caches = casadm_parser.get_caches()
-        if len(caches[0].get_core_devices()) != 1:
+        if len(caches[0].get_cores()) != 1:
             TestRun.fail("One core should be present in the cache.")
-        if caches[0].get_core_devices()[0].path != core.path:
+        if caches[0].get_cores()[0].path != core.path:
             TestRun.fail("The core path should be equal to the path of the core added.")
 
     with TestRun.step("Remove the core from the cache."):
@@ -191,7 +192,7 @@ def test_cli_add_remove_custom_id(shortcut):
         caches = casadm_parser.get_caches()
         if len(caches) != 1:
             TestRun.fail("One cache should be still present after removing the core.")
-        if len(caches[0].get_core_devices()) != 0:
+        if len(caches[0].get_cores()) != 0:
             TestRun.fail("No core device should be present after removing the core.")
 
     with TestRun.step("Stop the cache."):

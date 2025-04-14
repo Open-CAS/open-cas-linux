@@ -55,7 +55,7 @@ class Cache:
 
         return Device(path=cache["device_path"])
 
-    def get_core_devices(self) -> list:
+    def get_cores(self) -> list:
         return get_cores(self.cache_id)
 
     def get_cache_line_size(self) -> CacheLineSize:
