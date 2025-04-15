@@ -29,7 +29,7 @@ from tests.lazy_writes.recovery.recovery_tests_methods import compare_files
 mount_point = "/mnt/cas"
 test_file_path = f"{mount_point}/test_file"
 iterations_per_config = 10
-cache_size = Size(16, Unit.GibiByte)
+cache_size = Size(1, Unit.GibiByte)
 
 
 @pytest.mark.parametrizex("filesystem", Filesystem)
