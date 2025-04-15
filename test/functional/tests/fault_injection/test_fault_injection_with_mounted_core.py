@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2024-2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -110,7 +110,7 @@ def test_stop_cache_with_mounted_partition():
         core2 = cache.add_core(core_dev2)
 
     with TestRun.step("Create partitions on one exported object."):
-        core.block_size = Size(get_block_size(core.get_device_id()))
+        core.block_size = Unit(get_block_size(core.get_device_id()))
         create_partitions(core, 2 * [Size(4, Unit.GibiByte)])
         fs_part = core.partitions[0]
 
