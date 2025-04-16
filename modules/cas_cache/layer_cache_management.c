@@ -1758,7 +1758,7 @@ int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 
 	/* repartition without management lock */
 	ocf_mngt_cache_unlock(cache);
-	ocf_repart_all_to_default(cache, io_class_cfg);
+	ocf_repart_to_default(cache, io_class_cfg, cfg->repart_all);
 	goto out_not_running;
 
 out_configure:
