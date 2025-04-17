@@ -259,6 +259,7 @@ ioclass_help = [
     r"Options that are valid with --load-config \(-C\) are:",
     r"-i  --cache-id \<ID\>                 Identifier of cache instance \<1-16384\>",
     r"-f  --file \<FILE\>                   Configuration file containing IO class definition",
+    r"-k  --keep-classification           Prevents reclassification of data in IO classes with IDs matching previous configuration",
     r"Lists currently configured IO classes:",
     r"Usage: casadm --io-class --list --cache-id \<ID\> \[option\.\.\.\]",
     r"Options that are valid with --list \(-L\) are:",
