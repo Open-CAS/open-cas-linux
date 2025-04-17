@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -15,21 +15,21 @@ from test_tools import initramfs
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
 from type_def.size import Size, Unit
-from tests.volumes.common import get_test_configuration, lvm_filters
+from tests.volumes.common import get_test_configuration, lvm_filters, validate_configuration
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_many_lvms_on_single_core():
     """
-        title: Test for LVM creation on CAS device - many lvms on single core.
-        description: |
-          Validation of LVM support, many LVMs (16) created on CAS device (1 cache, 1 core).
-        pass_criteria:
-          - CAS devices created successfully.
-          - LVMs created successfully.
-          - FIO with verification ran successfully.
-          - Configuration after reboot match configuration before.
+    title: Test for LVM creation on CAS device - many lvms on single core.
+    description: |
+        Validation of LVM support, many LVMs (16) created on CAS device (1 cache, 1 core).
+    pass_criteria:
+      - CAS devices created successfully.
+      - LVMs created successfully.
+      - FIO with verification ran successfully.
+      - Configuration after reboot match configuration before.
     """
     with TestRun.step(f"Create CAS device."):
         cache_dev = TestRun.disks['cache']
@@ -82,21 +82,7 @@ def test_many_lvms_on_single_core():
         TestRun.executor.reboot()
 
     with TestRun.step("Validate running configuration"):
-        config_after_reboot, devices_after = get_test_configuration()
-
-        if config_after_reboot == config_before_reboot:
-            TestRun.LOGGER.info(f"Configuration is as expected")
-        else:
-            TestRun.LOGGER.info(f"config before reboot: {config_before_reboot}")
-            TestRun.LOGGER.info(f"config after reboot: {config_after_reboot}")
-            TestRun.LOGGER.error(f"Configuration changed after reboot")
-
-        if devices_after == devices_before:
-            TestRun.LOGGER.info(f"Device list is as expected")
-        else:
-            TestRun.LOGGER.info(f"Devices before: {devices_before}")
-            TestRun.LOGGER.info(f"Devices after: {devices_after}")
-            TestRun.LOGGER.error(f"Device list changed after reboot")
+        validate_configuration(config_before_reboot, devices_before)
 
     with TestRun.step("Run FIO with verification on LVM."):
         fio_run.run()
