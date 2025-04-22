@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -719,7 +720,12 @@ def detach_all_cores(flush):
 
     for dev in dev_list:
         if dev['type'] == 'cache':
+            # Detach cores only from main caches from multilevel stack.
+            if 'main' not in dev['level']:
+                continue
+
             cache_id = dev['id']
+
         elif dev['type'] == 'core' and dev['status'] == "Active":
             # In case of exception we proceed with detaching remaining core instances
             # to gracefully shutdown as many cache instances as possible.
@@ -746,6 +752,10 @@ def stop_all_caches(flush):
 
     for dev in dev_list:
         if dev['type'] == 'cache':
+            # Stop only main caches from multilevel stack.
+            if 'main' not in dev['level']:
+                continue
+
             # In case of exception we proceed with stopping subsequent cache instances
             # to gracefully shutdown as many cache instances as possible.
             try:

@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -19,6 +20,7 @@
 #include "argp.h"
 #include "cas_lib.h"
 #include "cas_lib_utils.h"
+#include "ocf/ocf_def.h"
 #include "safeclib/safe_str_lib.h"
 #include <cas_ioctl_codes.h>
 #include "statistics_view.h"
@@ -40,6 +42,7 @@ struct command_args{
 	int force;
 	int cache_id;
 	int core_id;
+	int composite_volume_member_id;
 	int state;
 	int cache_mode;
 	int stats_filters;
@@ -61,12 +64,18 @@ struct command_args{
 	uint32_t params_count;
 	bool verbose;
 	bool by_id_path;
+	bool apply_all_levels;
+	bool ocf_enable;
+	const char *ocf_param;
+	const char *ocf_policy;
+	int main_cache_id;
 };
 
 static struct command_args command_args_values = {
 		.force = 0,
 		.cache_id = OCF_CACHE_ID_INVALID,
 		.core_id = OCF_CORE_ID_INVALID,
+		.composite_volume_member_id = OCF_COMPOSITE_VOLUME_MEMBER_ID_INVALID,
 		.state = CACHE_INIT_NEW,
 		.cache_mode = ocf_cache_mode_none,
 		.stats_filters = STATS_FILTER_DEFAULT,
@@ -85,6 +94,8 @@ static struct command_args command_args_values = {
 		.cache_device = NULL,
 		.core_device = NULL,
 		.by_id_path = false,
+		.apply_all_levels = false,
+		.main_cache_id = OCF_CACHE_ID_INVALID,
 
 		.params_type = 0,
 		.params_count = 0,
@@ -111,11 +122,21 @@ int command_handle_option(char *opt, const char **arg)
 			return FAILURE;
 
 		command_args_values.cache_id = atoi(arg[0]);
+	} else if (!strcmp(opt, "main-cache-id")) {
+		command_args_values.main_cache_id = atoi(arg[0]);
 	} else if (!strcmp(opt, "core-id")) {
 		if (validate_str_num(arg[0], "core id", 0, OCF_CORE_ID_MAX) == FAILURE)
 			return FAILURE;
 
 		command_args_values.core_id = atoi(arg[0]);
+#ifdef OCF_DEBUG_STATS
+	} else if (!strcmp(opt, "composite-volume-member-id")) {
+		if (validate_str_num(arg[0], "composite volume member id", 0,
+					OCF_COMPOSITE_VOLUME_MEMBERS_MAX - 1) == FAILURE)
+			return FAILURE;
+
+		command_args_values.composite_volume_member_id = atoi(arg[0]);
+#endif
 	} else if (!strcmp(opt, "core-device")) {
 		if (validate_device_name(arg[0]) == FAILURE)
 			return FAILURE;
@@ -149,6 +170,14 @@ int command_handle_option(char *opt, const char **arg)
 		command_args_values.no_flush = true;
 	} else if (!strcmp(opt, "by-id-path")) {
 		command_args_values.by_id_path = true;
+	} else if (!strcmp(opt, "all-levels")) {
+		command_args_values.apply_all_levels = true;
+	} else if (!strcmp(opt, "subvolume-id")) {
+		if (validate_str_num(arg[0], "subvolume id", 0,
+				OCF_COMPOSITE_VOLUME_MEMBERS_MAX - 1))
+			return FAILURE;
+
+		command_args_values.composite_volume_member_id = atoi(arg[0]);
 	} else {
 		return FAILURE;
 	}
@@ -279,6 +308,8 @@ int start_cache_command_handle_option(char *opt, const char **arg)
 	} else if (!strcmp(opt, "load")) {
 
 		command_args_values.state = CACHE_INIT_LOAD;
+	} else if (!strcmp(opt, "main-cache-id")) {
+		command_args_values.main_cache_id = atoi(arg[0]);
 	} else if (!strcmp(opt, "cache-device")) {
 		if(validate_device_name(arg[0]) == FAILURE)
 			return FAILURE;
@@ -310,24 +341,116 @@ int start_cache_command_handle_option(char *opt, const char **arg)
 /* OCF_CORE_ID_MAX is defined by arithmetic operations on OCF_CORE_MAX. As a result there is no easy way
  * to stringify OCF_CORE_ID_MAX. To work around this, additional definition for max core id is introduced here.
  * In case of mismatch between header and local definition preprocessor error is triggered. */
-#define _CASADM_CORE_ID_MAX 4095
+#define _CASADM_CORE_ID_MAX 4094
 #if (_CASADM_CORE_ID_MAX != OCF_CORE_ID_MAX)
 #error "Max core id definitions discrepancy. Please update above definition."
 #endif
 #define CORE_ID_DESC "Identifier of core <0-"xstr(_CASADM_CORE_ID_MAX)"> within given cache instance"
+#ifdef OCF_DEBUG_STATS
+#define _CASADM_COMPOSITE_VOLUME_MEMBER_ID_MAX 15
+#endif
 
 #define CACHE_DEVICE_DESC "Caching device to be used"
 #define CORE_DEVICE_DESC "Path to core device"
 #define CACHE_LINE_SIZE_DESC "Set cache line size in kibibytes: {4,8,16,32,64}[KiB] (default: %d)"
-
+#define OCF_ENABLE_DESC "Enable/Disable OCF policy(s). "\
+       "Options: {on|off}"
+#define OCF_PARAMETER_NAME_DESC "OCF parameter name (valid values of NAME are: ocf_prefetcher)"
+#define OCF_POLICY_DESC "Policy to enable or disable. "\
+       "Can be comma-separated list (e.g. --policy p1,p2). "\
+       "Supported policies: for ocf_prefetcher: stream"
 
 static cli_option start_options[] = {
+	{
+		'd',
+		"cache-device",
+		CACHE_DEVICE_DESC,
+		1,
+		"DEVICE",
+		CLI_OPTION_REQUIRED
+	},
+	{
+		'i',
+		"cache-id",
+		CACHE_ID_DESC_LONG,
+		1,
+		"ID",
+		0
+	},
+	{
+		'l',
+		"load",
+		"Load cache metadata from caching device "
+			"(DANGEROUS - see manual or Admin Guide for details)"
+	},
+	{
+		'f',
+		"force",
+		"Force the creation of cache instance"
+	},
+	{
+		'c',
+		"cache-mode",
+		"Set cache mode from available: "
+			"{"CAS_CLI_HELP_START_CACHE_MODES"} "
+			CAS_CLI_HELP_START_CACHE_MODES_FULL"; without this "
+			"parameter Write-Through will be set by default",
+		1,
+		"NAME"
+	},
+	{
+		'x',
+		"cache-line-size",
+		CACHE_LINE_SIZE_DESC,
+		1,
+		"NUMBER",
+		CLI_OPTION_DEFAULT_INT,
+		0,
+		0,
+		ocf_cache_line_size_default / KiB
+	},
+	{
+		'm',
+		"main-cache-id",
+		"The id of the main cache instance within a multi-level"
+		       " cache setup",
+		1,
+		"ID",
+		0
+	},
+	{0}
+};
+
+static cli_option attach_cache_options[] = {
 	{'d', "cache-device", CACHE_DEVICE_DESC, 1, "DEVICE", CLI_OPTION_REQUIRED},
-	{'i', "cache-id", CACHE_ID_DESC_LONG, 1, "ID", 0},
-	{'l', "load", "Load cache metadata from caching device (DANGEROUS - see manual or Admin Guide for details)"},
-	{'f', "force", "Force the creation of cache instance"},
-	{'c', "cache-mode", "Set cache mode from available: {"CAS_CLI_HELP_START_CACHE_MODES"} "CAS_CLI_HELP_START_CACHE_MODES_FULL"; without this parameter Write-Through will be set by default", 1, "NAME"},
-	{'x', "cache-line-size", CACHE_LINE_SIZE_DESC, 1, "NUMBER",  CLI_OPTION_DEFAULT_INT, 0, 0, ocf_cache_line_size_default / KiB},
+	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
+	{'f', "force", "Force attaching the cache device"},
+	{0}
+};
+
+#define SUBVOLUME_ID_DESC "Id of a subvolume within the composite"
+
+static cli_option attach_composite_cache_options[] = {
+	{
+		'd',
+		"cache-device",
+		CACHE_DEVICE_DESC,
+		1,
+		"DEVICE",
+		CLI_OPTION_REQUIRED
+	},
+	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
+	{
+		'k',
+		"subvolume-id",
+		SUBVOLUME_ID_DESC,
+		1,
+		"ID",
+		CLI_OPTION_REQUIRED,
+		0,
+		OCF_COMPOSITE_VOLUME_MEMBERS_MAX-1
+	},
+	{'f', "force", "Force attaching the cache device"},
 	{0}
 };
 
@@ -368,40 +491,91 @@ int validate_cache_path(const char* path, bool force)
 {
 	int cache_device;
 	struct stat device_info;
-
-
-	cache_device = open(path, O_RDONLY);
-
-	if (cache_device < 0) {
-		cas_printf(LOG_ERR, "Couldn't open cache device %s.\n", path);
+	char dup_path[PATH_MAX] = { 0 };
+	int num_cache_sub_volumes = 0;
+	char* rest = dup_path;
+	char* vol_path;
+	if (strncpy_s(dup_path, PATH_MAX - 1, path, PATH_MAX - 1))
 		return FAILURE;
-	}
 
-	if (fstat(cache_device, &device_info)) {
-		close(cache_device);
-		cas_printf(LOG_ERR, "Could not stat target device:%s!\n",
-				path);
-		return FAILURE;
-	}
+	while ((vol_path = strtok_r(rest, ",", &rest))) {
 
-	if (!S_ISBLK(device_info.st_mode)) {
-		close(cache_device);
-		cas_printf(LOG_ERR, WRONG_DEVICE_ERROR NOT_BLOCK_ERROR,
-				path);
-		return FAILURE;
-	}
+		if (num_cache_sub_volumes == OCF_CACHE_SUB_VOLUMES) {
+			cas_printf(LOG_ERR, "cache path %s has more than %d devices.\n",
+				path, num_cache_sub_volumes);
+			return FAILURE;
+		}
+		++num_cache_sub_volumes;
+		cache_device = open(vol_path, O_RDONLY);
 
-	if (check_fs(path, force)) {
-		close(cache_device);
-		return FAILURE;
-	}
+		if (cache_device < 0) {
+			cas_printf(LOG_ERR, "Couldn't open cache device %s.\n", path);
+			return FAILURE;
+		}
 
-	if (close(cache_device) < 0) {
-		cas_printf(LOG_ERR, "Couldn't close the cache device.\n");
-		return FAILURE;
-	}
+		if (fstat(cache_device, &device_info)) {
+			close(cache_device);
+			cas_printf(LOG_ERR, "Could not stat target device:%s!\n",
+				vol_path);
+			return FAILURE;
+		}
 
+		if (!S_ISBLK(device_info.st_mode)) {
+			close(cache_device);
+			cas_printf(LOG_ERR, WRONG_DEVICE_ERROR NOT_BLOCK_ERROR,
+				vol_path);
+			return FAILURE;
+		}
+
+		if (check_fs(vol_path, force)) {
+			close(cache_device);
+			return FAILURE;
+		}
+
+		if (close(cache_device) < 0) {
+			cas_printf(LOG_ERR, "Couldn't close the cache device.\n");
+			return FAILURE;
+		}
+	}
 	return SUCCESS;
+}
+
+int handle_cache_attach(void)
+{
+	return attach_cache(
+			command_args_values.cache_id,
+			command_args_values.cache_device,
+			command_args_values.force
+			);
+}
+
+int handle_cache_detach(void)
+{
+	return detach_cache(command_args_values.cache_id);
+}
+
+static int handle_composite_detach(void)
+{
+	return detach_composite_cache_cache_member(
+			command_args_values.cache_id,
+			command_args_values.cache_device,
+			OCF_COMPOSITE_VOLUME_MEMBER_ID_INVALID
+			);
+}
+
+static int handle_composite_attach(void)
+{
+	return attach_composite_cache_cache_member(
+			command_args_values.cache_id,
+			command_args_values.cache_device,
+			command_args_values.composite_volume_member_id,
+			command_args_values.force
+			);
+}
+
+int handle_cache_remove(void)
+{
+	return remove_cache(command_args_values.cache_id);
 }
 
 int handle_start()
@@ -438,6 +612,7 @@ int handle_start()
 			command_args_values.cache_device,
 			command_args_values.cache_mode,
 			command_args_values.line_size,
+		        command_args_values.main_cache_id,
 			command_args_values.force);
 
 	return status;
@@ -454,13 +629,21 @@ int handle_list()
 	return list_caches(command_args_values.output_format, command_args_values.by_id_path);
 }
 
+#define ALL_LEVELS_FLAG_DESC \
+	"Apply the command for all tiers of multilevel cache"
+
 static cli_option stats_options[] = {
 	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
 	{'j', "core-id", "Limit display of core-specific statistics to only ones pertaining to a specific core. If this option is not given, casadm will display statistics pertaining to all cores assigned to given cache instance.", 1, "ID", 0},
 	{'d', "io-class-id", "Display per IO class statistics", 1, "ID", CLI_OPTION_OPTIONAL_ARG},
-	{'f', "filter", "Apply filters from the following set: {all, conf, usage, req, blk, err}", 1, "FILTER-SPEC"},
+#ifdef OCF_DEBUG_STATS
+	{'m', "composite-volume-member-id", "Display per composite-volume member statistics",
+		1, "ID", CLI_OPTION_OPTIONAL_ARG},
+#endif
+	{'f', "filter", "Apply filters from the following set: {all, conf, usage, req, prefetch, blk, err}", 1, "FILTER-SPEC"},
 	{'o', "output-format", "Output format: {table|csv}", 1, "FORMAT"},
 	{'b', "by-id-path", "Display by-id path to disks instead of short form /dev/sdx"},
+	{'l', "all-levels", ALL_LEVELS_FLAG_DESC},
 	{0}
 };
 
@@ -489,6 +672,14 @@ int stats_command_handle_option(char *opt, const char **arg)
 			command_args_values.io_class_id = atoi(arg[0]);
 		}
 		command_args_values.stats_filters |= STATS_FILTER_IOCLASS;
+#ifdef OCF_DEBUG_STATS
+	} else if (!strcmp(opt, "composite-volume-member-id")) {
+		if (validate_str_num(arg[0], "composite volume member id",
+				0, _CASADM_COMPOSITE_VOLUME_MEMBER_ID_MAX) == FAILURE)
+				return FAILURE;
+
+		command_args_values.composite_volume_member_id = atoi(arg[0]);
+#endif
 	} else if (!strcmp(opt, "filter")) {
 		stats_filters = validate_str_stats_filters(arg[0]);
 		if (STATS_FILTER_INVALID == stats_filters)
@@ -503,6 +694,8 @@ int stats_command_handle_option(char *opt, const char **arg)
 		command_args_values.by_id_path = true;
 		if (command_args_values.by_id_path == false)
 			return FAILURE;
+	} else if (!strcmp(opt, "all-levels")) {
+		command_args_values.apply_all_levels = true;
 	} else {
 		return FAILURE;
 	}
@@ -515,14 +708,36 @@ int handle_stats()
 	return cache_status(command_args_values.cache_id,
 			    command_args_values.core_id,
 			    command_args_values.io_class_id,
+#ifdef OCF_DEBUG_STATS
+			    command_args_values.composite_volume_member_id,
+#endif
 			    command_args_values.stats_filters,
 			    command_args_values.output_format,
-			    command_args_values.by_id_path);
+			    command_args_values.by_id_path,
+			    command_args_values.apply_all_levels);
 }
 
 static cli_option stop_options[] = {
 	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
 	{'n', "no-data-flush", "Do not flush dirty data (may be dangerous)"},
+	{0}
+};
+
+static cli_option detach_options[] = {
+	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
+	{0}
+};
+
+static cli_option detach_composite_options[] = {
+	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
+	{
+		'd',
+		"cache-device",
+		CACHE_DEVICE_DESC,
+		1,
+		"DEVICE",
+		CLI_OPTION_REQUIRED
+	},
 	{0}
 };
 
@@ -672,8 +887,10 @@ static struct cas_param cas_core_params[] = {
 
 static char *cleaning_policy_type_values[] = {
 	[ocf_cleaning_nop] = "nop",
+#ifdef CLEANER_ENABLE
 	[ocf_cleaning_alru] = "alru",
 	[ocf_cleaning_acp] = "acp",
+#endif
 	NULL,
 };
 
@@ -867,12 +1084,14 @@ int set_param_cleaning_handle_option(char *opt, const char **arg)
 		if (!strcmp("nop", arg[0])) {
 			SET_CACHE_PARAM(cache_param_cleaning_policy_type,
 					ocf_cleaning_nop);
+#ifdef CLEANER_ENABLE
 		} else if (!strcmp("alru", arg[0])) {
 			SET_CACHE_PARAM(cache_param_cleaning_policy_type,
 					ocf_cleaning_alru);
 		} else if (!strcmp("acp", arg[0])) {
 			SET_CACHE_PARAM(cache_param_cleaning_policy_type,
 					ocf_cleaning_acp);
+#endif
 		} else {
 			cas_printf(LOG_ERR, "Error: Invalid policy name.\n");
 			return FAILURE;
@@ -1156,6 +1375,94 @@ static cli_option set_state_cache_mode_options[] = {
 	{0},
 };
 
+static cli_option set_ocf_param_options[] = {
+	{'n', "name", OCF_PARAMETER_NAME_DESC, 1, "NAME", CLI_OPTION_REQUIRED},
+	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
+	{'j', "core-id", CORE_ID_DESC, 1, "ID", CLI_OPTION_OPTIONAL_ARG},
+	{'e', "enable", OCF_ENABLE_DESC, 1, "on|off", CLI_OPTION_REQUIRED},
+	{'p', "policy", OCF_POLICY_DESC, 1, "POLICY", CLI_OPTION_OPTIONAL_ARG},
+	{0},
+};
+
+static cli_option get_ocf_param_options[] = {
+	{'n', "name", OCF_PARAMETER_NAME_DESC, 1, "NAME", CLI_OPTION_REQUIRED},
+	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
+	{'j', "core-id", CORE_ID_DESC, 1, "ID", CLI_OPTION_OPTIONAL_ARG},
+	{'o', "output-format", "Output format: {table|csv}", 1, "FORMAT", 0},
+	{0},
+};
+
+int get_ocf_param_handle_option(char *opt, const char **arg)
+{
+	if (!strcmp(opt, "name")) {
+		if (validate_ocf_param(arg[0]) == FAILURE)
+			return FAILURE;
+
+		command_args_values.ocf_param = arg[0];
+	} else if (!strcmp(opt, "cache-id")) {
+		if (validate_str_num(arg[0], "cache id", OCF_CACHE_ID_MIN,
+				OCF_CACHE_ID_MAX) == FAILURE)
+			return FAILURE;
+
+		command_args_values.cache_id = atoi(arg[0]);
+	} else if (!strcmp(opt, "core-id")) {
+		if (validate_str_num(arg[0], "core id", 0, OCF_CORE_ID_MAX) == FAILURE)
+			return FAILURE;
+
+		command_args_values.core_id = atoi(arg[0]);
+	} else if (!strcmp(opt, "output-format")) {
+		command_args_values.output_format
+			= validate_str_output_format(arg[0]);
+
+		if (OUTPUT_FORMAT_INVALID == command_args_values.output_format)
+			return FAILURE;
+
+	} else {
+		return FAILURE;
+	}
+
+	return 0;
+}
+
+int set_ocf_param_handle_option(char *opt, const char **arg)
+{
+	if (!strcmp(opt, "name")) {
+		if (validate_ocf_param(arg[0]) == FAILURE)
+			return FAILURE;
+
+		command_args_values.ocf_param = arg[0];
+	} else if (!strcmp(opt, "cache-id")) {
+		if (validate_str_num(arg[0], "cache id", OCF_CACHE_ID_MIN,
+				OCF_CACHE_ID_MAX) == FAILURE)
+			return FAILURE;
+
+		command_args_values.cache_id = atoi(arg[0]);
+	} else if (!strcmp(opt, "core-id")) {
+		if (validate_str_num(arg[0], "core id", 0, OCF_CORE_ID_MAX) == FAILURE)
+			return FAILURE;
+
+		command_args_values.core_id = atoi(arg[0]);
+	} else if (!strcmp(opt, "enable")) {
+		if (!strcmp("on", arg[0]))
+			command_args_values.ocf_enable = true;
+		else if (!strcmp("off", arg[0]))
+			command_args_values.ocf_enable = false;
+		else {
+			cas_printf(LOG_ERR, "Error: 'on' or 'off' required as an argument for -e option.\n");
+			return FAILURE;
+		}
+	} else if (!strcmp(opt, "policy")) {
+		if (validate_ocf_param(arg[0]) == FAILURE)
+			return FAILURE;
+
+		command_args_values.ocf_policy = arg[0];
+	} else {
+		return FAILURE;
+	}
+
+	return 0;
+}
+
 int set_cache_mode_command_handle_option(char *opt, const char **arg)
 {
 	if (!strcmp(opt, "cache-mode")) {
@@ -1191,6 +1498,25 @@ int handle_set_cache_mode()
 	return set_cache_mode(command_args_values.cache_mode,
 			command_args_values.cache_id,
 			command_args_values.cache_state_flush);
+}
+
+int handle_set_ocf_param()
+{
+	return set_ocf_param(command_args_values.ocf_param, command_args_values.cache_id,
+		command_args_values.core_id, command_args_values.ocf_enable,
+		command_args_values.ocf_policy);
+}
+
+int handle_get_ocf_param()
+{
+	int format = TEXT;
+
+	if (OUTPUT_FORMAT_CSV == command_args_values.output_format) {
+		format = RAW_CSV;
+	}
+
+	return get_ocf_param(command_args_values.ocf_param, command_args_values.cache_id,
+		command_args_values.core_id, format);
 }
 
 static cli_option add_options[] = {
@@ -1250,29 +1576,54 @@ int handle_core_pool_remove()
 		"> within given cache instance. If not specified, statistics are reset " \
 		"for all cores in cache instance."
 
+#ifdef OCF_DEBUG_STATS
+#define RESET_COUNTERS_COMPOSITE_VOLUME_MEMBER_ID_DESC "Identifier of composite-volume member " \
+		"<0-"xstr(_CASADM_COMPOSITE_VOLUME_MEMBER_ID_MAX) \
+		"> within given cache instance. If not specified, statistics are reset " \
+		"for all volume members in cache instance."
+#endif
+
 static cli_option reset_counters_options[] = {
 	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
 	{'j', "core-id", RESET_COUNTERS_CORE_ID_DESC, 1, "ID", 0},
+	{'l', "all-levels", ALL_LEVELS_FLAG_DESC},
+#ifdef OCF_DEBUG_STATS
+	{'m', "composite-volume-member-id",
+		RESET_COUNTERS_COMPOSITE_VOLUME_MEMBER_ID_DESC, 1, "ID", 0},
+#endif
 	{0}
 };
 
 int handle_reset_counters()
 {
+#ifdef OCF_DEBUG_STATS
 	return reset_counters(command_args_values.cache_id,
-			command_args_values.core_id);
+			command_args_values.core_id,
+			command_args_values.composite_volume_member_id,
+			command_args_values.apply_all_levels);
+#else
+	return reset_counters(command_args_values.cache_id,
+			command_args_values.core_id,
+			command_args_values.apply_all_levels);
+#endif
 }
 
-static cli_option flush_cache_options[] = { 
+static cli_option flush_cache_options[] = {
 	{'i', "cache-id", CACHE_ID_DESC, 1, "ID", CLI_OPTION_REQUIRED},
 	{'j', "core-id", CORE_ID_DESC, 1, "ID", CLI_OPTION_OPTIONAL_ARG},
+	{'l', "all-levels", ALL_LEVELS_FLAG_DESC},
 	{0}
 };
 
 int handle_flush_cache()
 {
-	if(command_args_values.core_id != OCF_CORE_ID_INVALID)
-		return flush_core(command_args_values.cache_id, command_args_values.core_id);
-	return flush_cache(command_args_values.cache_id);
+	if (command_args_values.core_id != OCF_CORE_ID_INVALID)
+		return flush_core(command_args_values.cache_id,
+				command_args_values.core_id,
+				command_args_values.apply_all_levels);
+
+	return flush_cache(command_args_values.cache_id,
+			command_args_values.apply_all_levels);
 }
 
 /*******************************************************************************
@@ -1445,7 +1796,9 @@ int io_class_handle_option(char *opt, const char **arg)
 
 		io_class_params_options[io_class_opt_cache_file_load].priv |=  (1 << io_class_opt_flag_set);
 
-		strncpy_s(io_class_params.file, sizeof(io_class_params.file), arg[0], strnlen_s(arg[0], sizeof(io_class_params.file)));
+		if (strncpy_s(io_class_params.file, sizeof(io_class_params.file),
+			      arg[0], strnlen_s(arg[0], sizeof(io_class_params.file))))
+			return FAILURE;
 	} else if (!strcmp(opt, "output-format")) {
 		io_class_params.output_format = validate_str_output_format(arg[0]);
 		if (OUTPUT_FORMAT_INVALID == io_class_params.output_format)
@@ -2204,6 +2557,26 @@ static cli_command cas_commands[] = {
 			.help = NULL,
 		},
 		{
+			.name = "attach-cache",
+			.desc = "Attach cache device",
+			.long_desc = NULL,
+			.options = attach_cache_options,
+			.command_handle_opts = start_cache_command_handle_option,
+			.handle = handle_cache_attach,
+			.flags = CLI_SU_REQUIRED,
+			.help = NULL,
+		},
+		{
+			.name = "detach-cache",
+			.desc = "Detach cache device",
+			.long_desc = NULL,
+			.options = detach_options,
+			.command_handle_opts = command_handle_option,
+			.handle = handle_cache_detach,
+			.flags = CLI_SU_REQUIRED,
+			.help = NULL,
+		},
+		{
 			.name = "stop-cache",
 			.short_name = 'T',
 			.desc = "Stop cache instance",
@@ -2215,6 +2588,37 @@ static cli_command cas_commands[] = {
 			.help = NULL,
 		},
 		{
+			.name = "attach-composite",
+			.desc = "Attach a new device to a composite cache",
+			.long_desc = NULL,
+			.options = attach_composite_cache_options,
+			.command_handle_opts = command_handle_option,
+			.handle = handle_composite_attach,
+			.flags = CLI_SU_REQUIRED,
+			.help = NULL,
+		},
+		{
+			.name = "detach-composite",
+			.desc = "Detach a member of a composite cache",
+			.long_desc = NULL,
+			.options = detach_composite_options,
+			.command_handle_opts = command_handle_option,
+			.handle = handle_composite_detach,
+			.flags = CLI_SU_REQUIRED,
+			.help = NULL,
+		},
+		{
+			.name = "remove-cache",
+			.desc = "Stop cache and remove its metadata. Also "
+				"remove the cache from mulilevel setup",
+			.long_desc = NULL,
+			.options = detach_options,
+			.command_handle_opts = command_handle_option,
+			.handle = handle_cache_remove,
+			.flags = CLI_SU_REQUIRED,
+			.help = NULL,
+		},
+		{
 			.name = "set-param",
 			.short_name = 'X',
 			.desc = "Set various runtime parameters",
@@ -2222,7 +2626,11 @@ static cli_command cas_commands[] = {
 			.namespace = &set_param_namespace,
 			.namespace_handle_opts = set_param_namespace_handle_option,
 			.handle = handle_set_param,
+		#ifndef CAS_COMMUNITY_MODE
+			.flags = (CLI_SU_REQUIRED | CLI_COMMAND_UNSUPPORTED),
+		#else
 			.flags = CLI_SU_REQUIRED,
+		#endif
 			.help = NULL,
 		},
 		{
@@ -2233,6 +2641,28 @@ static cli_command cas_commands[] = {
 			.namespace = &get_param_namespace,
 			.namespace_handle_opts = get_param_namespace_handle_option,
 			.handle = handle_get_param,
+			.flags = CLI_SU_REQUIRED,
+			.help = NULL,
+		},
+		{
+			.name = "set-ocf-param",
+			.short_name = 'U',
+			.desc = "Set various OCF runtime parameters",
+			.long_desc = "Set various OCF runtime parameters",
+			.options = set_ocf_param_options,
+			.command_handle_opts = set_ocf_param_handle_option,
+			.handle = handle_set_ocf_param,
+			.flags = CLI_SU_REQUIRED,
+			.help = NULL,
+		},
+		{
+			.name = "get-ocf-param",
+			.short_name = 'W',
+			.desc = "Get various OCF runtime parameters",
+			.long_desc = "Get various OCF runtime parameters",
+			.options = get_ocf_param_options,
+			.command_handle_opts = get_ocf_param_handle_option,
+			.handle = handle_get_ocf_param,
 			.flags = CLI_SU_REQUIRED,
 			.help = NULL,
 		},

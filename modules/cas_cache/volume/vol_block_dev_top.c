@@ -31,39 +31,33 @@ static void blkdev_set_bio_data(struct blk_data *data, struct bio *bio)
 #endif
 }
 
-void blkdev_set_exported_object_flush_fua(ocf_core_t core)
+static void blkdev_set_exported_object_flush_fua(ocf_core_t core)
 {
 	ocf_cache_t cache = ocf_core_get_cache(core);
 	ocf_volume_t core_vol = ocf_core_get_volume(core);
-	ocf_volume_t cache_vol = ocf_cache_get_volume(cache);
-	struct bd_object *bd_core_vol, *bd_cache_vol;
-	struct request_queue *core_q, *exp_q, *cache_q;
+	struct bd_object *bd_core_vol;
+	struct request_queue *core_q, *exp_q;
 	bool flush, fua;
-
-	BUG_ON(!cache_vol);
-
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	bd_core_vol = bd_object(core_vol);
-	bd_cache_vol = bd_object(cache_vol);
 
 	core_q = cas_disk_get_queue(bd_core_vol->dsk);
 	exp_q = cas_exp_obj_get_queue(bd_core_vol->dsk);
-	cache_q = cas_disk_get_queue(bd_cache_vol->dsk);
 
-	flush = (CAS_CHECK_QUEUE_FLUSH(core_q) || CAS_CHECK_QUEUE_FLUSH(cache_q));
-	fua = (CAS_CHECK_QUEUE_FUA(core_q) || CAS_CHECK_QUEUE_FUA(cache_q));
+	flush = (CAS_CHECK_QUEUE_FLUSH(core_q) ||
+			cache_priv->device_properties.flush);
+	fua = (CAS_CHECK_QUEUE_FUA(core_q) || cache_priv->device_properties.fua);
 
 	cas_set_queue_flush_fua(exp_q, flush, fua);
 }
 
 static void blkdev_set_discard_properties(ocf_cache_t cache,
-		struct request_queue *exp_q, struct block_device *cache_bd,
-		struct block_device *core_bd, sector_t core_sectors)
+		struct request_queue *exp_q, struct block_device *core_bd,
+		sector_t core_sectors)
 {
 	struct request_queue *core_q;
-	struct request_queue *cache_q;
 
 	core_q = bdev_get_queue(core_bd);
-	cache_q = bdev_get_queue(cache_bd);
 
 	cas_set_discard_flag(exp_q);
 
@@ -91,38 +85,32 @@ static int blkdev_core_set_geometry(struct cas_disk *dsk, void *private)
 	ocf_core_t core;
 	ocf_cache_t cache;
 	ocf_volume_t core_vol;
-	ocf_volume_t cache_vol;
-	struct bd_object *bd_cache_vol;
-	struct request_queue *core_q, *cache_q, *exp_q;
-	struct block_device *core_bd, *cache_bd;
+	struct request_queue *core_q, *exp_q;
+	struct block_device *core_bd;
 	sector_t sectors;
 	const char *path;
+	struct cache_priv *cache_priv;
 
 	BUG_ON(!private);
 	core = private;
 	cache = ocf_core_get_cache(core);
 	core_vol = ocf_core_get_volume(core);
-	cache_vol = ocf_cache_get_volume(cache);
-	BUG_ON(!cache_vol);
+	cache_priv = ocf_cache_get_priv(cache);
 
-	bd_cache_vol = bd_object(cache_vol);
 	path = ocf_volume_get_uuid(core_vol)->data;
 
 	core_bd = cas_disk_get_blkdev(dsk);
 	BUG_ON(!core_bd);
 
-	cache_bd = cas_disk_get_blkdev(bd_cache_vol->dsk);
-	BUG_ON(!cache_bd);
-
 	core_q = cas_bdev_whole(core_bd)->bd_disk->queue;
-	cache_q = cache_bd->bd_disk->queue;
 	exp_q = cas_exp_obj_get_queue(dsk);
 
 	sectors = ocf_volume_get_length(core_vol) >> SECTOR_SHIFT;
 
 	set_capacity(cas_exp_obj_get_gendisk(dsk), sectors);
 
-	cas_copy_queue_limits(exp_q, cache_q, core_q);
+	cas_copy_queue_limits(exp_q, &cache_priv->device_properties.queue_limits,
+			core_q);
 
 	if (exp_q->limits.logical_block_size >
 		core_q->limits.logical_block_size) {
@@ -139,8 +127,7 @@ static int blkdev_core_set_geometry(struct cas_disk *dsk, void *private)
 
 	blkdev_set_exported_object_flush_fua(core);
 
-	blkdev_set_discard_properties(cache, exp_q, cache_bd, core_bd,
-			sectors);
+	blkdev_set_discard_properties(cache, exp_q, core_bd, sectors);
 
 	exp_q->queue_flags |= (1 << QUEUE_FLAG_NONROT);
 
@@ -202,10 +189,11 @@ static void blkdev_complete_data_master(struct blk_data *master, int error)
 	cas_free_blk_data(master);
 }
 
-static void blkdev_complete_data(struct ocf_io *io, int error)
+static void blkdev_complete_data(ocf_io_t io, void *priv1, void *priv2,
+		int error)
 {
-	struct bio *bio = io->priv1;
-	struct blk_data *master = io->priv2;
+	struct bio *bio = priv1;
+	struct blk_data *master = priv2;
 	struct blk_data *data = ocf_io_get_data(io);
 
 	ocf_io_put(io);
@@ -230,7 +218,7 @@ static int blkdev_handle_data_single(struct bd_object *bvol, struct bio *bio,
 	ocf_cache_t cache = ocf_volume_get_cache(bvol->front_volume);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	ocf_queue_t queue = cache_priv->io_queues[smp_processor_id()];
-	struct ocf_io *io;
+	ocf_io_t io;
 	struct blk_data *data;
 	uint64_t flags = CAS_BIO_OP_FLAGS(bio);
 	int ret;
@@ -330,9 +318,10 @@ err:
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(error));
 }
 
-static void blkdev_complete_discard(struct ocf_io *io, int error)
+static void blkdev_complete_discard(ocf_io_t io, void *priv1, void *priv2,
+		int error)
 {
-	struct bio *bio = io->priv1;
+	struct bio *bio = priv1;
 	int result = map_cas_err_to_generic(error);
 
 	CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio), CAS_ERRNO_TO_BLK_STS(result));
@@ -344,7 +333,7 @@ static void blkdev_handle_discard(struct bd_object *bvol, struct bio *bio)
 	ocf_cache_t cache = ocf_volume_get_cache(bvol->front_volume);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	ocf_queue_t queue = cache_priv->io_queues[smp_processor_id()];
-	struct ocf_io *io;
+	ocf_io_t io;
 
 	io = ocf_volume_new_io(bvol->front_volume, queue,
 			CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
@@ -369,10 +358,11 @@ static void blkdev_handle_bio_noflush(struct bd_object *bvol, struct bio *bio)
 		blkdev_handle_data(bvol, bio);
 }
 
-static void blkdev_complete_flush(struct ocf_io *io, int error)
+static void blkdev_complete_flush(ocf_io_t io, void *priv1, void *priv2,
+		int error)
 {
-	struct bio *bio = io->priv1;
-	struct bd_object *bvol = io->priv2;
+	struct bio *bio = priv1;
+	struct bd_object *bvol = priv2;
 	int result = map_cas_err_to_generic(error);
 
 	ocf_io_put(io);
@@ -383,10 +373,7 @@ static void blkdev_complete_flush(struct ocf_io *io, int error)
 		return;
 	}
 
-	if (in_interrupt())
-		blkdev_defer_bio(bvol, bio, blkdev_handle_bio_noflush);
-	else
-		blkdev_handle_bio_noflush(bvol, bio);
+	blkdev_defer_bio(bvol, bio, blkdev_handle_bio_noflush);
 }
 
 static void blkdev_handle_flush(struct bd_object *bvol, struct bio *bio)
@@ -394,7 +381,7 @@ static void blkdev_handle_flush(struct bd_object *bvol, struct bio *bio)
 	ocf_cache_t cache = ocf_volume_get_cache(bvol->front_volume);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	ocf_queue_t queue = cache_priv->io_queues[smp_processor_id()];
-	struct ocf_io *io;
+	ocf_io_t io;
 
 	io = ocf_volume_new_io(bvol->front_volume, queue, 0, 0, OCF_WRITE, 0,
 			CAS_SET_FLUSH(0));
@@ -451,11 +438,13 @@ static int blkdev_cache_set_geometry(struct cas_disk *dsk, void *private)
 	struct bd_object *bvol;
 	struct request_queue *cache_q, *exp_q;
 	struct block_device *bd;
+	struct cache_priv *cache_priv;
 	sector_t sectors;
 
 	BUG_ON(!private);
 	cache = private;
 	volume = ocf_cache_get_volume(cache);
+	cache_priv = ocf_cache_get_priv(cache);
 
 	bvol = bd_object(volume);
 
@@ -469,7 +458,8 @@ static int blkdev_cache_set_geometry(struct cas_disk *dsk, void *private)
 
 	set_capacity(cas_exp_obj_get_gendisk(dsk), sectors);
 
-	cas_copy_queue_limits(exp_q, cache_q, cache_q);
+	cas_copy_queue_limits(exp_q, &cache_q->limits, cache_q);
+	cas_cache_set_no_merges_flag(cache_q);
 
 	blk_stack_limits(&exp_q->limits, &cache_q->limits, 0);
 
@@ -521,10 +511,15 @@ static int kcas_volume_create_exported_object(ocf_volume_t volume,
 	struct bd_object *bvol = bd_object(volume);
 	int result;
 
+	result = ocf_volume_open(bvol->front_volume, NULL);
+	if (result < 0)
+		return result;
+
 	bvol->expobj_wq = alloc_workqueue("expobj_wq_%s",
 			WQ_MEM_RECLAIM | WQ_HIGHPRI, 0,
 			name);
 	if (!bvol->expobj_wq) {
+		ocf_volume_close(bvol->front_volume);
 		result = -ENOMEM;
 		goto end;
 	}
@@ -533,6 +528,7 @@ static int kcas_volume_create_exported_object(ocf_volume_t volume,
 			THIS_MODULE, ops, priv);
 	if (result) {
 		destroy_workqueue(bvol->expobj_wq);
+		ocf_volume_close(bvol->front_volume);
 		goto end;
 	}
 
@@ -575,6 +571,8 @@ static int kcas_volume_destroy_exported_object(ocf_volume_t volume)
 	cas_exp_obj_unlock(bvol->dsk);
 	cas_exp_obj_cleanup(bvol->dsk);
 
+	ocf_volume_close(bvol->front_volume);
+
 	return 0;
 
 err:
@@ -590,8 +588,9 @@ int kcas_core_create_exported_object(ocf_core_t core)
 {
 	ocf_cache_t cache = ocf_core_get_cache(core);
 	ocf_volume_t volume = ocf_core_get_volume(core);
-	struct bd_object *bvol = bd_object(volume);
+	struct bd_object *bvol;
 	char dev_name[DISK_NAME_LEN];
+	bvol = bd_object(volume);
 
 	snprintf(dev_name, DISK_NAME_LEN, "cas%s-%s",
 			get_cache_id_string(cache),

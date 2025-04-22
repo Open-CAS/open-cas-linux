@@ -1,10 +1,22 @@
 #!/bin/bash
 #
 # Copyright(c) 2012-2022 Intel Corporation
+# Copyright(c) 2023 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 MISSING_TOOLS=0
+: ${V:=0}
+
+SCRIPTPATH=`dirname $0`
+SCRIPTPATH=`realpath $SCRIPTPATH`
+CONFIG_FILES=`ls $SCRIPTPATH/configure.d/*.conf | sort`
+FILES_COUNT=`echo $CONFIG_FILES | wc -w`
+
+CONFIG_FILE=$SCRIPTPATH/"config.out"
+DEFINE_FILE=$SCRIPTPATH/"modules/generated_defines.h"
+CASADM_COMPILE_OPTIONS_FILE=$SCRIPTPATH/"casadm/flags.mk"
+CASADM_DEFINE_FILE=$SCRIPTPATH/"casadm/generated_defines.h"
 
 check_util() {
 	which $1 &> /dev/null
@@ -15,99 +27,98 @@ check_util() {
 	fi
 }
 
-check_util dirname
-check_util realpath
-check_util basename
-check_util awk
-check_util python3
-check_util sed
-check_util make
-check_util gcc
-check_util lsblk
+check_environment() {
+	check_util dirname
+	check_util realpath
+	check_util basename
+	check_util awk
+	check_util python3
+	check_util sed
+	check_util make
+	check_util gcc
+	check_util lsblk
 
-SCRIPTPATH=`dirname $0`
-SCRIPTPATH=`realpath $SCRIPTPATH`
-SUBMODULES=(
-	"ocf"
-)
+	SUBMODULES=(
+		"ocf"
+	)
 
-for SUBMOD in ${SUBMODULES[@]}; do
-	if ! ls -A "$SCRIPTPATH/$SUBMOD/"* &>/dev/null; then
-		SUBMODULES_MISSING+="'$SUBMOD' "
-	fi
-done
-if [ "$SUBMODULES_MISSING" ]; then
-	echo "Error: missing submodules: ${SUBMODULES_MISSING}" >&2
-	echo "Please run 'git submodule update --init' and try again!" >&2
-	MISSING_TOOLS=1
-fi
-
-if [ ! -e /lib/modules/$(uname -r)/build/ &> /dev/null ] && [ "$KERNEL_DIR" == "" ]
-then
-	echo >&2 "Error: missing kernel headers and/or kernel devel"
-	MISSING_TOOLS=1
-fi
-
-`python3 -c "import argparse" &> /dev/null`
-if [ $? -ne 0 ]
-then
-	echo >&2 "Error: missing argparse python module"
-	MISSING_TOOLS=1
-fi
-
-if [ ! -f /usr/include/libelf.h ]; then
-	KERNEL_CONFIG=$(find /usr/src/ -type d -name "*$(uname -r)")/.config
-	if [ -f "$KERNEL_CONFIG" ]; then
-		if grep ^CONFIG_UNWINDER_ORC=[Yy] "$KERNEL_CONFIG" &>/dev/null; then
-			echo "Error: CONFIG_UNWINDER_ORC=y option is set in your kernel,"\
-			"please install libelf-dev, libelf-devel or elfutils-libelf-devel" >&2
-			MISSING_TOOLS=1
+	for SUBMOD in ${SUBMODULES[@]}; do
+		if ! ls -A "$SCRIPTPATH/$SUBMOD/"* &>/dev/null; then
+			SUBMODULES_MISSING+="'$SUBMOD' "
 		fi
-	elif [ "$MISSING_TOOLS" -eq 0 ]; then
-		# Print this warning only if there is no missing tools, to not confuse the user
-		# that installing libelf-dev might help with the lack of needed utilities.
-		echo "Warning: unable to find kernel config" >&2
-		echo -e "If configure ends with an error, you may need to install"\
-		"libelf-dev, libelf-devel or elfutils-libelf-devel\n" >&2
+	done
+	if [ "$SUBMODULES_MISSING" ]; then
+		echo "Error: missing submodules: ${SUBMODULES_MISSING}" >&2
+		echo "Please run 'git submodule update --init' and try again!" >&2
+		MISSING_TOOLS=1
 	fi
-fi
 
-if [ "$MISSING_TOOLS" -ne "0" ]
-then
-	exit 1
-fi
+	if [ ! -e /lib/modules/$(uname -r)/build/ &> /dev/null ] && [ "$KERNEL_DIR" == "" ]
+	then
+		echo >&2 "Error: missing kernel headers and/or kernel devel"
+		MISSING_TOOLS=1
+	fi
 
-# Run version generator with 'build' flag to
-# indicate that we are in the build process
-(cd tools && ./cas_version_gen.sh build)
-if [ $? -ne 0 ]; then
-	echo "Error: failed to obtain CAS version" >&2
-	exit 1
-fi
+	`python3 -c "import argparse" &> /dev/null`
+	if [ $? -ne 0 ]
+	then
+		echo >&2 "Error: missing argparse python module"
+		MISSING_TOOLS=1
+	fi
 
-CONFIG_FILES=`ls $SCRIPTPATH/configure.d/*.conf | sort`
-FILES_COUNT=`echo $CONFIG_FILES | wc -w`
+	if [ ! -f /usr/include/libelf.h ]; then
+		KERNEL_CONFIG=$(find /usr/src/ -type d -name "*$(uname -r)")/.config
+		if [ -f "$KERNEL_CONFIG" ]; then
+			if grep ^CONFIG_UNWINDER_ORC=[Yy] "$KERNEL_CONFIG" &>/dev/null; then
+				echo "Error: CONFIG_UNWINDER_ORC=y option is set in your kernel,"\
+				"please install libelf-dev, libelf-devel or elfutils-libelf-devel" >&2
+				MISSING_TOOLS=1
+			fi
+		elif [ "$MISSING_TOOLS" -eq 0 ]; then
+			# Print this warning only if there is no missing tools, to not confuse the user
+			# that installing libelf-dev might help with the lack of needed utilities.
+			echo "Warning: unable to find kernel config" >&2
+			echo -e "If configure ends with an error, you may need to install"\
+			"libelf-dev, libelf-devel or elfutils-libelf-devel\n" >&2
+		fi
+	fi
 
-CONFIG_FILE=$SCRIPTPATH/"config.out"
+	if [ "$MISSING_TOOLS" -ne "0" ]
+	then
+		exit 1
+	fi
+}
+
+generate_version() {
+	# Run version generator with 'build' flag to
+	# indicate that we are in the build process
+	(cd tools && ./cas_version_gen.sh build)
+	if [ $? -ne 0 ]; then
+		echo "Error: failed to obtain CAS version" >&2
+		exit 1
+	fi
+}
 
 generate_config() {
-	rm -f ${CONFIG_FILE}
 	touch ${CONFIG_FILE}
 	n_cores=$(nproc)
 
 	# Compile each test module in background
+	local cnt=1
 	echo "Preparing configuration"
 		for file in $CONFIG_FILES; do
 			# $1 - Action to be performed
 			# $2 - File with stored configuration
 			# $3 - Name of called script (since script is running as subprocess
 			#		it has to be passed explicitly)
+			if [ $V -eq 1 ]; then echo "$cnt/$FILES_COUNT CONFIG $file"; fi
 			source $file "check" "$CONFIG_FILE" "$file" &
 
 			# Prevent spawning more subprocesses than CPU available
-			while [ $(ps --no-headers -o pid --ppid=$$ | wc -w) -ge $n_cores ] ; do
-				sleep 1
-			done
+			if [ $(ps --no-headers -o pid --ppid=$$ | wc -w) -ge $n_cores ] ; then
+				wait -n
+			fi
+			cnt=$((cnt+1))
 	done
 
 	# Wait for all compilation processes to finish
@@ -122,31 +133,102 @@ generate_config() {
 }
 
 generate_header() {
-	rm -f $SCRIPTPATH/modules/generated_defines.h
 	# Configs starting with '1_' have to be put as first in header
-	FIRST=$(echo $CONFIG_FILES | tr ' ' '\n' | grep '1_')
-	SECOND=$(echo $CONFIG_FILES | tr ' ' '\n' | grep '2_')
+	FIRST=$(echo $(basename -a $CONFIG_FILES) | tr ' ' '\n' | grep '^1_')
+	SECOND=$(echo $(basename -a $CONFIG_FILES) | tr ' ' '\n' | grep '^2_')
 
 	echo "Configuring OpenCAS"
-	for file in $FIRST; do
-		CONF=$(cat ${CONFIG_FILE} | grep $(basename $file) | cut -d' ' -f2)
+	local cnt=1
+	for f in $FIRST; do
+		file=$SCRIPTPATH/configure.d/$f
+		if [ $V -eq 1 ]; then echo "$cnt/$FILES_COUNT FIRST $file"; fi
+		CONF=$(cat ${CONFIG_FILE} | grep $f | cut -d' ' -f2)
 		source $file "apply" "$CONF" "$file"
+		cnt=$((cnt+1))
 	done
 
-	for file in $SECOND; do
-		CONF=$(cat ${CONFIG_FILE} | grep $(basename $file) | cut -d' ' -f2)
+	for f in $SECOND; do
+		file=$SCRIPTPATH/configure.d/$f
+		if [ $V -eq 1 ]; then echo "$cnt/$FILES_COUNT SECOND $file"; fi
+		CONF=$(cat ${CONFIG_FILE} | grep $f | cut -d' ' -f2)
 		source $file "apply" "$CONF" "$file"
+		cnt=$((cnt+1))
 	done
 }
 
-if [ -z "$1" ]; then
-	generate_config
-else
-	CONFIG_FILE=$(realpath $1)
-	if [ $? -ne 0 ] ; then
-		echo "Invaild path to config file!"
-		exit 1
-	fi
-fi
+cleanup() {
+	rm -f ${DEFINE_FILE}
+	rm -f ${CONFIG_FILE}
+	rm -f ${CASADM_COMPILE_OPTIONS_FILE}
+	rm -f ${CASADM_DEFINE_FILE}
 
+	touch ${DEFINE_FILE}
+	touch ${CONFIG_FILE}
+	touch ${CASADM_COMPILE_OPTIONS_FILE}
+	touch ${CASADM_DEFINE_FILE}
+}
+
+print_help() {
+	echo "Usage: ./$(basename $0) [--community-mode] [--debug] [--debug-stats] [--experimental]"
+	echo ""
+	echo -e "\t--community-mode\tenable open-cas-linux defaults"
+	echo -e "\t--debug\t\t\tenable debug build"
+	echo -e "\t--experimental\t\tuse experimental features"
+	echo -e "\t--help\t\t\tprint this message"
+	echo ""
+}
+
+COMMUNITY=0
+DEBUG=0
+EXPERIMENTAL=0
+
+apply_flags() {
+	if [ $COMMUNITY -eq 1 ] ; then
+		source configure.d/community.flag "apply" "" "configure.d/community.flag"
+	fi
+
+	if [ $DEBUG -eq 1 ] ; then
+		source configure.d/debug.flag "apply" "" "configure.d/debug.flag"
+	fi
+
+	if [ $EXPERIMENTAL -eq 1 ] ; then
+		source configure.d/experimental.flag "apply" "" "configure.d/experimental.flag"
+	fi
+}
+
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		--help)
+			print_help
+			exit 0
+			;;
+		--community-mode)
+			COMMUNITY=1
+			shift
+			;;
+		--debug)
+			DEBUG=1
+			shift
+			;;
+		--experimental)
+			EXPERIMENTAL=1
+			shift
+			;;
+		--*)
+			echo "Unknown option $1"
+			print_help
+			exit 1
+			;;
+		*)
+			print_help
+			exit 1
+			;;
+	esac
+done
+
+cleanup
+apply_flags
+check_environment
+generate_config
+generate_version
 generate_header

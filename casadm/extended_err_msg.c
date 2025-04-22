@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -56,6 +57,10 @@ struct {
 	{
 		OCF_ERR_CORE_NOT_EXIST,
 		"Core ID does not exist"
+	},
+	{
+		OCF_ERR_COMPOSITE_VOLUME_MEMBER_NOT_EXIST,
+		"composite volume member ID does not exist"
 	},
 	{
 		OCF_ERR_CACHE_EXIST,
@@ -179,6 +184,34 @@ struct {
 		"Cache line size mismatch"
 	},
 	{
+		OCF_ERR_CACHE_DETACHED,
+		"The operation is not permited while the cache is detached"
+	},
+	{
+		OCF_ERR_COMPOSITE_VOLUME_UUID_EXIST,
+		"The device already is a member of the composite cache"
+	},
+	{
+		OCF_ERR_NOT_COMPOSITE_VOLUME,
+		"The volume is not composite"
+	},
+	{
+		OCF_ERR_COMPOSITE_UNINITIALISED_VOLUME,
+		"Composite subvolume slot ID out of range"
+	},
+	{
+		OCF_ERR_COMPOSITE_ATTACHED,
+		"Composite subvolume already attached at given slot ID"
+	},
+	{
+		OCF_ERR_COMPOSITE_DETACHED,
+		"Composite subvolume already detached from given slot ID"
+	},
+	{
+		OCF_ERR_COMPOSITE_INVALID_SIZE,
+		"New composite subvolume has a different size than the one previously attached at this slot ID"
+	},
+	{
 		OCF_ERR_CACHE_STANDBY,
 		"The operation is not permited while the cache is in the standby mode"
 	},
@@ -195,6 +228,14 @@ struct {
 		OCF_ERR_CORE_NOT_REMOVED,
 		"Unable fully remove core due to metadata flush error.\n"
 		"Exported object was removed, but core object still exists."
+	},
+	{
+		OCF_ERR_CACHE_NOT_MAIN,
+		"Given cache ID isn't the main cache in the multi-level stack"
+	},
+	{
+		OCF_ERR_CACHE_IS_MULTI_LEVEL,
+		"Operation not supported for multi-level cache"
 	},
 
 	/* CAS kernel error mappings*/
@@ -238,6 +279,15 @@ struct {
 		KCAS_ERR_CONTAINS_PART,
 		"Device contains partitions.\nIf you want to continue, "
 		"please use --force option.\nWarning: all data will be lost!"
+	},
+	{
+		KCAS_ERR_COMPOSITE_PROPERTIES_INCONSISTENT,
+		"Composite cache members have inconsistent properties"
+	},
+	{
+		KCAS_ERR_DEVICE_PROPERTIES_MISMATCH,
+		"The new device's properties doesn't match the original cache device's"
+		" properties"
 	},
 	{
 		KCAS_ERR_A_PART,

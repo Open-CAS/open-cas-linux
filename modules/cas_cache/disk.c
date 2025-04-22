@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #include <linux/module.h>
@@ -11,18 +12,18 @@
 #include "exp_obj.h"
 #include "debug.h"
 
-#define CAS_DISK_OPEN_FMODE (FMODE_READ | FMODE_WRITE)
+#define CAS_DISK_OPEN_MODE (CAS_BLK_MODE_READ | CAS_BLK_MODE_WRITE)
 
-static inline struct block_device *open_bdev_exclusive(const char *path,
-						       fmode_t mode,
-						       void *holder)
+static inline cas_bdev_handle_t open_bdev_exclusive(const char *path,
+		CAS_BLK_MODE mode, void *holder)
 {
-	return blkdev_get_by_path(path, mode | FMODE_EXCL, holder);
+	return cas_bdev_open_by_path(path, mode | CAS_BLK_MODE_EXCL, holder);
 }
 
-static inline void close_bdev_exclusive(struct block_device *bdev, fmode_t mode)
+static inline void close_bdev_exclusive(cas_bdev_handle_t handle,
+		CAS_BLK_MODE mode)
 {
-	blkdev_put(bdev, mode | FMODE_EXCL);
+	cas_bdev_release(handle, mode | CAS_BLK_MODE_EXCL, NULL);
 }
 
 int __init cas_init_disks(void)
@@ -67,10 +68,10 @@ struct cas_disk *cas_disk_open(const char *path)
 		goto error_kstrdup;
 	}
 
-	dsk->bd = open_bdev_exclusive(path, CAS_DISK_OPEN_FMODE, dsk);
-	if (IS_ERR(dsk->bd)) {
+	dsk->bdev_handle = open_bdev_exclusive(path, CAS_DISK_OPEN_MODE, dsk);
+	if (IS_ERR(dsk->bdev_handle)) {
 		CAS_DEBUG_ERROR("Cannot open exclusive");
-		result = PTR_ERR(dsk->bd);
+		result = PTR_ERR(dsk->bdev_handle);
 		goto error_open_bdev;
 	}
 
@@ -89,11 +90,11 @@ error_kmem:
 void cas_disk_close(struct cas_disk *dsk)
 {
 	BUG_ON(!dsk);
-	BUG_ON(!dsk->bd);
+	BUG_ON(!dsk->bdev_handle);
 
 	CAS_DEBUG_DISK(dsk, "Destroying (%p)", dsk);
 
-	close_bdev_exclusive(dsk->bd, CAS_DISK_OPEN_FMODE);
+	close_bdev_exclusive(dsk->bdev_handle, CAS_DISK_OPEN_MODE);
 
 	kfree(dsk->path);
 	kmem_cache_free(cas_module.disk_cache, dsk);
@@ -102,19 +103,18 @@ void cas_disk_close(struct cas_disk *dsk)
 struct block_device *cas_disk_get_blkdev(struct cas_disk *dsk)
 {
 	BUG_ON(!dsk);
-	return dsk->bd;
+	BUG_ON(!dsk->bdev_handle);
+	return cas_bdev_get_from_handle(dsk->bdev_handle);
 }
 
 struct gendisk *cas_disk_get_gendisk(struct cas_disk *dsk)
 {
-	BUG_ON(!dsk);
-	BUG_ON(!dsk->bd);
-	return dsk->bd->bd_disk;
+	return cas_disk_get_blkdev(dsk)->bd_disk;
 }
 
 struct request_queue *cas_disk_get_queue(struct cas_disk *dsk)
 {
-	BUG_ON(!dsk);
-	BUG_ON(!dsk->bd);
-	return cas_bdev_whole(dsk->bd)->bd_disk->queue;
+	struct block_device *bd = cas_disk_get_blkdev(dsk);
+
+	return cas_bdev_whole(bd)->bd_disk->queue;
 }

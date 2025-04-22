@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -39,6 +40,8 @@ struct kcas_start_cache {
 	 * id of newely inserted cache (in range 1-OCF_CACHE_ID_MAX).
 	 */
 	uint16_t cache_id;
+
+	uint16_t lower_cache_id; /**< id of lower cache if applicable*/
 
 	/**
 	 * cache initialization mode
@@ -82,12 +85,43 @@ struct kcas_stop_cache {
 	int ext_err_code;
 };
 
+struct kcas_composite_resize_cache {
+	uint16_t cache_id; /**< id of cache to be stopped */
+
+	char cache_path_name[MAX_STR_LEN]; /**< path to an ssd*/
+
+	uint8_t tgt_subvol_id; /**< Target subvolume id */
+
+	uint8_t force; /**< Override partitions */
+
+	int ext_err_code;
+};
+
 struct kcas_set_cache_state {
 	uint16_t cache_id; /**< id of cache for which state should be set */
 
 	ocf_cache_mode_t caching_mode;
 
 	uint8_t flush_data; /**< should data be flushed? */
+
+	int ext_err_code;
+};
+
+struct kcas_get_ocf_param {
+	uint16_t cache_id; /**< id of an running cache */
+	uint16_t core_id; /**< id of a running core object */
+	char param_name[OCF_MAX_POLICY_NAME];
+	struct ocf_policy_list list;
+
+	int ext_err_code;
+};
+
+struct kcas_set_ocf_param {
+	uint16_t cache_id; /**< id of an running cache */
+	uint16_t core_id; /**< id of a running core object */
+	char param_name[OCF_MAX_POLICY_NAME];
+	bool enable;
+	char policy[OCF_MAX_POLICY_NAME * OCF_MAX_PARAMS_POLICIES];
 
 	int ext_err_code;
 };
@@ -123,6 +157,9 @@ struct kcas_reset_stats {
 	uint16_t cache_id; /**< id of an running cache */
 	uint16_t core_id; /**< id core object to be removed */
 
+#ifdef OCF_DEBUG_STATS
+	uint16_t composite_volume_member_id; /**< id of composite volume member */
+#endif
 	int ext_err_code;
 };
 
@@ -153,7 +190,12 @@ struct kcas_get_stats {
 	uint16_t core_id;
 
 	/** id of an ioclass */
-	uint16_t part_id;
+	uint8_t part_id;
+
+#ifdef OCF_DEBUG_STATS
+	/** id of a composite volume member */
+	uint16_t composite_volume_member_id;
+#endif
 
 	/** fields to be filled with statistics */
 	struct ocf_stats_usage usage;
@@ -170,6 +212,9 @@ struct kcas_get_stats {
 struct kcas_cache_info {
 	/** id of a cache */
 	uint16_t cache_id;
+
+	uint16_t upper_level_cache_id;
+	uint16_t lower_level_cache_id;
 
 	/** path to caching device */
 	char cache_path_name[MAX_STR_LEN];
@@ -405,6 +450,10 @@ struct kcas_standby_activate
  *    39    *    KCAS_IOCTL_STANDBY_ACTIVATE                *    OK            *
  *    40    *    KCAS_IOCTL_CORE_INFO                       *    OK            *
  *    41    *    KCAS_IOCTL_START_CACHE                     *    OK            *
+ *    42    *    KCAS_IOCTL_DETACH_CACHE                    *    OK            *
+ *    43    *    KCAS_IOCTL_ATTACH_CACHE                    *    OK            *
+ *    98    *    KCAS_IOCTL_SET_OCF_PARAM                   *    OK            *
+ *    99    *    KCAS_IOCTL_GET_OCF_PARAM                   *    OK            *
  *******************************************************************************
  */
 
@@ -503,6 +552,27 @@ struct kcas_standby_activate
 /** Start new cache instance, load cache or recover cache */
 #define KCAS_IOCTL_START_CACHE _IOWR(KCAS_IOCTL_MAGIC, 41, struct kcas_start_cache)
 
+/** Detach cache device */
+#define KCAS_IOCTL_DETACH_CACHE _IOWR(KCAS_IOCTL_MAGIC, 42, struct kcas_stop_cache)
+
+/** Attach cache device */
+#define KCAS_IOCTL_ATTACH_CACHE _IOWR(KCAS_IOCTL_MAGIC, 43, struct kcas_start_cache)
+
+/** Detach a member of composite cache instance */
+#define KCAS_IOCTL_DETACH_COMPOSITE _IOWR(KCAS_IOCTL_MAGIC, 44, struct kcas_composite_resize_cache)
+
+/** Attach a new device to composite cache instance */
+#define KCAS_IOCTL_ATTACH_COMPOSITE _IOWR(KCAS_IOCTL_MAGIC, 45, struct kcas_composite_resize_cache)
+
+/** Remove cache device */
+#define KCAS_IOCTL_REMOVE_CACHE _IOWR(KCAS_IOCTL_MAGIC, 46, struct kcas_stop_cache)
+
+/** Set various OCF runtime parameters */
+#define KCAS_IOCTL_SET_OCF_PARAM _IOWR(KCAS_IOCTL_MAGIC, 98, struct kcas_set_ocf_param)
+
+/** Get various OCF runtime parameters */
+#define KCAS_IOCTL_GET_OCF_PARAM _IOWR(KCAS_IOCTL_MAGIC, 99, struct kcas_get_ocf_param)
+
 /**
  * Extended kernel CAS error codes
  */
@@ -544,6 +614,14 @@ enum kcas_error {
 
 	/** Device contains partitions */
 	KCAS_ERR_CONTAINS_PART,
+
+	/** The new device's properties doesn't match the original cache's
+	 *  properties
+	 */
+	KCAS_ERR_DEVICE_PROPERTIES_MISMATCH,
+
+	/** Composite cache members have inconsistent properties */
+	KCAS_ERR_COMPOSITE_PROPERTIES_INCONSISTENT,
 
 	/** Given device is a partition */
 	KCAS_ERR_A_PART,

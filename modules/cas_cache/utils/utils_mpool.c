@@ -1,5 +1,6 @@
 /*
  * Copyright(c) 2012-2021 Intel Corporation
+ * Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -28,14 +29,13 @@ struct env_mpool {
 
 struct env_mpool *env_mpool_create(uint32_t hdr_size, uint32_t elem_size,
 		int flags, int mpool_max, bool fallback,
-		const uint32_t limits[env_mpool_max],
 		const char *name_perfix, bool zero)
 {
 	uint32_t i;
 	char name[MPOOL_ALLOCATOR_NAME_MAX] = { '\0' };
 	int result;
 	struct env_mpool *mpool;
-	size_t size;
+	uint32_t size;
 
 	mpool = env_zalloc(sizeof(*mpool), ENV_MEM_NORMAL);
 	if (!mpool)
@@ -55,8 +55,7 @@ struct env_mpool *env_mpool_create(uint32_t hdr_size, uint32_t elem_size,
 
 		size = hdr_size + (elem_size * (1 << i));
 
-		mpool->allocator[i] = env_allocator_create_extended(
-				size, name, limits ? limits[i] : -1);
+		mpool->allocator[i] = env_allocator_create(size, name, zero);
 
 		if (!mpool->allocator[i])
 			goto err;
@@ -111,7 +110,9 @@ void *env_mpool_new_f(struct env_mpool *mpool, uint32_t count, int flags)
 
 	if (allocator) {
 		items = env_allocator_new(allocator);
-	} else if(mpool->fallback) {
+	} else if (!mpool->fallback || size == 0) {
+		return NULL;
+	} else {
 		items = cas_vmalloc(size,
 			flags | __GFP_ZERO | __GFP_HIGHMEM);
 	}

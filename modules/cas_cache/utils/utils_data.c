@@ -1,9 +1,11 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include "cas_cache.h"
+#include "utils_data.h"
 
 /**
  * This function locates index of IO vec from given vecs array where byte at

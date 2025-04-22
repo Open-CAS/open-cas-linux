@@ -1,5 +1,6 @@
 /*
  * Copyright(c) 2012-2021 Intel Corporation
+ * Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -43,7 +44,6 @@ struct env_mpool;
  */
 struct env_mpool *env_mpool_create(uint32_t hdr_size, uint32_t elem_size,
 		int flags, int mpool_max, bool fallback,
-		const uint32_t limits[env_mpool_max],
 		const char *name_prefix, bool zero);
 
 /**

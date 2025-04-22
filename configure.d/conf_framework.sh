@@ -1,16 +1,26 @@
 #!/bin/bash
 #
 # Copyright(c) 2012-2022 Intel Corporation
+# Copyright(c) 2023-2024 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 SCRIPTPATH=`dirname $0`
 SCRIPTPATH=`realpath $SCRIPTPATH`
 KERNEL_DIR="${KERNEL_DIR:-/lib/modules/$(uname -r)/build/}"
-KERNEL_VER="$(cd $KERNEL_DIR; make M=$SCRIPTPATH kernelversion)"
+#KERNEL_VER="$(cd $KERNEL_DIR; make M=$SCRIPTPATH kernelversion)"
 NPROC=`nproc`
-DEFINE_FILE=$SCRIPTPATH/modules/generated_defines.h
+DEFINE_FILE=$SCRIPTPATH/"modules/generated_defines.h"
+CASADM_COMPILE_OPTIONS_FILE=$SCRIPTPATH/"casadm/flags.mk"
+CASADM_DEFINE_FILE=$SCRIPTPATH/"casadm/generated_defines.h"
 
+add_casadm_compile_option() {
+	printf "%s\n" $1 >> $CASADM_COMPILE_OPTIONS_FILE
+}
+
+add_casadm_define() {
+	printf "#define %s\n" $1 >> $CASADM_DEFINE_FILE
+}
 
 add_define() {
 	printf "#define %s\n" $1 >> $DEFINE_FILE
@@ -18,6 +28,10 @@ add_define() {
 
 add_function() {
 	printf "%s\n" $1 >> $DEFINE_FILE
+}
+
+add_typedef() {
+	printf "typedef %s\n" $1 >> $DEFINE_FILE
 }
 
 __compile_module(){

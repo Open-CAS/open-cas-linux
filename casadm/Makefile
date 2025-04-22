@@ -1,9 +1,11 @@
 #
 # Copyright(c) 2012-2022 Intel Corporation
+# Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 include ../tools/helpers.mk
+-include ./flags.mk
 
 PWD:=$(shell pwd)
 MODULESDIR:=$(PWD)/../modules
@@ -27,6 +29,9 @@ DEFINES   += CAS_VERSION_MAIN=$(CAS_VERSION_MAIN)
 DEFINES   += CAS_VERSION_MAJOR=$(CAS_VERSION_MAJOR)
 DEFINES   += CAS_VERSION_MINOR=$(CAS_VERSION_MINOR)
 DEFINES   += CAS_VERSION=\"$(CAS_VERSION)\"
+ifeq ($(DEBUG_STATS),1)
+DEFINES   += OCF_CONFIG_DEBUG_STATS
+endif
 
 #
 # Include directories
@@ -146,13 +151,15 @@ $(TARGET).a: $(patsubst %,$(OBJDIR)%,$(OBJS))
 #
 # Generic target for C file
 #
-$(OBJDIR)%.o: %.c
+$(OBJDIR)%.o: %.c Makefile
 	@echo "  CC " $<
 	@mkdir -p $(dir $@)
 ifeq ($(strip $(CAS_VERSION_MAIN)),)
 	$(error "No version file")
 endif
-	@$(CC) -c $(CFLAGS) -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	@$(CC) -c $(CFLAGS) -MMD -o "$@" "$<"
+
+-include $(addprefix $(OBJDIR),$(OBJS:.o=.d))
 
 clean:
 	@echo "  CLEAN "
@@ -160,6 +167,8 @@ clean:
 	@rm -f $(shell find -name \*.d) $(shell find -name \*.o)
 
 distclean: clean
+	@rm -f $(PWD)/generated_defines.h
+	@rm -f $(PWD)/flags.mk
 
 install: install_files
 

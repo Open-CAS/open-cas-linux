@@ -1,0 +1,13 @@
+#!/bin/bash
+#
+# Copyright(c) 2023 Huawei Technologies Co., Ltd.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+. $(dirname $3)/conf_framework.sh
+
+apply() {
+	add_define "WI_AVAILABLE 1"
+}
+
+conf_run $@

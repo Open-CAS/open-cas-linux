@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -22,7 +23,8 @@ enum CLI_OPTION_FLAGS {
 
 enum CLI_COMMAND_FLAGS {
 	CLI_SU_REQUIRED			= 1 << 0,
-	CLI_COMMAND_HIDDEN		= 1 << 1
+	CLI_COMMAND_HIDDEN		= 1 << 1,
+	CLI_COMMAND_UNSUPPORTED		= 1 << 2
 };
 
 #define	ERROR		-1

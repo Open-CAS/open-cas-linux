@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -31,7 +32,7 @@
 	return map_cas_err_to_generic(ret); \
 })
 
-/* this handles IOctl for /dev/cas */
+/* this handles IOctl for /dev/cas_ctrl */
 /*********************************************/
 long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		unsigned long arg)
@@ -73,6 +74,85 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		retval = cache_mngt_exit_instance(cache_name, OCF_CACHE_NAME_SIZE,
 				cmd_info->flush_data);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+
+	case KCAS_IOCTL_REMOVE_CACHE: {
+		struct kcas_stop_cache *cmd_info;
+		char cache_name[OCF_CACHE_NAME_SIZE];
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		cache_name_from_id(cache_name, cmd_info->cache_id);
+
+		retval = cache_mngt_remove(cache_name, OCF_CACHE_NAME_SIZE);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+
+	case KCAS_IOCTL_ATTACH_CACHE: {
+		struct kcas_start_cache *cmd_info;
+		struct ocf_mngt_cache_config cfg;
+		struct ocf_mngt_cache_attach_config attach_cfg;
+		char cache_name[OCF_CACHE_NAME_SIZE];
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		cache_name_from_id(cache_name, cmd_info->cache_id);
+
+		retval = cache_mngt_attach_cache_cfg(cache_name, OCF_CACHE_NAME_SIZE,
+				&cfg, &attach_cfg, cmd_info);
+		if (retval)
+			RETURN_CMD_RESULT(cmd_info, arg, retval);
+
+		retval = cache_mngt_attach_device(cache_name, OCF_CACHE_NAME_SIZE,
+				cmd_info->cache_path_name, &attach_cfg);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+
+	case KCAS_IOCTL_DETACH_CACHE: {
+		struct kcas_stop_cache *cmd_info;
+		char cache_name[OCF_CACHE_NAME_SIZE];
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		cache_name_from_id(cache_name, cmd_info->cache_id);
+
+		retval = cache_mngt_detach_cache(cache_name,
+				OCF_CACHE_NAME_SIZE);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+
+	case KCAS_IOCTL_DETACH_COMPOSITE: {
+		struct kcas_composite_resize_cache *cmd_info;
+		char cache_name[OCF_CACHE_NAME_SIZE];
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		cache_name_from_id(cache_name, cmd_info->cache_id);
+
+		retval = cache_mngt_composite_cache_detach(cache_name,
+				OCF_CACHE_NAME_SIZE, cmd_info->cache_path_name,
+				MAX_STR_LEN);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+
+	case KCAS_IOCTL_ATTACH_COMPOSITE: {
+		struct kcas_composite_resize_cache *cmd_info;
+		char cache_name[OCF_CACHE_NAME_SIZE];
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		cache_name_from_id(cache_name, cmd_info->cache_id);
+
+		retval = cache_mngt_attach_composite_cache(cache_name,
+				OCF_CACHE_NAME_SIZE, cmd_info->tgt_subvol_id,
+				cmd_info->cache_path_name, MAX_STR_LEN,
+				cmd_info->force);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -143,11 +223,20 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 		if (cmd_info->core_id != OCF_CORE_ID_INVALID)
 			core_name_from_id(core_name, cmd_info->core_id);
 
+#ifndef OCF_DEBUG_STATS
 		retval = cache_mngt_reset_stats(cache_name, OCF_CACHE_NAME_SIZE,
 				cmd_info->core_id != OCF_CORE_ID_INVALID ?
 						core_name : NULL,
 				cmd_info->core_id != OCF_CORE_ID_INVALID ?
 						OCF_CORE_NAME_SIZE : 0);
+#else
+		retval = cache_mngt_reset_stats(cache_name, OCF_CACHE_NAME_SIZE,
+				cmd_info->core_id != OCF_CORE_ID_INVALID ?
+						core_name : NULL,
+				cmd_info->core_id != OCF_CORE_ID_INVALID ?
+						OCF_CORE_NAME_SIZE : 0,
+				cmd_info->composite_volume_member_id);
+#endif
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
@@ -399,6 +488,24 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 			RETURN_CMD_RESULT(cmd_info, arg, retval);
 
 		retval = cache_mngt_activate(&cfg, cmd_info);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+	case KCAS_IOCTL_SET_OCF_PARAM: {
+		struct kcas_set_ocf_param *cmd_info;
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		retval = cache_mngt_set_ocf_param(cmd_info);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+	case KCAS_IOCTL_GET_OCF_PARAM: {
+		struct kcas_get_ocf_param *cmd_info;
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		retval = cache_mngt_get_ocf_param(cmd_info);
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}

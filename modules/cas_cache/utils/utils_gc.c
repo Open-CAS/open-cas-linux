@@ -1,13 +1,13 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include "cas_cache.h"
 #include "utils_gc.h"
 #include <linux/vmalloc.h>
-
-#if defined (CAS_GARBAGE_COLLECTOR)
+#include <linux/cpu.h>
 
 struct cas_vfree_item {
 	struct llist_head list;
@@ -46,38 +46,44 @@ void cas_vfree(const void *addr)
 		schedule_work(&item->ws);
 }
 
+int cas_starting_cpu(unsigned int cpu)
+{
+	struct cas_vfree_item *item;
+
+	item = &per_cpu(cas_vfree_item, cpu);
+	init_llist_head(&item->list);
+	INIT_WORK(&item->ws, cas_garbage_collector);
+
+	return 0;
+}
+
+int cas_ending_cpu(unsigned int cpu)
+{
+	struct cas_vfree_item *item;
+
+	item = &per_cpu(cas_vfree_item, cpu);
+	while (work_pending(&item->ws))
+		schedule();
+	return 0;
+}
+
 void cas_garbage_collector_init(void)
 {
-	int i;
+	unsigned int i;
 
-	for_each_possible_cpu(i) {
-		struct cas_vfree_item *item;
-
-		item = &per_cpu(cas_vfree_item, i);
-		init_llist_head(&item->list);
-		INIT_WORK(&item->ws, cas_garbage_collector);
+	for_each_online_cpu(i) {
+		cas_starting_cpu(i);
 	}
 }
 
 void cas_garbage_collector_deinit(void)
 {
-	int i;
+	unsigned int i;
 
-	for_each_possible_cpu(i) {
-		struct cas_vfree_item *item;
-
-		item = &per_cpu(cas_vfree_item, i);
-		while (work_pending(&item->ws))
-			schedule();
+	for_each_online_cpu(i) {
+		cas_ending_cpu(i);
 	}
 
 	WARN(atomic_read(&freed) != 0,
 			OCF_PREFIX_SHORT" Not all memory deallocated\n");
 }
-#else
-void cas_garbage_collector_init(void) {};
-
-void cas_garbage_collector_deinit(void) {};
-
-void cas_vfree(const void *addr) { vfree(addr); };
-#endif

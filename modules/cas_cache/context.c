@@ -1,20 +1,20 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include "cas_cache.h"
 #include "context.h"
-#include "utils/utils_rpool.h"
 #include "utils/utils_data.h"
 #include "utils/utils_gc.h"
 #include "utils/utils_mpool.h"
 #include "threads.h"
 #include <linux/kmemleak.h>
+#include <linux/cpuhotplug.h>
+#include <linux/cpu.h>
 
 struct env_mpool *cas_bvec_pool;
-
-struct cas_reserve_pool *cas_bvec_pages_rpool;
 
 #define CAS_ALLOC_PAGE_LIMIT 1024
 #define PG_cas PG_private
@@ -23,71 +23,16 @@ struct cas_reserve_pool *cas_bvec_pages_rpool;
 /* High burst limit to ensure cache init logs are printed properly */
 #define CAS_LOG_BURST_LIMIT 50
 
-static inline void _cas_page_set_priv(struct page *page)
-{
-	set_bit(PG_cas , &page->flags);
-}
-
-static inline void _cas_page_clear_priv(struct page *page)
-{
-	clear_bit(PG_cas , &page->flags);
-	page->private = 0;
-}
-
-static inline int _cas_page_test_priv(struct page *page)
-{
-	return test_bit(PG_cas , &page->flags);
-}
-
-static void _cas_free_page_rpool(void *allocator_ctx, void *item)
-{
-	struct page *page = virt_to_page(item);
-
-	_cas_page_clear_priv(page);
-	__free_page(page);
-}
-
-static void _cas_page_set_cpu(struct page *page, int cpu)
-{
-	page->private = cpu;
-}
-
-void *_cas_alloc_page_rpool(void *allocator_ctx, int cpu)
-{
-	struct page *page;
-
-	page = alloc_page(GFP_NOIO | __GFP_NORETRY);
-	if (!page)
-		return NULL;
-
-	if (_cas_page_test_priv(page)) {
-		printk(KERN_WARNING "CAS private bit is set\n");
-		WARN(true, OCF_PREFIX_SHORT" CAS private bit is set\n");
-	}
-
-	_cas_page_set_priv(page);
-	_cas_page_set_cpu(page, cpu);
-
-	return page_address(page);
-}
-
-static int _cas_page_get_cpu(struct page *page)
-{
-	return page->private;
-}
-
 /* *** CONTEXT DATA OPERATIONS *** */
 
 /*
  *
  */
-ctx_data_t *__cas_ctx_data_alloc(uint32_t pages, bool zalloc)
+static ctx_data_t *__cas_ctx_data_alloc(uint32_t pages)
 {
 	struct blk_data *data;
 	uint32_t i;
-	void *page_addr = NULL;
 	struct page *page = NULL;
-	int cpu;
 
 	data = env_mpool_new(cas_bvec_pool, pages);
 
@@ -99,29 +44,12 @@ ctx_data_t *__cas_ctx_data_alloc(uint32_t pages, bool zalloc)
 	data->size = pages;
 
 	for (i = 0; i < pages; ++i) {
-		page_addr = cas_rpool_try_get(cas_bvec_pages_rpool, &cpu);
-		if (page_addr) {
-			data->vec[i].bv_page = virt_to_page(page_addr);
-			_cas_page_set_cpu(data->vec[i].bv_page, cpu);
-		} else {
-			data->vec[i].bv_page = alloc_page(GFP_NOIO);
-			if (data->vec[i].bv_page) {
-				/* Failed to get memory from rpool but backup allocation worked.
-				   Need to keep track of this page as well */
-				kmemleak_alloc(page_address(data->vec[i].bv_page), PAGE_SIZE, 1, GFP_NOIO);
-			}
-		}
+		data->vec[i].bv_page = alloc_page(GFP_NOIO);
 
 		if (!data->vec[i].bv_page)
 			break;
 
-		if (zalloc) {
-			if (!page_addr) {
-				page_addr = page_address(
-						data->vec[i].bv_page);
-			}
-			memset(page_addr, 0, PAGE_SIZE);
-		}
+		kmemleak_alloc(page_address(data->vec[i].bv_page), PAGE_SIZE, 1, GFP_NOIO);
 
 		data->vec[i].bv_len = PAGE_SIZE;
 		data->vec[i].bv_offset = 0;
@@ -131,13 +59,7 @@ ctx_data_t *__cas_ctx_data_alloc(uint32_t pages, bool zalloc)
 	if (i != pages) {
 		for (pages = 0; pages < i; pages++) {
 			page = data->vec[i].bv_page;
-
-			if (page && !(_cas_page_test_priv(page) &&
-					!cas_rpool_try_put(cas_bvec_pages_rpool,
-					page_address(page),
-					_cas_page_get_cpu(page)))) {
-				__free_page(page);
-			}
+			__free_page(page);
 		}
 
 		env_mpool_del(cas_bvec_pool, data, pages);
@@ -150,20 +72,15 @@ ctx_data_t *__cas_ctx_data_alloc(uint32_t pages, bool zalloc)
 	return data;
 }
 
-ctx_data_t *cas_ctx_data_alloc(uint32_t pages)
+static ctx_data_t *cas_ctx_data_alloc(uint32_t pages)
 {
-	return __cas_ctx_data_alloc(pages, false);
-}
-
-ctx_data_t *cas_ctx_data_zalloc(uint32_t pages)
-{
-	return __cas_ctx_data_alloc(pages, true);
+	return __cas_ctx_data_alloc(pages);
 }
 
 /*
  *
  */
-void cas_ctx_data_free(ctx_data_t *ctx_data)
+static void cas_ctx_data_free(ctx_data_t *ctx_data)
 {
 	uint32_t i;
 	struct page *page = NULL;
@@ -175,14 +92,8 @@ void cas_ctx_data_free(ctx_data_t *ctx_data)
 	for (i = 0; i < data->size; i++) {
 		page = data->vec[i].bv_page;
 
-		if (!(_cas_page_test_priv(page) && !cas_rpool_try_put(
-				cas_bvec_pages_rpool,
-				page_address(page),
-				_cas_page_get_cpu(page)))) {
-			__free_page(page);
-			/* It wasn't a page from rpool thus need to stop tracking it explicitly */
-			kmemleak_free(page_address(page));
-		}
+		__free_page(page);
+		kmemleak_free(page_address(page));
 	}
 
 	env_mpool_del(cas_bvec_pool, data, data->size);
@@ -197,7 +108,7 @@ static void _cas_ctx_data_munlock(ctx_data_t *ctx_data)
 {
 }
 
-void cas_ctx_data_secure_erase(ctx_data_t *ctx_data)
+static void cas_ctx_data_secure_erase(ctx_data_t *ctx_data)
 {
 	struct blk_data *data = ctx_data;
 	uint32_t i;
@@ -422,7 +333,7 @@ int cas_initialize_context(void)
 		return ret;
 
 	cas_bvec_pool = env_mpool_create(sizeof(struct blk_data),
-			sizeof(struct bio_vec), GFP_NOIO, 7, true, NULL,
+			sizeof(struct bio_vec), GFP_NOIO, 7, true,
 			"cas_biovec", true);
 
 	if (!cas_bvec_pool) {
@@ -431,29 +342,23 @@ int cas_initialize_context(void)
 		goto err_ctx;
 	}
 
-	cas_bvec_pages_rpool = cas_rpool_create(CAS_ALLOC_PAGE_LIMIT,
-			NULL, PAGE_SIZE, _cas_alloc_page_rpool,
-			_cas_free_page_rpool, NULL);
-	if (!cas_bvec_pages_rpool) {
-		printk(KERN_ERR "Cannot create reserve pool for "
-				"BIO vector memory pool\n");
-		ret = -ENOMEM;
-		goto err_mpool;
-	}
-
 	cas_garbage_collector_init();
 
 	ret = block_dev_init();
 	if (ret) {
 		printk(KERN_ERR "Cannot initialize block device layer\n");
-		goto err_rpool;
+		goto err_mpool;
 
+	}
+	ret = cpuhp_setup_state(CPUHP_AP_ONLINE_DYN, "Linux/opencas:online",
+			cas_starting_cpu, cas_ending_cpu);
+	if (ret < 0) {
+		pr_err("open-cas: failed to register hotplug callbacks, ret=%d\n", ret);
+		goto err_mpool;
 	}
 
 	return 0;
 
-err_rpool:
-	cas_rpool_destroy(cas_bvec_pages_rpool, _cas_free_page_rpool, NULL);
 err_mpool:
 	env_mpool_destroy(cas_bvec_pool);
 err_ctx:
@@ -464,9 +369,9 @@ err_ctx:
 
 void cas_cleanup_context(void)
 {
+	cpuhp_remove_state(CPUHP_AP_ONLINE_DYN);
 	cas_garbage_collector_deinit();
 	env_mpool_destroy(cas_bvec_pool);
-	cas_rpool_destroy(cas_bvec_pages_rpool, _cas_free_page_rpool, NULL);
 
 	ocf_ctx_put(cas_ctx);
 }

@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -53,7 +54,8 @@ struct table_draw_characters {
 	int inner_vert;	/**< thin vertical line */
 	int inner_x;		/**< intersection of thin lines */
 
-	int tree_node;		/**< tree node (but not last) */
+	int tree_node_first;	/**< first tree node */
+	int tree_node_middle;	/**< first tree node */
 	int tree_node_last;	/**< last tree node */
 };
 
@@ -100,7 +102,8 @@ int text_construct(struct view_t *this)
 		return 1;
 	}
 	const char *term = getenv("TERM");
-	if (term && (!strncmp(term, "xterm", 5) || !strcmp(term, "screen"))) {
+	if (term && (!strncmp(term, "xterm", 5) || !strcmp(term, "screen") ||
+			!strncmp(term, "tmux", 4))) {
 		prv->dec_fmt = true;
 	} else {
 		prv->dec_fmt = false;
@@ -141,8 +144,9 @@ int text_construct(struct view_t *this)
 		tc->inner_right = 0x2562;
 		tc->inner_x = 0x253c;
 
-		tc->tree_node = 0x2514;
-		tc->tree_node_last = 0x251c;
+		tc->tree_node_first = 0x250C;
+		tc->tree_node_middle = 0x251C;
+		tc->tree_node_last = 0x2514;
 	} else {
 		tc->outer_horiz = '=';
 		tc->outer_right = '+'; /* T facing right border */
@@ -163,7 +167,8 @@ int text_construct(struct view_t *this)
 		tc->inner_bottom = '+';
 		tc->inner_x = '+';
 
-		tc->tree_node = '+';
+		tc->tree_node_first = '+';
+		tc->tree_node_middle = '+';
 		tc->tree_node_last = '+';
 	}
 
@@ -572,6 +577,24 @@ static int finish_table(struct view_t *this)
 	return 0;
 }
 
+static int resolve_group_symbol(struct table_draw_characters *tc, int tag,
+		int tag_next)
+{
+	if (tag == TREE_ML_CACHE_BOTTOM) {
+		return tc->tree_node_last;
+	} else if (tag == TREE_ML_CACHE_MIDDLE) {
+		return tc->tree_node_middle;
+	} else if (tag == TREE_ML_CACHE_TOP) {
+		return tc->tree_node_first;
+	} else if (tag == TREE_CORE && tag_next == TREE_CORE) {
+		return tc->tree_node_middle;
+	} else if (tag == TREE_CORE && tag_next != TREE_CORE) {
+		return tc->tree_node_last;
+	} else {
+		return ' ';
+	}
+}
+
 /**
  * finish printing table (upon last row of table)
  */
@@ -582,6 +605,8 @@ static int finish_tree(struct view_t *this)
 	int i, j;
 	int w = table_get_width(prv->t);
 	int h = table_get_height(prv->t);
+	int tag, tag_next;
+
 	for (i = 0 ; i!= h ; ++i) {
 
 		for (j = 0 ; j != w ; ++j) {
@@ -590,29 +615,30 @@ static int finish_tree(struct view_t *this)
 			char *cell = (char*)table_get(prv->t, i, j);
 			int cell_len = strnlen(cell, MAX_STR_LEN);
 			int out_len = cell_len;
+			tag = vector_get(&prv->row_types, i);
+			if (i < h - 1)
+				tag_next = vector_get(&prv->row_types, i + 1);
+			else
+				tag_next = UNDEFINED_TAG;
 
 			/* digits are right aligned */
-			if (0 == j &&
-			    (vector_get(&prv->row_types, i) == TREE_LEAF)) {
-				if (h - 1 == i ||
-				    (i < h - 1 &&
-				     vector_get(&prv->row_types, i + 1)
-				     == TREE_BRANCH)) {
-					putcu8(tc->tree_node, this->outfile);
-				} else {
-					putcu8(tc->tree_node_last,
-					       this->outfile);
+			if (0 == j) {
+				if (tag == TREE_CORE) {
+					print_spaces(this->outfile, 1);
+					cell_len++;
 				}
+				putcu8(resolve_group_symbol(tc, tag, tag_next),
+						this->outfile);
 				cell_len++;
 			}
 
-			/* apply bright colors for all rows except leaves */
-			if (0 == j ||
-			    (vector_get(&prv->row_types, i) != TREE_LEAF)) {
+			if (0 == j || (tag != TREE_CORE &&
+					tag != TREE_ML_CACHE_BOTTOM &&
+					tag != TREE_ML_CACHE_MIDDLE)) {
 				conditional_fmt(this, ATTR_BRIGHT);
 			}
 
-			if (3 == j) {
+			if (4 == j) {
 				if (!strncmp(cell, "Active", MAX_STR_LEN) ||
 					(!strncmp(cell, "Running", MAX_STR_LEN)) ||
 					(!strncmp(cell, "Stopping", MAX_STR_LEN))) {
@@ -636,8 +662,11 @@ static int finish_tree(struct view_t *this)
 			}
 
 			if ('/' == mother_cell[0]) {
-				if (vector_get(&prv->row_types, i)
-				    == TREE_BRANCH) {
+				if (tag == TREE_BRANCH ||
+						tag == TREE_ML_CACHE_TOP ||
+						tag == TREE_ML_CACHE_MIDDLE ||
+						tag == TREE_ML_CACHE_BOTTOM ||
+						tag == TREE_CACHE) {
 					conditional_fmt(this, TREE_BRANCH_COLOR);
 				} else {
 					conditional_fmt(this, PATH_COLOR);

@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #include <linux/module.h>
@@ -36,12 +37,9 @@ static inline void bd_release_from_disk(struct block_device *bdev,
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
 	#define KRETURN(x)	({ return (x); })
 	#define MAKE_RQ_RET_TYPE blk_qc_t
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0)
+#else
 	#define KRETURN(x)	return
 	#define MAKE_RQ_RET_TYPE void
-#else
-	#define KRETURN(x)	({ return (x); })
-	#define MAKE_RQ_RET_TYPE int
 #endif
 
 int __init cas_init_exp_objs(void)
@@ -173,7 +171,7 @@ static int _cas_exp_obj_hide_parts(struct cas_disk *dsk)
 		/* It is partition, no more job required */
 		return 0;
 
-	if (GET_DISK_MAX_PARTS(dsk->bd->bd_disk) > 1) {
+	if (GET_DISK_MAX_PARTS(cas_disk_get_gendisk(dsk)) > 1) {
 		if (_cas_del_partitions(dsk)) {
 			printk(KERN_ERR "Error deleting a partition on thedevice %s\n",
 				gdsk->disk_name);
@@ -255,9 +253,9 @@ static void _cas_exp_obj_clear_dev_t(struct cas_disk *dsk)
 	}
 }
 
-static int _cas_exp_obj_open(struct block_device *bdev, fmode_t mode)
+CAS_BDEV_OPEN(_cas_exp_obj_open, struct gendisk *gd)
 {
-	struct cas_disk *dsk = bdev->bd_disk->private_data;
+	struct cas_disk *dsk = gd->private_data;
 	struct cas_exp_obj *exp_obj = dsk->exp_obj;
 	int result = -ENAVAIL;
 
@@ -276,7 +274,7 @@ static int _cas_exp_obj_open(struct block_device *bdev, fmode_t mode)
 	return result;
 }
 
-static void _cas_exp_obj_close(struct gendisk *gd, fmode_t mode)
+CAS_BDEV_CLOSE(_cas_exp_obj_close, struct gendisk *gd)
 {
 	struct cas_disk *dsk = gd->private_data;
 	struct cas_exp_obj *exp_obj = dsk->exp_obj;
@@ -291,8 +289,8 @@ static void _cas_exp_obj_close(struct gendisk *gd, fmode_t mode)
 
 static const struct block_device_operations _cas_exp_obj_ops = {
 	.owner = THIS_MODULE,
-	.open = _cas_exp_obj_open,
-	.release = _cas_exp_obj_close,
+	.open = CAS_REFER_BDEV_OPEN_CALLBACK(_cas_exp_obj_open),
+	.release = CAS_REFER_BDEV_CLOSE_CALLBACK(_cas_exp_obj_close),
 	CAS_SET_SUBMIT_BIO(_cas_exp_obj_submit_bio)
 };
 
@@ -476,7 +474,7 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 
 	gd->fops = &_cas_exp_obj_ops;
 	gd->private_data = dsk;
-	strlcpy(gd->disk_name, exp_obj->dev_name, sizeof(gd->disk_name));
+	strscpy(gd->disk_name, exp_obj->dev_name, sizeof(gd->disk_name));
 
 	cas_blk_queue_make_request(queue, _cas_exp_obj_make_rq_fn);
 
@@ -489,7 +487,7 @@ int cas_exp_obj_create(struct cas_disk *dsk, const char *dev_name,
 	if (cas_add_disk(gd))
 		goto error_add_disk;
 
-	result = bd_claim_by_disk(dsk->bd, dsk, gd);
+	result = bd_claim_by_disk(cas_disk_get_blkdev(dsk), dsk, gd);
 	if (result)
 		goto error_bd_claim;
 
@@ -530,7 +528,7 @@ int cas_exp_obj_destroy(struct cas_disk *dsk)
 
 	exp_obj = dsk->exp_obj;
 
-	bd_release_from_disk(dsk->bd, exp_obj->gd);
+	bd_release_from_disk(cas_disk_get_blkdev(dsk), exp_obj->gd);
 	_cas_exp_obj_clear_dev_t(dsk);
 	del_gendisk(exp_obj->gd);
 

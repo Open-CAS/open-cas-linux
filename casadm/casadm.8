@@ -88,8 +88,16 @@ Stop cache instance.
 Set runtime parameter for cache/core instance.
 
 .TP
-.B -G, --set-param
+.B -G, --get-param
 Get runtime parameter for cache/core instance.
+
+.TP
+.B -U, --set-ocf-param
+Set runtime OCF parameter for cache/core instance.
+
+.TP
+.B -W, --get-ocf-param
+Get runtime OCF parameter for cache/core instance.
 
 .TP
 .B -Q, --set-cache-mode
@@ -246,7 +254,7 @@ Identifier of cache instance <1-16384>.
 
 .TP
 .B -j, --core-id <ID>
-Identifier of core instance <0-4095> within given cache instance. If this option
+Identifier of core instance <0-4094> within given cache instance. If this option
 is not specified, parameter is set to all cores within given cache instance.
 
 .TP
@@ -366,7 +374,7 @@ Identifier of cache instance <1-16384>.
 
 .TP
 .B -j, --core-id <ID>
-Identifier of core instance <0-4095> within given cache instance.
+Identifier of core instance <0-4094> within given cache instance.
 
 .TP
 .B -o, --output-format {table|csv}
@@ -459,7 +467,7 @@ Path to core device using by-id link (e.g. /dev/disk/by-id/wwn-0x1234567890b100d
 
 .TP
 .B -j, --core-id <ID>
-Identifier of core instance <0-4095> within given cache instance for new core to be created. This
+Identifier of core instance <0-4094> within given cache instance for new core to be created. This
 parameter is optional. If it is not supplied, first available core id within cache instance will
 be used for new core.
 
@@ -470,7 +478,7 @@ Identifier of cache instance <1-16384>.
 
 .TP
 .B -j, --core-id <ID>
-Identifier of core instance <0-4095> within given cache instance.
+Identifier of core instance <0-4094> within given cache instance.
 
 .TP
 .B -f, --force
@@ -498,7 +506,7 @@ Identifier of cache instance <1-16384>.
 
 .TP
 .B -j, --core-id <ID>
-Identifier of core instance <0-4095> within given cache instance. If this option is
+Identifier of core instance <0-4094> within given cache instance. If this option is
 not given, aggregated statistics for whole cache instance are printed instead.
 
 .TP
@@ -543,7 +551,7 @@ Identifier of cache instance <1-16384>.
 
 .TP
 .B -j, --core-id <ID>
-Identifier of core instance <0-4095> within given cache instance. If this option
+Identifier of core instance <0-4094> within given cache instance. If this option
 is not specified, statistics are reset for all cores within given cache instance.
 
 
@@ -555,9 +563,9 @@ Identifier of cache instance <1-16384>.
 
 .TP
 .B -j, --core-id <ID>
-Identifier of core instance <0-4095> within given cache instance. This is an
+Identifier of core instance <0-4094> within given cache instance. This is an
 optional parameter When provided, it will flush core with provided id
-connected to cache. In other case it will flush cache.   
+connected to cache. In other case it will flush cache.
 
 .SH Options that are valid with --io-class --load-config (-C -C) are:
 .TP
@@ -631,6 +639,98 @@ Ignore potential dirty data on cache device.
 .TP
 .B -o --output-format {table|csv}
 Defines output format. It can be either \fBtable\fR (default) or \fBcsv\fR.
+
+.SH Options that are valid with --set-ocf-param (-U) are:
+
+.TP
+.B -n, --name <NAME>
+Name of parameters namespace.
+
+Available namespaces are:
+.br
+\fBocf_prefetcher\fR - Set OCF prefetch parameters.
+\fBocf_classifier\fR - Set OCF classification parameters.
+
+.SH Options that are valid with --set-ocf-param (-U) --name (-n) ocf_prefetcher are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -j, --core-id <ID>
+Identifier of core instance <0-4094> within given cache instance. If this option
+is not specified, parameter is set to all cores and given cache instance.
+
+.TP
+.B -e, --enable <on|off>
+Enable/Disable policy, or all policies if no policy specified.
+
+.TP
+.B -p, --policy <POLICY>
+Policy to enable or disable
+Can be a list of policies with comma separation (e.g. --policy stream)
+
+.SH Options that are valid with --set-ocf-param (-U) --name (-n) ocf_classifier are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -j, --core-id <ID>
+Identifier of core instance <0-4094> within given cache instance. If this option
+is not specified, parameter is set to all cores and given cache instance.
+
+.TP
+.B -e, --enable <on|off>
+Enable/Disable policy, or all policies if no policy specified.
+
+.TP
+.B -p, --policy <POLICY>
+Policy to enable or disable
+Can be a list of policies with comma separation (e.g --policy swap)
+
+.SH Options that are valid with --get-ocf-param (-W) are:
+
+.TP
+.B -n, --name <NAME>
+Name of parameters namespace.
+
+Available namespaces are:
+.br
+\fBocf_prefetcher\fR - OCF prefetch parameters.
+\fBocf_classifier\fR - OCF classification parameters.
+
+.SH Options that are valid with --get-ocf-param (-W) --name (-n) ocf_prefetcher are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -j, --core-id <ID>
+Identifier of core instance <0-4094> within given cache instance. If this option
+is not specified, the cache configuration is returned.
+
+.TP
+.B -o, --output-format {table|csv}
+Defines output format for parameter list. It can be either \fBtable\fR (default) or \fBcsv\fR.
+
+.SH Options that are valid with --get-ocf-param (-W) --name (-n) ocf_classifier are:
+
+.TP
+.B -i, --cache-id <ID>
+Identifier of cache instance <1-16384>.
+
+.TP
+.B -j, --core-id <ID>
+Identifier of core instance <0-4094> within given cache instance. If this option
+is not specified, the cache configuration is returned.
+
+.TP
+.B -o, --output-format {table|csv}
+Defines output format for parameter list. It can be either \fBtable\fR (default) or \fBcsv\fR.
 
 
 .SH ENVIRONMENT VARIABLES

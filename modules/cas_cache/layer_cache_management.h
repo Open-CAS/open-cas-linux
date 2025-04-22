@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #ifndef __LAYER_CACHE_MANAGEMENT_H__
@@ -36,16 +37,41 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd);
 
 int cache_mngt_remove_inactive_core(struct kcas_remove_inactive *cmd);
 
+#ifndef OCF_DEBUG_STATS
 int cache_mngt_reset_stats(const char *cache_name, size_t cache_name_len,
 			const char *core_name, size_t core_name_len);
+#else
+int cache_mngt_reset_stats(const char *cache_name, size_t cache_name_len,
+			const char *core_name, size_t core_name_len,
+			int composite_volume_member_id);
+#endif
 
 int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 		struct kcas_io_classes *cfg);
 
+int cache_mngt_detach_cache(const char *cache_name, size_t name_len);
+
+int cache_mngt_composite_cache_detach(const char *cache_name, size_t name_len,
+		char *target_subvol_path, size_t target_size_len);
+
+int cache_mngt_attach_composite_cache(const char *cache_name, size_t name_len,
+		uint8_t tgt_subvol_id, char *new_vol_path,
+		size_t new_vol_path_max_len, bool force);
+
+int cache_mngt_attach_device(const char *cache_name, size_t name_len,
+		const char *device, struct ocf_mngt_cache_attach_config *attach_cfg);
+
 int cache_mngt_exit_instance(const char *cache_name, size_t name_len,
 			int flush);
 
+int cache_mngt_remove(const char *cache_name, size_t name_len);
+
 int cache_mngt_create_cache_cfg(struct ocf_mngt_cache_config *cfg,
+		struct ocf_mngt_cache_attach_config *attach_cfg,
+		struct kcas_start_cache *cmd);
+
+int cache_mngt_attach_cache_cfg(char *cache_name, size_t name_len,
+		struct ocf_mngt_cache_config *cfg,
 		struct ocf_mngt_cache_attach_config *attach_cfg,
 		struct kcas_start_cache *cmd);
 
@@ -116,5 +142,9 @@ int cache_mngt_create_cache_standby_activate_cfg(
 
 int cache_mngt_activate(struct ocf_mngt_cache_standby_activate_config *cfg,
 		struct kcas_standby_activate *cmd);
+
+int cache_mngt_set_ocf_param(struct kcas_set_ocf_param *info);
+
+int cache_mngt_get_ocf_param(struct kcas_get_ocf_param *info);
 
 #endif

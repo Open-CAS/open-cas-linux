@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -29,6 +30,7 @@ static struct cas_error_map_entry cas_ocf_error_map[] = {
 	{ OCF_ERR_START_CACHE_FAIL,		EFAULT	},
 	{ OCF_ERR_CACHE_NOT_EXIST,		ENODEV	},
 	{ OCF_ERR_CORE_NOT_EXIST,		ENODEV	},
+	{ OCF_ERR_COMPOSITE_VOLUME_MEMBER_NOT_EXIST,	ENODEV	},
 	{ OCF_ERR_CACHE_EXIST,			EEXIST	},
 	{ OCF_ERR_CORE_EXIST,			EEXIST	},
 	{ OCF_ERR_TOO_MANY_CORES,		ENOSPC	},

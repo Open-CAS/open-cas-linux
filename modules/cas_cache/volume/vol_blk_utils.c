@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2024 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -191,42 +192,6 @@ uint32_t cas_io_iter_zero(struct bio_vec_iter *dst, uint32_t bytes)
 	return zeroed;
 }
 
-/*
- *
- */
-int cas_blk_io_set_data(struct ocf_io *io,
-		ctx_data_t *ctx_data, uint32_t offset)
-{
-	struct blkio *blkio = cas_io_to_blkio(io);
-	struct blk_data *data = ctx_data;
-
-	/* Set BIO vector (IO data) and initialize iterator */
-	blkio->data = data;
-	if (blkio->data) {
-		cas_io_iter_init(&blkio->iter, blkio->data->vec,
-				blkio->data->size);
-
-		/* Move into specified offset in BIO vector iterator */
-		if (offset != cas_io_iter_move(&blkio->iter, offset)) {
-			/* TODO Log message */
-			blkio->error = -ENOBUFS;
-			return -ENOBUFS;
-		}
-	}
-
-	return 0;
-}
-
-/*
- *
- */
-ctx_data_t *cas_blk_io_get_data(struct ocf_io *io)
-{
-	struct blkio *blkio = cas_io_to_blkio(io);
-
-	return blkio->data;
-}
-
 int cas_blk_open_volume_by_bdev(ocf_volume_t *vol, struct block_device *bdev)
 {
 	struct bd_object *bdobj;
@@ -256,7 +221,7 @@ void cas_blk_close_volume(ocf_volume_t vol)
 	env_free(vol);
 }
 
-int _cas_blk_identify_type(const char *path, uint8_t *type)
+static int _cas_blk_identify_type(const char *path, uint8_t *type)
 {
 	struct file *file;
 	int result = 0;

@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -44,20 +45,8 @@
 
 #define CORE_ADD_MAX_TIMEOUT 30
 
-#define CHECK_IF_CACHE_IS_MOUNTED -1
-
-/**
- * @brief Routine verifies if filesystem is currently mounted for given cache/core
- *
- *        If FAILURE is returned, reason for failure is printed onto
- *        standard error.
- * @param cache_id cache id of filesystem (to verify if it is mounted)
- * @param core_id core id of filesystem (to verify if it is mounted); if this
- *        parameter is set to negative value, it is only checked if any core belonging
- *        to given cache is mounted;
- * @return SUCCESS if is not mounted; FAILURE if filesystem is mounted
- */
-int check_if_mounted(int cache_id, int core_id);
+int is_cache_mounted(int cache_id);
+int is_core_mounted(int cache_id, int core_id);
 
 /* KCAS_IOCTL_CACHE_CHECK_DEVICE  wrapper */
 int _check_cache_device(const char *device_path,
@@ -66,7 +55,7 @@ int _check_cache_device(const char *device_path,
 static const char *cache_states_name[ocf_cache_state_max + 1] = {
 		[ocf_cache_state_running] = "Running",
 		[ocf_cache_state_stopping] = "Stopping",
-		[ocf_cache_state_initializing] = "Initializing",
+		[ocf_cache_state_detached] = "Detached",
 		[ocf_cache_state_incomplete] = "Incomplete",
 		[ocf_cache_state_standby] = "Standby",
 		[ocf_cache_state_max] = "Unknown",
@@ -81,7 +70,7 @@ static const char *core_states_name[] = {
 
 #define STANDBY_DETACHED_STATE "Standby detached"
 
-#define CACHE_STATE_LENGHT 20
+#define CACHE_STATE_LENGTH 20
 
 #define CAS_LOG_FILE "/var/log/opencas.log"
 #define CAS_LOG_LEVEL LOG_INFO
@@ -164,23 +153,29 @@ int validate_dev(const char *dev_path)
 {
 	struct fstab *fstab_entry;
 	struct stat status;
+	char dup_path[PATH_MAX] = { 0 };
+	char* rest = dup_path;
+	char* vol_path;
+	strncpy(dup_path, dev_path, PATH_MAX - 1);
 
-	fstab_entry = getfsspec(dev_path);
-	if (fstab_entry != NULL) {
-		printf("Device entry present in fstab, please remove it.\n");
-		return FAILURE;
+	while ((vol_path = strtok_r(rest, ",", &rest))) {
+
+		fstab_entry = getfsspec(vol_path);
+		if (fstab_entry != NULL) {
+			printf("Device entry present in fstab, please remove it.\n");
+			return FAILURE;
+		}
+
+		if (stat(vol_path, &status) == -1) {
+			printf("Failed to query device status.\n");
+			return FAILURE;
+		}
+
+		if (!S_ISBLK(status.st_mode)) {
+			printf("Path does not describe a block device\n");
+			return FAILURE;
+		}
 	}
-
-	if (stat(dev_path, &status) == -1) {
-		printf("Failed to query device status.\n");
-		return FAILURE;
-	}
-
-	if (!S_ISBLK(status.st_mode)) {
-		printf("Path does not describe a block device\n");
-		return FAILURE;
-	}
-
 	return SUCCESS;
 }
 
@@ -237,8 +232,23 @@ int __validate_str_num(const char *source_str, const char *msg,
 	return SUCCESS;
 }
 
+int validate_ocf_param(const char *source_str)
+{
+	if (source_str == NULL)
+		return FAILURE;
+
+	if (strnlen(source_str, MAX_STR_LEN) >= MAX_STR_LEN) {
+		cas_printf(LOG_ERR, "Illegal device name\n");
+		return FAILURE;
+	}
+	return SUCCESS;
+}
+
 int validate_str_num(const char *source_str, const char *msg, long long int min, long long int max)
 {
+	if (source_str == NULL)
+		return FAILURE;
+
 	return __validate_str_num(source_str, msg, min, max, false);
 }
 
@@ -273,8 +283,10 @@ static struct name_to_val_mapping cache_mode_names[] = {
 
 static struct name_to_val_mapping cleaning_policy_names[] = {
 	{ .short_name = "nop", .value = ocf_cleaning_nop },
+#ifdef CLEANER_ENABLE
 	{ .short_name = "alru", .value = ocf_cleaning_alru },
 	{ .short_name = "acp", .value = ocf_cleaning_acp },
+#endif
 	{ NULL }
 };
 
@@ -295,6 +307,7 @@ static struct name_to_val_mapping stats_filters_names[] = {
 	{ .short_name = "conf", .value = STATS_FILTER_CONF },
 	{ .short_name = "usage", .value = STATS_FILTER_USAGE },
 	{ .short_name = "req", .value = STATS_FILTER_REQ },
+	{ .short_name = "prefetch", .value = STATS_FILTER_PREFETCH },
 	{ .short_name = "blk", .value = STATS_FILTER_BLK },
 	{ .short_name = "err", .value = STATS_FILTER_ERR },
 	{ .short_name = "all", .value = STATS_FILTER_ALL },
@@ -554,19 +567,56 @@ dev_err:
 /**
   * @brief get special device file path (/dev/sdX) for disk.
   */
-int get_dev_path(const char* disk, char* buf, size_t num)
+int get_dev_path(const char *disk, char *buf, size_t buf_size)
 {
-	char *path;
-	int err;
+	char dup_path[PATH_MAX] = { 0 };
+	char *rest = dup_path;
+	char *vol_path;
+	rsize_t path_len, composite_len;
 
-	path = realpath(disk, NULL);
-	if (!path)
-		return FAILURE;
+	strncpy_s(dup_path, PATH_MAX - 1, disk, PATH_MAX - 1);
+	buf[0] = '\0';
+	while ((vol_path = strtok_r(rest, ",", &rest))) {
 
-	err = strncpy_s(buf, num, path, MAX_STR_LEN);
+		char* path = realpath(vol_path, NULL);
+		if (!path) {
+			/* Even if the path is not a valid device path,
+			 * detached composite members are represented by '-' so
+			 * they need to be parsed as well
+			 */
+			if (vol_path[0] != '-' ||
+					strnlen(vol_path, PATH_MAX) != 1) {
+				return FAILURE;
+			}
 
-	free(path);
-	return err;
+			path = strdup("-");
+			if (!path)
+				return FAILURE;
+		}
+
+		path_len = strlen(path) + 1;
+		composite_len = strlen(buf) + path_len;
+
+		if ((composite_len + 1) >= buf_size) {
+			free(path);
+			return FAILURE;
+		}
+
+		if (strncat_s(buf, buf_size - composite_len, path, path_len)) {
+			free(path);
+			return FAILURE;
+		}
+
+		free(path);
+
+		if (strncat_s(buf, buf_size - composite_len - 1,
+					",", sizeof(","))) {
+			return FAILURE;
+		}
+	}
+
+	buf[strnlen_s(buf, buf_size) - 1] = '\0';
+	return SUCCESS;
 }
 
 /* Indicate whether given path should be passed without check */
@@ -792,6 +842,8 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 	cache->id = cache_id;
 	cache->state = info->info.state;
 	cache->standby_detached = info->info.standby_detached;
+	cache->upper_level_cache_id = info->upper_level_cache_id;
+	cache->lower_level_cache_id = info->lower_level_cache_id;
 
 	if (strncpy_s(cache->device, sizeof(cache->device),
 			info->cache_path_name,
@@ -807,9 +859,8 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 	cache->promotion_policy = info->info.promotion_policy;
 	cache->size = info->info.cache_line_size;
 
-	if ((info->info.state & (1 << ocf_cache_state_running)) == 0) {
+	if (cache->lower_level_cache_id != OCF_CACHE_ID_INVALID)
 		return cache;
-	}
 
 	for (cache->core_count = 0; cache->core_count < info->info.core_count; ++cache->core_count) {
 		core_id = info->core_id[cache->core_count];
@@ -855,10 +906,153 @@ void free_cache_devices_list(struct cache_device **caches, int caches_count)
 {
 	int i;
 	for (i = 0; i < caches_count; ++i) {
+		if (caches[i] == NULL)
+			continue;
+
 		free(caches[i]);
 		caches[i] = NULL;
 	}
 	free(caches);
+}
+
+static int _ml_find_first_main_cache(struct cache_device **caches,
+		int caches_count)
+{
+	int i;
+
+	for (i = 0; i < caches_count; i++) {
+		if (caches[i] == NULL)
+			continue;
+
+		if (caches[i]->lower_level_cache_id == OCF_CACHE_ID_INVALID)
+			return i;
+	}
+
+	return -1;
+}
+
+static int _ml_find_cache(struct cache_device **caches,
+		int caches_count, int cache_id)
+{
+	int i;
+
+	for (i = 0; i < caches_count; i++) {
+		if (caches[i] == NULL)
+			continue;
+
+		if (caches[i]->id == cache_id)
+			return i;
+	}
+
+	return -1;
+}
+
+static int _ml_find_top_cache(struct cache_device **caches,
+		int caches_count, int id)
+{
+	while (caches[id]->upper_level_cache_id != OCF_CACHE_ID_INVALID) {
+		id = _ml_find_cache(caches, caches_count,
+				caches[id]->upper_level_cache_id);
+	}
+
+	return id;
+}
+
+static int _ml_find_main_cache(struct cache_device **caches,
+		int caches_count, int id)
+{
+	while (caches[id]->lower_level_cache_id != OCF_CACHE_ID_INVALID) {
+		id = _ml_find_cache(caches, caches_count,
+				caches[id]->lower_level_cache_id);
+	}
+
+	return id;
+}
+
+static int _ml_get_cache_level(struct cache_device **caches, int caches_count,
+		struct cache_device *cache)
+{
+	int level = 0;
+	int list_id;
+
+	list_id = _ml_find_cache(caches, caches_count, cache->id);
+	if (list_id == -1)
+		return -1;
+
+	list_id = _ml_find_top_cache(caches, caches_count, list_id);
+	if (list_id == -1)
+		return -1;
+
+	while (caches[list_id]->id != cache->id) {
+		list_id = _ml_find_cache(caches, caches_count,
+				caches[list_id]->lower_level_cache_id);
+		if (list_id == -1)
+			return -1;
+		level++;
+	}
+
+	return level;
+}
+
+static struct cache_device **ml_reorder_cache_list(
+		struct cache_device **caches, int caches_count,
+		bool print_main_cache_on_top)
+{
+	struct cache_device **new_list;
+	int old_list_id, tgt_list_id = 0;
+	int next_cache_id;
+
+	if (caches_count == 0)
+		return caches;
+
+	new_list = calloc(caches_count, sizeof(*new_list));
+	if (!new_list)
+		goto err_alloc;
+
+	while (tgt_list_id != caches_count) {
+		old_list_id = _ml_find_first_main_cache(caches, caches_count);
+		if (old_list_id == -1)
+			goto err;
+
+		if (print_main_cache_on_top == false) {
+			old_list_id = _ml_find_top_cache(caches, caches_count,
+					old_list_id);
+		}
+		if (old_list_id == -1)
+			goto err;
+
+		while (true) {
+			new_list[tgt_list_id] = caches[old_list_id];
+			tgt_list_id++;
+
+			next_cache_id = (
+				print_main_cache_on_top ?
+				caches[old_list_id]->upper_level_cache_id :
+				caches[old_list_id]->lower_level_cache_id
+				);
+
+			caches[old_list_id] = NULL;
+
+			if (next_cache_id == OCF_CACHE_ID_INVALID)
+				break;
+
+			old_list_id = _ml_find_cache(caches, caches_count,
+					next_cache_id);
+			if (old_list_id == -1 || caches[old_list_id] == NULL)
+				goto err;
+		}
+	}
+
+	free(caches);
+
+	return new_list;
+
+err:
+	free_cache_devices_list(new_list, caches_count);
+err_alloc:
+	free_cache_devices_list(caches, caches_count);
+
+	return NULL;
 }
 
 struct cache_device **get_cache_devices(int *caches_count, bool by_id_path)
@@ -926,6 +1120,24 @@ error_out:
 	return caches;
 }
 
+struct cache_device **ml_get_cache_devices_ordered(int *caches_count,
+		bool by_id_path)
+{
+	struct cache_device **caches;
+
+	caches = get_cache_devices(caches_count, by_id_path);
+	if (caches == NULL)
+		return NULL;
+
+	caches = ml_reorder_cache_list(caches, *caches_count, true);
+	if (caches == NULL) {
+		*caches_count = -1;
+		return NULL;
+	}
+
+	return caches;
+}
+
 int caches_compare(const void *a, const void *b)
 {
 	int a_id = (*(struct cache_device**)a)->id;
@@ -956,42 +1168,89 @@ int check_cache_already_added(const char *cache_device) {
 	return SUCCESS;
 }
 
-int start_cache(uint16_t cache_id, unsigned int cache_init,
-		const char *cache_device, ocf_cache_mode_t cache_mode,
-		ocf_cache_line_size_t line_size, int force)
+static int _verify_and_parse_composite_volume_path(char *tgt_buf,
+		size_t tgt_buf_size, const char *compsite_member_paths,
+		size_t paths_size)
 {
 	int fd = 0;
-	struct kcas_start_cache cmd;
-	int status;
-	double min_free_ram_gb;
+	char* vol_path;
+	size_t current_len = 0;
+	char paths_copy[PATH_MAX] = { 0 };
+	char* rest = paths_copy;
 
-	/* check if cache device given exists */
-	fd = open(cache_device, 0);
-	if (fd < 0) {
-		cas_printf(LOG_ERR, "Device %s not found.\n", cache_device);
-		return FAILURE;
+	strncpy(paths_copy, compsite_member_paths, PATH_MAX - 1);
+
+	/* check if all devices exist */
+	while ((vol_path = strtok_r(rest, ",", &rest))) {
+		fd = open(vol_path, 0);
+		if (fd < 0) {
+			cas_printf(LOG_ERR, "Device %s not found.\n", vol_path);
+			return FAILURE;
+		}
+		close(fd);
 	}
-	close(fd);
+
+	strncpy(paths_copy, compsite_member_paths, PATH_MAX - 1);
+	rest = paths_copy;
+
+	while ((vol_path = strtok_r(rest, ",", &rest))) {
+
+		if (set_device_path(tgt_buf + current_len, tgt_buf_size - current_len,
+			vol_path, MAX_STR_LEN) != SUCCESS) {
+			return FAILURE;
+		}
+
+		// skip '\0'
+		current_len = strlen(tgt_buf);
+		// replace '\0' with ','
+		tgt_buf[current_len++] = ',';
+
+	}
+	// rplace last ',' with '\0'
+	tgt_buf[current_len - 1] = '\0';
+
+	return SUCCESS;
+}
+
+static int _start_cache(uint16_t cache_id, unsigned int cache_init,
+		const char *cache_device, ocf_cache_mode_t cache_mode,
+		ocf_cache_line_size_t line_size, uint16_t main_cache_id,
+		int force, bool start)
+{
+	int fd = 0;
+	struct kcas_start_cache cmd = {};
+	int status;
+	int ioctl = start ? KCAS_IOCTL_START_CACHE : KCAS_IOCTL_ATTACH_CACHE;
+	double min_free_ram_gb;
 
 	fd = open_ctrl_device();
 	if (fd == -1)
 		return FAILURE;
 
-	memset(&cmd, 0, sizeof(cmd));
-
-	cmd.cache_id = cache_id;
-	cmd.init_cache = cache_init;
-	if (set_device_path(cmd.cache_path_name, sizeof(cmd.cache_path_name),
-			    cache_device, MAX_STR_LEN) != SUCCESS) {
+	status = _verify_and_parse_composite_volume_path(
+			cmd.cache_path_name,
+			sizeof(cmd.cache_path_name),
+			cache_device,
+			MAX_STR_LEN);
+	if (status != SUCCESS) {
 		close(fd);
 		return FAILURE;
 	}
+
+	cmd.cache_id = cache_id;
 	cmd.caching_mode = cache_mode;
 	cmd.line_size = line_size;
 	cmd.force = (uint8_t)force;
+	cmd.init_cache = cache_init;
+	cmd.lower_cache_id = main_cache_id;
 
-	status = run_ioctl_interruptible_retry(fd, KCAS_IOCTL_START_CACHE, &cmd,
-			"Starting cache", cache_id, OCF_CORE_ID_INVALID);
+	status = run_ioctl_interruptible_retry(
+			fd,
+			ioctl,
+			&cmd,
+			start ? "Starting cache" : "Attaching device to cache",
+			cache_id,
+			OCF_CORE_ID_INVALID);
 	cache_id = cmd.cache_id;
 	if (status < 0) {
 		close(fd);
@@ -1001,22 +1260,28 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 			min_free_ram_gb /= GiB;
 
 			cas_printf(LOG_ERR, "Not enough free RAM.\n"
-					"You need at least %0.2fGB to start cache"
+					"You need at least %0.2fGB to %s cache"
 					" with cache line size equal %llukB.\n",
-					min_free_ram_gb, line_size / KiB);
+					min_free_ram_gb,
+					start ? "start" : "attach a device to",
+					line_size / KiB);
 
-			if (64 * KiB > line_size)
-				cas_printf(LOG_ERR, "Try with greater cache line size.\n");
+			if (64 * KiB > line_size) {
+				cas_printf(LOG_ERR, "Try with greater cache "
+						"line size.\n");
+			}
 
 			return FAILURE;
 		} else {
 			cas_printf(LOG_ERR, "Error inserting cache %d\n", cache_id);
 			if (FAILURE == check_cache_already_added(cache_device)) {
-				cas_printf(LOG_ERR, "Cache device '%s' is already used as cache.\n",
-				cache_device);
+				cas_printf(LOG_ERR, "Cache device '%s' is "
+						"already used as cache.\n",
+						cache_device);
 			} else {
 				print_err(cmd.ext_err_code);
 			}
+
 			return FAILURE;
 		}
 	}
@@ -1024,7 +1289,85 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 	check_cache_state_incomplete(cache_id, fd);
 	close(fd);
 
-	cas_printf(LOG_INFO, "Successfully added cache instance %u\n", cache_id);
+	cas_printf(LOG_INFO, "Successfully %s %u\n",
+			start ? "added cache instance" : "attached device to cache",
+			cache_id);
+
+	return SUCCESS;
+}
+
+int start_cache(uint16_t cache_id, unsigned int cache_init,
+		const char *cache_device, ocf_cache_mode_t cache_mode,
+		ocf_cache_line_size_t line_size, uint16_t main_cache_id,
+		int force)
+{
+	return _start_cache(cache_id, cache_init, cache_device, cache_mode,
+			line_size, main_cache_id, force, true);
+}
+
+int attach_cache(uint16_t cache_id, const char *cache_device, int force)
+{
+	return _start_cache(cache_id, CACHE_INIT_NEW, cache_device,
+			ocf_cache_mode_none, ocf_cache_line_size_none,
+			OCF_CACHE_ID_INVALID, force, false);
+}
+
+int detach_cache(uint16_t cache_id)
+{
+	int fd = 0;
+	struct kcas_stop_cache cmd = {};
+	int ioctl_code = KCAS_IOCTL_DETACH_CACHE;
+	int status;
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	cmd.cache_id = cache_id;
+	cmd.flush_data = true;
+
+	status = run_ioctl_interruptible_retry(
+			fd,
+			ioctl_code,
+			&cmd,
+			"Detaching the device from cache",
+			cache_id,
+			OCF_CORE_ID_INVALID);
+	close(fd);
+
+	if (status < 0) {
+		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
+			cas_printf(LOG_ERR,
+				"You have interrupted detaching the device "
+				"from cache %d. CAS continues to operate "
+				"normally.\n",
+				cache_id
+				);
+			return INTERRUPTED;
+
+		} else if (OCF_ERR_WRITE_CACHE == cmd.ext_err_code){
+			cas_printf(LOG_ERR,
+					"Detached the device from cache %d "
+					"with errors\n",
+					cache_id
+					);
+			print_err(cmd.ext_err_code);
+			return FAILURE;
+
+		} else {
+			cas_printf(LOG_ERR,
+					"Error while detaching the device from"
+					" cache %d\n",
+					cache_id
+					);
+			print_err(cmd.ext_err_code);
+			return FAILURE;
+
+		}
+	}
+
+	cas_printf(LOG_INFO, "Successfully detached device from cache %hu\n",
+			cache_id);
 
 	return SUCCESS;
 }
@@ -1032,41 +1375,193 @@ int start_cache(uint16_t cache_id, unsigned int cache_init,
 int stop_cache(uint16_t cache_id, int flush)
 {
 	int fd = 0;
-	struct kcas_stop_cache cmd;
+	struct kcas_stop_cache cmd = {};
+	int ioctl_code = KCAS_IOCTL_STOP_CACHE;
+	int status;
 
-	/* don't even attempt ioctl if filesystem is mounted */
-	if (check_if_mounted(cache_id, CHECK_IF_CACHE_IS_MOUNTED) == FAILURE) {
+	/* Don't stop instance with mounted filesystem */
+	if (is_cache_mounted(cache_id) == FAILURE)
 		return FAILURE;
-	}
 
 	fd = open_ctrl_device();
 	if (fd == -1)
 		return FAILURE;
 
-	memset(&cmd, 0, sizeof(cmd));
 	cmd.cache_id = cache_id;
 	cmd.flush_data = flush;
 
-	if(run_ioctl_interruptible_retry(fd, KCAS_IOCTL_STOP_CACHE, &cmd, "Stopping cache",
-			cache_id, OCF_CORE_ID_INVALID) < 0) {
-		close(fd);
+	status = run_ioctl_interruptible_retry(
+			fd,
+			ioctl_code,
+			&cmd,
+			"Stopping cache",
+			cache_id,
+			OCF_CORE_ID_INVALID);
+	close(fd);
+
+	if (status < 0) {
 		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
-			cas_printf(LOG_ERR, "You have interrupted stopping of cache. CAS continues\n"
-				"to operate normally. If you want to stop cache without fully\n"
-				"flushing dirty data, use '-n' option.\n");
+			cas_printf(LOG_ERR,
+				"You have interrupted stopping of cache %d. "
+				"CAS continues\nto operate normally. The cache"
+				" can be stopped without\nflushing dirty data "
+				"by using '-n' option.\n",
+				cache_id
+				);
 			return INTERRUPTED;
-		} else if (cmd.ext_err_code == OCF_ERR_WRITE_CACHE){
-			cas_printf(LOG_ERR, "Removed cache %d with errors\n", cache_id);
+
+		} else if (OCF_ERR_WRITE_CACHE == cmd.ext_err_code){
+			cas_printf(LOG_ERR,
+					"Stopped cache %d with errors\n",
+					cache_id
+					);
 			print_err(cmd.ext_err_code);
 			return FAILURE;
+
 		} else {
-			cas_printf(LOG_ERR, "Error while removing cache %d\n", cache_id);
+			cas_printf(LOG_ERR,
+					"Error while stopping cache %d\n",
+					cache_id
+					);
 			print_err(cmd.ext_err_code);
 			return FAILURE;
+
 		}
 	}
-	close(fd);
+
+	cas_printf(LOG_INFO, "Successfully stopped cache %hu\n", cache_id);
+
 	return SUCCESS;
+}
+
+int remove_cache(uint16_t cache_id)
+{
+	int fd = 0;
+	struct kcas_stop_cache cmd = {};
+	int ioctl_code = KCAS_IOCTL_REMOVE_CACHE;
+	int status;
+
+	/* Don't stop instance with mounted filesystem */
+	if (is_cache_mounted(cache_id) == FAILURE)
+		return FAILURE;
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	cmd.cache_id = cache_id;
+	cmd.flush_data = true;
+
+	status = run_ioctl_interruptible_retry(
+			fd,
+			ioctl_code,
+			&cmd,
+			"Removing cache",
+			cache_id,
+			OCF_CORE_ID_INVALID);
+	close(fd);
+
+	if (status < 0) {
+		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
+			cas_printf(LOG_ERR,
+				"You have interrupted removing of cache %d. "
+				"CAS continues\nto operate normally\n",
+				cache_id
+				);
+			return INTERRUPTED;
+
+		} else if (OCF_ERR_WRITE_CACHE == cmd.ext_err_code){
+			cas_printf(LOG_ERR,
+					"Removed cache %d with errors\n",
+					cache_id
+					);
+			print_err(cmd.ext_err_code);
+			return FAILURE;
+
+		} else {
+			cas_printf(LOG_ERR,
+					"Error while removing cache %d\n",
+					cache_id
+					);
+			print_err(cmd.ext_err_code);
+			return FAILURE;
+
+		}
+	}
+
+	cas_printf(LOG_INFO, "Successfully removed cache %hu\n", cache_id);
+
+	return SUCCESS;
+}
+
+static int _resize_composite_cache_member(uint16_t cache_id,
+		const char *cache_device, uint8_t tgt_subvol_id, bool detach,
+		bool force)
+{
+	int fd = 0;
+	struct kcas_composite_resize_cache cmd = {};
+	int status;
+	int ioctl_code = detach ? KCAS_IOCTL_DETACH_COMPOSITE :
+		KCAS_IOCTL_ATTACH_COMPOSITE;
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	status = set_device_path(cmd.cache_path_name,
+			MAX_STR_LEN,
+			cache_device,
+			MAX_STR_LEN);
+	if (status != SUCCESS) {
+		close(fd);
+		return FAILURE;
+	}
+
+	cmd.cache_id = cache_id;
+	cmd.tgt_subvol_id = tgt_subvol_id;
+	if (!detach)
+		cmd.force = force;
+
+	status = run_ioctl_interruptible_retry(
+			fd,
+			ioctl_code,
+			&cmd,
+			detach ? "Detaching composite cache member" :
+			"Attaching composite",
+			cache_id,
+			OCF_CORE_ID_INVALID);
+	close(fd);
+	if (status < 0) {
+		cas_printf(LOG_ERR,
+				"Error while %s a member of composite cache %d."
+				" See dmesg for more information.\n",
+				detach ? "detaching" : "attaching",
+				cache_id
+			  );
+		print_err(cmd.ext_err_code);
+
+		return FAILURE;
+	}
+
+	cas_printf(LOG_INFO, "Successfully %s device from cache %hu\n",
+			detach ? "detached" : "attached",
+			cache_id);
+
+	return SUCCESS;
+}
+
+int detach_composite_cache_cache_member(uint16_t cache_id,
+		const char *cache_device, uint8_t tgt_subvol_id)
+{
+	return _resize_composite_cache_member(cache_id, cache_device,
+			tgt_subvol_id, true, false);
+}
+
+int attach_composite_cache_cache_member(uint16_t cache_id,
+		const char *cache_device, uint8_t tgt_subvol_id, bool force)
+{
+	return _resize_composite_cache_member(cache_id, cache_device,
+			tgt_subvol_id, false, force);
 }
 
 /*
@@ -1329,7 +1824,7 @@ int cache_params_set(unsigned int cache_id, struct cas_param *params)
 }
 
 int cache_params_get(unsigned int cache_id, struct cas_param *params,
-		unsigned int output_format)
+		int output_format)
 {
 	struct kcas_get_cache_param cmd = {0};
 	FILE *intermediate_file[2];
@@ -1414,6 +1909,93 @@ int check_core_already_cached(const char *core_device) {
 	}
 
 	free_cache_devices_list(caches, caches_count);
+
+	return SUCCESS;
+}
+
+int get_ocf_param(const char *name, unsigned int cache_id, unsigned int core_id,
+		int output_format)
+{
+	int fd = 0;
+	struct kcas_get_ocf_param cmd;
+	FILE *intermediate_file[2];
+	int i;
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	if (create_pipe_pair(intermediate_file)) {
+		cas_printf(LOG_ERR, "Failed to create unidirectional pipe.\n");
+		close(fd);
+		return FAILURE;
+	}
+
+	fprintf(intermediate_file[1], TAG(TABLE_HEADER) "Parameter name,Value\n");
+	fflush(intermediate_file[1]);
+
+	memset(&cmd, 0, sizeof(cmd));
+	strncpy_s(cmd.param_name, OCF_MAX_POLICY_NAME - 1, name, strlen(name));
+	cmd.cache_id = cache_id;
+	cmd.core_id = core_id;
+
+	if (run_ioctl(fd, KCAS_IOCTL_GET_OCF_PARAM, &cmd) < 0) {
+		close(fd);
+		fclose(intermediate_file[1]);
+		fclose(intermediate_file[0]);
+		print_err(cmd.ext_err_code);
+		return FAILURE;
+	}
+
+	for (i = 0; i < cmd.list.list_size; ++i) {
+		struct cas_param param = {
+			.name = cmd.list.policy_info[i].policy_name,
+			.unit = NULL,
+			.value_names = NULL,
+			.transform_value = NULL,
+			.value = cmd.list.policy_info[i].enable,
+			.select = true
+		};
+		print_param(intermediate_file[1], &param);
+	}
+	close(fd);
+
+	fclose(intermediate_file[1]);
+	stat_format_output(intermediate_file[0], stdout, output_format);
+	fclose(intermediate_file[0]);
+
+	return SUCCESS;
+}
+
+int set_ocf_param(const char *name, unsigned int cache_id, unsigned int core_id, bool enable,
+	const char *policy)
+{
+	int fd = 0;
+	struct kcas_set_ocf_param cmd;
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+
+	memset(&cmd, 0, sizeof(cmd));
+	strncpy_s(cmd.param_name, OCF_MAX_POLICY_NAME - 1, name, strlen(name));
+	cmd.cache_id = cache_id;
+	cmd.core_id = core_id;
+	cmd.enable = enable;
+	if (policy) {
+		strncpy_s(cmd.policy, OCF_MAX_POLICY_NAME * OCF_MAX_PARAMS_POLICIES - 1,
+			policy, strlen(policy));
+	} else {
+		cmd.policy[0] = '\0';
+	}
+
+	if (run_ioctl(fd, KCAS_IOCTL_SET_OCF_PARAM, &cmd) < 0) {
+		close(fd);
+		print_err(cmd.ext_err_code);
+		return FAILURE;
+	}
+	close(fd);
 
 	return SUCCESS;
 }
@@ -1710,7 +2292,7 @@ int add_core(unsigned int cache_id, unsigned int core_id, const char *core_devic
 	return SUCCESS;
 }
 
-int check_if_mounted(int cache_id, int core_id)
+int _check_if_mounted(int cache_id, int core_id)
 {
 	FILE *mtab;
 	struct mntent *mstruct;
@@ -1754,6 +2336,14 @@ int check_if_mounted(int cache_id, int core_id)
 
 }
 
+int is_cache_mounted(int cache_id) {
+	return _check_if_mounted(cache_id, -1);
+}
+
+int is_core_mounted(int cache_id, int core_id) {
+	return _check_if_mounted(cache_id, core_id);
+}
+
 int remove_core(unsigned int cache_id, unsigned int core_id,
 		bool detach, bool force_no_flush)
 {
@@ -1761,7 +2351,7 @@ int remove_core(unsigned int cache_id, unsigned int core_id,
 	struct kcas_remove_core cmd;
 
 	/* don't even attempt ioctl if filesystem is mounted */
-	if (SUCCESS != check_if_mounted(cache_id, core_id)) {
+	if (SUCCESS != is_core_mounted(cache_id, core_id)) {
 		return FAILURE;
 	}
 
@@ -1827,7 +2417,7 @@ int remove_inactive_core(unsigned int cache_id, unsigned int core_id,
 	struct kcas_remove_inactive cmd;
 
 	/* don't even attempt ioctl if filesystem is mounted */
-	if (SUCCESS != check_if_mounted(cache_id, core_id)) {
+	if (SUCCESS != is_core_mounted(cache_id, core_id)) {
 		return FAILURE;
 	}
 
@@ -1910,7 +2500,7 @@ int purge_cache(unsigned int cache_id)
 }
 
 #define DIRTY_FLUSHING_WARNING "You have interrupted flushing of cache dirty data. CAS continues to operate\nnormally and dirty data that remains on cache device will be flushed by cleaning thread.\n"
-int flush_cache(unsigned int cache_id)
+int _flush_cache(unsigned int cache_id)
 {
 	int fd = 0;
 	struct kcas_flush_cache cmd;
@@ -1935,6 +2525,118 @@ int flush_cache(unsigned int cache_id)
 	}
 
 	close(fd);
+	return SUCCESS;
+}
+
+int is_main_cache(unsigned int cache_id, bool *is_main)
+{
+	int ctrl_fd;
+	struct kcas_cache_info cache_info;
+	int ret;
+
+	memset(&cache_info, 0, sizeof(cache_info));
+	cache_info.cache_id = cache_id;
+
+	ctrl_fd = open_ctrl_device();
+	if (ctrl_fd < 0)
+		return -KCAS_ERR_SYSTEM;
+
+	ret = ioctl(ctrl_fd, KCAS_IOCTL_CACHE_INFO, &cache_info);
+	close(ctrl_fd);
+	if (ret)
+		return -OCF_ERR_CACHE_NOT_EXIST;
+
+	*is_main = (cache_info.lower_level_cache_id == OCF_CACHE_ID_INVALID);
+
+	return SUCCESS;
+}
+
+int flush_cache(unsigned int cache_id, bool apply_all_levels)
+{
+	int ctrl_fd;
+	int ret = SUCCESS;
+	struct kcas_cache_info cache_info;
+	uint16_t cache_count;
+	uint16_t *cache_ids;
+	int i = 0;
+	bool is_main;
+
+	if (!apply_all_levels)
+		return _flush_cache(cache_id);
+
+	ret = is_main_cache(cache_id, &is_main);
+	if (ret != SUCCESS) {
+		print_err(ret);
+		return FAILURE;
+	}
+
+	if (!is_main && apply_all_levels) {
+		cas_printf(LOG_ERR, "The \'all-levels\' flag must be used with "
+				"main cache only!\n");
+		return FAILURE;
+	}
+
+	ctrl_fd = open_ctrl_device();
+	if (ctrl_fd < 0) {
+		print_err(KCAS_ERR_SYSTEM);
+		return FAILURE;
+	}
+	cache_count = get_cache_count(ctrl_fd);
+
+	if (cache_count == 0) {
+		cas_printf(LOG_ERR, "Failed to retrieve cache information!\n");
+		close(ctrl_fd);
+		return FAILURE;
+	}
+
+	cache_ids = calloc(cache_count, sizeof(uint16_t));
+	if (!cache_ids) {
+		cas_printf(LOG_ERR, "Failed to allocate memory\n");
+		close(ctrl_fd);
+		return FAILURE;
+	}
+
+	cache_ids[i++] = cache_id;
+
+	while (true) {
+		memset(&cache_info, 0, sizeof(cache_info));
+		cache_info.cache_id = cache_ids[i-1];
+
+		if (i > cache_count) {
+			cas_printf(LOG_ERR, "Failed to retrieve cache "
+					"information!\n");
+			close(ctrl_fd);
+			free(cache_ids);
+			return FAILURE;
+		}
+
+		ret = ioctl(ctrl_fd, KCAS_IOCTL_CACHE_INFO, &cache_info);
+		if (ret < 0) {
+			cas_printf(LOG_ERR, "Failed to retrieve cache information!\n");
+			close(ctrl_fd);
+			free(cache_ids);
+			return FAILURE;
+		}
+
+		if (cache_info.upper_level_cache_id == OCF_CACHE_ID_INVALID)
+			break;
+
+		cache_ids[i++] = cache_info.upper_level_cache_id;
+	};
+
+	close(ctrl_fd);
+
+	for (i--; i >= 0; i--) {
+		cas_printf(LOG_INFO, "Flushing data from cache %u\n", cache_ids[i]);
+		ret = _flush_cache(cache_ids[i]);
+		if (ret) {
+			free(cache_ids);
+			return ret;
+		}
+	}
+
+	free(cache_ids);
+
 	return SUCCESS;
 }
 
@@ -1964,7 +2666,7 @@ int purge_core(unsigned int cache_id, unsigned int core_id)
 	return SUCCESS;
 }
 
-int flush_core(unsigned int cache_id, unsigned int core_id)
+int _flush_core(unsigned int cache_id, unsigned int core_id)
 {
 	int fd = 0;
 	struct kcas_flush_core cmd;
@@ -1989,6 +2691,96 @@ int flush_core(unsigned int cache_id, unsigned int core_id)
 		}
 	}
 	close(fd);
+	return SUCCESS;
+}
+
+int flush_core(unsigned int cache_id, unsigned int core_id,
+		bool apply_all_levels)
+{
+	int ctrl_fd;
+	int ret = SUCCESS;
+	struct kcas_cache_info cache_info;
+	uint16_t cache_count;
+	uint16_t *cache_ids;
+	int i = 0;
+	bool is_main;
+
+	if (!apply_all_levels)
+		return _flush_core(cache_id, core_id);
+
+	ret = is_main_cache(cache_id, &is_main);
+	if (ret != SUCCESS) {
+		print_err(ret);
+		return FAILURE;
+	}
+
+	if (!is_main && apply_all_levels) {
+		cas_printf(LOG_ERR, "The \'all-levels\' flag must be used with "
+				"main cache only!\n");
+		return FAILURE;
+	}
+
+	ctrl_fd = open_ctrl_device();
+	if (ctrl_fd < 0) {
+		print_err(KCAS_ERR_SYSTEM);
+		return FAILURE;
+	}
+	cache_count = get_cache_count(ctrl_fd);
+
+	if (cache_count == 0) {
+		cas_printf(LOG_ERR, "Failed to retrieve cache information!\n");
+		close(ctrl_fd);
+		return FAILURE;
+	}
+
+	cache_ids = calloc(cache_count, sizeof(uint16_t));
+	if (!cache_ids) {
+		cas_printf(LOG_ERR, "Failed to allocate memory\n");
+		close(ctrl_fd);
+		return FAILURE;
+	}
+
+	cache_ids[i++] = cache_id;
+
+	while (true) {
+		memset(&cache_info, 0, sizeof(cache_info));
+		cache_info.cache_id = cache_ids[i-1];
+
+		if (i > cache_count) {
+			cas_printf(LOG_ERR, "Failed to retrieve cache "
+					"information!\n");
+			close(ctrl_fd);
+			free(cache_ids);
+			return FAILURE;
+		}
+
+		ret = ioctl(ctrl_fd, KCAS_IOCTL_CACHE_INFO, &cache_info);
+		if (ret < 0) {
+			cas_printf(LOG_ERR, "Failed to retrieve cache information!\n");
+			close(ctrl_fd);
+			free(cache_ids);
+			return FAILURE;
+		}
+
+		if (cache_info.upper_level_cache_id == OCF_CACHE_ID_INVALID)
+			break;
+
+		cache_ids[i++] = cache_info.upper_level_cache_id;
+	};
+
+	close(ctrl_fd);
+
+	for (i--; i >= 0; i--) {
+		cas_printf(LOG_INFO, "Flushing data from cache %u to core %d\n", cache_ids[i], core_id);
+		ret = _flush_core(cache_ids[i], core_id);
+		if (ret) {
+			free(cache_ids);
+			return ret;
+		}
+	}
+
+	free(cache_ids);
+
 	return SUCCESS;
 }
 
@@ -2438,7 +3230,12 @@ exit:
 	return result;
 }
 
-int reset_counters(unsigned int cache_id, unsigned int core_id)
+#ifdef OCF_DEBUG_STATS
+static int _reset_counters(unsigned int cache_id, unsigned int core_id,
+		unsigned int composite_volume_member_id)
+#else
+static int _reset_counters(unsigned int cache_id, unsigned int core_id)
+#endif
 {
 	struct kcas_reset_stats cmd;
 	int fd = 0;
@@ -2450,9 +3247,12 @@ int reset_counters(unsigned int cache_id, unsigned int core_id)
 	memset(&cmd, 0, sizeof(cmd));
 	cmd.cache_id = cache_id;
 	cmd.core_id = core_id;
+#ifdef OCF_DEBUG_STATS
+	cmd.composite_volume_member_id = composite_volume_member_id;
+#endif
 
 	if (ioctl(fd, KCAS_IOCTL_RESET_STATS, &cmd) < 0) {
-		
+
 		if (OCF_ERR_CACHE_STANDBY == cmd.ext_err_code) {
 			print_err(cmd.ext_err_code);
 		} else {
@@ -2465,6 +3265,76 @@ int reset_counters(unsigned int cache_id, unsigned int core_id)
 	}
 
 	close(fd);
+	return SUCCESS;
+}
+
+#ifdef OCF_DEBUG_STATS
+int reset_counters(unsigned int cache_id, unsigned int core_id,
+unsigned int composite_volume_member_id, bool apply_all_levels)
+#else
+int reset_counters(unsigned int cache_id, unsigned int core_id,
+	bool apply_all_levels)
+#endif
+{
+	int ctrl_fd;
+	int ret = SUCCESS;
+	struct kcas_cache_info cache_info;
+	uint16_t main_cache_id = cache_id;
+	bool is_main;
+
+	if (!apply_all_levels) {
+#ifdef OCF_DEBUG_STATS
+		return _reset_counters(cache_id, core_id,
+				composite_volume_member_id);
+#else
+		return _reset_counters(cache_id, core_id);
+#endif
+	}
+
+	ret = is_main_cache(cache_id, &is_main);
+	if (ret != SUCCESS) {
+		print_err(ret);
+		return FAILURE;
+	}
+
+	if (!is_main && apply_all_levels) {
+		cas_printf(LOG_ERR, "The \'all-levels\' flag must be used with "
+				"main cache only!\n");
+		return FAILURE;
+	}
+
+	do {
+#ifdef OCF_DEBUG_STATS
+		ret = _reset_counters(cache_id, core_id,
+				composite_volume_member_id);
+#else
+		ret = _reset_counters(cache_id, core_id);
+#endif
+		if (ret)
+			return ret;
+
+		memset(&cache_info, 0, sizeof(cache_info));
+		cache_info.cache_id = cache_id;
+
+		ctrl_fd = open_ctrl_device();
+		if (ctrl_fd < 0) {
+			print_err(KCAS_ERR_SYSTEM);
+			return FAILURE;
+		}
+
+		ret = ioctl(ctrl_fd, KCAS_IOCTL_CACHE_INFO, &cache_info);
+		close(ctrl_fd);
+		if (ret < 0) {
+			cas_printf(LOG_ERR, "Error during reseting upper level"
+					" cache stats of cache %hu\n",
+					main_cache_id);
+			return FAILURE;
+		}
+
+		cache_id = cache_info.upper_level_cache_id;
+
+	} while (cache_id != OCF_CACHE_ID_INVALID);
+
 	return SUCCESS;
 }
 
@@ -2596,19 +3466,171 @@ error_out:
 	return result;
 }
 
+static void _list_cache(FILE *file, struct cache_device *cache,
+		struct cache_device *main_cache, bool by_id_path,
+		int level)
+{
+	char status_buf[CACHE_STATE_LENGTH];
+	const char *tmp_status;
+	struct core_device *curr_core;
+	char mode_string[12];
+	char exp_obj[32];
+	char cache_ctrl_dev[MAX_STR_LEN] = "-";
+	float cache_flush_prog;
+	float core_flush_prog;
+	bool cache_device_detached;
+	int lower_id = cache->lower_level_cache_id;
+	int upper_id = cache->upper_level_cache_id;
+	bool ml_main_cache, ml_middle_cache, ml_top_cache, single_level_cache;
+	int j;
+
+	if (!by_id_path && !cache->standby_detached) {
+		if (get_dev_path(cache->device, cache->device,
+					sizeof(cache->device))) {
+			cas_printf(LOG_WARNING, "WARNING: Cannot resolve path "
+					"to cache. By-id path will be shown "
+					"for that cache.\n");
+		}
+	}
+
+	cache_flush_prog = calculate_flush_progress(cache->dirty,
+			cache->flushed);
+	if (cache_flush_prog) {
+		snprintf(status_buf, sizeof(status_buf),
+				"%s (%3.1f %%)", "Flushing", cache_flush_prog);
+		tmp_status = status_buf;
+		snprintf(mode_string, sizeof(mode_string), "wb->%s",
+				cache_mode_to_name(cache->mode));
+	} else {
+		tmp_status = get_cache_state_name(cache->state,
+				cache->standby_detached);
+
+		if (cache->state & (1 << ocf_cache_state_standby)) {
+			strncpy(mode_string, "-", sizeof(mode_string));
+			if (!cache->standby_detached) {
+				snprintf(cache_ctrl_dev, sizeof(cache_ctrl_dev),
+						"/dev/cas-cache-%d", cache->id);
+			}
+		} else {
+			snprintf(mode_string, sizeof(mode_string), "%s",
+					cache_mode_to_name(cache->mode));
+		}
+	}
+
+	cache_device_detached = (
+			(cache->state & (1 << ocf_cache_state_standby)) |
+			(cache->state & (1 << ocf_cache_state_detached))
+		 );
+
+	ml_main_cache = (
+			level != 0 &&
+			upper_id != OCF_CACHE_ID_INVALID &&
+			lower_id == OCF_CACHE_ID_INVALID
+			);
+	ml_middle_cache = (
+			lower_id != OCF_CACHE_ID_INVALID &&
+			upper_id != OCF_CACHE_ID_INVALID &&
+			level != 0
+			);
+	ml_top_cache = (level == 0 && lower_id != OCF_CACHE_ID_INVALID);
+
+	single_level_cache = (
+			!ml_main_cache && !ml_middle_cache && !ml_top_cache
+			);
+
+	if (ml_middle_cache) {
+		fprintf(file, TAG(TREE_ML_CACHE_MIDDLE)
+				"%s,L%d,%u,\"%s\",%s,%s,%s\n",
+				"cache",
+				level,
+				cache->id,
+				cache_device_detached ? "-" : cache->device,
+				tmp_status,
+				mode_string,
+				cache_ctrl_dev);
+	} else if (ml_top_cache) {
+		fprintf(file, TAG(TREE_ML_CACHE_BOTTOM)
+				"%s,L%d,%u,\"%s\",%s,%s,%s\n",
+				"cache",
+				level,
+				cache->id,
+				cache_device_detached ? "-" : cache->device,
+				tmp_status,
+				mode_string,
+				cache_ctrl_dev);
+	} else if (ml_main_cache) {
+		fprintf(file, TAG(TREE_ML_CACHE_TOP)
+				"%s,L%d (main),%u,\"%s\",%s,%s,%s\n",
+				"cache",
+				level,
+				cache->id,
+				cache_device_detached ? "-" : cache->device,
+				tmp_status,
+				mode_string,
+				cache_ctrl_dev);
+	} else {
+		fprintf(file, TAG(TREE_CACHE)
+				"%s,L%d (main),%u,\"%s\",%s,%s,%s\n",
+				"cache",
+				level,
+				cache->id,
+				cache_device_detached ? "-" : cache->device,
+				tmp_status,
+				mode_string,
+				cache_ctrl_dev);
+	}
+
+	if (!single_level_cache && !ml_top_cache)
+		return;
+
+	for (j = 0; j < main_cache->core_count; ++j) {
+		char* core_path;
+
+		curr_core = &main_cache->cores[j];
+		core_path = curr_core->path;
+
+		core_flush_prog = calculate_flush_progress(curr_core->info.info.dirty,
+				curr_core->info.info.flushed);
+
+		if (!core_flush_prog && cache_flush_prog) {
+			core_flush_prog = curr_core->info.info.dirty ? 0 : 100;
+		}
+
+		if (core_flush_prog || cache_flush_prog) {
+			snprintf(status_buf, CACHE_STATE_LENGTH,
+					"%s (%3.1f %%)", "Flushing", core_flush_prog);
+			tmp_status = status_buf;
+		} else {
+			tmp_status = get_core_state_name(curr_core->info.state);
+		}
+
+		snprintf(exp_obj, sizeof(exp_obj), "/dev/cas%d-%d",
+				main_cache->id, curr_core->id);
+
+		fprintf(file, TAG(TREE_CORE)
+				"%s,%s,%u,%s,%s,%s,%s\n",
+				"core", /* type */
+				"-", /* level */
+				curr_core->id, /* id */
+				core_path, /* path to core*/
+				tmp_status, /* core status */
+				"-", /* write policy */
+				curr_core->info.exp_obj_exists ? exp_obj : "-");
+	}
+}
+
 int list_caches(unsigned int list_format, bool by_id_path)
 {
-	struct cache_device **caches, *curr_cache;
+	struct cache_device **caches;
 	struct kcas_core_pool_path core_pool_path_cmd = {0};
-	struct core_device *curr_core;
-	int caches_count, i, j;
+	int caches_count, i;
 	/* 1 is writing end, 0 is reading end of a pipe */
 	FILE *intermediate_file[2];
 	int result = SUCCESS;
 	pthread_t thread;
 	struct list_printout_ctx printout_ctx;
 
-	caches = get_cache_devices(&caches_count, by_id_path);
+	caches = ml_get_cache_devices_ordered(&caches_count, by_id_path);
 	if (caches_count < 0) {
 		cas_printf(LOG_INFO, "Error getting caches list\n");
 		return FAILURE;
@@ -2647,15 +3669,16 @@ int list_caches(unsigned int list_format, bool by_id_path)
 
 	if (caches_count || core_pool_path_cmd.core_pool_count) {
 		fprintf(intermediate_file[1],
-			TAG(TREE_HEADER)"%s,%s,%s,%s,%s,%s\n",
-			"type", "id", "disk", "status",
+			TAG(TREE_HEADER)"%s,%s,%s,%s,%s,%s,%s\n",
+			"type", "level", "id", "disk", "status",
 			"write policy", "device");
 	}
 
 	if (core_pool_path_cmd.core_pool_count) {
 		fprintf(intermediate_file[1], TAG(TREE_BRANCH)
-			"%s,%s,%s,%s,%s,%s\n",
+			"%s,%s,%s,%s,%s,%s,%s\n",
 			"core pool", /* type */
+			"-",
 			"-", /* id */
 			"-",
 			"-",
@@ -2670,7 +3693,7 @@ int list_caches(unsigned int list_format, bool by_id_path)
 						   "core.\n");
 				}
 			}
-			fprintf(intermediate_file[1], TAG(TREE_LEAF)
+			fprintf(intermediate_file[1], TAG(TREE_CACHE)
 			"%s,%s,%s,%s,%s,%s\n",
 			"core", /* type */
 			"-", /* id */
@@ -2682,88 +3705,15 @@ int list_caches(unsigned int list_format, bool by_id_path)
 	}
 
 	for (i = 0; i < caches_count; ++i) {
-		curr_cache = caches[i];
+		int main_cache_list_id = _ml_find_main_cache(caches,
+				caches_count, i);
+		struct cache_device *main_cache = caches[main_cache_list_id];
+		struct cache_device *curr_cache = caches[i];
+		int level = _ml_get_cache_level(caches, caches_count,
+				curr_cache);
 
-		char status_buf[CACHE_STATE_LENGHT];
-		const char *tmp_status;
-		char mode_string[12];
-		char exp_obj[32];
-		char cache_ctrl_dev[MAX_STR_LEN] = "-";
-		float cache_flush_prog;
-		float core_flush_prog;
-
-		if (!by_id_path && !curr_cache->standby_detached) {
-			if (get_dev_path(curr_cache->device, curr_cache->device,
-					sizeof(curr_cache->device))) {
-				cas_printf(LOG_WARNING, "WARNING: Cannot resolve path "
-					"to cache. By-id path will be shown for that cache.\n");
-			}
-		}
-
-		cache_flush_prog = calculate_flush_progress(curr_cache->dirty, curr_cache->flushed);
-		if (cache_flush_prog) {
-			snprintf(status_buf, sizeof(status_buf),
-				"%s (%3.1f %%)", "Flushing", cache_flush_prog);
-			tmp_status = status_buf;
-			snprintf(mode_string, sizeof(mode_string), "wb->%s",
-					cache_mode_to_name(curr_cache->mode));
-		} else {
-			tmp_status = get_cache_state_name(curr_cache->state, curr_cache->standby_detached);
-
-			if (curr_cache->state & (1 << ocf_cache_state_standby)) {
-				strncpy(mode_string, "-", sizeof(mode_string));
-				if (!curr_cache->standby_detached) {
-					snprintf(cache_ctrl_dev, sizeof(cache_ctrl_dev),
-							"/dev/cas-cache-%d", curr_cache->id);
-				}
-			} else {
-				snprintf(mode_string, sizeof(mode_string), "%s",
-						cache_mode_to_name(curr_cache->mode));
-			}
-		}
-
-		fprintf(intermediate_file[1], TAG(TREE_BRANCH)
-			"%s,%u,%s,%s,%s,%s\n",
-			"cache", /* type */
-			curr_cache->id, /* id */
-			curr_cache->standby_detached ? "-" : curr_cache->device, /* device path */
-			tmp_status, /* cache status */
-			mode_string, /* write policy */
-			cache_ctrl_dev  /* device */);
-
-		for (j = 0; j < curr_cache->core_count; ++j) {
-			char* core_path;
-
-			curr_core = &curr_cache->cores[j];
-			core_path = curr_core->path;
-
-			core_flush_prog = calculate_flush_progress(curr_core->info.info.dirty,
-					curr_core->info.info.flushed);
-
-			if (!core_flush_prog && cache_flush_prog) {
-				core_flush_prog = curr_core->info.info.dirty ? 0 : 100;
-			}
-
-			if (core_flush_prog || cache_flush_prog) {
-				snprintf(status_buf, CACHE_STATE_LENGHT,
-						"%s (%3.1f %%)", "Flushing", core_flush_prog);
-				tmp_status = status_buf;
-			} else {
-				tmp_status = get_core_state_name(curr_core->info.state);
-			}
-
-			snprintf(exp_obj, sizeof(exp_obj), "/dev/cas%d-%d",
-					curr_cache->id, curr_core->id);
-
-			fprintf(intermediate_file[1], TAG(TREE_LEAF)
-					"%s,%u,%s,%s,%s,%s\n",
-					"core", /* type */
-					curr_core->id, /* id */
-					core_path, /* path to core*/
-					tmp_status, /* core status */
-					"-", /* write policy */
-					curr_core->info.exp_obj_exists ? exp_obj : "-" /* exported object path */);
-		}
+		_list_cache(intermediate_file[1], curr_cache, main_cache,
+				by_id_path, level);
 	}
 
 	free_cache_devices_list(caches, caches_count);
@@ -2934,6 +3884,7 @@ int standby_init(int cache_id, ocf_cache_line_size_t line_size,
 			cache_device,
 			ocf_cache_mode_default,
 			line_size,
+			OCF_CACHE_ID_INVALID,
 			force);
 }
 
@@ -2945,6 +3896,7 @@ int standby_load(int cache_id, ocf_cache_line_size_t line_size,
 			cache_device,
 			ocf_cache_mode_none,
 			line_size,
+			OCF_CACHE_ID_INVALID,
 			0);
 }
 

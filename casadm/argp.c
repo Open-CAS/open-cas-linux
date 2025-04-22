@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -24,6 +25,11 @@ static int is_su_requied(const cli_command* commands, int cmd)
 static int is_command_hidden(const cli_command* commands, int cmd)
 {
 	return commands[cmd].flags & CLI_COMMAND_HIDDEN;
+}
+
+static int is_command_forbidden(const cli_command* commands, int cmd)
+{
+	return commands[cmd].flags & CLI_COMMAND_UNSUPPORTED;
 }
 
 static void print_short_usage(const app *app_values)
@@ -313,7 +319,7 @@ void print_help(const app *app_values, const cli_command *commands)
 			break;
 		}
 
-		if (is_command_hidden(commands, i))
+		if (is_command_hidden(commands, i) || is_command_forbidden(commands, i))
 			continue;
 
 		get_short_name_string(commands[i].short_name, short_name);
@@ -612,6 +618,13 @@ int args_parse(app *app_values, cli_command *commands, int argc, const char **ar
 			cmd = i;
 			break;
 		}
+	}
+
+	if (is_command_forbidden(commands, i)) {
+		cas_printf(LOG_ERR, "Unrecognized command %s\n",
+				cmd_name);
+		print_info(app_values);
+		return FAILURE;
 	}
 
 	configure_cli_commands(commands);

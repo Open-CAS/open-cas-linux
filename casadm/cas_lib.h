@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -19,8 +20,10 @@
 #include "safeclib/safe_str_lib.h"
 #include <cas_ioctl_codes.h>
 #include <sys/utsname.h>
+#include "generated_defines.h"
 
 #define CTRL_DEV_PATH "/dev/cas_ctrl"
+#define OCF_CACHE_SUB_VOLUMES (4)
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
 
@@ -50,6 +53,8 @@ struct cache_device {
 	unsigned size;
 	int core_count;
 	bool standby_detached;
+	int upper_level_cache_id;
+	int lower_level_cache_id;
 	struct core_device cores[];
 };
 
@@ -76,14 +81,17 @@ enum output_format_t {
 #define STATS_FILTER_BLK (1 << 3)
 #define STATS_FILTER_ERR (1 << 4)
 #define STATS_FILTER_IOCLASS (1 << 5)
+#define STATS_FILTER_PREFETCH (1 << 6)
 #define STATS_FILTER_ALL (STATS_FILTER_CONF |	\
 			  STATS_FILTER_USAGE |	\
 			  STATS_FILTER_REQ |	\
 			  STATS_FILTER_BLK |	\
-			  STATS_FILTER_ERR)
+			  STATS_FILTER_ERR |	\
+			  STATS_FILTER_PREFETCH)
 #define STATS_FILTER_DEFAULT STATS_FILTER_ALL
 
-#define STATS_FILTER_COUNTERS (STATS_FILTER_REQ | STATS_FILTER_BLK | STATS_FILTER_ERR)
+#define STATS_FILTER_COUNTERS (STATS_FILTER_REQ | STATS_FILTER_BLK | STATS_FILTER_ERR | \
+			       STATS_FILTER_PREFETCH)
 
 const char *cleaning_policy_to_name(uint8_t policy);
 const char *promotion_policy_to_name(uint8_t policy);
@@ -113,8 +121,17 @@ void metadata_memory_footprint(uint64_t size, float *footprint, const char **uni
 
 int start_cache(uint16_t cache_id, unsigned int cache_init,
 		const char *cache_device, ocf_cache_mode_t cache_mode,
-		ocf_cache_line_size_t line_size, int force);
+		ocf_cache_line_size_t line_size, uint16_t main_cache_id, int force);
 int stop_cache(uint16_t cache_id, int flush);
+int remove_cache(uint16_t cache_id);
+
+int detach_cache(uint16_t cache_id);
+int attach_cache(uint16_t cache_id, const char *cache_device, int force);
+
+int detach_composite_cache_cache_member(uint16_t cache_id,
+		const char *cache_device, uint8_t tgt_subvol_id);
+int attach_composite_cache_cache_member(uint16_t cache_id,
+		const char *cache_device, uint8_t tgt_subvol_id, bool force);
 
 #ifdef WI_AVAILABLE
 #define CAS_CLI_HELP_START_CACHE_MODES "wt|wb|wa|pt|wi|wo"
@@ -151,11 +168,12 @@ int cache_get_param(unsigned int cache_id, unsigned int param_id,
  * @brief handle get cache param command
  * @param cache_id id of cache device
  * @param params parameter array
+ * @param output_format output format (text, csv, etc)
  * @return exit code of successful completion is 0;
  * nonzero exit code means failure
  */
 int cache_params_get(unsigned int cache_id, struct cas_param *params,
-		unsigned int output_format);
+		int output_format);
 
 /**
  * @brief handle set core param command
@@ -187,6 +205,31 @@ int core_params_get(unsigned int cache_id, unsigned int core_id,
  *              (UNDEFINED is illegal when transitioning from Write-Back mode to any other mode)
  */
 int set_cache_mode(unsigned int cache_state, unsigned int cache_id, int flush);
+
+/**
+ * @brief handle set OCF param (-U) command
+ * @param name OCF parameter name (ocf_classifier, ocf_prefetcher etc...)
+ * @param cache_id id of cache device
+ * @param core_id id of core device (optional)
+ * @param enable enable or disable the parameter. Options: true, false.
+ * @param policy policy to enable or disable. Can be a list of policies with comma separation (e.g --policy p1,p2)
+ * @return exit code of successful completion is 0;
+ * nonzero exit code means failure
+ */
+int set_ocf_param(const char *name, unsigned int cache_id, unsigned int core_id, bool enable,
+	const char *policy);
+
+/**
+ * @brief handle get OCF param (-W) command
+ * @param name OCF parameter name (ocf_classifier, ocf_prefetcher etc...)
+ * @param cache_id id of cache device
+ * @param core_id id of core device (optional)
+ * @param output_format format of output (optional)
+ * @return exit code of successful completion is 0;
+ * nonzero exit code means failure
+ */
+int get_ocf_param(const char *name, unsigned int cache_id, unsigned int core_id,
+		int output_format);
 
 /**
  * @brief add core device to a cache
@@ -264,13 +307,22 @@ int remove_inactive_core(unsigned int cache_id, unsigned int core_id, bool force
 int core_pool_remove(const char *core_device);
 int get_core_pool_count(int fd);
 
-int reset_counters(unsigned int cache_id, unsigned int core_id);
+int is_main_cache(unsigned int cache_id, bool *is_main);
+
+#ifdef OCF_DEBUG_STATS
+int reset_counters(unsigned int cache_id, unsigned int core_id,
+		unsigned int composite_volume_member_id, bool apply_all_levels);
+#else
+int reset_counters(unsigned int cache_id, unsigned int core_id,
+		bool apply_all_levels);
+#endif
 
 int purge_cache(unsigned int cache_id);
 int purge_core(unsigned int cache_id, unsigned int core_id);
 
-int flush_cache(unsigned int cache_id);
-int flush_core(unsigned int cache_id, unsigned int core_id);
+int flush_cache(unsigned int cache_id, bool apply_all_levels);
+int flush_core(unsigned int cache_id, unsigned int core_id,
+		bool apply_all_levels);
 
 int check_cache_device(const char *device_path);
 
@@ -281,7 +333,11 @@ int partition_is_name_valid(const char *name);
 int cas_module_version(char *buff, int size);
 int list_caches(unsigned int list_format, bool by_id_path);
 int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
-		 unsigned int stats_filters, unsigned int stats_format, bool by_id_path);
+#ifdef OCF_DEBUG_STATS
+	int composite_volume_member_id,
+#endif
+	 unsigned int stats_filters, unsigned int output_format,
+	 bool by_id_path, bool apply_all_levels);
 int get_inactive_core_count(const struct kcas_cache_info *cache_info);
 
 int open_ctrl_device_quiet();
@@ -303,6 +359,7 @@ int validate_str_cln_policy(const char *s);
 int validate_str_promotion_policy(const char *s);
 int validate_str_stats_filters(const char* s);
 int validate_str_output_format(const char* s);
+int validate_ocf_param(const char *source_str);
 
 /**
  * @brief clear metadata

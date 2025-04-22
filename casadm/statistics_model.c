@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -22,6 +23,8 @@
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <time.h>
+
+#define OCF_PF_ALGOS_DEFINE
 #include "cas_lib.h"
 #include "extended_err_msg.h"
 #include "cas_lib_utils.h"
@@ -38,6 +41,8 @@
 
 #define UNIT_REQUESTS "Requests"
 #define UNIT_BLOCKS "4KiB Blocks"
+#define UNIT_IOS "IOs"
+#define UNIT_NS "ns"
 
 static inline float fraction(uint64_t numerator, uint64_t denominator)
 {
@@ -247,6 +252,90 @@ static void print_ioclass_usage_stats(struct ocf_stats_usage *stats, FILE* outfi
 					stats->dirty.fraction, "%lu", stats->dirty.value);
 }
 
+#ifdef OCF_DEBUG_STATS
+#define PR_DBG_STT(name, varname, len) \
+do {\
+	char str[64]; \
+	int i = 0; \
+	print_val_perc_table_section(outfile, name " [512 B]", UNIT_REQUESTS, stats->varname[i].fraction, "%lu", stats->varname[i].value); \
+	for (i = 1; i < len; i++) { \
+		snprintf(str, sizeof(str), name " [%u KiB]", (512 << i) >> 10); \
+		print_val_perc_table_row(outfile, str, UNIT_REQUESTS, stats->varname[i].fraction, "%lu", stats->varname[i].value); \
+	} \
+} \
+while (0)
+
+static void print_debug_chkpts_stats(const struct ocf_stats_requests *stats,
+		const dbg_chkpts_stats_t *cpstts,
+		const char *str,
+		FILE *outfile)
+{
+	char title[128];
+
+	snprintf(title, sizeof(title), "%s chkpts cnt", str);
+	print_val_perc_table_section(outfile, title,
+				     UNIT_IOS, cpstts->chkpts_cnt.fraction, "%lu",
+					 cpstts->chkpts_cnt.value);
+	snprintf(title, sizeof(title), "%s chkpts alloc_free", str);
+	print_val_perc_table_row(outfile, title,
+				     UNIT_NS, cpstts->chkpts_alloc_free.fraction, "%lu",
+					 cpstts->chkpts_alloc_free.value);
+	snprintf(title, sizeof(title), "%s chkpts alloc_sub", str);
+	print_val_perc_table_row(outfile, title,
+				     UNIT_NS, cpstts->chkpts_alloc_sub.fraction, "%lu",
+					 cpstts->chkpts_alloc_sub.value);
+	snprintf(title, sizeof(title), "%s chkpts sub_comp", str);
+	print_val_perc_table_row(outfile, title,
+				     UNIT_NS, cpstts->chkpts_sub_comp.fraction, "%lu",
+					 cpstts->chkpts_sub_comp.value);
+	snprintf(title, sizeof(title), "%s chkpts comp_free", str);
+	print_val_perc_table_row(outfile, title,
+				     UNIT_NS, cpstts->chkpts_comp_free.fraction, "%lu",
+					 cpstts->chkpts_comp_free.value);
+	snprintf(title, sizeof(title), "%s chkpts push_back_cnt", str);
+	print_val_perc_table_row(outfile, title,
+				     UNIT_IOS, cpstts->chkpts_push_back_cnt.fraction, "%lu",
+					 cpstts->chkpts_push_back_cnt.value);
+	snprintf(title, sizeof(title), "%s chkpts push_back_pop", str);
+	print_val_perc_table_row(outfile, title,
+				     UNIT_NS, cpstts->chkpts_push_back_pop.fraction, "%lu",
+					 cpstts->chkpts_push_back_pop.value);
+	snprintf(title, sizeof(title), "%s chkpts push_front_cnt", str);
+	print_val_perc_table_row(outfile, title,
+				     UNIT_IOS, cpstts->chkpts_push_front_cnt.fraction, "%lu",
+					 cpstts->chkpts_push_front_cnt.value);
+	snprintf(title, sizeof(title), "%s chkpts push_front_pop", str);
+	print_val_perc_table_row(outfile, title,
+				     UNIT_NS, cpstts->chkpts_push_front_pop.fraction, "%lu",
+					 cpstts->chkpts_push_front_pop.value);
+}
+
+static void print_req_debug_stats(const struct ocf_stats_requests *stats,
+		FILE *outfile)
+{
+	PR_DBG_STT("Read size", dbg_read_size, DBG_IO_PACKET_NO);
+	PR_DBG_STT("Write size", dbg_write_size, DBG_IO_PACKET_NO);
+	PR_DBG_STT("Read align", dbg_read_align, DBG_IO_ALIGN_NO);
+	PR_DBG_STT("Write align", dbg_write_align, DBG_IO_ALIGN_NO);
+	print_val_perc_table_section(outfile, "Read slow path",
+				     UNIT_REQUESTS, stats->dbg_read_slow_path.fraction, "%lu",
+					 stats->dbg_read_slow_path.value);
+	print_val_perc_table_row(outfile, "Write slow path",
+				     UNIT_REQUESTS, stats->dbg_write_slow_path.fraction, "%lu",
+					 stats->dbg_write_slow_path.value);
+	print_val_perc_table_section(outfile, "Concurrent requests",
+				     UNIT_REQUESTS, stats->dbg_concurrent_requests.fraction, "%lu",
+					 stats->dbg_concurrent_requests.value);
+
+	print_debug_chkpts_stats(stats, &stats->dbg_chkpts_stats_core_rd, "Read core", outfile);
+	print_debug_chkpts_stats(stats, &stats->dbg_chkpts_stats_core_wr, "Write core", outfile);
+	print_debug_chkpts_stats(stats, &stats->dbg_chkpts_stats_cache_rd, "Read cache", outfile);
+	print_debug_chkpts_stats(stats, &stats->dbg_chkpts_stats_cache_wr, "Write cache", outfile);
+	print_debug_chkpts_stats(stats, &stats->dbg_chkpts_stats_ocf_rd, "Read ocf", outfile);
+	print_debug_chkpts_stats(stats, &stats->dbg_chkpts_stats_ocf_wr, "Write ocf", outfile);
+}
+#endif
+
 static void print_req_stats(const struct ocf_stats_requests *stats,
 		FILE *outfile)
 {
@@ -256,6 +345,9 @@ static void print_req_stats(const struct ocf_stats_requests *stats,
 	print_val_perc_table_section(outfile, "Read hits",
 				     UNIT_REQUESTS, stats->rd_hits.fraction, "%lu",
 					 stats->rd_hits.value);
+	print_val_perc_table_row(outfile, "Read deferred",
+				     UNIT_REQUESTS, stats->rd_deferred.fraction, "%lu",
+					 stats->rd_deferred.value);
 	print_val_perc_table_row(outfile, "Read partial misses",
 				     UNIT_REQUESTS, stats->rd_partial_misses.fraction, "%lu",
 					 stats->rd_partial_misses.value);
@@ -269,6 +361,9 @@ static void print_req_stats(const struct ocf_stats_requests *stats,
 	print_val_perc_table_section(outfile, "Write hits",
 				     UNIT_REQUESTS, stats->wr_hits.fraction, "%lu",
 					 stats->wr_hits.value);
+	print_val_perc_table_row(outfile, "Write deferred",
+				     UNIT_REQUESTS, stats->wr_deferred.fraction, "%lu",
+					 stats->wr_deferred.value);
 	print_val_perc_table_row(outfile, "Write partial misses",
 				     UNIT_REQUESTS, stats->wr_partial_misses.fraction, "%lu",
 					 stats->wr_partial_misses.value);
@@ -288,6 +383,9 @@ static void print_req_stats(const struct ocf_stats_requests *stats,
 	print_val_perc_table_row(outfile, "Serviced requests",
 				     UNIT_REQUESTS, stats->serviced.fraction, "%lu",
 					 stats->serviced.value);
+#ifdef OCF_DEBUG_STATS
+	print_req_debug_stats(stats, outfile);
+#endif
 
 	print_val_perc_table_section(outfile, "Total requests",
 				     UNIT_REQUESTS, stats->total.fraction, "%lu",
@@ -299,9 +397,44 @@ static void print_req_stats(const struct ocf_stats_requests *stats,
 	snprintf(__dst, __len, "%s%s", __name, __postfix);
 
 
+/* OCF: Print Prefetch Request statistics in a separate table */
+static void print_prefetch_req_stats(const struct ocf_stats_requests *stats,
+		FILE *outfile)
+{
+	uint64_t total_value = 0;
+	uint64_t total_fraction = 0;
+	int pa;
+
+	print_table_header(outfile, 4, "Prefetch statistics", "Count",
+			   "%", "[Units]");
+
+	for_each_valid_pa_id(pa) {
+		size_t max_stat_len = 128;
+		char stat_name[max_stat_len];
+		get_stat_name(stat_name, max_stat_len, "Prefetch: ", ocf_pa_names[pa]);
+
+		if (pa == 1)
+			print_val_perc_table_section(outfile, stat_name,
+				     UNIT_REQUESTS, stats->prefetches[pa].fraction, "%lu",
+					 stats->prefetches[pa].value);
+		else
+			print_val_perc_table_row(outfile, stat_name,
+				     UNIT_REQUESTS, stats->prefetches[pa].fraction, "%lu",
+					 stats->prefetches[pa].value);
+
+		total_value += stats->prefetches[pa].value;
+		total_fraction += stats->prefetches[pa].fraction;
+	}
+	print_val_perc_table_row(outfile, "Prefetch total",
+				UNIT_REQUESTS, total_fraction, "%lu", total_value);
+}
+
+
 static void print_blk_stats(const struct ocf_stats_blocks *stats,
 		bool cache_stats, FILE *outfile)
 {
+	int pa;
+
 	print_table_header(outfile, 4, "Block statistics", "Count",
 			   "%", "[Units]");
 
@@ -313,6 +446,15 @@ static void print_blk_stats(const struct ocf_stats_blocks *stats,
 	print_val_perc_table_section(outfile, stat_name,
 				     UNIT_BLOCKS, stats->core_volume_rd.fraction, "%lu",
 					 stats->core_volume_rd.value);
+
+	/* OCF: print "Prefetch from core(s)" stats per algorithm */
+	for_each_valid_pa_id(pa) {
+		get_stat_name(stat_name, max_stat_len, "Prefetch from core(s): ",
+				ocf_pa_names[pa]);
+		print_val_perc_table_row(outfile, stat_name,
+				UNIT_BLOCKS, stats->prefetch_core_rd[pa].fraction, "%lu",
+				stats->prefetch_core_rd[pa].value);
+	}
 
 	get_stat_name(stat_name, max_stat_len, "Writes to core", postfix);
 	print_val_perc_table_row(outfile, stat_name,
@@ -332,9 +474,35 @@ static void print_blk_stats(const struct ocf_stats_blocks *stats,
 				     UNIT_BLOCKS, stats->cache_volume_wr.fraction, "%lu",
 					 stats->cache_volume_wr.value);
 
+	/* OCF: print "Prefetch to cache" stats per algorithm */
+	for_each_valid_pa_id(pa) {
+		get_stat_name(stat_name, max_stat_len, "Prefetch from cache: ",
+				ocf_pa_names[pa]);
+		print_val_perc_table_row(outfile, stat_name,
+				UNIT_BLOCKS, stats->prefetch_cache_rd[pa].fraction, "%lu",
+				stats->prefetch_cache_rd[pa].value);
+		get_stat_name(stat_name, max_stat_len, "Prefetch to cache: ",
+				ocf_pa_names[pa]);
+		print_val_perc_table_row(outfile, stat_name,
+				UNIT_BLOCKS, stats->prefetch_cache_wr[pa].fraction, "%lu",
+				stats->prefetch_cache_wr[pa].value);
+	}
+
 	print_val_perc_table_row(outfile, "Total to/from cache",
 				     UNIT_BLOCKS, stats->cache_volume_total.fraction, "%lu",
 					 stats->cache_volume_total.value);
+
+	print_val_perc_table_section(outfile, "Pass-Through reads",
+				     UNIT_BLOCKS, stats->pass_through_rd.fraction, "%lu",
+					 stats->pass_through_rd.value);
+
+	print_val_perc_table_row(outfile, "Pass-Through writes",
+				     UNIT_BLOCKS, stats->pass_through_wr.fraction, "%lu",
+					 stats->pass_through_wr.value);
+
+	print_val_perc_table_row(outfile, "Pass-Through total",
+				     UNIT_BLOCKS, stats->pass_through_total.fraction, "%lu",
+					 stats->pass_through_total.value);
 
 	get_stat_name(stat_name, max_stat_len, "Reads from exported object",
 					postfix);
@@ -386,6 +554,47 @@ static void print_err_stats(const struct ocf_stats_errors *stats,
 					 stats->total.value);
 }
 
+#ifdef OCF_DEBUG_STATS
+static void print_composite_volume_blk_stats(const struct ocf_stats_blocks *stats,
+						FILE *outfile)
+{
+	int pa;
+
+	print_table_header(outfile, 4, "Composite volume cache - Block statistics",
+			"Count", "%", "[Units]");
+
+	size_t max_stat_len = 128;
+	char stat_name[max_stat_len];
+
+	print_val_perc_table_section(outfile, "Reads from composite sub-volume",
+				     UNIT_BLOCKS, stats->cache_volume_rd.fraction,
+				     "%lu", stats->cache_volume_rd.value);
+
+	print_val_perc_table_row(outfile, "Writes to composite sub-volume",
+				     UNIT_BLOCKS, stats->cache_volume_wr.fraction,
+				     "%lu", stats->cache_volume_wr.value);
+
+	/* OCF: print "Prefetch to composite volume member" stats per algorithm */
+	for_each_valid_pa_id(pa) {
+		get_stat_name(stat_name, max_stat_len,
+			"Prefetch from composite sub-volume: ", ocf_pa_names[pa]);
+		print_val_perc_table_row(outfile, stat_name,
+				UNIT_BLOCKS, stats->prefetch_cache_rd[pa].fraction,
+				"%lu", stats->prefetch_cache_rd[pa].value);
+		get_stat_name(stat_name, max_stat_len,
+			"Prefetch to composite sub-volume: ", ocf_pa_names[pa]);
+		print_val_perc_table_row(outfile, stat_name,
+				UNIT_BLOCKS, stats->prefetch_cache_wr[pa].fraction,
+				"%lu", stats->prefetch_cache_wr[pa].value);
+	}
+
+	print_val_perc_table_row(outfile, "Total to/from composite sub-volume",
+				     UNIT_BLOCKS, stats->cache_volume_total.fraction,
+				     "%lu", stats->cache_volume_total.value);
+
+}
+#endif
+
 void cache_stats_core_counters(const struct kcas_core_info *info,
 			struct kcas_get_stats *stats,
 			unsigned int stats_filters, FILE *outfile)
@@ -400,6 +609,9 @@ void cache_stats_core_counters(const struct kcas_core_info *info,
 
 	if (stats_filters & STATS_FILTER_REQ)
 		print_req_stats(&stats->req, outfile);
+
+	if (stats_filters & STATS_FILTER_PREFETCH)
+		print_prefetch_req_stats(&stats->req, outfile);
 
 	if (stats_filters & STATS_FILTER_BLK)
 		print_blk_stats(&stats->blocks, false, outfile);
@@ -456,6 +668,9 @@ void print_stats_ioclass(struct kcas_io_class *io_class,
 	if (stats_filters & STATS_FILTER_REQ)
 		print_req_stats(&stats->req, outfile);
 
+	if (stats_filters & STATS_FILTER_PREFETCH)
+		print_prefetch_req_stats(&stats->req, outfile);
+
 	if (stats_filters & STATS_FILTER_BLK)
 		print_blk_stats(&stats->blocks, cache_stats, outfile);
 }
@@ -481,6 +696,9 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		stats.cache_id = cache_id;
 		stats.core_id = core_id;
 		stats.part_id = io_class_id;
+#ifdef OCF_DEBUG_STATS
+		stats.composite_volume_member_id = OCF_COMPOSITE_VOLUME_MEMBER_ID_INVALID;
+#endif
 
 		ret = ioctl(ctrl_fd, KCAS_IOCTL_PARTITION_INFO, &info);
 		if (info.ext_err_code  == OCF_ERR_IO_CLASS_NOT_EXIST) {
@@ -509,6 +727,9 @@ int cache_stats_ioclasses(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		stats.cache_id = cache_id;
 		stats.core_id = core_id;
 		stats.part_id = part_iter_id;
+#ifdef OCF_DEBUG_STATS
+		stats.composite_volume_member_id = OCF_COMPOSITE_VOLUME_MEMBER_ID_INVALID;
+#endif
 
 		ret = ioctl(ctrl_fd, KCAS_IOCTL_PARTITION_INFO, &info);
 		if (info.ext_err_code  == OCF_ERR_IO_CLASS_NOT_EXIST)
@@ -569,7 +790,7 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		      cache_size,
 		      (float) cache_size * (4 * KiB) / GiB);
 
-	print_kv_pair(outfile, "Cache Device", "%s",
+	print_kv_pair(outfile, "Cache Device", "\"%s\"",
 		      cache_path);
 	if (cache_exported_obj_exists) {
 		print_kv_pair(outfile, "Exported Object", "/dev/cas-cache-%d",
@@ -618,6 +839,10 @@ void cache_stats_counters(struct kcas_get_stats *cache_stats, FILE *outfile,
 	if (stats_filters & STATS_FILTER_REQ)
 		print_req_stats(&cache_stats->req, outfile);
 
+	/* Totals for prefetch requests stats. */
+	if (stats_filters & STATS_FILTER_PREFETCH)
+		print_prefetch_req_stats(&cache_stats->req, outfile);
+
 	/* Totals for blocks stats. */
 	if (stats_filters & STATS_FILTER_BLK)
 		print_blk_stats(&cache_stats->blocks, true, outfile);
@@ -626,6 +851,45 @@ void cache_stats_counters(struct kcas_get_stats *cache_stats, FILE *outfile,
 	if (stats_filters & STATS_FILTER_ERR)
 		print_err_stats(&cache_stats->errors, outfile);
 }
+
+#ifdef OCF_DEBUG_STATS
+static int cache_stats_member_composite_vol(int ctrl_fd,
+		const struct kcas_cache_info *cache_info, unsigned int cache_id,
+		unsigned int core_id, int io_class_id, int composite_volume_member_id,
+		FILE *outfile, unsigned int stats_filters, bool by_id_path)
+{
+	struct kcas_get_stats cache_stats = {};
+	bool standby;
+
+	cache_stats.cache_id = cache_id;
+	cache_stats.core_id = core_id;
+	cache_stats.part_id = io_class_id;
+	cache_stats.composite_volume_member_id = composite_volume_member_id;
+
+	standby = !!(cache_info->info.state & (1 << ocf_cache_state_standby));
+
+	if (!standby) {
+		if (ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &cache_stats)) {
+			print_err(cache_stats.ext_err_code);
+			return FAILURE;
+		}
+	}
+
+	begin_record(outfile);
+
+	if (stats_filters & STATS_FILTER_CONF)
+		(void)cache_stats_conf(ctrl_fd, cache_info, cache_id, outfile, by_id_path);
+
+	/* Don't print stats for a cache in standby state */
+	if (standby)
+		return SUCCESS;
+	if (stats_filters & STATS_FILTER_COUNTERS)
+		if (stats_filters & STATS_FILTER_BLK)
+			print_composite_volume_blk_stats(&cache_stats.blocks, outfile);
+
+	return SUCCESS;
+}
+#endif
 
 static int cache_stats(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		      unsigned int cache_id, FILE *outfile, unsigned int stats_filters,
@@ -637,6 +901,9 @@ static int cache_stats(int ctrl_fd, const struct kcas_cache_info *cache_info,
 	cache_stats.cache_id = cache_id;
 	cache_stats.core_id = OCF_CORE_ID_INVALID;
 	cache_stats.part_id = OCF_IO_CLASS_INVALID;
+#ifdef OCF_DEBUG_STATS
+	cache_stats.composite_volume_member_id = OCF_COMPOSITE_VOLUME_MEMBER_ID_INVALID;
+#endif
 
 	standby = !!(cache_info->info.state & (1 << ocf_cache_state_standby));
 
@@ -686,6 +953,9 @@ int cache_stats_cores(int ctrl_fd, const struct kcas_cache_info *cache_info,
 	stats.cache_id = cache_id;
 	stats.core_id = core_id;
 	stats.part_id = OCF_IO_CLASS_INVALID;
+#ifdef OCF_DEBUG_STATS
+	stats.composite_volume_member_id = OCF_COMPOSITE_VOLUME_MEMBER_ID_INVALID;
+#endif
 
 	if (ioctl(ctrl_fd, KCAS_IOCTL_GET_STATS, &stats) < 0) {
 		cas_printf(LOG_ERR, "Error while retrieving stats for core %d\n", core_id);
@@ -726,15 +996,15 @@ void *stats_printout(void *ctx)
  * @param cache_id id of a cache, to which stats query pertains
  * @param stats_filters subset of statistics to be displayed. If filters are not
  *        specified STATS_FILTER_DEFAULT are displayd.
- * @param fpath path to an output CSV file to which statistics shall be printed. single "-"
- *        can be passed as a path, to generate CSV to stdout. Henceforth non-NULL value of
- *        fpath is a sign that stats shall be printed in CSV-format, and NULL value will]
- *        cause stats to be printed in pretty tables.
  *
  * @return SUCCESS upon successful printing of statistic. FAILURE if any error happens
  */
-int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
-		 unsigned int stats_filters, unsigned int output_format, bool by_id_path)
+static int _cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
+#ifdef OCF_DEBUG_STATS
+		 int composite_volume_member_id,
+#endif
+		 unsigned int stats_filters, unsigned int output_format,
+		 bool by_id_path)
 {
 	int ctrl_fd, i;
 	int ret = SUCCESS;
@@ -803,6 +1073,17 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 		}
 	}
 
+#ifdef OCF_DEBUG_STATS
+	if (composite_volume_member_id != OCF_COMPOSITE_VOLUME_MEMBER_ID_INVALID){
+		if (cache_stats_member_composite_vol(ctrl_fd, &cache_info, cache_id,
+					core_id, io_class_id, composite_volume_member_id,
+					intermediate_file[1], stats_filters,
+					by_id_path)) {
+			ret = FAILURE;
+			goto cleanup;
+		}
+	} else
+#endif
 	if (stats_filters & STATS_FILTER_IOCLASS) {
 		if (cache_stats_ioclasses(ctrl_fd, &cache_info, cache_id,
 					core_id, io_class_id,
@@ -837,4 +1118,71 @@ cleanup:
 	fclose(intermediate_file[0]);
 
 	return ret;
+}
+
+int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
+#ifdef OCF_DEBUG_STATS
+		 int composite_volume_member_id,
+#endif
+		 unsigned int stats_filters, unsigned int output_format,
+		 bool by_id_path, bool apply_all_levels)
+{
+	int ctrl_fd;
+	int ret = SUCCESS;
+	bool is_main;
+	struct kcas_cache_info cache_info;
+	uint16_t main_cache_id = cache_id;
+
+	ret = is_main_cache(cache_id, &is_main);
+	if (ret != SUCCESS) {
+		print_err(ret);
+		return FAILURE;
+	}
+
+	if (!is_main && apply_all_levels) {
+		cas_printf(LOG_ERR, "The \'all-levels\' flag must be used with "
+				"main cache only!\n");
+		return FAILURE;
+	}
+
+	if (!apply_all_levels) {
+		return _cache_status(cache_id, core_id, io_class_id,
+#ifdef OCF_DEBUG_STATS
+				composite_volume_member_id,
+#endif
+				stats_filters, output_format, by_id_path);
+	}
+
+	do {
+		ret = _cache_status(cache_id, core_id, io_class_id,
+#ifdef OCF_DEBUG_STATS
+				composite_volume_member_id,
+#endif
+				stats_filters, output_format, by_id_path);
+		if (ret)
+			return ret;
+
+		memset(&cache_info, 0, sizeof(cache_info));
+		cache_info.cache_id = cache_id;
+
+		ctrl_fd = open_ctrl_device();
+		if (ctrl_fd < 0) {
+			print_err(KCAS_ERR_SYSTEM);
+			return FAILURE;
+		}
+
+		ret = ioctl(ctrl_fd, KCAS_IOCTL_CACHE_INFO, &cache_info);
+		close(ctrl_fd);
+		if (ret < 0) {
+			cas_printf(LOG_ERR, "Error during acquiring upper level"
+					" cache stats of cache %hu\n",
+					main_cache_id);
+			return FAILURE;
+		}
+
+		cache_id = cache_info.upper_level_cache_id;
+
+	} while (cache_id != OCF_CACHE_ID_INVALID);
+
+	return SUCCESS;
 }

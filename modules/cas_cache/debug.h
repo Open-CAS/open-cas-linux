@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #ifndef __CASDISK_DEBUG_H__
@@ -12,7 +13,7 @@
 	printk(KERN_INFO "%s\n", __func__)
 
 #define CAS_DEBUG_DISK_TRACE(dsk)					\
-	printk(KERN_INFO "[%u] %s\n", dsk->id,  __func__)
+	printk(KERN_INFO "[%s] %s\n", dsk->path,  __func__)
 
 #define CAS_DEBUG_MSG(msg)						\
 	printk(KERN_INFO "%s - %s\n", __func__, msg)
@@ -22,8 +23,8 @@
 	       __func__, ##__VA_ARGS__)
 
 #define CAS_DEBUG_DISK(dsk, format, ...)				\
-	printk(KERN_INFO "[%u] %s - "format"\n",			\
-	       dsk->id,							\
+	printk(KERN_INFO "[%s] %s - "format"\n",			\
+	       dsk->path,						\
 	       __func__, ##__VA_ARGS__)
 
 #define CAS_DEBUG_ERROR(error, ...)					\

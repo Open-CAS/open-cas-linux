@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -12,7 +13,7 @@
 
 #define CAS_CPUS_ALL -1
 
-int cas_create_queue_thread(ocf_queue_t q, int cpu);
+int cas_create_queue_thread(ocf_cache_t cache, ocf_queue_t q, int cpu);
 void cas_kick_queue_thread(ocf_queue_t q);
 void cas_stop_queue_thread(ocf_queue_t q);
 

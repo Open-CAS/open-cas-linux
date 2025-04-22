@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# Copyright(c) 2023 Huawei Technologies Co., Ltd.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+. $(dirname $3)/conf_framework.sh
+
+apply() {
+	add_define "DEBUG 1"
+	add_casadm_compile_option "DEBUG=1"
+}
+
+conf_run $@

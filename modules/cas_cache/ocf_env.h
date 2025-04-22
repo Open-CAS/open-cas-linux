@@ -1,8 +1,8 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2023-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
-
 
 #ifndef __OCF_ENV_H__
 #define __OCF_ENV_H__
@@ -65,6 +65,23 @@ static inline void env_vfree(const void *ptr)
 	cas_vfree(ptr);
 }
 
+#define ENV_PROCESSOR_CACHE_LINE_SIZE	64
+
+static inline void *env_aligned_alloc(size_t alignment, size_t size)
+{
+	return env_vmalloc(size);
+}
+
+static inline void *env_aligned_zalloc(size_t alignment, size_t size)
+{
+	return env_vzalloc(size);
+}
+
+static inline void env_aligned_free(const void *p)
+{
+	env_vfree(p);
+}
+
 static inline void *env_secure_alloc(size_t size)
 {
 	return env_vmalloc(size);
@@ -78,9 +95,6 @@ static inline void env_secure_free(const void *ptr, size_t size)
 /* *** ALLOCATOR *** */
 
 typedef struct _env_allocator env_allocator;
-
-env_allocator *env_allocator_create_extended(uint32_t size, const char *name,
-	int rpool_limit);
 
 env_allocator *env_allocator_create(uint32_t size, const char *name, bool zero);
 
@@ -293,8 +307,58 @@ static inline void env_completion_destroy(env_completion *completion)
 
 /* *** ATOMIC VARIABLES *** */
 
+
+typedef struct {
+	volatile uint8_t counter;
+} env_atomic8;
+
+static inline uint8_t env_atomic8_read(const env_atomic8 *a) 
+{
+	return READ_ONCE(a->counter);
+}
+
+static inline void env_atomic8_set(env_atomic8 *a, uint8_t i)
+{
+	WRITE_ONCE(a->counter, i); 
+}
+
+static inline uint8_t env_atomic8_cmpxchg(env_atomic8 *a,
+		uint8_t old, uint8_t new_value)
+{
+	return cmpxchg(&a->counter, old, new_value);
+}
+
+static inline void env_atomic8_sub(uint8_t i, env_atomic8 *a) 
+{
+	for (;;) {
+		u8 c = env_atomic8_read(a);
+		if (env_atomic8_cmpxchg(a, c, c - i) == c)
+			break;
+		/* the kernel does not yield here, neither do us */
+	}
+}
+
+static inline void env_atomic8_dec(env_atomic8 *a) 
+{
+	env_atomic8_sub(1, a);
+}
+
+static inline uint8_t env_atomic8_add_unless(env_atomic8 *a, uint8_t i, uint8_t u)
+{
+	uint8_t c, old;
+	c = env_atomic8_read(a);
+	for (;;) {
+		if (unlikely(c == (u)))
+			break;
+		old = env_atomic8_cmpxchg((a), c, c + (i));
+		if (likely(old == c))
+			break;
+		c = old;
+	}
+	return c != (u);
+}
+
 typedef atomic_t env_atomic;
-typedef atomic64_t env_atomic64;
 
 static inline int env_atomic_read(const env_atomic *a)
 {
@@ -371,6 +435,8 @@ static inline int env_atomic_add_unless(env_atomic *a, int i, int u)
 	return atomic_add_unless(a, i, u);
 }
 
+typedef atomic64_t env_atomic64;
+
 static inline u64 env_atomic64_read(const env_atomic64 *a)
 {
 	return atomic64_read(a);
@@ -401,9 +467,19 @@ static inline void env_atomic64_dec(env_atomic64 *a)
 	atomic64_dec(a);
 }
 
+static inline u64 env_atomic64_add_return(u64 i, env_atomic64 *a)
+{
+	return atomic64_add_return(i, a);
+}
+
 static inline u64 env_atomic64_inc_return(env_atomic64 *a)
 {
 	return atomic64_inc_return(a);
+}
+
+static inline u64 env_atomic64_dec_return(env_atomic64 *a)
+{
+	return (u64)atomic64_dec_return(a);
 }
 
 static inline u64 env_atomic64_cmpxchg(atomic64_t *a, u64 old, u64 new)
@@ -455,6 +531,36 @@ static inline void env_spinlock_destroy(env_spinlock *l)
 
 #define env_spinlock_unlock_irqrestore(l, flags) \
 		spin_unlock_irqrestore((l), (flags))
+
+/* *** 8-BIT SPIN LOCKS *** */
+
+typedef env_atomic8 env_spinlock8;
+
+static inline int env_spinlock8_init(env_spinlock8 *l)
+{
+	env_atomic8_set(l, 0);
+
+	return 0;
+}
+
+static inline void env_spinlock8_lock(env_spinlock8 *l)
+{
+	uint32_t step = 0;
+
+	while (env_atomic8_cmpxchg(l, 0, 1)) {
+	    if (unlikely(++step % 1000000))
+            cond_resched();
+	}
+}
+
+static inline void env_spinlock8_unlock(env_spinlock8 *l)
+{
+	env_atomic8_set(l, 0);
+}
+
+static inline void env_spinlock8_destroy(env_spinlock8 *l)
+{
+}
 
 /* *** RW LOCKS *** */
 
@@ -597,7 +703,7 @@ static inline int env_bit_test(int nr, const void *addr)
 #define env_strncmp(s1, slen1, s2, slen2) strncmp(s1, s2, \
 					min_t(size_t, slen1, slen2))
 #define env_strncpy(dest, dmax, src, slen) ({ \
-		strlcpy(dest, src, min_t(int, dmax, slen)); \
+		strscpy(dest, src, min_t(int, dmax, slen)); \
 		0; \
 	})
 
@@ -640,7 +746,7 @@ static inline void env_put_execution_context(unsigned ctx)
 
 static inline unsigned env_get_execution_context_count(void)
 {
-	return num_online_cpus();
+	return num_possible_cpus();
 }
 
 #endif /* __OCF_ENV_H__ */

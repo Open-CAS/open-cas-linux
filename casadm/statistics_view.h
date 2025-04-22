@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -22,7 +23,11 @@ enum tag_type {
 	RECORD, /**< one record of data */
 	TREE_HEADER,
 	TREE_BRANCH,
-	TREE_LEAF,
+	TREE_CORE,
+	TREE_ML_CACHE_TOP,
+	TREE_ML_CACHE_MIDDLE,
+	TREE_ML_CACHE_BOTTOM,
+	TREE_CACHE,
 	UNDEFINED_TAG /**< occurence of this (or anything else out of
 			 above tags) will immediately break processing */
 };

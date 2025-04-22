@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2021-2025 Huawei Technologies Co., Ltd.
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -27,12 +28,6 @@ MODULE_PARM_DESC(use_io_scheduler,
 		"Configure how IO shall be handled. "
 		"0 - in make request function, 1 - in request function");
 
-u32 unaligned_io = 1;
-module_param(unaligned_io, uint, (S_IRUSR | S_IRGRP));
-MODULE_PARM_DESC(unaligned_io,
-		"Define how to handle I/O requests unaligned to 4 kiB, "
-		"0 - apply PT, 1 - handle by cache");
-
 u32 seq_cut_off_mb = 1;
 module_param(seq_cut_off_mb, uint, (S_IRUSR | S_IRGRP));
 MODULE_PARM_DESC(seq_cut_off_mb,
@@ -56,12 +51,6 @@ static int __init cas_init_module(void)
 		printk(KERN_ERR OCF_PREFIX_SHORT
 				"parameter writeback_queue_unblock_size"
 				" must be less than max_writeback_queue_size\n");
-		return -EINVAL;
-	}
-
-	if (unaligned_io != 0 && unaligned_io != 1) {
-		printk(KERN_ERR OCF_PREFIX_SHORT
-				"Invalid value for unaligned_io parameter\n");
 		return -EINVAL;
 	}
 
