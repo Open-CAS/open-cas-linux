@@ -1,10 +1,10 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-from pathlib import Path
+from pathlib import PurePosixPath
 from datetime import timedelta
 from string import Template
 from textwrap import dedent
@@ -17,8 +17,8 @@ from test_tools.fs_tools import (
 )
 from test_tools.systemctl import reload_daemon
 
-opencas_drop_in_directory = Path("/etc/systemd/system/open-cas.service.d/")
-test_drop_in_file = Path("10-modified-timeout.conf")
+opencas_drop_in_directory = PurePosixPath("/etc/systemd/system/open-cas.service.d/")
+test_drop_in_file = PurePosixPath("10-modified-timeout.conf")
 
 drop_in_timeout_template = Template(
     dedent(
