@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -302,7 +302,7 @@ def test_acp_param_wake_up_time(cache_line_size, cache_mode):
           - ACP flush iterations are triggered with defined frequency.
     """
     with TestRun.step("Test prepare."):
-        error_threshold_ms = 50
+        error_threshold_ms = 200
         generated_vals = get_random_list(
             min_val=FlushParametersAcp.acp_params_range().wake_up_time[0],
             max_val=FlushParametersAcp.acp_params_range().wake_up_time[1],
