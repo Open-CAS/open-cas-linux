@@ -308,11 +308,16 @@ def test_acp_param_wake_up_time(cache_line_size, cache_mode):
             n=10,
         )
         acp_configs = []
+
+        # Always set flush_max_buffers to 1 so we can accurately determine start
+        # of cleaner iteration
         for config in generated_vals:
             acp_configs.append(
-                FlushParametersAcp(wake_up_time=Time(milliseconds=config))
+                FlushParametersAcp(flush_max_buffers=1, wake_up_time=Time(milliseconds=config))
             )
-        acp_configs.append(FlushParametersAcp.default_acp_params())
+        default = FlushParametersAcp.default_acp_params()
+        default.flush_max_buffers = 1
+        acp_configs.append(default)
 
 
     with TestRun.step("Prepare devices."):
