@@ -345,10 +345,11 @@ def test_acp_param_wake_up_time(cache_line_size, cache_mode):
 
     with TestRun.group("Verify IO number for different wake_up_time values."):
         for acp_config in acp_configs:
+            wake_up_time_ms = acp_config.wake_up_time.total_milliseconds()
             with TestRun.step(f"Setting {acp_config}"):
                 cache.set_params_acp(acp_config)
                 accepted_interval_threshold = (
-                    acp_config.wake_up_time.total_milliseconds() + error_threshold_ms
+                    wake_up_time_ms + error_threshold_ms
                 )
             with TestRun.step(
                 "Using blktrace verify if interval between ACP cleaning iterations "
@@ -357,7 +358,8 @@ def test_acp_param_wake_up_time(cache_line_size, cache_mode):
             ):
                 blktrace = BlkTrace(core.core_device, BlkTraceMask.write)
                 blktrace.start_monitoring()
-                time.sleep(15)
+                # Allow for at least a few iterations of cleaner to run
+                time.sleep(max(5, (float(wake_up_time_ms) * 5)/1000))
                 blktrace_output = blktrace.stop_monitoring()
 
                 if len(blktrace_output) == 0:
