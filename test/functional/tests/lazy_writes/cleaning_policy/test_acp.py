@@ -19,6 +19,7 @@ from api.cas.cache_config import (
     FlushParametersAcp,
     CacheLineSize
 )
+from storage_devices.nullblk import NullBlk
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskTypeLowerThan, DiskType
 from test_tools.blktrace import BlkTrace, BlkTraceMask, ActionKind, RwbsKind
@@ -290,8 +291,6 @@ def test_acp_param_flush_max_buffers(cache_line_size, cache_mode):
 @pytest.mark.parametrizex(
     "cache_mode", CacheMode.with_any_trait(CacheModeTrait.LazyWrites)
 )
-@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-@pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd, DiskType.hdd4k]))
 def test_acp_param_wake_up_time(cache_line_size, cache_mode):
     """
         title: Functional test for ACP wake-up parameter.
@@ -315,20 +314,18 @@ def test_acp_param_wake_up_time(cache_line_size, cache_mode):
             )
         acp_configs.append(FlushParametersAcp.default_acp_params())
 
-    with TestRun.step("Prepare partitions."):
+
+    with TestRun.step("Prepare devices."):
         core_size = Size(5, Unit.GibiByte)
-        cache_device = TestRun.disks["cache"]
-        core_device = TestRun.disks["core"]
-        cache_device.create_partitions([Size(10, Unit.GibiByte)])
-        core_device.create_partitions([core_size])
+        cache_device, core_device = NullBlk.create(size_gb=int(core_size.get_value(Unit.GiB)), nr_devices=2)
 
     with TestRun.step(
         f"Start cache in {cache_mode} with {cache_line_size} and add core."
     ):
         cache = casadm.start_cache(
-            cache_device.partitions[0], cache_mode, cache_line_size
+            cache_device, cache_mode, cache_line_size
         )
-        core = cache.add_core(core_device.partitions[0])
+        core = cache.add_core(core_device)
 
     with TestRun.step("Set cleaning policy to NOP."):
         cache.set_cleaning_policy(CleaningPolicy.nop)
