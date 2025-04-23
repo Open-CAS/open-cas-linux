@@ -77,7 +77,7 @@ def start_cache(
         )
         _cache_id = new_cache.cache_id
 
-    cache = Cache(cache_id=int(_cache_id), device=cache_dev, cache_line_size=_cache_line_size)
+    cache = Cache(cache_id=int(_cache_id), device=cache_dev, cache_line_size=cache_line_size)
     TestRun.dut.cache_list.append(cache)
     return cache
 
