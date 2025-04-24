@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -65,7 +65,7 @@ def test_simulation_startup_from_config():
             )
 
     with TestRun.step("Verify if core is working"):
-        core = cache.get_core_devices()[0]
+        core = cache.get_cores()[0]
         if core.get_status() is not CoreStatus.active:
             TestRun.fail(
                 f"Core {core.core_id} should be active but is in {core.get_status()} " f"state."
@@ -89,7 +89,7 @@ def test_simulation_startup_from_config():
             )
 
     with TestRun.step("Verify if core is working"):
-        cores = cache.get_core_devices()
+        cores = cache.get_cores()
         if not cores:
             TestRun.fail("Core is not working")
         core = cores[0]

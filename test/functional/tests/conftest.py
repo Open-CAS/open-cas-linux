@@ -8,13 +8,13 @@ import os
 import posixpath
 import sys
 import traceback
+from datetime import timedelta
+
 import paramiko
 import pytest
 import yaml
 
-from datetime import timedelta
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "../test-framework"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "test-framework"))
 
 from core.test_run import Blocked
 from core.test_run_utils import TestRun
@@ -100,7 +100,7 @@ def pytest_runtest_setup(item):
                 f"{ex}\nYou need to specify DUT config. See the example_dut_config.py file"
             )
 
-        dut_config["plugins_dir"] = os.path.join(os.path.dirname(__file__), "../lib")
+        dut_config["plugins_dir"] = os.path.join(os.path.dirname(__file__), "..", "lib")
         dut_config["opt_plugins"] = {"test_wrapper": {}, "serial_log": {}, "power_control": {}}
         dut_config["extra_logs"] = {"cas": "/var/log/opencas.log"}
 
@@ -127,7 +127,7 @@ def pytest_runtest_setup(item):
         TestRun.LOGGER.print_test_identifier_to_logs()
 
         TestRun.usr = Opencas(
-            repo_dir=os.path.join(os.path.dirname(__file__), "../../.."),
+            repo_dir=os.path.join(os.path.dirname(__file__), "..", "..", ".."),
             working_dir=dut_config["working_dir"],
         )
         if item.config.getoption("--fuzzy-iter-count"):

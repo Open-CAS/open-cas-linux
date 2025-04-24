@@ -1,13 +1,13 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-import pytest
 import time
-
 from random import shuffle
+
+import pytest
 
 from api.cas import casadm, cli, cli_messages
 from api.cas.cache_config import (
@@ -22,16 +22,16 @@ from api.cas.casadm_params import OutputFormat
 from api.cas.core import CoreStatus
 from api.cas.init_config import InitConfig
 from api.cas.statistics import CacheStats
+from connection.utils.output import CmdException
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.dd import Dd
-from test_tools.fs_tools import Filesystem
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import IoEngine, ReadWrite
-from test_utils.filesystem.file import File
+from test_tools.fs_tools import Filesystem
 from test_tools.os_tools import sync
 from test_tools.udev import Udev
-from connection.utils.output import CmdException
+from test_utils.filesystem.file import File
 from type_def.size import Size, Unit
 from type_def.time import Time
 
@@ -129,7 +129,7 @@ def test_incremental_load_missing_core_device():
             if core.get_status() is not CoreStatus.active:
                 TestRun.fail(f"Core {core.core_id} should be active but is {core.get_status()}.")
 
-        core_with_missing_device = cache.get_core_devices()[-1]
+        core_with_missing_device = cache.get_cores()[-1]
 
     with TestRun.step("Stop cache."):
         cache.stop()
@@ -143,7 +143,7 @@ def test_incremental_load_missing_core_device():
             TestRun.fail(
                 f"Cache {cache.cache_id} should be incomplete but is " f"{cache.get_status()}."
             )
-        for core in cache.get_core_devices():
+        for core in cache.get_cores():
             if core.get_status() is not CoreStatus.active:
                 TestRun.fail(f"Core {core.core_id} should be Active but is {core.get_status()}.")
         if core_with_missing_device.get_status() is not CoreStatus.inactive:

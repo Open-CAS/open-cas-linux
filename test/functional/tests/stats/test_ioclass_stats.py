@@ -1,10 +1,11 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import random
+
 import pytest
 
 from api.cas import casadm
@@ -23,13 +24,13 @@ from api.cas.statistics import (
     block_stats_core,
     block_stats_cache
 )
+from connection.utils.output import CmdException
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fs_tools import Filesystem
-from test_utils.filesystem.file import File
 from test_tools.os_tools import sync
 from test_tools.udev import Udev
-from connection.utils.output import CmdException
+from test_utils.filesystem.file import File
 from type_def.size import Size, Unit
 
 IoClass = ioclass_config.IoClass
@@ -235,7 +236,7 @@ def test_ioclass_stats_sections(stat_filter, per_core, random_cls):
                       f"{'cores' if per_core else 'caches'}"):
         for cache in caches:
             with TestRun.group(f"Cache {cache.cache_id}"):
-                for core in cache.get_core_devices():
+                for core in cache.get_cores():
                     if per_core:
                         TestRun.LOGGER.info(f"Core {core.cache_id}-{core.core_id}")
                     statistics = (
@@ -257,7 +258,7 @@ def test_ioclass_stats_sections(stat_filter, per_core, random_cls):
                       f"class for all {'cores' if per_core else 'caches'}"):
         for cache in caches:
             with TestRun.group(f"Cache {cache.cache_id}"):
-                for core in cache.get_core_devices():
+                for core in cache.get_cores():
                     core_info = f"Core {core.cache_id}-{core.core_id} ," if per_core else ""
                     for class_id in range(ioclass_config.MAX_IO_CLASS_ID + 1):
                         with TestRun.group(core_info + f"IO class id {class_id}"):

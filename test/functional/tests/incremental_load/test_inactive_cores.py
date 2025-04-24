@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -143,7 +143,7 @@ def test_core_inactive_stats_usage():
         active_cores_clean_stats = 0
         active_cores_dirty_stats = 0
 
-        active_cores = cache.get_core_devices()
+        active_cores = cache.get_cores()
         for core in active_cores:
             core_stats = core.get_statistics()
             active_cores_occupancy_stats += core_stats.usage_stats.occupancy
