@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -250,6 +250,7 @@ struct kcas_io_class {
 struct kcas_io_classes {
 	/** Cache ID */
 	uint16_t cache_id;
+	bool repart_all;
 
 	int ext_err_code;
 

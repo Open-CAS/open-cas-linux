@@ -490,9 +490,9 @@ def flush_core(cache_id: int, core_id: int, shortcut: bool = False) -> Output:
     return output
 
 
-def load_io_classes(cache_id: int, file: str, shortcut: bool = False) -> Output:
+def load_io_classes(cache_id: int, file: str, keep_classification: bool = False, shortcut: bool = False) -> Output:
     output = TestRun.executor.run(
-        load_io_classes_cmd(cache_id=str(cache_id), file=file, shortcut=shortcut)
+        load_io_classes_cmd(cache_id=str(cache_id), file=file, keep_classification=keep_classification, shortcut=shortcut)
     )
     if output.exit_code != 0:
         raise CmdException("Load IO class command failed.", output)
