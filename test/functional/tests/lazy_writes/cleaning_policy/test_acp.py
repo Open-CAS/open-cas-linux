@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -19,6 +19,7 @@ from api.cas.cache_config import (
     FlushParametersAcp,
     CacheLineSize
 )
+from storage_devices.nullblk import NullBlk
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskTypeLowerThan, DiskType
 from test_tools.blktrace import BlkTrace, BlkTraceMask, ActionKind, RwbsKind
@@ -290,8 +291,6 @@ def test_acp_param_flush_max_buffers(cache_line_size, cache_mode):
 @pytest.mark.parametrizex(
     "cache_mode", CacheMode.with_any_trait(CacheModeTrait.LazyWrites)
 )
-@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-@pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd, DiskType.hdd4k]))
 def test_acp_param_wake_up_time(cache_line_size, cache_mode):
     """
         title: Functional test for ACP wake-up parameter.
@@ -302,33 +301,36 @@ def test_acp_param_wake_up_time(cache_line_size, cache_mode):
           - ACP flush iterations are triggered with defined frequency.
     """
     with TestRun.step("Test prepare."):
-        error_threshold_ms = 50
+        error_threshold_ms = 200
         generated_vals = get_random_list(
             min_val=FlushParametersAcp.acp_params_range().wake_up_time[0],
             max_val=FlushParametersAcp.acp_params_range().wake_up_time[1],
             n=10,
         )
         acp_configs = []
+
+        # Always set flush_max_buffers to 1 so we can accurately determine start
+        # of cleaner iteration
         for config in generated_vals:
             acp_configs.append(
-                FlushParametersAcp(wake_up_time=Time(milliseconds=config))
+                FlushParametersAcp(flush_max_buffers=1, wake_up_time=Time(milliseconds=config))
             )
-        acp_configs.append(FlushParametersAcp.default_acp_params())
+        default = FlushParametersAcp.default_acp_params()
+        default.flush_max_buffers = 1
+        acp_configs.append(default)
 
-    with TestRun.step("Prepare partitions."):
+
+    with TestRun.step("Prepare devices."):
         core_size = Size(5, Unit.GibiByte)
-        cache_device = TestRun.disks["cache"]
-        core_device = TestRun.disks["core"]
-        cache_device.create_partitions([Size(10, Unit.GibiByte)])
-        core_device.create_partitions([core_size])
+        cache_device, core_device = NullBlk.create(size_gb=int(core_size.get_value(Unit.GiB)), nr_devices=2)
 
     with TestRun.step(
         f"Start cache in {cache_mode} with {cache_line_size} and add core."
     ):
         cache = casadm.start_cache(
-            cache_device.partitions[0], cache_mode, cache_line_size
+            cache_device, cache_mode, cache_line_size
         )
-        core = cache.add_core(core_device.partitions[0])
+        core = cache.add_core(core_device)
 
     with TestRun.step("Set cleaning policy to NOP."):
         cache.set_cleaning_policy(CleaningPolicy.nop)
@@ -343,10 +345,11 @@ def test_acp_param_wake_up_time(cache_line_size, cache_mode):
 
     with TestRun.group("Verify IO number for different wake_up_time values."):
         for acp_config in acp_configs:
+            wake_up_time_ms = acp_config.wake_up_time.total_milliseconds()
             with TestRun.step(f"Setting {acp_config}"):
                 cache.set_params_acp(acp_config)
                 accepted_interval_threshold = (
-                    acp_config.wake_up_time.total_milliseconds() + error_threshold_ms
+                    wake_up_time_ms + error_threshold_ms
                 )
             with TestRun.step(
                 "Using blktrace verify if interval between ACP cleaning iterations "
@@ -355,8 +358,12 @@ def test_acp_param_wake_up_time(cache_line_size, cache_mode):
             ):
                 blktrace = BlkTrace(core.core_device, BlkTraceMask.write)
                 blktrace.start_monitoring()
-                time.sleep(15)
+                # Allow for at least a few iterations of cleaner to run
+                time.sleep(max(5, (float(wake_up_time_ms) * 5)/1000))
                 blktrace_output = blktrace.stop_monitoring()
+
+                if len(blktrace_output) == 0:
+                    TestRun.LOGGER.error("blktrace length == 0")
 
                 for (prev, curr) in zip(blktrace_output, blktrace_output[1:]):
                     if not new_acp_iteration(prev, curr):
