@@ -358,6 +358,9 @@ def test_acp_param_wake_up_time(cache_line_size, cache_mode):
                 time.sleep(15)
                 blktrace_output = blktrace.stop_monitoring()
 
+                if len(blktrace_output) == 0:
+                    TestRun.LOGGER.error("blktrace length == 0")
+
                 for (prev, curr) in zip(blktrace_output, blktrace_output[1:]):
                     if not new_acp_iteration(prev, curr):
                         continue
