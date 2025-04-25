@@ -164,7 +164,7 @@ missing_param = [r"Option \'.+\' is missing"]
 disallowed_param = [r"Unrecognized option \S+"]
 
 operation_forbiden_in_standby = [
-    r"The operation is not permited while the cache is in the standby mode"
+    r"The operation is not permitted while the cache is in the standby mode"
 ]
 
 mutually_exclusive_params_init = [
