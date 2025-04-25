@@ -179,11 +179,11 @@ struct {
 	},
 	{
 		OCF_ERR_CACHE_DETACHED,
-		"The operation is not permited while the cache is detached"
+		"The operation is not permitted while the cache is detached"
 	},
 	{
 		OCF_ERR_CACHE_STANDBY,
-		"The operation is not permited while the cache is in the standby mode"
+		"The operation is not permitted while the cache is in the standby mode"
 	},
 	{
 		OCF_ERR_STANDBY_ATTACHED,
