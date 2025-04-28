@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2024-2026 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -589,9 +590,16 @@ def flush_core(cache_id: int, core_id: int, shortcut: bool = False) -> Output:
     return output
 
 
-def load_io_classes(cache_id: int, file: str, shortcut: bool = False) -> Output:
+def load_io_classes(
+    cache_id: int, file: str, shortcut: bool = False, keep_classification: bool = False
+) -> Output:
     output = TestRun.executor.run(
-        load_io_classes_cmd(cache_id=str(cache_id), file=file, shortcut=shortcut)
+        load_io_classes_cmd(
+            cache_id=str(cache_id),
+            file=file,
+            shortcut=shortcut,
+            keep_classification=keep_classification,
+        )
     )
     if output.exit_code != 0:
         raise CmdException("Load IO class command failed.", output)
