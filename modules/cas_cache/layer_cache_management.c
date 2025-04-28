@@ -1764,7 +1764,7 @@ out_cls:
 			cas_cls_rule_destroy(cache, cls_rule[class_id]);
 	} else {
 		/* repartition without management lock */
-		ocf_repart_all_to_default(cache, io_class_cfg);
+		ocf_repart_to_default(cache, io_class_cfg, cfg->repart_all);
 	}
 out_not_running:
 	ocf_mngt_cache_put(cache);

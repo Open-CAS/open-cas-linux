@@ -2524,7 +2524,7 @@ int partition_set_config(struct kcas_io_classes *cnfg)
 	return result;
 }
 
-int partition_setup(unsigned int cache_id, const char *file)
+int partition_setup(unsigned int cache_id, bool reclassify, const char *file)
 {
 	int result = 0;
 	CSVFILE *in;
@@ -2556,6 +2556,7 @@ int partition_setup(unsigned int cache_id, const char *file)
 	}
 
 	if (0 == partition_get_config(in, cnfg, cache_id)) {
+		cnfg->repart_all = reclassify;
 		result = partition_set_config(cnfg);
 	} else {
 		result = FAILURE;
