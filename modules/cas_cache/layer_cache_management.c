@@ -1746,7 +1746,7 @@ int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 	result = ocf_mngt_cache_io_classes_configure(cache, io_class_cfg);
 	if (result == -OCF_ERR_IO_CLASS_NOT_EXIST)
 		result = 0;
-	if(result)
+	if (result)
 		goto out_configure;
 
 	result = _cache_mngt_save_sync(cache);
@@ -1762,6 +1762,9 @@ out_cls:
 	if (result) {
 		while (class_id--)
 			cas_cls_rule_destroy(cache, cls_rule[class_id]);
+	} else {
+		/* repartition without management lock */
+		ocf_repart_all_to_default(cache, io_class_cfg);
 	}
 out_not_running:
 	ocf_mngt_cache_put(cache);
