@@ -1785,6 +1785,7 @@ int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 
 	for (class_id = 0; class_id < OCF_USER_IO_CLASS_MAX; class_id++) {
 		io_class_cfg->config[class_id].class_id = class_id;
+		io_class_cfg->config[class_id].repart = true;
 
 		if (!cfg->info[class_id].name[0]) {
 			io_class_cfg->config[class_id].class_id = class_id;
