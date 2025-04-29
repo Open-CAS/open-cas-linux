@@ -22,7 +22,7 @@ from api.cas.cli_messages import (
     check_stderr_msg,
     missing_param,
     disallowed_param,
-    operation_forbiden_in_standby,
+    operation_forbidden_in_standby,
     mutually_exclusive_params_init,
     mutually_exclusive_params_load,
     activate_without_detach,
@@ -256,9 +256,9 @@ def test_standby_neg_cli_management():
 
             TestRun.LOGGER.info(f"Verify {cmd}")
             output = TestRun.executor.run_expect_fail(cmd)
-            if not check_stderr_msg(output, operation_forbiden_in_standby):
+            if not check_stderr_msg(output, operation_forbidden_in_standby):
                 TestRun.LOGGER.error(
-                    f'Expected the following error message "{operation_forbiden_in_standby[0]}" '
+                    f'Expected the following error message "{operation_forbidden_in_standby[0]}" '
                     f'Got "{output.stderr}" instead.'
                 )
 
