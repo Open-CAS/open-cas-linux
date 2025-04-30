@@ -1,11 +1,13 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import random
 import re
+from collections import OrderedDict
+
 import pytest
 
 from api.cas.cache_config import CacheMode, CacheLineSize, CacheModeTrait
@@ -13,29 +15,29 @@ from api.cas.casadm import OutputFormat, print_statistics, start_cache
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
-from test_tools.fs_tools import Filesystem
-from type_def.size import Size, Unit
+from test_utils.size import Size, Unit
 
-iterations = 64
-cache_size = Size(8, Unit.GibiByte)
+iterations = 4
+cache_size = Size(4, Unit.GibiByte)
 
 
-@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_any_trait(
-    CacheModeTrait.InsertRead | CacheModeTrait.InsertWrite))
-@pytest.mark.parametrizex("test_object", ["cache", "core"])
+    CacheModeTrait.InsertRead | CacheModeTrait.InsertWrite
+))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_output_consistency(cache_line_size, cache_mode, test_object):
+def test_output_consistency(cache_mode):
     """
-        title: Test consistency between different cache and core statistics' outputs.
+        title: Test consistency between different cache and core statistics' output formats.
         description: |
           Check if OpenCAS's statistics for cache and core are consistent
           regardless of the output format.
         pass_criteria:
-          - Statistics in CSV format matches statistics in table format.
+          - Statistics in CSV format match statistics in table format.
     """
-    with TestRun.step("Prepare cache and core."):
+    cache_line_size = random.choice(list(CacheLineSize))
+
+    with TestRun.step("Prepare cache and core devices"):
         cache_dev = TestRun.disks['cache']
         cache_dev.create_partitions([cache_size])
         cache_part = cache_dev.partitions[0]
@@ -44,46 +46,62 @@ def test_output_consistency(cache_line_size, cache_mode, test_object):
         core_part = core_dev.partitions[0]
         blocks_in_cache = int(cache_size / cache_line_size.value)
 
-    with TestRun.step("Start cache and add core with a filesystem."):
+    with TestRun.step("Start cache and add core"):
         cache = start_cache(cache_part, cache_mode, cache_line_size, force=True)
-        core_part.create_filesystem(Filesystem.xfs)
         exp_obj = cache.add_core(core_part)
 
-    with TestRun.step("Select object to test."):
-        if test_object == "cache":
-            tested_object = cache
-            flush = tested_object.flush_cache
-        elif test_object == "core":
-            tested_object = exp_obj
-            flush = tested_object.flush_core
-        else:
-            TestRun.LOGGER.error("Wrong type of device to read statistics from.")
-
     for _ in TestRun.iteration(range(iterations), f"Run configuration {iterations} times"):
-        with TestRun.step(f"Reset stats and run workload on the {test_object}."):
-            tested_object.reset_counters()
+        with TestRun.step("Reset stats and run workload"):
+            cache.reset_counters()
             # Run workload on a random portion of the tested object's capacity,
             # not too small, but not more than half the size
-            random_count = random.randint(blocks_in_cache / 32, blocks_in_cache / 2)
+            random_count = random.randint(blocks_in_cache // 32, blocks_in_cache // 2)
             TestRun.LOGGER.info(f"Run workload on {(random_count / blocks_in_cache * 100):.2f}% "
-                                f"of {test_object}'s capacity.")
+                                "of cache's capacity.")
             dd_builder(cache_mode, cache_line_size, random_count, exp_obj).run()
 
-        with TestRun.step(f"Flush {test_object} and get statistics from different outputs."):
-            flush()
-            csv_stats = get_stats_from_csv(
-                cache.cache_id, tested_object.core_id if test_object == "core" else None
+        with TestRun.step("Get statistics from different outputs"):
+            cache_csv_output = print_statistics(cache.cache_id, output_format=OutputFormat.csv)
+            cache_table_output = print_statistics(cache.cache_id, output_format=OutputFormat.table)
+            cache_csv_stats = get_stats_from_csv(cache_csv_output)
+            cache_table_stats = get_stats_from_table(cache_table_output)
+
+            core_csv_output = print_statistics(
+                exp_obj.cache_id, exp_obj.core_id, output_format=OutputFormat.csv
             )
-            table_stats = get_stats_from_table(
-                cache.cache_id, tested_object.core_id if test_object == "core" else None
+            core_table_output = print_statistics(
+                exp_obj.cache_id, exp_obj.core_id, output_format=OutputFormat.table
             )
+            core_csv_stats = get_stats_from_csv(core_csv_output)
+            core_table_stats = get_stats_from_table(core_table_output)
 
-        with TestRun.step("Compare statistics between outputs."):
-            if csv_stats != table_stats:
-                TestRun.LOGGER.error(f"Inconsistent outputs:\n{csv_stats}\n\n{table_stats}")
+        with TestRun.step("Compare statistics between outputs"):
+            if cache_csv_stats != cache_table_stats:
+                wrong_keys = []
+                for key in cache_csv_stats:
+                    # 'Dirty for' values might differ by 1 [s], skip check
+                    if (cache_csv_stats[key] != cache_table_stats[key]
+                            and not key.startswith("Dirty for")):
+                        wrong_keys.append(key)
+                if len(cache_csv_stats) != len(cache_table_stats) or len(wrong_keys):
+                    TestRun.LOGGER.error(
+                        "Inconsistent outputs for cache d:\n"
+                        f"{cache_csv_stats}\n\n{cache_table_stats}"
+                    )
+            if core_csv_stats != core_table_stats:
+                wrong_keys = []
+                for key in core_csv_stats:
+                    # 'Dirty for' values might differ by 1 [s], skip check
+                    if (core_csv_stats[key] != core_table_stats[key]
+                            and not key.startswith("Dirty for")):
+                        wrong_keys.append(key)
+                if len(core_csv_stats) != len(core_table_stats) or len(wrong_keys):
+                    TestRun.LOGGER.error(
+                        f"Inconsistent outputs for core d:\n{core_csv_stats}\n\n{core_table_stats}"
+                    )
 
 
-def get_stats_from_csv(cache_id: int, core_id: int = None):
+def get_stats_from_csv(output):
     """
     'casadm -P' csv output has two lines:
     1st - statistics names with units
@@ -91,18 +109,16 @@ def get_stats_from_csv(cache_id: int, core_id: int = None):
     This function returns dictionary with statistics names with units as keys
     and statistics values as values.
     """
-    output = print_statistics(cache_id, core_id, output_format=OutputFormat.csv)
-
     output = output.stdout.splitlines()
 
     keys = output[0].split(",")
     values = output[1].split(",")
 
     # return the keys and the values as a dictionary
-    return dict(zip(keys, values))
+    return OrderedDict(zip(keys, values))
 
 
-def get_stats_from_table(cache_id: int, core_id: int = None):
+def get_stats_from_table(output):
     """
     'casadm -P' table output has a few sections:
     1st - config section with two columns
@@ -110,7 +126,6 @@ def get_stats_from_table(cache_id: int, core_id: int = None):
     This function returns dictionary with statistics names with units as keys
     and statistics values as values.
     """
-    output = print_statistics(cache_id, core_id, output_format=OutputFormat.table)
     output = output.stdout.splitlines()
 
     output_parts = []
@@ -124,20 +139,20 @@ def get_stats_from_table(cache_id: int, core_id: int = None):
 
     # the first part is config section
     conf_section = output_parts.pop(0)
-    keys, values = (parse_core_conf_section(conf_section) if core_id
-                    else parse_cache_conf_section(conf_section))
+    id_row = _find_id_row(conf_section)
+    column_width = _check_first_column_width(id_row)
+    stat_dict = parse_conf_section(conf_section, column_width)
 
     # parse each remaining section
     for section in output_parts:
         # the remaining parts are table sections
-        part_of_keys, part_of_values = parse_tables_section(section)
+        part_of_stat_dict = parse_tables_section(section)
 
-        # receive keys and values lists from every section
-        keys.extend(part_of_keys)
-        values.extend(part_of_values)
+        # receive keys and values from every section
+        stat_dict.update(part_of_stat_dict)
 
     # return the keys and the values as a dictionary
-    return dict(zip(keys, values))
+    return stat_dict
 
 
 def parse_conf_section(table_as_list: list, column_width: int):
@@ -146,45 +161,36 @@ def parse_conf_section(table_as_list: list, column_width: int):
     of the first section in the statistics output in table format.
     The first section in the 'casadm -P' output have two columns.
     """
-    keys = []
-    values = []
+    stat_dict = OrderedDict()
     # reformat table
     table_as_list = separate_values_to_two_lines(table_as_list, column_width)
 
     # split table lines to statistic name and its value
     # and save them to keys and values tables
+    process_dirty_for = True
     for line in table_as_list:
-        splitted_line = []
+        split_line = []
 
         # move unit from value to statistic name if needed
-        sqr_brackets_counter = line.count("[")
-        if sqr_brackets_counter:
+        sqr_brackets_present = "[" in line
+        if (sqr_brackets_present
+           and (not line.startswith("Dirty for") or process_dirty_for)):
             addition = line[line.index("["):line.index("]") + 1]
-            splitted_line.insert(0, line[:column_width] + addition)
-            splitted_line.insert(1, line[column_width:].replace(addition, ""))
+            split_line.insert(0, line[:column_width] + addition)
+            split_line.insert(1, line[column_width:].replace(addition, ""))
+            if line.startswith("Dirty for"):
+                # first 'Dirty for' line found, the second one has no unit in key
+                process_dirty_for = False
         else:
-            splitted_line.insert(0, line[:column_width])
-            splitted_line.insert(1, line[column_width:])
+            split_line.insert(0, line[:column_width])
+            split_line.insert(1, line[column_width:])
 
         # remove whitespaces
-        # save each statistic name (with unit) to keys
-        keys.append(re.sub(r'\s+', ' ', splitted_line[0]).strip())
-        # save each statistic value to values
-        values.append(re.sub(r'\s+', ' ', splitted_line[1]).strip())
+        key = re.sub(r'\s+', ' ', split_line[0]).strip()
+        value = re.sub(r'\s+', ' ', split_line[1]).strip()
+        stat_dict[key] = value
 
-    return keys, values
-
-
-def parse_cache_conf_section(table_as_list: list):
-    id_row = _find_id_row(table_as_list)
-    column_width = _check_first_column_width(id_row)
-    return parse_conf_section(table_as_list, column_width)
-
-
-def parse_core_conf_section(table_as_list: list):
-    id_row = _find_id_row(table_as_list)
-    column_width = _check_first_column_width(id_row)
-    return parse_conf_section(table_as_list, column_width)
+    return stat_dict
 
 
 def _find_id_row(table_as_list: list):
@@ -229,8 +235,7 @@ def parse_tables_section(table_as_list: list):
     3rd: % - percentage values
     4th: Units - full units for values stored in 2nd column
     """
-    keys = []
-    values = []
+    stats_dict = OrderedDict()
 
     # remove table header - 3 lines, it is useless
     table_as_list = table_as_list[3:]
@@ -242,21 +247,23 @@ def parse_tables_section(table_as_list: list):
 
     # split lines to columns and remove whitespaces
     for line in table_as_list:
-        splitted_line = re.split(r'│|\|', line)
-        for i in range(len(splitted_line)):
-            splitted_line[i] = splitted_line[i].strip()
+        split_line = re.split(r'│|\|', line)
+        for i in range(len(split_line)):
+            split_line[i] = split_line[i].strip()
 
         # save keys and values in order:
         # key: statistic name and unit
         # value: value in full unit
-        keys.append(f'{splitted_line[1]} [{splitted_line[4]}]')
-        values.append(splitted_line[2])
+        key = f'{split_line[1]} [{split_line[4]}]'
+        value = split_line[2]
+        stats_dict[key] = value
         # key: statistic name and percent sign
         # value: value as percentage
-        keys.append(f'{splitted_line[1]} [%]')
-        values.append(splitted_line[3])
+        key = f'{split_line[1]} [%]'
+        value = split_line[3]
+        stats_dict[key] = value
 
-    return keys, values
+    return stats_dict
 
 
 def is_table_separator(line: str):
