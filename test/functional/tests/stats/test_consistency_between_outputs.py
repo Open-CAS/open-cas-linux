@@ -38,10 +38,10 @@ def test_output_consistency(cache_mode):
     cache_line_size = random.choice(list(CacheLineSize))
 
     with TestRun.step("Prepare cache and core devices"):
-        cache_dev = TestRun.disks['cache']
+        cache_dev = TestRun.disks["cache"]
         cache_dev.create_partitions([cache_size])
         cache_part = cache_dev.partitions[0]
-        core_dev = TestRun.disks['core']
+        core_dev = TestRun.disks["core"]
         core_dev.create_partitions([cache_size * 4])
         core_part = core_dev.partitions[0]
         blocks_in_cache = int(cache_size / cache_line_size.value)
@@ -76,29 +76,10 @@ def test_output_consistency(cache_mode):
             core_table_stats = get_stats_from_table(core_table_output)
 
         with TestRun.step("Compare statistics between outputs"):
-            if cache_csv_stats != cache_table_stats:
-                wrong_keys = []
-                for key in cache_csv_stats:
-                    # 'Dirty for' values might differ by 1 [s], skip check
-                    if (cache_csv_stats[key] != cache_table_stats[key]
-                            and not key.startswith("Dirty for")):
-                        wrong_keys.append(key)
-                if len(cache_csv_stats) != len(cache_table_stats) or len(wrong_keys):
-                    TestRun.LOGGER.error(
-                        "Inconsistent outputs for cache d:\n"
-                        f"{cache_csv_stats}\n\n{cache_table_stats}"
-                    )
-            if core_csv_stats != core_table_stats:
-                wrong_keys = []
-                for key in core_csv_stats:
-                    # 'Dirty for' values might differ by 1 [s], skip check
-                    if (core_csv_stats[key] != core_table_stats[key]
-                            and not key.startswith("Dirty for")):
-                        wrong_keys.append(key)
-                if len(core_csv_stats) != len(core_table_stats) or len(wrong_keys):
-                    TestRun.LOGGER.error(
-                        f"Inconsistent outputs for core d:\n{core_csv_stats}\n\n{core_table_stats}"
-                    )
+            TestRun.LOGGER.info("Cache stats comparison")
+            compare_csv_and_table(cache_csv_stats, cache_table_stats)
+            TestRun.LOGGER.info("Core stats comparison")
+            compare_csv_and_table(core_csv_stats, core_table_stats)
 
 
 def get_stats_from_csv(output):
@@ -162,32 +143,30 @@ def parse_conf_section(table_as_list: list, column_width: int):
     The first section in the 'casadm -P' output have two columns.
     """
     stat_dict = OrderedDict()
+
     # reformat table
     table_as_list = separate_values_to_two_lines(table_as_list, column_width)
 
+    # 'Dirty for' in csv has one entry with and one without unit, we want to match that
+    # and set this to False after the first entry is processed
+    process_dirty_for = True
+
     # split table lines to statistic name and its value
     # and save them to keys and values tables
-    process_dirty_for = True
     for line in table_as_list:
-        split_line = []
-
+        key, value = line[:column_width], line[column_width:]
+        is_dirty_for = key.startswith("Dirty for")
         # move unit from value to statistic name if needed
-        sqr_brackets_present = "[" in line
-        if (sqr_brackets_present
-           and (not line.startswith("Dirty for") or process_dirty_for)):
-            addition = line[line.index("["):line.index("]") + 1]
-            split_line.insert(0, line[:column_width] + addition)
-            split_line.insert(1, line[column_width:].replace(addition, ""))
-            if line.startswith("Dirty for"):
-                # first 'Dirty for' line found, the second one has no unit in key
+        if "[" in value and (not is_dirty_for or process_dirty_for):
+            unit = line[line.index("["):line.index("]") + 1]
+            key = key + unit
+            value = value.replace(unit, "")
+            if is_dirty_for:
                 process_dirty_for = False
-        else:
-            split_line.insert(0, line[:column_width])
-            split_line.insert(1, line[column_width:])
 
         # remove whitespaces
-        key = re.sub(r'\s+', ' ', split_line[0]).strip()
-        value = re.sub(r'\s+', ' ', split_line[1]).strip()
+        key = re.sub(r"\s+", " ", key).strip()
+        value = re.sub(r"\s+", " ", value).strip()
         stat_dict[key] = value
 
     return stat_dict
@@ -216,7 +195,7 @@ def separate_values_to_two_lines(table_as_list: list, column_width: int):
     replace this line with two lines, each containing value in one unit.
     """
     for i, line in enumerate(table_as_list):
-        has_two_units = line.count(" / ")
+        has_two_units = " / " in line
         if has_two_units:
             table_as_list.remove(line)
             value_parts = line[column_width:].split(" / ")
@@ -247,19 +226,18 @@ def parse_tables_section(table_as_list: list):
 
     # split lines to columns and remove whitespaces
     for line in table_as_list:
-        split_line = re.split(r'│|\|', line)
-        for i in range(len(split_line)):
-            split_line[i] = split_line[i].strip()
+        split_line = re.split(r"[│|]", line)
+        split_line = [part.strip() for part in split_line]
 
         # save keys and values in order:
         # key: statistic name and unit
         # value: value in full unit
-        key = f'{split_line[1]} [{split_line[4]}]'
+        key = f"{split_line[1]} [{split_line[4]}]"
         value = split_line[2]
         stats_dict[key] = value
         # key: statistic name and percent sign
         # value: value as percentage
-        key = f'{split_line[1]} [%]'
+        key = f"{split_line[1]} [%]"
         value = split_line[3]
         stats_dict[key] = value
 
@@ -271,6 +249,29 @@ def is_table_separator(line: str):
     Tables in the 'casadm -P' output have plus signs only on separator lines.
     """
     return ('+' or '╪' or '╧') in line
+
+
+def compare_csv_and_table(csv_stats, table_stats):
+    if csv_stats != table_stats:
+        wrong_keys = []
+        dirty_for_similar = True
+        for key in csv_stats:
+            if csv_stats[key] != table_stats[key]:
+                if not key.startswith("Dirty for") or not dirty_for_similar:
+                    wrong_keys.append(key)
+                    continue
+                if "[s]" not in key:
+                    continue
+                # 'Dirty for' values might differ by 1 [s]
+                dirty_for_similar = int(csv_stats[key]) - int(table_stats[key]) in {-1, 1}
+                if not dirty_for_similar:
+                    wrong_keys.append(key)
+
+        if len(csv_stats) != len(table_stats) or wrong_keys:
+            TestRun.LOGGER.error(
+                f"Inconsistent outputs:\n{csv_stats}\n\n{table_stats}"
+                + (f"\nWrong keys: {', '.join(wrong_keys)}" if wrong_keys else "")
+            )
 
 
 def dd_builder(cache_mode, cache_line_size, count, device):
