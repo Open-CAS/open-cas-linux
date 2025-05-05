@@ -163,8 +163,23 @@ missing_param = [r"Option \'.+\' is missing"]
 
 disallowed_param = [r"Unrecognized option \S+"]
 
-operation_forbiden_in_standby = [
+operation_forbidden_in_standby = [
     r"The operation is not permitted while the cache is in the standby mode"
+]
+
+set_param_detached_cache = [r"Setting runtime parameter failed!"]
+
+operation_forbidden_detached_cache = [
+    r"The operation is not permitted while the cache is detached"
+]
+
+set_cache_mode_detached_cache = [
+    r"Error while setting cache state for cache \d+\n"
+    r"The operation is not permitted while the cache is detached"
+]
+
+remove_core_detached_cache = [
+    r"Failed to remove core\. See dmesg for more information"
 ]
 
 mutually_exclusive_params_init = [
