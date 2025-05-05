@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -121,17 +121,19 @@ def test_ioclass_file_name_prefix():
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
 
     with TestRun.step(f"Prepare filesystem and mount {core.path} at {mountpoint}"):
-        previous_occupancy = cache.get_occupancy()
+        cache.purge_cache()
 
         core.create_filesystem(Filesystem.ext3)
         core.mount(mountpoint)
 
         current_occupancy = cache.get_occupancy()
-        if previous_occupancy.get_value() > current_occupancy.get_value():
+        if current_occupancy.get_value() != 0:
             TestRun.fail(
-                f"Current occupancy ({str(current_occupancy)}) is lower "
-                f"than before ({str(previous_occupancy)})."
+                f"Current occupancy value is not valid.\n"
+                f"Expected occupancy: 0 \n"
+                f"Actual occupancy: {str(current_occupancy)})"
             )
+        previous_occupancy = current_occupancy
 
         # Filesystem creation caused metadata IO which is not supposed
         # to be cached

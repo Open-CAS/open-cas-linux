@@ -122,6 +122,10 @@ def test_ci_write_around_write():
                                    cache_mode=CacheMode.WA)
         casadm.add_core(cache, core_device)
 
+    with TestRun.step("Purge cache and reset cache counters"):
+        cache.purge_cache()
+        cache.reset_counters()
+
     with TestRun.step("Collect iostat before I/O"):
         iostat_core = IOstatBasic.get_iostat_list([core_device.parent_device.get_device_id()])
         write_core_0 = iostat_core[0].total_writes

@@ -70,6 +70,10 @@ def test_cache_stop_and_load(cache_mode):
     with TestRun.step("Add core to the cache"):
         core = cache.add_core(core_dev.partitions[0])
 
+    with TestRun.step("Purge cache and reset cache counters"):
+        cache.purge_cache()
+        cache.reset_counters()
+
     with TestRun.step(f"Change cache mode to {cache_mode[1]}"):
         cache.set_cache_mode(cache_mode[1], flush=True)
         check_cache_config = cache.get_cache_config()
