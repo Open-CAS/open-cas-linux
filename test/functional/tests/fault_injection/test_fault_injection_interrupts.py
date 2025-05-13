@@ -512,7 +512,7 @@ def test_interrupt_cache_stop(cache_mode, filesystem):
     """
     title: Test if OpenCAS works correctly after cache stopping interruption.
     description: |
-      Negative test of the ability of OpenCAS to handle cache's stop interruption.
+        Negative test the ability to handle cache's stop interruption.
     pass_criteria:
       - No system crash.
       - Flushing would be stopped after interruption.
@@ -539,16 +539,16 @@ def test_interrupt_cache_stop(cache_mode, filesystem):
         range(iterations_per_config), f"Reload cache configuration {iterations_per_config} times."
     ):
 
-        with TestRun.step("Start cache."):
-            cache = casadm.start_cache(cache_part, cache_mode, force=True)
+        with TestRun.step("Start cache"):
+            cache = casadm.start_cache(cache_dev=cache_part, cache_mode=cache_mode, force=True)
 
-        with TestRun.step("Set cleaning policy to NOP."):
-            cache.set_cleaning_policy(CleaningPolicy.nop)
+        with TestRun.step("Set cleaning policy to NOP"):
+            cache.set_cleaning_policy(cleaning_policy=CleaningPolicy.nop)
 
-        with TestRun.step(f"Add core device with {filesystem} filesystem and mount it."):
-            core_part.create_filesystem(filesystem)
-            core = cache.add_core(core_part)
-            core.mount(mount_point)
+        with TestRun.step(f"Add core device with {filesystem} filesystem and mount it"):
+            core_part.create_filesystem(fs_type=filesystem)
+            core = cache.add_core(core_dev=core_part)
+            core.mount(mount_point=mount_point)
 
         with TestRun.step("Create test file in mount point of exported object"):
             bs = Size(512, Unit.KibiByte)
@@ -567,42 +567,50 @@ def test_interrupt_cache_stop(cache_mode, filesystem):
 
             test_file.refresh_item()
 
-        with TestRun.step("Get number of dirty data on exported object before interruption."):
+        with TestRun.step("Calculate checksum of test file"):
+            test_file_md5_before = test_file.md5sum()
+
+        with TestRun.step("Get number of dirty data on exported object before interruption"):
             sync()
             drop_caches(DropCachesMode.ALL)
             cache_dirty_blocks_before = cache.get_dirty_blocks()
 
-        with TestRun.step("Unmount core."):
+        with TestRun.step("Unmount core"):
             core.unmount()
 
-        with TestRun.step("Start stopping cache."):
+        with TestRun.step("Start stopping cache"):
             flush_pid = TestRun.executor.run_in_background(cli.stop_cmd(str(cache.cache_id)))
 
-        with TestRun.step("Interrupt cache stopping."):
+        with TestRun.step("Interrupt cache stopping"):
             wait_for_flushing(cache, core)
             percentage = casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
             while percentage < 50:
                 percentage = casadm_parser.get_flushing_progress(cache.cache_id, core.core_id)
-            TestRun.executor.run(f"kill -s SIGINT {flush_pid}")
 
-        with TestRun.step("Check number of dirty data on exported object after interruption."):
+            TestRun.executor.kill_process(pid=flush_pid)
+
+        with TestRun.step("Check number of dirty data on exported object after interruption"):
             cache_dirty_blocks_after = cache.get_dirty_blocks()
             if cache_dirty_blocks_after >= cache_dirty_blocks_before:
                 TestRun.LOGGER.error(
-                    "Quantity of dirty lines after cache stop interruption " "should be lower."
+                    "Quantity of dirty lines after cache stop interruption should be lower."
                 )
-            if int(cache_dirty_blocks_after) == 0:
+            if cache_dirty_blocks_after == Size.zero():
                 TestRun.LOGGER.error(
-                    "Quantity of dirty lines after cache stop interruption " "should not be zero."
+                    "Quantity of dirty lines after cache stop interruption should not be zero."
                 )
 
-        with TestRun.step("Stop cache."):
+        with TestRun.step("Stop cache"):
             cache.stop()
 
-        with TestRun.step("Mount core device."):
-            core_part.mount(mount_point)
+        with TestRun.step("Mount core device"):
+            core_part.mount(mount_point=mount_point)
 
-        with TestRun.step("Unmount core device."):
+        with TestRun.step("Compare checksum of test files"):
+            target_file_md5 = test_file.md5sum()
+            compare_files(test_file_md5_before, target_file_md5)
+
+        with TestRun.step("Unmount core device"):
             core_part.unmount()
 
 
