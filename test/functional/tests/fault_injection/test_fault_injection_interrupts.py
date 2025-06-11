@@ -43,7 +43,7 @@ def test_interrupt_core_flush(cache_mode: CacheMode, filesystem: Filesystem):
     pass_criteria:
       - No system crash.
       - Flushing would be stopped after interruption.
-      - Md5sum are correct during all test steps.
+      - Checksum are correct during all test steps.
       - Dirty blocks quantity after interruption is equal or lower but non-zero.
     """
     cache_size = Size(2, Unit.GibiByte)
@@ -99,7 +99,7 @@ def test_interrupt_core_flush(cache_mode: CacheMode, filesystem: Filesystem):
             test_file.refresh_item()
 
         with TestRun.step("Calculate checksum of test file"):
-            test_file_md5sum_before = test_file.md5sum()
+            test_file_checksum_before = test_file.crc32sum()
 
         with TestRun.step("Get number of dirty data on exported object before interruption"):
             sync()
@@ -141,7 +141,7 @@ def test_interrupt_core_flush(cache_mode: CacheMode, filesystem: Filesystem):
             core_part.mount(mount_point)
 
         with TestRun.step("Compare checksum of test file"):
-            if test_file_md5sum_before != test_file.md5sum():
+            if test_file_checksum_before != test_file.crc32sum():
                 TestRun.LOGGER.error(
                     "Checksum before and after interrupting core flush are different."
                 )
@@ -162,7 +162,7 @@ def test_interrupt_cache_flush(cache_mode: CacheMode, filesystem: Filesystem):
     pass_criteria:
       - No system crash.
       - Flushing would be stopped after interruption.
-      - Md5sum are correct during all test steps.
+      - Checksum are correct during all test steps.
       - Dirty blocks quantity after interruption is equal or lower but non-zero.
     """
     cache_size = Size(2, Unit.GibiByte)
@@ -218,7 +218,7 @@ def test_interrupt_cache_flush(cache_mode: CacheMode, filesystem: Filesystem):
             test_file.refresh_item()
 
         with TestRun.step("Check checksum of test file"):
-            test_file_md5sum_before = test_file.md5sum()
+            test_file_checksum_before = test_file.crc32sum()
 
         with TestRun.step("Get number of dirty data on exported object before interruption"):
             sync()
@@ -254,7 +254,7 @@ def test_interrupt_cache_flush(cache_mode: CacheMode, filesystem: Filesystem):
             core_part.mount(mount_point)
 
         with TestRun.step("Check checksum of test file again"):
-            if test_file_md5sum_before != test_file.md5sum():
+            if test_file_checksum_before != test_file.crc32sum():
                 TestRun.LOGGER.error(
                     "Checksum before and after interrupting cache flush are different."
                 )
@@ -322,7 +322,7 @@ def test_interrupt_core_remove(cache_mode, filesystem):
             test_file.refresh_item()
 
         with TestRun.step("Calculate checksum of test file"):
-            test_file_crc32sum_before = test_file.crc32sum()
+            test_file_checksum_before = test_file.crc32sum()
 
         with TestRun.step(
             "Get number of dirty data on exported object before core removal interruption"
@@ -362,7 +362,7 @@ def test_interrupt_core_remove(cache_mode, filesystem):
         with TestRun.step("Mount core and verify test file checksum after interruption"):
             core.mount(mount_point)
 
-            if test_file.crc32sum() != test_file_crc32sum_before:
+            if test_file.crc32sum() != test_file_checksum_before:
                 TestRun.LOGGER.error("Checksum after interrupting core removal is different.")
 
         with TestRun.step("Unmount core"):
@@ -375,7 +375,7 @@ def test_interrupt_core_remove(cache_mode, filesystem):
             core_part.mount(mount_point)
 
         with TestRun.step("Verify checksum of test file again"):
-            if test_file.crc32sum() != test_file_crc32sum_before:
+            if test_file.crc32sum() != test_file_checksum_before:
                 TestRun.LOGGER.error("Checksum after core removal is different.")
 
         with TestRun.step("Unmount core device"):
@@ -397,7 +397,7 @@ def test_interrupt_cache_mode_switch_parametrized(cache_mode, stop_percentage):
       - No system crash.
       - Cache mode will not be switched after interruption.
       - Flushing would be stopped after interruption.
-      - Md5sum are correct during all test steps.
+      - Checksum are correct during all test steps.
       - Dirty blocks quantity after interruption is lower but non-zero.
     """
     cache_size = Size(2, Unit.GibiByte)
@@ -435,8 +435,8 @@ def test_interrupt_cache_mode_switch_parametrized(cache_mode, stop_percentage):
         with TestRun.step("Create test file in mount point of exported object"):
             test_file = create_random_test_file(test_file_path, test_file_size)
 
-        with TestRun.step("Calculate md5sum of test file"):
-            test_file_md5_before = test_file.md5sum()
+        with TestRun.step("Calculate checksum of test file"):
+            test_file_checksum_before = test_file.crc32sum()
 
         with TestRun.step("Copy test data to core"):
             dd = (
@@ -499,9 +499,9 @@ def test_interrupt_cache_mode_switch_parametrized(cache_mode, stop_percentage):
             )
             dd.run()
 
-        with TestRun.step("Compare md5 sum of test files"):
-            target_file_md5 = test_file.md5sum()
-            compare_files(test_file_md5_before, target_file_md5)
+        with TestRun.step("Compare checksum of test files"):
+            test_file_checksum_after = test_file.crc32sum()
+            compare_files(test_file_checksum_before, test_file_checksum_after)
 
 
 @pytest.mark.parametrizex("filesystem", Filesystem)
@@ -512,11 +512,11 @@ def test_interrupt_cache_stop(cache_mode, filesystem):
     """
     title: Test if OpenCAS works correctly after cache stopping interruption.
     description: |
-        Negative test the ability to handle cache's stop interruption.
+        Test the ability to handle cache's stop interruption.
     pass_criteria:
       - No system crash.
       - Flushing would be stopped after interruption.
-      - Md5sum are correct during all test steps.
+      - Checksum are correct during all test steps.
       - Dirty blocks quantity after interruption is lower but non-zero.
     """
     cache_size = Size(2, Unit.GibiByte)
@@ -568,7 +568,7 @@ def test_interrupt_cache_stop(cache_mode, filesystem):
             test_file.refresh_item()
 
         with TestRun.step("Calculate checksum of test file"):
-            test_file_md5_before = test_file.md5sum()
+            test_file_checksum_before = test_file.crc32sum()
 
         with TestRun.step("Get number of dirty data on exported object before interruption"):
             sync()
@@ -607,8 +607,8 @@ def test_interrupt_cache_stop(cache_mode, filesystem):
             core_part.mount(mount_point=mount_point)
 
         with TestRun.step("Compare checksum of test files"):
-            target_file_md5 = test_file.md5sum()
-            compare_files(test_file_md5_before, target_file_md5)
+            test_file_checksum_after = test_file.crc32sum()
+            compare_files(test_file_checksum_before, test_file_checksum_after)
 
         with TestRun.step("Unmount core device"):
             core_part.unmount()
