@@ -20,7 +20,7 @@ from tests.volumes.common import get_test_configuration, lvm_filters, validate_c
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_many_lvms_on_single_core():
+def test_many_lvms_on_single_core(update_initramfs_before_and_after_test):
     """
     title: Test for LVM creation on CAS device - many lvms on single core.
     description: |

@@ -20,7 +20,7 @@ from tests.volumes.common import get_test_configuration, validate_configuration
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.optane, DiskType.nand]))
-def test_many_cores_on_many_lvms():
+def test_many_cores_on_many_lvms(update_initramfs_before_and_after_test):
     """
     title: Test for CAS creation with lvms as cores: 1 cache, 16 lvms, 16 cores.
     description: |
