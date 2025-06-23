@@ -97,7 +97,3 @@ def test_many_lvms_on_many_cores(update_initramfs_before_and_after_test):
 
     with TestRun.step("Run FIO with verification on LVM."):
         fio_run.run()
-
-    with TestRun.step("Remove LVMs and clean up config changes."):
-        Lvm.remove_all()
-        LvmConfiguration.remove_filters_from_config()

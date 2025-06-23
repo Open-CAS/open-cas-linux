@@ -127,8 +127,8 @@ def test_data_integrity(filesystem, cache_mode, cache_line_size):
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
 
-        cache_device.create_partitions([Size(200, Unit.MebiByte)])
-        core_device.create_partitions([Size(100, Unit.MebiByte)])
+        cache_device.create_partitions([Size(600, Unit.MebiByte)])
+        core_device.create_partitions([Size(300, Unit.MebiByte)])
 
         cache_part = cache_device.partitions[0]
         core_part = core_device.partitions[0]
