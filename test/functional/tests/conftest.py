@@ -174,7 +174,6 @@ def base_prepare(item):
         if lvms:
             Lvm.remove_all()
         LvmConfiguration.remove_filters_from_config()
-        initramfs.update()
 
         raids = Raid.discover()
         if len(TestRun.disks):
@@ -225,6 +224,14 @@ def pytest_runtest_makereport(item, call):
     TestRun.makereport(item, call, res)
 
 
+@pytest.fixture(scope="function")
+def update_initramfs_before_and_after_test():
+    initramfs.update()
+    yield
+    initramfs.update()
+
+
+@pytest.hookimpl(trylast=True)
 def pytest_runtest_teardown():
     """
     This method is executed always in the end of each test, even if it fails or raises exception in
@@ -262,7 +269,6 @@ def pytest_runtest_teardown():
                 if lvms:
                     Lvm.remove_all()
                 LvmConfiguration.remove_filters_from_config()
-                initramfs.update()
 
                 DeviceMapper.remove_all()
                 RamDisk.remove_all()
