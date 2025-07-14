@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2012-2022 Intel Corporation
+# Copyright(c) 2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -13,7 +14,7 @@ check_cflag=$(shell echo "" | \
 	if [ $$? -eq 0 ]; then echo 1; else echo 0; fi; )
 
 ifeq ($(call check_cflag,-Werror=int-conversion), 1)
-EXTRA_CFLAGS += -Werror=int-conversion 
+ccflags-y += -Werror=int-conversion
 endif
 KBUILD_CFLAGS += -Wno-error
 all:
