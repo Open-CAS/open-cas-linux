@@ -2,6 +2,7 @@
 #
 # Copyright(c) 2012-2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2025 mchtech
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -50,11 +51,13 @@ __compile_module(){
 	#include <linux/kernel.h>
 	$INCLUDE
 
-	int init_module(void) {
+	static int __init test_init_module(void) {
 		$1
 		return 0;
 	}
-	void cleanup_module(void) {};
+	module_init(test_init_module);
+	static void __exit test_exit_module(void) {};
+	module_exit(test_exit_module);
 	MODULE_LICENSE("GPL");
 	EOF
 	#######################################
