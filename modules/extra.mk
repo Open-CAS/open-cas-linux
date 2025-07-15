@@ -1,11 +1,12 @@
 #
 # Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 ifneq ($(M),)
 
 ifeq ($(CAS_EXT_EXP),1)
-EXTRA_CFLAGS += -DWI_AVAILABLE
+ccflags-y += -DWI_AVAILABLE
 endif
 
 else #KERNELRELEASE
