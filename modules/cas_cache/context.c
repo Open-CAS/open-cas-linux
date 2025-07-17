@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -284,22 +284,11 @@ static void _cas_ctx_cleaner_stop(ocf_cleaner_t c)
 
 static int _cas_ctx_logger_open(ocf_logger_t logger)
 {
-	void __percpu *priv;
-
-	priv = alloc_percpu(char[CAS_LOG_FORMAT_STRING_MAX_LEN]);
-	if (!priv)
-		return -ENOMEM;
-
-	ocf_logger_set_priv(logger, priv);
-
 	return 0;
 }
 
 static void _cas_ctx_logger_close(ocf_logger_t logger)
 {
-	void __percpu *priv = ocf_logger_get_priv(logger);
-
-	free_percpu(priv);
 }
 
 /*
@@ -318,15 +307,11 @@ static int _cas_ctx_logger_print(ocf_logger_t logger, ocf_logger_lvl_t lvl,
 		[log_info] = KERN_INFO,
 		[log_debug] = KERN_DEBUG,
 	};
+	char buf[CAS_LOG_FORMAT_STRING_MAX_LEN];
 	int ret;
-	void __percpu *priv;
-	char *buf;
 
 	if (((unsigned)lvl) >= sizeof(level)/sizeof(level[0]))
 		return -EINVAL;
-
-	priv = ocf_logger_get_priv(logger);
-	buf = get_cpu_ptr(priv);
 
 	/* Try to prepend log level prefix to format string. If this fails
 	 * for any reason, we just fall back to user provided format string */
@@ -336,9 +321,6 @@ static int _cas_ctx_logger_print(ocf_logger_t logger, ocf_logger_lvl_t lvl,
 		vprintk(fmt, args);
 	else
 		vprintk(buf, args);
-
-
-	put_cpu_ptr(priv);
 
 	return 0;
 }
