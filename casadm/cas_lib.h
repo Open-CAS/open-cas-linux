@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -279,7 +279,7 @@ int flush_core(unsigned int cache_id, unsigned int core_id);
 int check_cache_device(const char *device_path);
 
 int partition_list(unsigned int cache_id, unsigned int output_format);
-int partition_setup(unsigned int cache_id, const char *file);
+int partition_setup(unsigned int cache_id, bool reclassify, const char *file);
 int partition_is_name_valid(const char *name);
 
 int cas_module_version(char *buff, int size);
