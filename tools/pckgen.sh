@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2025 Brian J. Murrell
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -402,13 +403,23 @@ generate_rpm() {
         mv -ft "$OUTPUT_DIR" "$RPM_SRPMS_DIR"/*
     fi
     if [ "$GENERATE_SRPM" ] && [ "$GENERATE_RPM" ]; then
-        echo "--- Building source and binary RPM packages"
-        (HOME="$TEMP_DIR"; rpmbuild -ba --target "$ARCH" "$RPM_SPECS_DIR/$CAS_NAME.spec")
-        if [ $? -ne 0 ]; then
-            error "couldn't create RPM packages"
+        if [ -z "$MOCK_ROOT" ]; then
+            echo "--- Building source and binary RPM packages"
+            if ! (HOME="$TEMP_DIR"; rpmbuild -ba --target "$ARCH" "$RPM_SPECS_DIR/$CAS_NAME.spec"); then
+                error "couldn't create RPM packages"
+            fi
+            mv -ft "$OUTPUT_DIR" "$RPM_SRPMS_DIR"/*
+            mv -ft "$OUTPUT_DIR" "$RPM_RPMS_DIR/$ARCH"/*
+        else
+            echo "--- Building source and binary RPM packages using mock"
+            # shellcheck disable=SC1083
+            if ! mock --no-clean ${KVER:+--define="kver $KVER"} -r "$MOCK_ROOT" packages/"$CAS_NAME"-"$CAS_VERSION"-1"$(rpm --eval %{dist})".src.rpm; then
+                error "couldn't create RPM packages"
+            fi
+            mv -ft "$OUTPUT_DIR" /var/lib/mock/"$MOCK_ROOT"/result/"$CAS_NAME"-"$CAS_VERSION"-1.*.src.rpm
+            mv -ft "$OUTPUT_DIR" /var/lib/mock/"$MOCK_ROOT"/result/"$CAS_NAME"-"$CAS_VERSION"-1.*.x86_64.rpm
+            mv -ft "$OUTPUT_DIR" /var/lib/mock/"$MOCK_ROOT"/result/"$CAS_NAME"-modules_k*-"$CAS_VERSION"-1.*.x86_64.rpm
         fi
-        mv -ft "$OUTPUT_DIR" "$RPM_SRPMS_DIR"/*
-        mv -ft "$OUTPUT_DIR" "$RPM_RPMS_DIR/$ARCH"/*
     fi
 
     RPM_BUILT="rpm_built"
@@ -509,6 +520,15 @@ while (( $# )); do
         --help|-h)
             print_help
             exit 0
+            ;;
+        --mock_root)
+            MOCK_ROOT="$2"
+            shift
+            GENERATE_SRPM="generate_srpm"
+            ;;
+        --kernel_version)
+            KVER="$2"
+            shift
             ;;
         *)
             if [ -d "$1" ]; then
