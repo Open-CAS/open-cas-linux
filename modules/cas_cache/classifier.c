@@ -686,7 +686,7 @@ static cas_cls_eval_t _cas_cls_file_offset_test(
 	if (!dentry)
 		return cas_cls_eval_no;
 
-	offset = PAGE_SIZE * io->page->index +
+	offset = PAGE_SIZE * cas_page_index(io->page) +
 		io->bio->bi_io_vec->bv_offset;
 
 	return _cas_cls_numeric_test_u(c, offset);
