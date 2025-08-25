@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2025 Huawei Technologies
 # Copyright(c) 2025 Brian J. Murrell
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -13,34 +14,39 @@
 
 %global __python %{__python3}
 <DEBUG_PACKAGE>
-%if 0%{!?kver:1}
-%define kver %(uname -r)
-%endif
-%define kver_base %{expand:%(kname="%{kver}"; echo "${kname%.*}")}
-%define kver_filename k%{expand:%(echo "%kver_base" | sed -r "y/-/_/;")}
+%define kver <KVER>
+# Following define takes kernel version, cuts everything after (and including)
+# second hyphen (-), and then cuts the architecture (including 'noarch') part.
+# It's the only package version variant that is accepted by RPM spec.
+%define kver_pkg %{expand:%(kpkg="%{kver}"; for i in $(seq 2 $(grep -o '-' <<<$kpkg | grep -c .)); do kpkg="${kpkg%%-*}"; done; kpkg="${kpkg%%.$(uname -m)}"; echo "${kpkg%%.noarch}")}
+%define kver_filename k%{expand:%(echo "%{kver}" | sed -r "y/-/_/;")}
 
 
-Name:       <CAS_NAME>
-Version:    <CAS_VERSION>
-Release:    1%{?dist}
-Summary:    Open Cache Acceleration Software
-Group:      System
-Vendor:     Intel Corporation
-License:    <CAS_LICENSE_NAME>
-URL:        <CAS_HOMEPAGE>
-Source0:    https://github.com/Open-CAS/<CAS_NAME>/releases/download/v%{version}/%{name}-%{version}.tar.gz
-Packager:   <PACKAGE_MAINTAINER>
-BuildRequires:  coreutils
-BuildRequires:  gawk
-BuildRequires:  gcc
-BuildRequires:  kernel-core = %{kver_base}
-BuildRequires:  kernel-devel = %{kver_base}
-BuildRequires:  kernel-headers
-BuildRequires:  make
-BuildRequires:  python3
-BuildRequires:  elfutils-libelf-devel
-BuildRequires:  procps-ng
-Requires:   <CAS_NAME>-modules-%{version}, python3, sed, python3-PyYAML
+Name:          <CAS_NAME>
+Version:       <CAS_VERSION>
+Release:       1%{?dist}
+Summary:       Open Cache Acceleration Software
+Group:         System
+License:       <CAS_LICENSE_NAME>
+URL:           <CAS_HOMEPAGE>
+Source0:       https://github.com/Open-CAS/<CAS_NAME>/releases/download/v%{version}/%{name}-%{version}.tar.gz
+Packager:      <PACKAGE_MAINTAINER>
+BuildRequires: coreutils
+BuildRequires: gawk
+BuildRequires: gcc
+BuildRequires: make
+BuildRequires: procps
+BuildRequires: python3
+BuildRequires: kernel = %{kver_pkg}
+BuildRequires: kernel-devel = %{kver_pkg}
+# Allow using different version of kernel-headers package (some distros requires it).
+BuildRequires: kernel-headers
+BuildRequires: <LIBELF_PKG>
+BuildRequires: <UTIL_PKG>
+Requires:      <CAS_NAME>-modules-%{version}
+Requires:      python3
+Requires:      python3-PyYAML
+Requires:      sed
 %description
 Open Cache Acceleration Software (Open CAS) is an open source project
 encompassing block caching software libraries, adapters, tools and more.
@@ -65,7 +71,6 @@ This package contains only CAS kernel modules.
 
 %prep
 %setup -q
-sed -i 's/@mandb -q/#@mandb -q/' {casadm,utils}/Makefile
 
 
 %build
@@ -76,7 +81,7 @@ export KERNEL_DIR=/lib/modules/%{kver}/build/
 
 %install
 rm -rf $RPM_BUILD_ROOT
-/usr/bin/make install_files KERNEL_VERSION=%{kver} DESTDIR=$RPM_BUILD_ROOT
+/usr/bin/make install_files DESTDIR=$RPM_BUILD_ROOT KERNEL_VERSION=%{kver}
 
 
 %post
@@ -113,7 +118,7 @@ if [[ ! "$ID_LIKE" =~ suse|sles ]]; then
     printf "%s\n" "${modules[@]}" | weak-modules --no-initramfs --add-modules
 else
     for version in $(echo "${modules[@]}" | tr " " "\n" | cut -d"/" -f4 | sort | uniq); do
-	# run depmod for all kernel versions for which the modules installed
+        # run depmod for all kernel versions for which the modules installed
         depmod $version
     done
 fi
@@ -176,10 +181,10 @@ fi
 
 
 %changelog
+* Mon Aug 25 2025 Rafal Stefanowski <rafal.stefanowski@huawei.com> - 25.03-1
 * Thu Aug 7 2025 Brian J. Murrell <brian@interlinx.bc.ca> - 25.03-1
-- Make more portable:
-  - Allow external definition of kver
-- Add missing BRs kernel-core, python3, elfutils-libelf-devel, procps-ng
+- Allow building RPM packages for different kernel versions
+- Update dependencies
 * Mon Mar 21 2022 Rafal Stefanowski <rafal.stefanowski@intel.com> - 22.03-1
 - Update modules destination directory and permissions
 - Add license to modules package
