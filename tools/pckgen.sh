@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # Copyright(c) 2020-2022 Intel Corporation
+# Copyright(c) 2025 Huawei Technologies
 # Copyright(c) 2025 Brian J. Murrell
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -47,7 +48,7 @@ unset ${!GENERATE_*} ARCHIVE_PREPARED DEBUG FAILED_DEPS OUTPUT_DIR RPM_BUILT\
 
 usage() {
     echo "Usage:"
-    echo "  ./$THIS <commands> [options] <SOURCES_PATH>"
+    echo "  ./$THIS <commands> [options] [SOURCES_PATH]"
     echo "  ./$THIS -c|-h"
     echo "where SOURCES_PATH is the root directory of OpenCAS sources"
 }
@@ -123,8 +124,11 @@ check_os() {
 
 check_options() {
     if [ ! "$SOURCES_DIR" ]; then
-        invalid_usage "no mandatory SOURCES_PATH provided"
-    elif [[ $(head -n 1 "$SOURCES_DIR/README.md" 2>/dev/null) != *Open*CAS*Linux* ]]; then
+        local CURRENT_DIR=$(dirname $(readlink -f "${BASH_SOURCE[0]}"))
+        SOURCES_DIR=$(readlink -f "$CURRENT_DIR/..")
+    fi
+
+    if [[ $(head -n 1 "$SOURCES_DIR/README.md" 2>/dev/null) != *Open*CAS*Linux* ]]; then
         invalid_usage "'$SOURCES_DIR' does not point to the root directory of CAS sources"
     elif [ ! "${!GENERATE_*}" ]; then
         invalid_usage "nothing to do - no command provided"
