@@ -45,22 +45,15 @@ struct cas_module cas_module;
 
 static inline uint32_t involuntary_preemption_enabled(void)
 {
-	bool config_dynamic = IS_ENABLED(CONFIG_PREEMPT_DYNAMIC);
 	bool config_rt = IS_ENABLED(CONFIG_PREEMPT_RT);
 	bool config_preempt = IS_ENABLED(CONFIG_PREEMPT);
 	bool config_lazy = IS_ENABLED(CONFIG_PREEMPT_LAZY);
-	bool config_none = IS_ENABLED(CONFIG_PREEMPT_NONE);
 
-	if (!config_dynamic && !config_rt && !config_preempt && !config_lazy)
-		return false;
-
-	if (config_none)
-		return false;
-
-	if (config_rt || config_preempt || config_lazy) {
+	if (config_rt) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
-			"The kernel has been built with involuntary preemption "
-			"enabled.\nFailed to load Open CAS kernel module.\n");
+			"The kernel has been compiled with real-time "
+			"preemption enabled (PREEMPT_RT).\nFailed to load "
+			"Open CAS kernel module");
 		return true;
 	}
 
@@ -78,10 +71,19 @@ static inline uint32_t involuntary_preemption_enabled(void)
 			"preemption enabled.\nFailed to load Open CAS kernel "
 			"module.\n");
 		return true;
-	} else {
-		return false;
 	}
+	return false;
+
 #endif
+
+	if (config_preempt || config_lazy) {
+		printk(KERN_ERR OCF_PREFIX_SHORT
+			"The kernel has been compiled with involuntary "
+			"preemption enabled.\nFailed to load Open CAS kernel "
+			"module.\n");
+		return true;
+	}
+
 
 	return false;
 }
