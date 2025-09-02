@@ -241,6 +241,10 @@ check_dependencies() {
         fi
     done
 
+	if [ "$GENERATE_DEB" ] && ! { apt list --installed dh-dkms | grep -q installed; } 2> /dev/null; then
+		local FAILED_DEPS+="dh-dkms "
+	fi
+
     if [ "$FAILED_DEPS" ]; then
         error "Dependencies not installed. You need to provide these programs first: $FAILED_DEPS"
     fi
