@@ -35,6 +35,7 @@ else
 	@$(SYSTEMCTL) daemon-reload
 	@$(SYSTEMCTL) -q enable open-cas-shutdown
 	@$(SYSTEMCTL) -q enable open-cas
+	@mandb -q
 
 install_files:
 	@echo "Installing Open-CAS utils"
@@ -61,7 +62,6 @@ install_files:
 	@install -m 644 -D open-cas-shutdown.service $(DESTDIR)$(SYSTEMD_DIR)/open-cas-shutdown.service
 	@install -m 644 -D open-cas.service $(DESTDIR)$(SYSTEMD_DIR)/open-cas.service
 	@install -m 755 -D open-cas.shutdown $(DESTDIR)$(SYSTEMD_DIR)/../system-shutdown/open-cas.shutdown
-	@mandb -q
 endif
 
 uninstall:

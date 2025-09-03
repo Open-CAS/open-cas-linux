@@ -169,12 +169,12 @@ clean:
 distclean: clean
 
 install: install_files
+	@mandb -q
 
 install_files:
 	@echo "Installing casadm"
 	@install -m 755 -D $(TARGET) $(DESTDIR)$(BINARY_PATH)/$(TARGET)
 	@install -m 644 -D $(TARGET).8.gz $(DESTDIR)/usr/share/man/man8/$(TARGET).8.gz
-	@mandb -q
 
 uninstall:
 	@echo "Uninstalling casadm"
