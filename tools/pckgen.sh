@@ -38,7 +38,7 @@ DEPENDENCIES_TAR=(tar)
 DEPENDENCIES_ZIP=(zip)
 DEPENDENCIES_RPM=(rpmbuild tar)
 DEPENDENCIES_SRPM=("${DEPENDENCIES_RPM[@]}")
-DEPENDENCIES_DEB=(debuild dh fakeroot tar dkms)
+DEPENDENCIES_DEB=(debuild dh fakeroot tar dkms dh-dkms)
 DEPENDENCIES_DSC=("${DEPENDENCIES_DEB[@]}")
 # List of relative submodule directories:
 SUBMODULES=(

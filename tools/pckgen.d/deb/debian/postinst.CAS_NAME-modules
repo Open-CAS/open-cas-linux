@@ -1,0 +1,9 @@
+#!/bin/bash
+set -eu
+
+if ! { dkms status | grep -q "<CAS_NAME>-modules/<CAS_VERSION>" | grep -q installed; } 2> /dev/null; then
+	echo "<CAS_NAME>-modules/<CAS_VERSION> module is not installed. There may have been an error during DKMS build or install. Check the DKMS logs"
+	exit 1
+fi
+
+exit 0

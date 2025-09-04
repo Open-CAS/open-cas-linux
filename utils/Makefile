@@ -37,7 +37,7 @@ else
 	@$(SYSTEMCTL) -q enable open-cas
 	@mandb -q
 
-install_files:
+install_files: manpage
 	@echo "Installing Open-CAS utils"
 
 	@install -m 644 -D $(UTILS_DIR)/opencas.conf $(DESTDIR)/etc/opencas/opencas.conf
