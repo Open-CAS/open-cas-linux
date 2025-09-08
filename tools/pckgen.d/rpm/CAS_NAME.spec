@@ -37,10 +37,10 @@ BuildRequires: gcc
 BuildRequires: make
 BuildRequires: procps
 BuildRequires: python3
-BuildRequires: kernel = %{kver_pkg}
-BuildRequires: kernel-devel = %{kver_pkg}
 # Allow using different version of kernel-headers package (some distros requires it).
 BuildRequires: kernel-headers
+BuildRequires: <KERNEL_PKG> = %{kver_pkg}
+BuildRequires: <KERNEL_DEVEL_PKG> = %{kver_pkg}
 BuildRequires: <LIBELF_PKG>
 BuildRequires: <UTIL_PKG>
 Requires:      <CAS_NAME>-modules-%{version}
