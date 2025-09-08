@@ -27,6 +27,12 @@ manpage:
 	gzip -k -f opencas.conf.5
 	gzip -k -f casctl.8
 
+clean:
+	@rm -f opencas.conf.5.gz
+	@rm -f casctl.8.gz
+
+distclean: clean
+
 install: install_files
 ifeq (, $(PYTHON3))
 	$(error package 'python3' not found)
