@@ -28,8 +28,12 @@ DEB_CONTROL_FILES_DIR="$SCRIPT_BASE_DIR/${THIS%.*}.d/deb/debian"
 PACKAGE_MAINTAINER="Rafal Stefanowski <rafal.stefanowski@open-cas.com>"
 PACKAGE_DATE="$(date -R)"
 TEMP_TEMPLATE="opencas-${THIS}"
+RHEL_KERNEL_PKG_NAME="kernel"
+RHEL_KERNEL_DEVEL_PKG_NAME="kernel-devel"
 RHEL_LIBELF_PKG_NAME="elfutils-libelf-devel"
 RHEL_UTIL_PKG_NAME="util-linux"
+SUSE_KERNEL_PKG_NAME="kernel-default"
+SUSE_KERNEL_DEVEL_PKG_NAME="kernel-default-devel"
 SUSE_LIBELF_PKG_NAME="libelf-devel"
 SUSE_UTIL_PKG_NAME="util-linux-systemd"
 DEPENDENCIES=(git mktemp rsync sed)
@@ -46,8 +50,8 @@ SUBMODULES=(
 )
 
 # Unset all variables that may be checked for existence:
-unset ${!GENERATE_*} ARCHIVE_PREPARED DEBUG FAILED_DEPS KVER KVER_FULL MOCK_CFG OUTPUT_DIR\
-      RPM_BUILT SOURCES_DIR SUBMODULES_MISSING TAR_CREATED
+unset ${!GENERATE_*} ARCHIVE_PREPARED DEBUG FAILED_DEPS KVER KVER_FULL LIST_KERNELS MOCK_CFG\
+      OUTPUT_DIR RPM_BUILT SOURCES_DIR SUBMODULES_MISSING TAR_CREATED
 
 
 usage() {
@@ -76,13 +80,17 @@ print_help() {
     echo
     echo "Options:"
     echo "  -a, --arch <ARCH>               target platform architecture for packages"
-    echo "  -k, --kernel-version <KVER>     build packages for specific kernel version;"
+    echo "  -l, --list-kernels              instead of normal operation, just list available kernel"
+    echo "                                  versions (local or within chosen --mock) and exit;"
+    echo "                                  if --kernel-version is provided, list only matching versions"
+    echo "  -k, --kernel-version <KVER>     build packages for specific kernel version"
+    echo "                                  (RPM only; DEB uses DKMS to build modules during install);"
     echo "                                  sources with headers for this kernel must be"
-    echo "                                  available in /lib/modules/ (version should be"
-    echo "                                  unambiguous enough to match only one installed kernel),"
-    echo "                                  or if used with --mock specific kernel version"
-    echo "                                  will be installed automatically if available in repo"
-    echo "                                  (usually the newest one matching given version)"
+    echo "                                  available in /lib/modules/, or if used with --mock"
+    echo "                                  specific kernel version will be installed automatically"
+    echo "                                  if available in repo"
+    echo "                                  (NOTE: if given version matches more than one available"
+    echo "                                  kernel, the newest one matching will be taken)"
     echo "  -m, --mock <MOCK_CFG>           use 'mock' to build RPMs in chrooted environment"
     echo "                                  (RPM only; check 'mock' documentation for details);"
     echo "                                  if --kernel-version is not provided, RPMs will be"
@@ -198,34 +206,22 @@ check_kernel_version() {
     if [ "$MOCK_CFG" ]; then
         echo "--- Checking kernel version in mock environment '$MOCK_CFG'"
 
-        # TODO: find a better way of obtaining kernel version in mock env
-        # without installing anything and allowing partial version input
-
-        # 'kernel-devel' seems to be the only package available by that exact name on all
-        # supported distros (including SUSE) that can be used to determine kernel version.
-        if ! mock -r "$MOCK_CFG" -i kernel-devel${KVER:+-$KVER}; then
-            error "couldn't install kernel-devel package in mock environment"
+        if is_suse; then
+            local KDEVEL_PKG="$SUSE_KERNEL_DEVEL_PKG_NAME"
+        else
+            local KDEVEL_PKG="$RHEL_KERNEL_DEVEL_PKG_NAME"
         fi
-
-        # Save kernel version to file and then copy it instead of using direct output,
-        # as mock may sometimes print some warnings on stdout despite the --quiet flag.
-        mock -r "$MOCK_CFG" --quiet --chroot "rpm -q kernel-devel --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' > /tmp/mock-kver.txt"
-        mock -r "$MOCK_CFG" --quiet --copyout /tmp/mock-kver.txt "$TEMP_DIR"
-
-        KVER_FULL=$(cat "$TEMP_DIR/mock-kver.txt")
+        KVER_FULL=$(mock -r "$MOCK_CFG" --dnf-cmd -- repoquery --quiet --available --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' "$KDEVEL_PKG" | grep "^${KVER:-[0-9]}" | sort -V | tail -n 1)
         if [ ! "$KVER_FULL" ]; then
-            error "couldn't obtain version of the kernel package in mock environment"
+            error "kernel version matching '${KVER:-any}' not found in '$MOCK_CFG'"
         fi
 
         echo -e "--- Building in mock environment '$MOCK_CFG' for kernel version: \e[33m$KVER_FULL\e[0m"
     else
         if [ "$KVER" ]; then
-            KVER_FULL=$(find /lib/modules/ -maxdepth 1 -type d -name "$KVER*" -printf "%f\n")
-            local KVER_COUNT=$(echo "$KVER_FULL" | wc -w)
-            if [ "$KVER_COUNT" -lt 1 ]; then
-                error "kernel version '$KVER' not found in /lib/modules/ - try more general version, e.g. 6.16"
-            elif [ "$KVER_COUNT" -gt 1 ]; then
-                error "more than one kernel version '$KVER' found in /lib/modules/ - try to be more precise"
+            KVER_FULL=$(find /lib/modules/* -maxdepth 0 -type d -name "$KVER*" -printf "%f\n" | sort -V | tail -n 1)
+            if [ ! "$KVER_FULL" ]; then
+                error "kernel version matching '$KVER' not found in /lib/modules/"
             fi
         fi
 
@@ -287,6 +283,27 @@ mock_prepare() {
     if ! mock -r "$MOCK_CFG" --init --no-clean; then
         error "couldn't prepare mock environment"
     fi
+}
+
+list_kernels() {
+    if [ "$MOCK_CFG" ]; then
+        echo "--- Listing available kernel versions in mock environment '$MOCK_CFG'"
+
+        if is_suse; then
+            local KDEVEL_PKG="$SUSE_KERNEL_DEVEL_PKG_NAME"
+        else
+            local KDEVEL_PKG="$RHEL_KERNEL_DEVEL_PKG_NAME"
+        fi
+        local KVER_LIST=$(mock -r "$MOCK_CFG" --dnf-cmd -- repoquery --quiet --available --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' "$KDEVEL_PKG" | grep "^${KVER:-[0-9]}" | sort -V)
+    else
+        echo "--- Listing available local kernel versions"
+
+        local KVER_LIST=$(find /lib/modules/* -maxdepth 0 -type d ${KVER:+-name "$KVER*"} -printf "%f\n" | sort -V)
+    fi
+
+    echo -e "\nAvailable kernel versions${MOCK_CFG:+ in '$MOCK_CFG'}${KVER:+ matching '$KVER'}:\n${KVER_LIST[@]}"
+
+    exit 0
 }
 
 archive_prepare() {
@@ -394,15 +411,28 @@ rpm_spec_prepare() {
         sed -i "s/<KVER>/%(uname -r)/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     fi
 
-    if is_rhel; then
-        sed -i "s/<LIBELF_PKG>/$RHEL_LIBELF_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
-        sed -i "s/<UTIL_PKG>/$RHEL_UTIL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
-    elif is_suse; then
+    if is_suse; then
+        if [ "$MOCK_CFG" ]; then
+            # On SUSE kernel packages versions not necessarily corelate with the actual
+            # kernel version reported by uname (which is in fact the name of kernel
+            # sources directory). Since uname command doesn't work in mock environment
+            # (as it is just a chroot and it is reporting info from the host system),
+            # this workaround sets kernel directory to whatever exists in /lib/modules/
+            # counting on that there will be only one kernel sources installed.
+            # Odds are much more in favor of this scenario, than of the rare case of
+            # having a match between kernel package version and the actual kernel version.
+            sed -i "/export KERNEL_DIR/s/%{kver}/*/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        fi
+
+        sed -i "s/<KERNEL_PKG>/$SUSE_KERNEL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        sed -i "s/<KERNEL_DEVEL_PKG>/$SUSE_KERNEL_DEVEL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         sed -i "s/<LIBELF_PKG>/$SUSE_LIBELF_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         sed -i "s/<UTIL_PKG>/$SUSE_UTIL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     else
-        sed -i "/<LIBELF_PKG>/d" "$RPM_SPECS_DIR/$CAS_NAME.spec"
-        sed -i "/<UTIL_PKG>/d" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        sed -i "s/<KERNEL_PKG>/$RHEL_KERNEL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        sed -i "s/<KERNEL_DEVEL_PKG>/$RHEL_KERNEL_DEVEL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        sed -i "s/<LIBELF_PKG>/$RHEL_LIBELF_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        sed -i "s/<UTIL_PKG>/$RHEL_UTIL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     fi
 
     if [ "$DEBUG" ]; then
@@ -628,6 +658,9 @@ while (( $# )); do
             DEPENDENCIES_RPM+=(mock)
             shift
             ;;
+        --list-kernels|-l)
+            LIST_KERNELS="list_kernels"
+            ;;
         --output-dir|-o)
             OUTPUT_DIR="$2"
             if ! dirname $OUTPUT_DIR &>/dev/null; then
@@ -712,7 +745,9 @@ echo -e "\n"
 
 check_dependencies
 [ "$MOCK_CFG" ] && mock_prepare
-check_kernel_version
+[ "$LIST_KERNELS" ] && list_kernels
+# Only RPM packages are built for specific kernel version.
+[ "$GENERATE_RPM" ] && check_kernel_version
 create_dir "$OUTPUT_DIR"
 for package in ${!GENERATE_*}; do
     ${package,,}
