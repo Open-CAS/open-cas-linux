@@ -2,7 +2,7 @@ Source: <CAS_NAME>
 Section: utils
 Priority: optional
 Maintainer: <PACKAGE_MAINTAINER>
-Build-Depends: debhelper (>= 11), gawk, libelf-dev, linux-headers-generic, dkms
+Build-Depends: debhelper (>= 11), gawk, libelf-dev, linux-headers-generic, dkms, dh-dkms
 Standards-Version: 4.1.2
 Homepage: <CAS_HOMEPAGE>
 Vcs-Git: <CAS_GIT>

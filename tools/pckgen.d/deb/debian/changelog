@@ -4,6 +4,18 @@
 
  -- <PACKAGE_MAINTAINER>  <PACKAGE_DATE>
 
+open-cas-linux (25.03.0.0980-1) trusty; urgency=medium
+
+  * Fix package build
+
+ -- Rafal Stefanowski <rafal.stefanowski@open-cas.com>  Mon, 08 Sep 2025 13:31:02 +0100
+
+open-cas-linux (25.03.0.0980-1) trusty; urgency=medium
+
+  * Fix package build
+
+ -- Aram Akhavan <github@aram.nubmail.ca>  Mon, 01 Sep 2025 22:27:59 -0700
+
 open-cas-linux (22.03.0.0683-1) trusty; urgency=medium
 
   * Fix debug packages creation

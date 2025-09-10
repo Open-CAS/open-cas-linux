@@ -42,7 +42,7 @@ DEPENDENCIES_TAR=(tar)
 DEPENDENCIES_ZIP=(zip)
 DEPENDENCIES_RPM=(rpmbuild tar)
 DEPENDENCIES_SRPM=("${DEPENDENCIES_RPM[@]}")
-DEPENDENCIES_DEB=(debuild dh fakeroot tar dkms)
+DEPENDENCIES_DEB=(debuild dh fakeroot tar dkms dh_dkms)
 DEPENDENCIES_DSC=("${DEPENDENCIES_DEB[@]}")
 # List of relative submodule directories:
 SUBMODULES=(
@@ -236,7 +236,9 @@ check_dependencies() {
         DEPENDENCIES+=(${!DEP_NAME})
     done
     for DEP in ${DEPENDENCIES[@]}; do
-        if ! which $DEP &>/dev/null; then
+        # Some distros doesn't include /sbin and /usr/sbin in PATH for
+        # unprivileged users, so append it temporarily for the dependency check.
+        if ! PATH="$PATH:/sbin:/usr/sbin" which $DEP &>/dev/null; then
             local FAILED_DEPS+="$DEP "
         fi
     done
