@@ -116,4 +116,7 @@ Before running tests make sure you have a platform with at least 2 disks (one fo
 Feel like making Open CAS Linux better? Don't hesitate to submit a pull request!
 You can find more information about our contribution process
 [here](https://open-cas.github.io/contributing.html).
-In case of any questions feel free to contact [maintainer](mailto:robert.baldyga@open-cas.com).
+
+## Maintainers
+
+The maintainer of this project is Robert Baldyga [<robert.baldyga@open-cas.com>](mailto:robert.baldyga@open-cas.com).
