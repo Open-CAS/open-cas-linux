@@ -1482,6 +1482,12 @@ static void _cache_mngt_generic_complete(void *priv, int error)
 	complete(&context->cmpl);
 }
 
+static void _cache_mngt_detach_core_complete(ocf_core_t core, void *priv,
+		int error)
+{
+	_cache_mngt_generic_complete(priv, error);
+}
+
 static void _cache_mngt_remove_core_fallback(ocf_cache_t cache, ocf_core_t core)
 {
 	struct _cache_mngt_sync_context context;
@@ -1495,7 +1501,7 @@ static void _cache_mngt_remove_core_fallback(ocf_cache_t cache, ocf_core_t core)
 	context.result = &result;
 
 	ocf_mngt_cache_detach_core(core,
-			_cache_mngt_generic_complete, &context);
+			_cache_mngt_detach_core_complete, &context);
 
 	wait_for_completion(&context.cmpl);
 
@@ -1568,7 +1574,7 @@ int cache_mngt_remove_core_from_cache(struct kcas_remove_core *cmd)
 
 	if (cmd->detach) {
 		ocf_mngt_cache_detach_core(core,
-				_cache_mngt_generic_complete, &context);
+				_cache_mngt_detach_core_complete, &context);
 	} else {
 		ocf_mngt_cache_remove_core(core,
 				_cache_mngt_generic_complete, &context);
