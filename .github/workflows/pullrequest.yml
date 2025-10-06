@@ -1,4 +1,7 @@
 name: Licence-date-verification
+permissions:
+  contents: read
+  pull-requests: read
 on:
   pull_request:
     branches:
