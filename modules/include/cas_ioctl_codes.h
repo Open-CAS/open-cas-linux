@@ -1,7 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2022      David Lee <live4thee@gmail.com>
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -326,7 +326,8 @@ enum kcas_cache_param_id {
 	cache_param_cleaning_alru_stale_buffer_time,
 	cache_param_cleaning_alru_flush_max_buffers,
 	cache_param_cleaning_alru_activity_threshold,
-	cache_param_cleaning_alru_max_dirty_ratio,
+	cache_param_cleaning_alru_dirty_ratio_threshold,
+	cache_param_cleaning_alru_dirty_ratio_inertia,
 	cache_param_cleaning_acp_wake_up_time,
 	cache_param_cleaning_acp_flush_max_buffers,
 	cache_param_promotion_policy_type,
