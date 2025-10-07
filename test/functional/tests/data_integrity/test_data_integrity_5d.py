@@ -16,8 +16,13 @@ from api.cas import casadm
 from api.cas.cache_config import CacheMode
 from api.cas.ioclass_config import IoClass
 from core.test_run import TestRun
-from test_tools.fs_tools import Filesystem, create_directory, check_if_directory_exists, \
-    read_file, crc32sum
+from test_tools.fs_tools import (
+    Filesystem,
+    create_directory,
+    check_if_directory_exists,
+    read_file,
+    crc32sum,
+)
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine, VerifyMethod
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
@@ -53,11 +58,13 @@ def test_data_integrity_5d_with_io_classification(filesystems):
     runtime = datetime.timedelta(days=5)
 
     with TestRun.step("Prepare cache and core devices"):
-        cache_device = TestRun.disks['cache']
-        core_devices = [TestRun.disks['core1'],
-                        TestRun.disks['core2'],
-                        TestRun.disks['core3'],
-                        TestRun.disks['core4']]
+        cache_device = TestRun.disks["cache"]
+        core_devices = [
+            TestRun.disks["core1"],
+            TestRun.disks["core2"],
+            TestRun.disks["core3"],
+            TestRun.disks["core4"],
+        ]
 
         cache_device.create_partitions([Size(50, Unit.GibiByte)] * len(core_devices))
 
@@ -76,8 +83,7 @@ def test_data_integrity_5d_with_io_classification(filesystems):
 
     with TestRun.step("Add one core to each cache"):
         cores = [
-            cache.add_core(core_dev=core_part)
-            for cache, core_part in zip(caches, core_partitions)
+            cache.add_core(core_dev=core_part) for cache, core_part in zip(caches, core_partitions)
         ]
 
     with TestRun.step("Load default I/O class config for each cache"):
@@ -90,41 +96,52 @@ def test_data_integrity_5d_with_io_classification(filesystems):
 
     with TestRun.step("Mount cached volumes"):
         for core in cores:
-            mount_point = core.path.replace('/dev/', '/mnt/')
-            if not check_if_directory_exists(mount_point):
-                create_directory(mount_point)
-            core.mount(mount_point)
+            mount_point = core.path.replace("/dev/", "/mnt/")
+            if not check_if_directory_exists(path=mount_point):
+                create_directory(path=mount_point)
+            core.mount(mount_point=mount_point)
             sync()
 
-    with TestRun.step("Prepare fio workload config"):
+    with TestRun.step("Prepare I/O workload config"):
         template_io_classes = IoClass.csv_to_list(read_file(template_config_path))
         config_max_file_sizes = [
-            int(re.search(r'\d+', io_class.rule).group())
-            for io_class in template_io_classes if io_class.rule.startswith("file_size:le")
+            int(re.search(r"\d+", io_class.rule).group())
+            for io_class in template_io_classes
+            if io_class.rule.startswith("file_size:le")
         ]
         config_max_file_sizes.append(config_max_file_sizes[-1] * 2)
         io_class_section_size = Size(
-            int(core_size.get_value(Unit.GibiByte) / len(config_max_file_sizes)),
-            Unit.GibiByte
+            int(core_size.get_value(Unit.GibiByte) / len(config_max_file_sizes)), Unit.GibiByte
         )
 
-        fio = Fio()
-        fio_run = fio.create_command()
-        fio.base_cmd_parameters.set_param(
-            'alloc-size', int(Size(1, Unit.GiB).get_value(Unit.KiB))
-        )
+        '''
+            Fio has a bug when verifying randrw. 
+            If someone would like to switch to randrw in the future, 
+            Fio will return the error "verify: bad header rand_seed ..., wanted ..." 
+            It's recommended to verify the status of bug https://github.com/axboe/fio/issues/1049 
+            in that case.
+            
+        '''
 
-        fio_run.io_engine(IoEngine.libaio)
-        fio_run.direct()
-        fio_run.time_based()
-        fio_run.do_verify()
-        fio_run.verify(VerifyMethod.md5)
-        fio_run.verify_dump()
-        fio_run.run_time(runtime)
-        fio_run.read_write(ReadWrite.randrw)
-        fio_run.io_depth(128)
-        fio_run.blocksize_range(
-            [(Size(512, Unit.Byte).get_value(), Size(128, Unit.KibiByte).get_value())]
+        fio_run = (
+            Fio()
+            .create_command()
+            .io_engine(IoEngine.libaio)
+            .direct()
+            .time_based()
+            .do_verify()
+            .verify(VerifyMethod.md5)
+            .verify_dump()
+            .run_time(runtime)
+            .read_write(ReadWrite.randwrite)
+            .open_files(1000)
+            .io_depth(128)
+            .blocksize_range(
+                [(Size(512, Unit.Byte).get_value(), Size(128, Unit.KibiByte).get_value())]
+            )
+        )
+        fio_run.fio.base_cmd_parameters.set_param(
+            "alloc-size", int(Size(1, Unit.GibiByte).get_value(Unit.KibiByte))
         )
 
         for core in cores:
@@ -146,23 +163,25 @@ def test_data_integrity_5d_with_io_classification(filesystems):
         for core in cores:
             core.unmount()
 
-    with TestRun.step("Calculate crc32 for each core"):
-        core_crc32s = [crc32sum(core.path, timeout=timedelta(hours=4)) for core in cores]
+    with TestRun.step("Calculate checksum for each core"):
+        core_crc32s = [crc32sum(file=core.path, timeout=timedelta(hours=4)) for core in cores]
 
     with TestRun.step("Stop caches"):
         for cache in caches:
             cache.stop()
 
-    with TestRun.step("Calculate crc32 for each core"):
-        dev_crc32s = [crc32sum(dev.path, timeout=timedelta(hours=4)) for dev in core_devices]
+    with TestRun.step("Calculate checksum for each core device"):
+        dev_crc32s = [crc32sum(file=dev.path, timeout=timedelta(hours=4)) for dev in core_devices]
 
-    with TestRun.step("Compare crc32 sums for cores and core devices"):
-        for core_crc32, dev_crc32, mode, fs in zip(
-                core_crc32s, dev_crc32s, cache_modes, filesystems
+    with TestRun.step("Compare checksum for cores and core devices"):
+        for core_crc32, dev_crc32, cache_mode, filesystem in zip(
+            core_crc32s, dev_crc32s, cache_modes, filesystems
         ):
             if core_crc32 != dev_crc32:
-                TestRun.fail("Crc32 sums of core and core device do not match! "
-                             f"Cache mode: {mode} Filesystem: {fs}")
+                TestRun.fail(
+                    "Checksum of core and core device do not match!\n"
+                    f"Cache mode: {cache_mode} Filesystem: {filesystem}"
+                )
 
 
 @pytest.mark.os_dependent
@@ -186,11 +205,13 @@ def test_data_integrity_5d():
     runtime = datetime.timedelta(days=5)
 
     with TestRun.step("Prepare cache and core devices"):
-        cache_device = TestRun.disks['cache']
-        core_devices = [TestRun.disks['core1'],
-                        TestRun.disks['core2'],
-                        TestRun.disks['core3'],
-                        TestRun.disks['core4']]
+        cache_device = TestRun.disks["cache"]
+        core_devices = [
+            TestRun.disks["core1"],
+            TestRun.disks["core2"],
+            TestRun.disks["core3"],
+            TestRun.disks["core4"],
+        ]
 
         cache_device.create_partitions([Size(50, Unit.GibiByte)] * len(core_devices))
 
@@ -202,30 +223,34 @@ def test_data_integrity_5d():
 
     with TestRun.step("Start caches, each in different cache mode"):
         caches = [
-            casadm.start_cache(cache_device, cache_mode, force=True)
+            casadm.start_cache(cache_dev=cache_device, cache_mode=cache_mode, force=True)
             for cache_device, cache_mode in zip(cache_device.partitions, cache_modes)
         ]
 
     with TestRun.step("Add one core to each cache"):
         cores = [
-            casadm.add_core(cache, core_dev=core_device)
+            casadm.add_core(cache=cache, core_dev=core_device)
             for cache, core_device in zip(caches, core_devices)
         ]
 
-    with TestRun.step("Prepare fio workload config"):
-        fio_run = Fio().create_command()
-        fio_run.io_engine(IoEngine.libaio)
-        fio_run.direct()
-        fio_run.time_based()
-        fio_run.do_verify()
-        fio_run.verify(VerifyMethod.md5)
-        fio_run.verify_dump()
-        fio_run.run_time(runtime)
-        fio_run.read_write(ReadWrite.randrw)
-        fio_run.io_depth(128)
-        fio_run.blocksize_range(
-            [(Size(512, Unit.Byte).get_value(), Size(128, Unit.KibiByte).get_value())]
+    with TestRun.step("Prepare I/O workload config"):
+        fio_run = (
+            Fio()
+            .create_command()
+            .io_engine(IoEngine.libaio)
+            .direct()
+            .time_based()
+            .do_verify()
+            .verify(VerifyMethod.md5)
+            .verify_dump()
+            .run_time(runtime)
+            .read_write(ReadWrite.randrw)
+            .io_depth(128)
+            .blocksize_range(
+                [(Size(512, Unit.Byte).get_value(), Size(128, Unit.KibiByte).get_value())]
+            )
         )
+
         for core in cores:
             fio_job = fio_run.add_job()
             fio_job.target(core)
@@ -233,18 +258,20 @@ def test_data_integrity_5d():
     with TestRun.step("Run test workload with data verification"):
         fio_run.run(fio_timeout=runtime + datetime.timedelta(hours=2))
 
-    with TestRun.step("Calculate crc32 for each core"):
-        core_crc32s = [crc32sum(core.path, timeout=timedelta(hours=4)) for core in cores]
+    with TestRun.step("Calculate checksum for each core"):
+        core_crc32s = [crc32sum(file=core.path, timeout=timedelta(hours=4)) for core in cores]
 
     with TestRun.step("Stop caches"):
         for cache in caches:
             cache.stop()
 
-    with TestRun.step("Calculate crc32 for each core"):
-        dev_crc32s = [crc32sum(dev.path, timeout=timedelta(hours=4)) for dev in core_devices]
+    with TestRun.step("Calculate checksum for each core device"):
+        dev_crc32s = [crc32sum(file=dev.path, timeout=timedelta(hours=4)) for dev in core_devices]
 
-    with TestRun.step("Compare crc32 sums for cores and core devices"):
-        for core_crc32, dev_crc32, mode in zip(core_crc32s, dev_crc32s, cache_modes):
+    with TestRun.step("Compare checksum for cores and core devices"):
+        for core_crc32, dev_crc32, cache_mode in zip(core_crc32s, dev_crc32s, cache_modes):
             if core_crc32 != dev_crc32:
-                TestRun.fail("Crc32 sums of core and core device do not match! "
-                             f"Cache mode: {mode}")
+                TestRun.fail(
+                    "Checksum sums of core and core device do not match!\n" 
+                    f"Cache mode with wrong checksum: {cache_mode}"
+                )
