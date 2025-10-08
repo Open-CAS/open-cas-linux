@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -120,10 +120,12 @@ def set_param_cleaning_cmd(cache_id: str, policy: str, shortcut: bool = False) -
 
 def set_param_cleaning_alru_cmd(
     cache_id: str,
-    wake_up: str = None,
-    staleness_time: str = None,
-    flush_max_buffers: str = None,
-    activity_threshold: str = None,
+    wake_up: str | None = None,
+    staleness_time: str | None = None,
+    flush_max_buffers: str | None = None,
+    activity_threshold: str | None = None,
+    dirty_ratio_threshold: str | None = None,
+    dirty_ratio_inertia: str | None = None,
     shortcut: bool = False,
 ) -> str:
     name = "cleaning-alru"
@@ -136,6 +138,10 @@ def set_param_cleaning_alru_cmd(
         command += (" -b " if shortcut else " --flush-max-buffers ") + flush_max_buffers
     if activity_threshold:
         command += (" -t " if shortcut else " --activity-threshold ") + activity_threshold
+    if dirty_ratio_threshold:
+        command += (" -d " if shortcut else " --dirty-ratio-threshold ") + dirty_ratio_threshold
+    if dirty_ratio_inertia:
+        command += " --dirty-ratio-inertia " + dirty_ratio_inertia
     return casadm_bin + command
 
 
