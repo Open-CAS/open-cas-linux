@@ -119,4 +119,4 @@ You can find more information about our contribution process
 
 ## Maintainers
 
-The maintainer of this project is Robert Baldyga [<robert.baldyga@open-cas.com>](mailto:robert.baldyga@open-cas.com).
+The maintainer of this project is [Robert Baldyga](https://github.com/robertbaldyga) [\<robert.baldyga@open-cas.com\>](mailto:robert.baldyga@open-cas.com).
