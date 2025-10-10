@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2022      David Lee <live4thee@gmail.com>
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -730,6 +731,12 @@ static struct cas_param cas_cache_params[] = {
 	[cache_param_cleaning_alru_activity_threshold] = {
 		.name = "Activity threshold [ms]" ,
 	},
+	[cache_param_cleaning_alru_dirty_ratio_threshold] = {
+		.name = "Dirty ratio trigger threshold [%]",
+	},
+	[cache_param_cleaning_alru_dirty_ratio_inertia] = {
+		.name = "Dirty ratio trigger inertia [%]",
+	},
 
 	/* Cleaning policy ACP params */
 	[cache_param_cleaning_acp_wake_up_time] = {
@@ -774,6 +781,10 @@ static struct cas_param cas_cache_params[] = {
 	" <%d-%d> (default: %d)"
 #define CLEANING_ALRU_ACTIVITY_THRESHOLD_DESC "Cache idle time before flushing thread can start <%d-%d>[ms]" \
 	" (default: %d ms)"
+#define CLEANING_ALRU_DIRTY_RATIO_THRESHOLD_DESC "Dirty ratio of the cache device at which cleaning will be triggered" \
+	" <%d-%d>[%] (default: %d%)"
+#define CLEANING_ALRU_DIRTY_RATIO_INERTIA_DESC "Inertia for dirty ratio triggered cleaning - the trigger will be disabled" \
+	" after dirty ratio falls to (trigger - inertia)% <%d-%d>[%] (default: %d%)"
 
 #define CLEANING_ACP_WAKE_UP_DESC "Time between ACP cleaning thread iterations <%d-%d>[ms] (default: %d ms)"
 #define CLEANING_ACP_MAX_BUFFERS_DESC "Number of cache lines flushed in single ACP cleaning thread iteration" \
@@ -834,6 +845,14 @@ static cli_namespace set_param_namespace = {
 				CLI_OPTION_RANGE_INT | CLI_OPTION_DEFAULT_INT,
 				OCF_ALRU_MIN_ACTIVITY_THRESHOLD, OCF_ALRU_MAX_ACTIVITY_THRESHOLD,
 				OCF_ALRU_DEFAULT_ACTIVITY_THRESHOLD},
+			{'d', "dirty-ratio-threshold", CLEANING_ALRU_DIRTY_RATIO_THRESHOLD_DESC, 1, "NUMBER",
+				CLI_OPTION_RANGE_INT | CLI_OPTION_DEFAULT_INT,
+				OCF_ALRU_MIN_DIRTY_RATIO_THRESHOLD, OCF_ALRU_MAX_DIRTY_RATIO_THRESHOLD,
+				OCF_ALRU_DEFAULT_DIRTY_RATIO_THRESHOLD},
+			{0, "dirty-ratio-inertia", CLEANING_ALRU_DIRTY_RATIO_INERTIA_DESC, 1, "NUMBER",
+				CLI_OPTION_RANGE_INT | CLI_OPTION_DEFAULT_INT,
+				OCF_ALRU_MIN_DIRTY_RATIO_INERTIA, OCF_ALRU_MAX_DIRTY_RATIO_INERTIA,
+				OCF_ALRU_DEFAULT_DIRTY_RATIO_INERTIA},
 		CACHE_PARAMS_NS_END()
 
 		CACHE_PARAMS_NS_BEGIN("cleaning-acp", "Cleaning policy ACP parameters")
@@ -944,6 +963,22 @@ int set_param_cleaning_alru_handle_option(char *opt, const char **arg)
 		}
 
 		SET_CACHE_PARAM(cache_param_cleaning_alru_activity_threshold,
+				strtoul(arg[0], NULL, 10));
+	} else if (!strcmp(opt, "dirty-ratio-threshold")) {
+		if (validate_str_num(arg[0], "dirty ratio trigger threshold",
+				OCF_ALRU_MIN_DIRTY_RATIO_THRESHOLD, OCF_ALRU_MAX_DIRTY_RATIO_THRESHOLD)) {
+			return FAILURE;
+		}
+
+		SET_CACHE_PARAM(cache_param_cleaning_alru_dirty_ratio_threshold,
+				strtoul(arg[0], NULL, 10));
+	} else if (!strcmp(opt, "dirty-ratio-inertia")) {
+		if (validate_str_num(arg[0], "dirty ratio trigger inertia",
+				OCF_ALRU_MIN_DIRTY_RATIO_INERTIA, OCF_ALRU_MAX_DIRTY_RATIO_INERTIA)) {
+			return FAILURE;
+		}
+
+		SET_CACHE_PARAM(cache_param_cleaning_alru_dirty_ratio_inertia,
 				strtoul(arg[0], NULL, 10));
 	} else {
 		return FAILURE;
@@ -1125,6 +1160,8 @@ int get_param_namespace_handle_option(char *namespace, char *opt, const char **a
 		SELECT_CACHE_PARAM(cache_param_cleaning_alru_stale_buffer_time);
 		SELECT_CACHE_PARAM(cache_param_cleaning_alru_flush_max_buffers);
 		SELECT_CACHE_PARAM(cache_param_cleaning_alru_activity_threshold);
+		SELECT_CACHE_PARAM(cache_param_cleaning_alru_dirty_ratio_threshold);
+		SELECT_CACHE_PARAM(cache_param_cleaning_alru_dirty_ratio_inertia);
 		return cache_param_handle_option_generic(opt, arg,
 				get_param_handle_option);
 	} else if (!strcmp(namespace, "cleaning-acp")) {

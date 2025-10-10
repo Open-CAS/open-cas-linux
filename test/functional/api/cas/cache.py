@@ -209,6 +209,8 @@ class Cache:
                 if alru_params.activity_threshold
                 else None
             ),
+            (alru_params.dirty_ratio_threshold if alru_params.dirty_ratio_threshold else None),
+            (alru_params.dirty_ratio_inertia if alru_params.dirty_ratio_inertia else None),
         )
 
     def set_promotion_policy(self, policy: PromotionPolicy) -> Output:
