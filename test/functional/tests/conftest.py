@@ -200,12 +200,7 @@ def base_prepare(item):
             create_directory(path=TestRun.TEST_RUN_DATA_PATH)
 
         for disk in TestRun.disks.values():
-            disk_serial = Disk.get_disk_serial_number(disk.path)
-            if disk.serial_number and disk.serial_number != disk_serial:
-                raise Exception(
-                    f"Serial for {disk.path} doesn't match the one from the config."
-                    f"Serial from config {disk.serial_number}, actual serial {disk_serial}"
-                )
+            disk.serial_number = Disk.get_disk_serial_number(disk.path)
             disk.remove_partitions()
             disk.unmount()
             Mdadm.zero_superblock(posixpath.join("/dev", disk.get_device_id()))
