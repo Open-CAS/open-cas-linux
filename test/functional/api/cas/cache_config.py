@@ -134,15 +134,19 @@ class CacheStatus(Enum):
 class FlushParametersAlru:
     def __init__(
         self,
-        activity_threshold: Time = None,
-        flush_max_buffers: int = None,
-        staleness_time: Time = None,
-        wake_up_time: Time = None,
+        activity_threshold: Time | None = None,
+        flush_max_buffers: int | None = None,
+        staleness_time: Time | None = None,
+        wake_up_time: Time | None = None,
+        dirty_ratio_threshold: int | None = None,
+        dirty_ratio_inertia: Size | None = None
     ):
         self.activity_threshold = activity_threshold
         self.flush_max_buffers = flush_max_buffers
         self.staleness_time = staleness_time
         self.wake_up_time = wake_up_time
+        self.dirty_ratio_threshold = dirty_ratio_threshold
+        self.dirty_ratio_inertia = dirty_ratio_inertia
 
     def __eq__(self, other):
         return (
@@ -150,6 +154,8 @@ class FlushParametersAlru:
             and self.flush_max_buffers == other.flush_max_buffers
             and self.staleness_time == other.staleness_time
             and self.wake_up_time == other.wake_up_time
+            and self.dirty_ratio_threshold == other.dirty_ratio_threshold
+            and self.dirty_ratio_inertia == other.dirty_ratio_inertia
         )
 
     def __str__(self):
@@ -162,6 +168,10 @@ class FlushParametersAlru:
             + (f"{self.staleness_time}" if self.staleness_time is not None else "default"),
             "wake up time: "
             + (f"{self.wake_up_time}" if self.wake_up_time is not None else "default"),
+            "dirty ratio trigger threshold: "
+            + (f"{self.dirty_ratio_threshold}" if self.dirty_ratio_threshold is not None else "default"),
+            "dirty ratio trigger inertia: "
+            + (f"{self.dirty_ratio_inertia.set_unit(Unit.MebiByte)}" if self.dirty_ratio_inertia is not None else "default"),
         ]
         return " | ".join(ret)
 
@@ -172,6 +182,8 @@ class FlushParametersAlru:
         alru_params.flush_max_buffers = (1, 10000)
         alru_params.staleness_time = (1, 3600)
         alru_params.wake_up_time = (0, 3600)
+        alru_params.dirty_ratio_threshold = (0, 100)
+        alru_params.dirty_ratio_inertia = (0, (2**32 - 1) // Unit.MebiByte.get_value())
         return alru_params
 
     @staticmethod
@@ -181,6 +193,8 @@ class FlushParametersAlru:
         alru_params.flush_max_buffers = 100
         alru_params.staleness_time = Time(seconds=120)
         alru_params.wake_up_time = Time(seconds=20)
+        alru_params.dirty_ratio_threshold = 100
+        alru_params.dirty_ratio_inertia = Size(128, Unit.MebiByte)
         return alru_params
 
 

@@ -182,16 +182,20 @@ def set_param_cleaning(cache_id: int, policy: CleaningPolicy, shortcut: bool = F
 
 def set_param_cleaning_alru(
     cache_id: int,
-    wake_up: int = None,
-    staleness_time: int = None,
-    flush_max_buffers: int = None,
-    activity_threshold: int = None,
+    wake_up: int | None = None,
+    staleness_time: int | None = None,
+    flush_max_buffers: int | None = None,
+    activity_threshold: int | None = None,
+    dirty_ratio_threshold: int | None = None,
+    dirty_ratio_inertia: Size | None = None,
     shortcut: bool = False,
 ) -> Output:
     _wake_up = str(wake_up) if wake_up is not None else None
     _staleness_time = str(staleness_time) if staleness_time is not None else None
     _flush_max_buffers = str(flush_max_buffers) if flush_max_buffers is not None else None
     _activity_threshold = str(activity_threshold) if activity_threshold is not None else None
+    _dirty_ratio_threshold = str(dirty_ratio_threshold) if dirty_ratio_threshold is not None else None
+    _dirty_ratio_inertia = str(dirty_ratio_inertia.get_value(Unit.MebiByte)) if dirty_ratio_inertia is not None else None
     output = TestRun.executor.run(
         set_param_cleaning_alru_cmd(
             cache_id=str(cache_id),
@@ -199,6 +203,8 @@ def set_param_cleaning_alru(
             staleness_time=_staleness_time,
             flush_max_buffers=_flush_max_buffers,
             activity_threshold=_activity_threshold,
+            dirty_ratio_threshold=_dirty_ratio_threshold,
+            dirty_ratio_inertia=_dirty_ratio_inertia,
             shortcut=shortcut,
         )
     )
