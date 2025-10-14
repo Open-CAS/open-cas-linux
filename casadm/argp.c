@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -13,7 +13,7 @@
 #include <sys/stat.h>
 
 #define PADDING "   "
-#define MAX_OPT_HELP_LEN 30
+#define MAX_OPT_HELP_LEN 35
 
 extern cas_printf_t cas_printf;
 
@@ -154,10 +154,10 @@ void print_list_options(cli_option* options, int flag,
 					 options->long_name, options->arg);
 			}
 
-			cas_printf(LOG_INFO, "%s%-4s%-32s%s\n", PADDING,
+			cas_printf(LOG_INFO, "%s%-4s%-33s%s\n", PADDING,
 				   short_name, buf, desc);
 		} else {
-			cas_printf(LOG_INFO, "%s%-4s--%-30s%s\n", PADDING,
+			cas_printf(LOG_INFO, "%s%-4s--%-31s%s\n", PADDING,
 				   short_name, options->long_name, desc);
 		}
 	}
@@ -207,10 +207,10 @@ static void print_options_help(cli_option *options)
 					 options[i].arg);
 			}
 
-			cas_printf(LOG_INFO, "%s%-4s%-32s%s\n", PADDING,
+			cas_printf(LOG_INFO, "%s%-4s%-33s%s\n", PADDING,
 					short_name, buf, desc);
 		} else {
-			cas_printf(LOG_INFO, "%s%-4s--%-30s%s\n", PADDING,
+			cas_printf(LOG_INFO, "%s%-4s--%-31s%s\n", PADDING,
 					short_name, options[i].long_name,
 					desc);
 		}

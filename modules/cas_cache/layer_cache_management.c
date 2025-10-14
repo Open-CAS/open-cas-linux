@@ -3645,9 +3645,15 @@ int cache_mngt_set_cache_params(struct kcas_set_cache_param *info)
 				ocf_cleaning_alru, ocf_alru_activity_threshold,
 				info->param_value);
 		break;
-	case cache_param_cleaning_alru_max_dirty_ratio:
+	case cache_param_cleaning_alru_dirty_ratio_threshold:
 		result = cache_mngt_set_cleaning_param(cache,
-				ocf_cleaning_alru, ocf_alru_max_dirty_ratio,
+				ocf_cleaning_alru,
+				ocf_alru_dirty_ratio_threshold,
+				info->param_value);
+		break;
+	case cache_param_cleaning_alru_dirty_ratio_inertia:
+		result = cache_mngt_set_cleaning_param(cache,
+				ocf_cleaning_alru, ocf_alru_dirty_ratio_inertia,
 				info->param_value);
 		break;
 
@@ -3714,9 +3720,15 @@ int cache_mngt_get_cache_params(struct kcas_get_cache_param *info)
 				ocf_cleaning_alru, ocf_alru_activity_threshold,
 				&info->param_value);
 		break;
-	case cache_param_cleaning_alru_max_dirty_ratio:
+	case cache_param_cleaning_alru_dirty_ratio_threshold:
 		result = cache_mngt_get_cleaning_param(cache,
-				ocf_cleaning_alru, ocf_alru_max_dirty_ratio,
+				ocf_cleaning_alru,
+				ocf_alru_dirty_ratio_threshold,
+				&info->param_value);
+		break;
+	case cache_param_cleaning_alru_dirty_ratio_inertia:
+		result = cache_mngt_get_cleaning_param(cache,
+				ocf_cleaning_alru, ocf_alru_dirty_ratio_inertia,
 				&info->param_value);
 		break;
 
