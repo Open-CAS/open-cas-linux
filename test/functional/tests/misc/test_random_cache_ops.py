@@ -330,7 +330,6 @@ def set_param(
                     f"Changed seq-cutoff params on cache {cache_to_set_param.cache_id} to:\n"
                     f"Threshold: {str(random_threshold)}\n"
                     f"Policy: {str(random_policy)}\n"
-                    f"Threshold: {str(random_threshold)}\n"
                 )
             else:
                 core_list = cache_to_set_param.get_cores()
@@ -385,15 +384,20 @@ def set_param(
             )
 
         case cache_to_set_param.set_params_alru:
-            random_wake_up_time = Time(seconds=random.randint(0, 3600))
-            random_staleness_time = Time(seconds=random.randint(1, 3600))
-            random_flush_max_buffers = random.randint(1, 10000)
-            random_activity_threshold = Time(milliseconds=random.randint(0, 1000000))
+            ranges = FlushParametersAlru.alru_params_range()
+            random_wake_up_time = Time(seconds=random.randint(*ranges.wake_up_time))
+            random_staleness_time = Time(seconds=random.randint(*ranges.staleness_time))
+            random_flush_max_buffers = random.randint(*ranges.flush_max_buffers)
+            random_activity_threshold = Time(milliseconds=random.randint(*ranges.activity_threshold))
+            random_dirty_ratio_threshold = random.randint(*ranges.dirty_ratio_threshold)
+            random_dirty_ratio_inertia = Size(random.randint(*ranges.dirty_ratio_inertia), Unit.MebiByte)
             random_flush_parameters_alru = FlushParametersAlru(
                 wake_up_time=random_wake_up_time,
                 staleness_time=random_staleness_time,
                 flush_max_buffers=random_flush_max_buffers,
                 activity_threshold=random_activity_threshold,
+                dirty_ratio_threshold=random_dirty_ratio_threshold,
+                dirty_ratio_inertia=random_dirty_ratio_inertia,
             )
             cache_to_set_param.set_params_alru(random_flush_parameters_alru)
             return (
@@ -402,6 +406,8 @@ def set_param(
                 f"Staleness time: {str(random_staleness_time)}\n"
                 f"Flush max buffers: {str(random_flush_max_buffers)}\n"
                 f"Activity threshold time: {str(random_activity_threshold)}\n"
+                f"Dirty ratio trigger threshold: {str(random_dirty_ratio_threshold)}%\n"
+                f"Dirty ratio trigger inertia: {str(random_dirty_ratio_inertia)}%\n"
             )
 
         case cache_to_set_param.set_params_acp:
