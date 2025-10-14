@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
+* Copyright(c) 2022      David Lee <live4thee@gmail.com>
 * Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
@@ -3644,6 +3645,11 @@ int cache_mngt_set_cache_params(struct kcas_set_cache_param *info)
 				ocf_cleaning_alru, ocf_alru_activity_threshold,
 				info->param_value);
 		break;
+	case cache_param_cleaning_alru_max_dirty_ratio:
+		result = cache_mngt_set_cleaning_param(cache,
+				ocf_cleaning_alru, ocf_alru_max_dirty_ratio,
+				info->param_value);
+		break;
 
 	case cache_param_cleaning_acp_wake_up_time:
 		result = cache_mngt_set_cleaning_param(cache,
@@ -3706,6 +3712,11 @@ int cache_mngt_get_cache_params(struct kcas_get_cache_param *info)
 	case cache_param_cleaning_alru_activity_threshold:
 		result = cache_mngt_get_cleaning_param(cache,
 				ocf_cleaning_alru, ocf_alru_activity_threshold,
+				&info->param_value);
+		break;
+	case cache_param_cleaning_alru_max_dirty_ratio:
+		result = cache_mngt_get_cleaning_param(cache,
+				ocf_cleaning_alru, ocf_alru_max_dirty_ratio,
 				&info->param_value);
 		break;
 
