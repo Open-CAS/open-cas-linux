@@ -1,6 +1,6 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2024-2025 Huawei Technologies
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -1312,6 +1312,7 @@ enum {
 
 	io_class_opt_cache_id,
 	io_class_opt_cache_file_load,
+	io_class_opt_keep_classification,
 	io_class_opt_output_format,
 
 	io_class_opt_io_class_id,
@@ -1368,6 +1369,14 @@ static cli_option io_class_params_options[] = {
 		.arg = "FILE",
 		.priv = (1 << io_class_opt_subcmd_configure)
 			| (1 << io_class_opt_flag_required)
+	},
+	[io_class_opt_keep_classification] = {
+		.short_name = 'k',
+		.long_name = "keep-classification",
+		.desc = "Prevents reclassification of data in IO classes with IDs matching previous configuration",
+		.args_count = 0,
+		.arg = NULL,
+		.priv = (1 << io_class_opt_subcmd_configure)
 	},
 	[io_class_opt_output_format] = {
 		.short_name = 'o',
@@ -1434,6 +1443,7 @@ struct {
 	int io_class_id;
 	int cache_mode;
 	int io_class_prio;
+	bool reclassify;
 	int output_format;
 	uint32_t min;
 	uint32_t max;
@@ -1443,6 +1453,7 @@ struct {
 	.subcmd = io_class_opt_subcmd_unknown,
 	.cache_id = 0,
 	.file = "",
+	.reclassify = true,
 	.output_format = OUTPUT_FORMAT_DEFAULT
 };
 
@@ -1479,6 +1490,10 @@ int io_class_handle_option(char *opt, const char **arg)
 			return FAILURE;
 
 		io_class_params_options[io_class_opt_output_format].priv |=  (1 << io_class_opt_flag_set);
+	} else if (!strcmp(opt, "keep-classification")) {
+		io_class_params.reclassify = false;
+
+		io_class_params_options[io_class_opt_keep_classification].priv |=  (1 << io_class_opt_flag_set);
 	}
 
 	return 0;
@@ -1534,8 +1549,8 @@ int io_class_handle() {
 
 	switch (io_class_params.subcmd) {
 	case io_class_opt_subcmd_configure:
-		return partition_setup(io_class_params.cache_id,
-				io_class_params.file);
+		return partition_setup(io_class_params.cache_id, 
+				io_class_params.reclassify, io_class_params.file);
 	case io_class_opt_subcmd_list:
 		return partition_list(io_class_params.cache_id,
 				io_class_params.output_format);
