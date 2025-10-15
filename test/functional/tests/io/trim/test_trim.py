@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -36,12 +36,13 @@ def test_trim_start_discard():
       - Partition used for cache is discarded.
       - Second partition is untouched - written pattern is preserved.
     """
+
     with TestRun.step("Clearing dmesg"):
         TestRun.executor.run_expect_success("dmesg -C")
 
     with TestRun.step("Preparing cache device"):
         dev = TestRun.disks["cache"]
-        dev.create_partitions([Size(500, Unit.MebiByte), Size(500, Unit.MebiByte)])
+        dev.create_partitions([Size(500, Unit.MebiByte)] * 2)
         cas_part = dev.partitions[0]
         non_cas_part = dev.partitions[1]
 
@@ -116,7 +117,7 @@ def test_trim_propagation():
       - No data corruption after power failure.
     """
 
-    with TestRun.step(f"Create partitions"):
+    with TestRun.step("Prepare cache and core devices"):
         TestRun.disks["ssd1"].create_partitions([Size(43, Unit.MegaByte)])
         TestRun.disks["ssd2"].create_partitions([Size(512, Unit.KiloByte)])
 
@@ -131,36 +132,52 @@ def test_trim_propagation():
     with TestRun.step(f"Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Prepare cache instance in WB with one core"):
+    with TestRun.step("Start cache in Write-Back mode and add core device"):
         cache = casadm.start_cache(cache_dev, CacheMode.WB, force=True)
         core = cache.add_core(core_dev)
-        cache.set_cleaning_policy(CleaningPolicy.nop)
+
+    with TestRun.step("Disable cleaning policy and sequential cutoff"):
         cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+        cache.set_cleaning_policy(CleaningPolicy.nop)
+
+    with TestRun.step("Purge cache and reset cache counters"):
         cache.purge_cache()
+        cache.reset_counters()
 
-    with TestRun.step(f"Fill exported object with dirty data"):
+    with TestRun.step("Run I/O to fill exported object with dirty data"):
         core_size_4k = core.get_statistics().config_stats.core_size.get_value(Unit.Blocks4096)
-        core_size_4k = int(core_size_4k)
 
-        cas_fio = write_pattern(core.path)
-        cas_fio.verification_with_pattern("0xdeadbeef")
-        cas_fio.run()
+        fio = (
+            Fio()
+            .create_command()
+            .io_engine(IoEngine.libaio)
+            .read_write(ReadWrite.write)
+            .target(core.path)
+            .direct()
+            .verification_with_pattern()
+        )
+        fio.verification_with_pattern("0xdeadbeef")
 
+        fio.run()
+
+    with TestRun.step("Check if exported object was filled with dirty data"):
         dirty_4k = cache.get_statistics().usage_stats.dirty.get_value(Unit.Blocks4096)
-
         if dirty_4k != core_size_4k:
             TestRun.fail(
-                f"Failed to fill cache. Expected dirty blocks: {core_size_4k}, "
-                f"actual value {dirty_4k}"
+                "Failed to fill cache with dirty data\n"
+                f"Expected dirty blocks: {core_size_4k}\n"
+                f"Actual value: {dirty_4k}"
             )
 
-    with TestRun.step(f"Discard 4k of data on exported object"):
-        TestRun.executor.run_expect_success(f"blkdiscard {core.path} --length 4096 --offset 0")
+    with TestRun.step("Discard 4k of data on exported object"):
+        TestRun.executor.run_expect_success(f"blkdiscard {core.path} --length 4096 --offset 4096")
         old_occupancy = cache.get_statistics().usage_stats.occupancy.get_value(Unit.Blocks4096)
 
-    with TestRun.step("Power cycle"):
+    with TestRun.step("Power cycle DUT"):
         power_control = TestRun.plugin_manager.get_plugin("power_control")
-        power_control.power_cycle()
+        power_control.power_cycle(wait_for_connection=True)
+
+    with TestRun.step("Disable udev after power cycle"):
         Udev.disable()
 
     with TestRun.step("Load cache"):
@@ -170,14 +187,15 @@ def test_trim_propagation():
         new_occupancy = cache.get_statistics().usage_stats.occupancy.get_value(Unit.Blocks4096)
         if new_occupancy != old_occupancy:
             TestRun.LOGGER.error(
-                f"Expected occupancy after dirty shutdown: {old_occupancy}. "
-                f"Actuall: {new_occupancy})"
+                "Wrong number of occupancy blocks after power cycle\n"
+                f"Expected occupancy after dirty shutdown: {old_occupancy}\n"
+                f"Actual: {new_occupancy}"
             )
 
-    with TestRun.step("Verify data after dirty shutdown"):
-        cas_fio.read_write(ReadWrite.read)
-        cas_fio.offset(Unit.Blocks4096)
-        cas_fio.run()
+    with TestRun.step("Verify data after power cycle"):
+        fio.read_write(ReadWrite.read)
+        fio.offset(Unit.Blocks4096)
+        fio.run()
 
 
 @pytest.mark.os_dependent
