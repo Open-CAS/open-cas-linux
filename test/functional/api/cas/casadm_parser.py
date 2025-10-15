@@ -188,6 +188,10 @@ def get_flush_parameters_alru(cache_id: int):
             flush_parameters.staleness_time = Time(seconds=int(line.split(",")[1]))
         if "Wake up time" in line:
             flush_parameters.wake_up_time = Time(seconds=int(line.split(",")[1]))
+        if "trigger threshold" in line:
+            flush_parameters.dirty_ratio_threshold = int(line.split(",")[1])
+        if "trigger inertia" in line:
+            flush_parameters.dirty_ratio_inertia = Size(int(line.split(",")[1]), Unit.MebiByte)
     return flush_parameters
 
 

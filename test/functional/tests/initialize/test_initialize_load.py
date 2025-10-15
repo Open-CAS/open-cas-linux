@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -67,6 +67,8 @@ def test_load_x_cores_to_one_cache(cache_mode, cleaning_policy, cache_line_size,
             alru.flush_max_buffers = 10
             alru.staleness_time = Time(seconds=60)
             alru.wake_up_time = Time(seconds=5)
+            alru.dirty_ratio_threshold = 75
+            alru.dirty_ratio_inertia = Size(15, Unit.MebiByte)
             cache.set_params_alru(alru)
         if cleaning_policy == CleaningPolicy.acp:
             acp = FlushParametersAcp()

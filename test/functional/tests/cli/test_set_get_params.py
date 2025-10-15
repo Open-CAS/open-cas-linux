@@ -243,7 +243,7 @@ def new_seq_cutoff_parameters_random_values():
 
 def new_cleaning_parameters_random_values(cleaning_policy):
     if cleaning_policy == CleaningPolicy.alru:
-        alru_params_range = FlushParametersAlru().alru_params_range()
+        alru_params_range = FlushParametersAlru.alru_params_range()
         wake_up_time_random_value = Time(
             seconds=random.randint(*alru_params_range.wake_up_time)
         )
@@ -256,11 +256,21 @@ def new_cleaning_parameters_random_values(cleaning_policy):
         activity_threshold_random_value = Time(
             milliseconds=random.randint(*alru_params_range.activity_threshold)
         )
+        dirty_ratio_threshold_random_value = random.randint(
+            *alru_params_range.dirty_ratio_threshold
+        )
+        dirty_ratio_inertia_random_value = Size(random.randint(
+            *alru_params_range.dirty_ratio_inertia),
+            Unit.MebiByte,
+        )
         cleaning_params = FlushParametersAlru()
         cleaning_params.wake_up_time = wake_up_time_random_value
         cleaning_params.staleness_time = staleness_time_random_value
         cleaning_params.flush_max_buffers = flush_max_buffers_random_value
         cleaning_params.activity_threshold = activity_threshold_random_value
+        cleaning_params.dirty_ratio_threshold = dirty_ratio_threshold_random_value
+        cleaning_params.dirty_ratio_inertia = dirty_ratio_inertia_random_value
+        
 
     if cleaning_policy == CleaningPolicy.acp:
         acp_params_range = FlushParametersAcp().acp_params_range()

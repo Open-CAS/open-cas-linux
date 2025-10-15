@@ -209,6 +209,8 @@ def set_cleaning_policy_params(cache, cleaning_policy):
             alru_params.staleness_time = Time(seconds=2)
             alru_params.flush_max_buffers = 100
             alru_params.activity_threshold = Time(milliseconds=1000)
+            alru_params.dirty_ratio_threshold = 66
+            alru_params.dirty_ratio_inertia = Size(66, Unit.MebiByte)
             cache.set_params_alru(alru_params)
             current_alru_params = cache.get_flush_parameters_alru()
             if current_alru_params != alru_params:
@@ -232,6 +234,16 @@ def set_cleaning_policy_params(cache, cleaning_policy):
                     failed_params += (
                         f"Activity threshold is {current_alru_params.activity_threshold}, "
                         f"should be {alru_params.activity_threshold}\n"
+                    )
+                if current_alru_params.dirty_ratio_threshold != alru_params.dirty_ratio_threshold:
+                    failed_params += (
+                        f"Dirty ratio trigger threshold is {current_alru_params.dirty_ratio_threshold}, "
+                        f"should be {alru_params.dirty_ratio_threshold}\n"
+                    )
+                if current_alru_params.dirty_ratio_inertia != alru_params.dirty_ratio_inertia:
+                    failed_params += (
+                        f"Dirty ratio trigger inertia is {current_alru_params.dirty_ratio_inertia}, "
+                        f"should be {alru_params.dirty_ratio_inertia}\n"
                     )
                 TestRun.LOGGER.error(f"ALRU parameters did not switch properly:\n{failed_params}")
 
