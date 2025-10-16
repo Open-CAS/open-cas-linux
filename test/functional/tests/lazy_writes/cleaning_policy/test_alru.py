@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2026 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -25,13 +25,13 @@ from type_def.time import Time
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_alru_no_idle():
     """
-        title: Test ALRU with activity threshold set to 0
-        description: |
-          Verify that ALRU is able to perform cleaning if cache is under constant load and
-          activity threshold is set to 0. Constant load is performed by using fio instance running
-          in background.
-        pass_criteria:
-          - Dirty cache lines are cleaned successfully.
+    title: Test ALRU with activity threshold set to 0
+    description: |
+      Verify that ALRU is able to perform cleaning if cache is under constant load and
+      activity threshold is set to 0. Constant load is performed by using fio instance running
+      in background.
+    pass_criteria:
+      - Dirty cache lines are cleaned successfully.
     """
 
     with TestRun.step("Prepare configuration"):
