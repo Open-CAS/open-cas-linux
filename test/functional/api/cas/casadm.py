@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2026 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -187,7 +187,7 @@ def set_param_cleaning_alru(
     flush_max_buffers: int | None = None,
     activity_threshold: int | None = None,
     dirty_ratio_threshold: int | None = None,
-    dirty_ratio_inertia: Size | None = None,
+    dirty_ratio_inertia: int | None = None,
     shortcut: bool = False,
 ) -> Output:
     _wake_up = str(wake_up) if wake_up is not None else None
@@ -195,7 +195,7 @@ def set_param_cleaning_alru(
     _flush_max_buffers = str(flush_max_buffers) if flush_max_buffers is not None else None
     _activity_threshold = str(activity_threshold) if activity_threshold is not None else None
     _dirty_ratio_threshold = str(dirty_ratio_threshold) if dirty_ratio_threshold is not None else None
-    _dirty_ratio_inertia = str(dirty_ratio_inertia.get_value(Unit.MebiByte)) if dirty_ratio_inertia is not None else None
+    _dirty_ratio_inertia = str(dirty_ratio_inertia) if dirty_ratio_inertia is not None else None
     output = TestRun.executor.run(
         set_param_cleaning_alru_cmd(
             cache_id=str(cache_id),
