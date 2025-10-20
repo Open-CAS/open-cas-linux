@@ -1,0 +1,8 @@
+line-length = 100
+
+[lint]
+ignore = [
+    "E402", # All module level imports should be at the top of the file. This means that there
+            # should be no statements in between module level imports
+    "F405", # Variable  may be undefined, or defined from star imports
+]
