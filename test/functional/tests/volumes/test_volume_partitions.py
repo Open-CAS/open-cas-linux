@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -34,7 +34,7 @@ def test_cas_preserves_partitions(partition_table, filesystem, cache_mode):
           - Md5 sums on partitions shall be identical before and after running cache.
           - Partition table shall be preserved on exported object.
     """
-    with TestRun.step(f"Prepare cache and core devices."):
+    with TestRun.step("Prepare cache and core devices."):
         cache_dev = TestRun.disks['cache']
         cache_dev.create_partitions([Size(1, Unit.GibiByte)])
         cache_dev = cache_dev.partitions[0]
@@ -63,7 +63,7 @@ def test_cas_preserves_partitions(partition_table, filesystem, cache_mode):
         for core in core_dev.partitions:
             core.unmount()
 
-    with TestRun.step(f"Start cache."):
+    with TestRun.step("Start cache."):
         cache = casadm.start_cache(cache_dev, cache_mode, force=True)
 
     with TestRun.step("Add cores to cache."):
@@ -108,13 +108,13 @@ def test_partition_create_cas(partition_table, filesystem, cache_mode):
           - Md5 sums on partitions shall be identical before and after stopping cache.
           - Partition table shall be preserved on core device.
     """
-    with TestRun.step(f"Prepare cache and core devices."):
+    with TestRun.step("Prepare cache and core devices."):
         cache_dev = TestRun.disks['cache']
         cache_dev.create_partitions([Size(256, Unit.MebiByte)])
         cache_dev = cache_dev.partitions[0]
         core_dev = TestRun.disks['core']
 
-    with TestRun.step(f"Start cache."):
+    with TestRun.step("Start cache."):
         cache = casadm.start_cache(cache_dev, cache_mode, force=True)
         core = cache.add_core(core_dev)
 

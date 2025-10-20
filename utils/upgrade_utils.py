@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
+# Copyright(c) 2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -215,5 +216,5 @@ def set_device_scheduler(sysfs_path, scheduler):
 
 
 def drop_os_caches():
-    with open(f"/proc/sys/vm/drop_caches", "w") as f:
+    with open("/proc/sys/vm/drop_caches", "w") as f:
         f.write("3")

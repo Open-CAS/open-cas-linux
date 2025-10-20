@@ -50,7 +50,7 @@ class Cache:
         if not cache:
             return None
 
-        if cache["device_path"] is "-":
+        if cache["device_path"] == "-":
             return None
 
         return Device(path=cache["device_path"])

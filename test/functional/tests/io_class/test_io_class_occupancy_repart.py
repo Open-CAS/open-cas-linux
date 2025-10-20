@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -99,7 +99,7 @@ def test_ioclass_repart(io_class_size_multiplication):
         cache.purge_cache()
         cache.reset_counters()
 
-    with TestRun.step(f"Create 3 files classified in default ioclass"):
+    with TestRun.step("Create 3 files classified in default ioclass"):
         for i, io_class in enumerate(io_classes[0:3]):
             run_io_dir(
                 f"{mountpoint}/{i}",
@@ -111,7 +111,7 @@ def test_ioclass_repart(io_class_size_multiplication):
             cache_size.value,
             rel_tol=0.1,
         ):
-            TestRun.fail(f"Failed to populte default ioclass")
+            TestRun.fail("Failed to populte default ioclass")
 
     with TestRun.step("Check initial occupancy"):
         for io_class in io_classes:

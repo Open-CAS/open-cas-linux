@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -44,17 +44,17 @@ def prepare(
     cache_device = cache_device.partitions[0]
     core_device = core_device.partitions[0]
 
-    TestRun.LOGGER.info(f"Starting cache")
+    TestRun.LOGGER.info("Starting cache")
     cache = casadm.start_cache(
         cache_device, cache_mode=cache_mode, cache_line_size=cache_line_size, force=True
     )
 
     Udev.disable()
-    TestRun.LOGGER.info(f"Setting cleaning policy to NOP")
+    TestRun.LOGGER.info("Setting cleaning policy to NOP")
     casadm.set_param_cleaning(cache_id=cache.cache_id, policy=CleaningPolicy.nop)
-    TestRun.LOGGER.info(f"Adding core device")
+    TestRun.LOGGER.info("Adding core device")
     core = casadm.add_core(cache, core_dev=core_device)
-    TestRun.LOGGER.info(f"Setting seq cutoff policy to never")
+    TestRun.LOGGER.info("Setting seq cutoff policy to never")
     core.set_seq_cutoff_policy(SeqCutOffPolicy.never)
     ioclass_config.create_ioclass_config(
         add_default_rule=False, ioclass_config_path=ioclass_config_path
@@ -72,7 +72,7 @@ def prepare(
 
     output = TestRun.executor.run(f"mkdir -p {mountpoint}")
     if output.exit_code != 0:
-        raise Exception(f"Failed to create mountpoint")
+        raise Exception("Failed to create mountpoint")
 
     return cache, core
 

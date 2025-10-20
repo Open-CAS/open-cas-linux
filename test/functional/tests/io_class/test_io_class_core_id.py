@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -35,12 +35,12 @@ def test_ioclass_core_id():
     """
 
     with TestRun.step(
-        f"Start cache with two cores on created partitions with NOP, disabled seq cutoff"
+        "Start cache with two cores on created partitions with NOP, disabled seq cutoff"
     ):
         cache, cores = prepare(2)
         core_1, core_2 = cores[0], cores[1]
 
-    with TestRun.step(f"Add core_id based classification rules"):
+    with TestRun.step("Add core_id based classification rules"):
         cached_ioclass_id = 11
         not_cached_ioclass_id = 12
 
@@ -59,18 +59,18 @@ def test_ioclass_core_id():
             ioclass_config_path=ioclass_config.default_config_file_path,
         )
 
-    with TestRun.step(f"Load ioclass config file"):
+    with TestRun.step("Load ioclass config file"):
         casadm.load_io_classes(
             cache_id=cache.cache_id, file=ioclass_config.default_config_file_path
         )
 
-    with TestRun.step(f"Reset counters"):
+    with TestRun.step("Reset counters"):
         sync()
         drop_caches()
         cache.purge_cache()
         cache.reset_counters()
 
-    with TestRun.step(f"Trigger IO to both cores"):
+    with TestRun.step("Trigger IO to both cores"):
         dd_dst_paths = [core_1.path, core_2.path]
 
         for path in dd_dst_paths:
@@ -86,7 +86,7 @@ def test_ioclass_core_id():
         sync()
         drop_caches()
 
-    with TestRun.step(f"Check cores occupancy"):
+    with TestRun.step("Check cores occupancy"):
         dd_size = (dd_bs * dd_count).set_unit(Unit.Blocks4096)
 
         core_1_occupancy = core_1.get_statistics().usage_stats.occupancy
@@ -101,7 +101,7 @@ def test_ioclass_core_id():
         if core_2_occupancy.get_value() != 0:
             TestRun.LOGGER.error(f"First core's occupancy is {core_2_occupancy} instead of 0!")
 
-    with TestRun.step(f"Check io classes occupancy"):
+    with TestRun.step("Check io classes occupancy"):
         cached_ioclass_occupancy = cache.get_io_class_statistics(
             io_class_id=cached_ioclass_id
         ).usage_stats.occupancy
@@ -119,7 +119,7 @@ def test_ioclass_core_id():
                 f"Not cached ioclass occupancy is {not_cached_ioclass_occupancy} instead of 0!"
             )
 
-    with TestRun.step(f"Check number of serviced requests to not cached core"):
+    with TestRun.step("Check number of serviced requests to not cached core"):
         core_2_serviced_requests = core_2.get_statistics().request_stats.requests_serviced
         if core_2_serviced_requests != 0:
             TestRun.LOGGER.error(

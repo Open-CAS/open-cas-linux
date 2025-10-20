@@ -57,7 +57,7 @@ def test_multistream_seq_cutoff_functional(streams_number, threshold):
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Start cache in Write-Back cache mode"):
+    with TestRun.step("Start cache in Write-Back cache mode"):
         cache_disk = TestRun.disks["cache"]
         core_disk = TestRun.disks["core"]
         cache = casadm.start_cache(cache_disk, CacheMode.WB, force=True)
@@ -154,16 +154,16 @@ def test_multistream_seq_cutoff_stress_raw(streams_seq_rand):
 
         cache_disk.create_partitions([Size(1.5, Unit.GibiByte)])
 
-    with TestRun.step(f"Disable udev"):
+    with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Start cache in Write-Back mode and add core"):
+    with TestRun.step("Start cache in Write-Back mode and add core"):
         cache = casadm.start_cache(
             cache_dev=cache_disk.partitions[0], cache_mode=CacheMode.WB, force=True
         )
         core = cache.add_core(core_disk)
 
-    with TestRun.step(f"Set seq-cutoff policy to always and threshold to 512KiB"):
+    with TestRun.step("Set seq-cutoff policy to always and threshold to 512KiB"):
         core.set_seq_cutoff_policy(SeqCutOffPolicy.always)
         core.set_seq_cutoff_threshold(Size(512, Unit.KibiByte))
 

@@ -371,7 +371,7 @@ def test_activate_without_detach():
     with TestRun.step("Verify if cache is in standby state after failed activation"):
         caches = casadm_parser.get_caches()
         if len(caches) < 1:
-            TestRun.LOGGER.error(f'Cache not present in system')
+            TestRun.LOGGER.error("Cache not present in system")
         else:
             cache_status = caches[0].get_status()
             if cache_status != CacheStatus.standby:
@@ -453,7 +453,7 @@ def test_activate_neg_cache_line_size():
     with TestRun.step("Detach standby cache instance"):
         standby_cache.standby_detach()
 
-    with TestRun.step(f"Copy changed metadata to the standby instance"):
+    with TestRun.step("Copy changed metadata to the standby instance"):
         Dd().input(md_dump.full_path).output(standby_cache_dev.path).run()
         sync()
 
@@ -635,7 +635,7 @@ def test_standby_activate_with_corepool():
                                             cache_line_size=cache_line_size,
                                             force=True)
 
-    with TestRun.step(f"Copy changed metadata to the standby instance"):
+    with TestRun.step("Copy changed metadata to the standby instance"):
         Dd().input(active_cache_dev.path).output(f"/dev/{cache_exp_obj_name}").run()
 
     with TestRun.step("Detach standby cache instance"):

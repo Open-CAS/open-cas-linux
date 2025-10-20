@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -277,7 +277,8 @@ def test_one_core_fail_dirty():
             .input("/dev/urandom")
             .output(core1.path)
             .oflag("direct")
-        ).run()
+        )
+        dd.run()
         cache_occupancy_before = cache.get_statistics(percentage_val=True).usage_stats.occupancy
         cache_dirty_blocks_before = cache.get_dirty_blocks()
         if cache_occupancy_before != 100:

@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -76,7 +76,7 @@ def test_io_class_eviction_priority():
                     f" Expected 0, got: {occupancy}"
                 )
 
-    with TestRun.step(f"To A, B and C directories perform IO with size of max io_class occupancy"):
+    with TestRun.step("To A, B and C directories perform IO with size of max io_class occupancy"):
         for io_class in io_classes[0:3]:
             run_io_dir(
                 f"{io_class.dir_path}/tmp_file",

@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -278,7 +278,7 @@ def test_failover_during_background_cleaning(cache_mode, cls, cleaning_policy, n
             if dirty_after_cleaning < 20:
                 TestRun.LOGGER.exception("Not enough dirty data")
 
-        with TestRun.step(f"Power off the main DUT"), TestRun.use_dut(primary_node):
+        with TestRun.step("Power off the main DUT"), TestRun.use_dut(primary_node):
             timed_async_power_cycle()
 
         with TestRun.step("Stop cache DRBD on the secondary node"), TestRun.use_dut(secondary_node):
@@ -529,7 +529,7 @@ def test_failover_during_dirty_flush(cache_mode, cls, num_iterations):
             if dirty_after_cleaning < 20:
                 TestRun.LOGGER.exception("Not enough dirty data")
 
-        with TestRun.step(f"Power off the main DUT"), TestRun.use_dut(primary_node):
+        with TestRun.step("Power off the main DUT"), TestRun.use_dut(primary_node):
             timed_async_power_cycle()
 
         with TestRun.step("Stop cache DRBD on the secondary node"), TestRun.use_dut(secondary_node):
@@ -819,7 +819,7 @@ def test_failover_during_io_with_eviction(cache_mode, cls, cleaning_policy, num_
             TestRun.LOGGER.info(f"Read miss change: {read_misses_before} -> {read_misses_after}")
 
             if read_misses_after <= read_misses_before:
-                TestRun.LOGGER.exception(f"Expected read misses increase was not registered")
+                TestRun.LOGGER.exception("Expected read misses increase was not registered")
 
         with TestRun.step(
             "Verify pass-through I/O statistic is not being incremented"
@@ -830,9 +830,9 @@ def test_failover_during_io_with_eviction(cache_mode, cls, cleaning_policy, num_
             TestRun.LOGGER.info(f"PT reads requests change: {pt_reads_before} -> {pt_reads_after}")
 
             if pt_reads_before != pt_reads_after:
-                TestRun.LOGGER.exception(f"Unexpected increase in PT statistics")
+                TestRun.LOGGER.exception("Unexpected increase in PT statistics")
 
-        with TestRun.step(f"Power off the main DUT"), TestRun.use_dut(primary_node):
+        with TestRun.step("Power off the main DUT"), TestRun.use_dut(primary_node):
             timed_async_power_cycle()
 
         with TestRun.step("Stop cache DRBD on the secondary node"), TestRun.use_dut(secondary_node):
@@ -931,7 +931,7 @@ def test_failover_io_long(cls, cleaning_policy, num_iterations):
         prepare_devices(TestRun.duts)
         primary_node, secondary_node = TestRun.duts
 
-    with TestRun.step(f"Create mount point"):
+    with TestRun.step("Create mount point"):
         mountpoint = "/tmp/standby_io_test_mount_point"
         for dut in TestRun.duts:
             with TestRun.use_dut(secondary_node):
@@ -999,7 +999,7 @@ def test_failover_io_long(cls, cleaning_policy, num_iterations):
         ):
             core.create_filesystem(Filesystem.xfs)
 
-        with TestRun.step(f"Mount file system"), TestRun.use_dut(primary_node):
+        with TestRun.step("Mount file system"), TestRun.use_dut(primary_node):
             core.mount(mountpoint)
 
         with TestRun.step("Prepare fio command"), TestRun.use_dut(primary_node):
@@ -1043,12 +1043,12 @@ def test_failover_io_long(cls, cleaning_policy, num_iterations):
         with TestRun.step("Calculate checksum of fio test file(s)"), TestRun.use_dut(primary_node):
             checksum1 = File(file_path).md5sum()
 
-        with TestRun.step(f"Switch back to the WB cache mode without flush"), TestRun.use_dut(
+        with TestRun.step("Switch back to the WB cache mode without flush"), TestRun.use_dut(
             primary_node
         ):
             primary_node.cache.set_cache_mode(CacheMode.WB, flush=False)
 
-        with TestRun.step(f"Power off the main DUT"), TestRun.use_dut(primary_node):
+        with TestRun.step("Power off the main DUT"), TestRun.use_dut(primary_node):
             power_control = TestRun.plugin_manager.get_plugin("power_control")
             power_control.power_cycle(wait_for_connection=False)
 
@@ -1070,7 +1070,7 @@ def test_failover_io_long(cls, cleaning_policy, num_iterations):
         ), TestRun.use_dut(secondary_node):
             secondary_node.cache.standby_activate(secondary_node.cache_dev)
 
-        with TestRun.step(f"Mount file system"), TestRun.use_dut(secondary_node):
+        with TestRun.step("Mount file system"), TestRun.use_dut(secondary_node):
             core.mount(mountpoint)
 
         with TestRun.step("Calculate checksum of CAS exported object"), TestRun.use_dut(

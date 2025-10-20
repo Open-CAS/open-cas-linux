@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -283,7 +284,7 @@ def test_cas_config_get_by_id_path_not_found(mock_listdir, mock_realpath):
     mock_realpath.side_effect = lambda x: x
 
     with pytest.raises(ValueError):
-        path = opencas.cas_config.get_by_id_path("/dev/dummy1")
+        opencas.cas_config.get_by_id_path("/dev/dummy1")
 
 
 @pytest.mark.parametrize(

@@ -7,7 +7,6 @@ import math
 import pytest
 
 from api.cas.casadm import start_cache
-from core.test_run import TestRun
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.memory import get_mem_free

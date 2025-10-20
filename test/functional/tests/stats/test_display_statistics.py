@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -56,7 +56,7 @@ def test_cache_config_stats():
     ):
         caches, cores = cache_prepare(cache_dev, core_dev)
 
-    with TestRun.step(f"Get configuration statistics for each cache and validate them"):
+    with TestRun.step("Get configuration statistics for each cache and validate them"):
         validate_cache_config_statistics(caches)
 
     with TestRun.step("Run 'fio'"):
@@ -97,7 +97,7 @@ def test_core_config_stats():
     ):
         caches, cores = cache_prepare(cache_dev, core_dev)
 
-    with TestRun.step(f"Get configuration statistics for each core and validate them"):
+    with TestRun.step("Get configuration statistics for each core and validate them"):
         validate_core_config_statistics(cores)
 
     with TestRun.step("Run 'fio'"):

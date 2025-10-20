@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -155,7 +155,7 @@ def test_performance_write_insert_wb(block_size, queue_depth):
             TestRun.LOGGER.info(f"Write ratio: {write_iops_ratio}")
 
             if write_iops_ratio < 50:
-                TestRun.LOGGER.error(f"The write iops ratio is below expected threshold (50%).")
+                TestRun.LOGGER.error("The write iops ratio is below expected threshold (50%).")
 
 
 @pytest.fixture(scope="session", autouse=True)

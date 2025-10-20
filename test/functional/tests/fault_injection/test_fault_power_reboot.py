@@ -41,7 +41,7 @@ def test_fault_power_reboot():
         core_dev = core_disk.partitions[0]
 
         cache = casadm.start_cache(cache_dev, force=True)
-        core = cache.add_core(core_dev)
+        cache.add_core(core_dev)
 
     with TestRun.step("Mark log lines for later validation of new entries."):
         last_read_line = 1
@@ -65,8 +65,8 @@ def test_fault_power_reboot():
 
     with TestRun.step("Start cache with load."):
         try:
-            cache = casadm.load_cache(cache_dev)
-            TestRun.LOGGER.info(f"Cache device loaded correctly (as expected).")
+            casadm.load_cache(cache_dev)
+            TestRun.LOGGER.info("Cache device loaded correctly (as expected).")
         except CmdException as e:
             TestRun.LOGGER.error(f"Failed to load cache device. Exception: {e.output}")
 
@@ -78,7 +78,7 @@ def test_fault_power_reboot():
             time.sleep(wait_long_time)
             result = check_log(last_read_line, cli_messages.reinitialize_with_force_or_recovery)
             if not result:
-                TestRun.LOGGER.error(f"Haven't found expected message in the log.")
+                TestRun.LOGGER.error("Haven't found expected message in the log.")
 
 
 def check_log(last_read_line, expected_message):

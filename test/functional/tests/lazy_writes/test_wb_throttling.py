@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2024-2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -56,7 +56,7 @@ def test_wb_throttling():
             cache_device = cache_device.partitions[0]
 
     with TestRun.step(
-        f"Start cache with one core in write back with 64k cache line, NOP and disabled seq cutoff"
+        "Start cache with one core in write back with 64k cache line, NOP and disabled seq cutoff"
     ):
         cache = casadm.start_cache(cache_device, CacheMode.WB, CacheLineSize.LINE_64KiB)
         cache.set_cleaning_policy(CleaningPolicy.nop)
@@ -67,12 +67,12 @@ def test_wb_throttling():
         wbt_lat_val = get_wbt_lat(core)
         TestRun.LOGGER.info(f"wbt_lat for exported object is {wbt_lat_val}")
         if wbt_lat_val == 0:
-            TestRun.LOGGER.info(f"Setting wbt_lat for exported object to 75000us")
+            TestRun.LOGGER.info("Setting wbt_lat for exported object to 75000us")
             set_wbt_lat(core, 75000)
 
     with TestRun.step("Fill cache with dirty data"):
         fio = get_fio_rw_cmd(core, write_percentage=100)
-        fio_pid = fio.run_in_background()
+        fio.run_in_background()
 
         wait(
             lambda: core.get_statistics(percentage_val=True).usage_stats.dirty == 100,

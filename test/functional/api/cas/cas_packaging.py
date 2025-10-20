@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -49,7 +49,7 @@ class _Rpm(RpmSet):
         arch: str = "",
         source: bool = False,
     ):
-        TestRun.LOGGER.info(f"Creating Open CAS RPM packages")
+        TestRun.LOGGER.info("Creating Open CAS RPM packages")
 
         self.packages_dir = (
             packages_dir or self.packages_dir or os.path.join(sources_dir, "packages")
@@ -79,7 +79,7 @@ class _Deb(DebSet):
         arch: str = "",
         source: bool = False,
     ):
-        TestRun.LOGGER.info(f"Creating Open CAS DEB packages")
+        TestRun.LOGGER.info("Creating Open CAS DEB packages")
 
         self.packages_dir = (
             packages_dir or self.packages_dir or os.path.join(sources_dir, "packages")

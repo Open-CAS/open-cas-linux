@@ -312,7 +312,7 @@ def test_seq_cutoff_thresh(cache_line_size, io_dir, policy, verify_type):
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Start cache and add core"):
+    with TestRun.step("Start cache and add core"):
         cache = casadm.start_cache(
             cache_dev=cache_part,
             force=True,
@@ -396,7 +396,7 @@ def test_seq_cutoff_thresh_fill(cache_line_size, io_dir):
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Start cache and add core"):
+    with TestRun.step("Start cache and add core"):
         cache = casadm.start_cache(
             cache_dev=cache_part,
             force=True,

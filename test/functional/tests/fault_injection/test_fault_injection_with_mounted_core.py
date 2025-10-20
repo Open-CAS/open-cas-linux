@@ -45,7 +45,7 @@ def test_load_cache_with_mounted_core():
         core = cache.add_core(core_part)
         core.mount(mount_point)
 
-    with TestRun.step(f"Create test file in mount point of exported object and check its md5 sum."):
+    with TestRun.step("Create test file in mount point of exported object and check its md5 sum."):
         test_file = create_random_test_file(test_file_path)
         test_file_md5_before = test_file.md5sum()
 

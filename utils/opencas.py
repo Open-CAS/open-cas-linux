@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -204,7 +205,7 @@ class cas_config(object):
 
         try:
             mode = os.stat(path).st_mode
-        except:
+        except Exception:
             raise ValueError(f'{path} not found')
 
         if not stat.S_ISBLK(mode):
@@ -280,7 +281,7 @@ class cas_config(object):
         def check_cache_device_empty(self):
             try:
                 result = casadm.run_cmd(['lsblk', '-o', 'NAME',  '-l', '-n', self.device])
-            except:
+            except Exception:
                 # lsblk returns non-0 if it can't probe for partitions
                 # this means that we're probably dealing with atomic device
                 # let it through
@@ -500,7 +501,7 @@ class cas_config(object):
 
         try:
             new_cache_config.device = cas_config.get_by_id_path(new_cache_config.device)
-        except:
+        except Exception:
             pass
 
         self.caches[new_cache_config.cache_id] = new_cache_config
@@ -536,7 +537,7 @@ class cas_config(object):
 
         try:
             new_core_config.device = cas_config.get_by_id_path(new_core_config.device)
-        except:
+        except Exception:
             pass
 
         self.caches[new_core_config.cache_id].cores[new_core_config.core_id] = new_core_config
@@ -561,7 +562,7 @@ class cas_config(object):
                 conf.write('\n[cores]\n')
                 for core in self.cores:
                     conf.write(core.to_line())
-        except:
+        except Exception:
             raise Exception('Couldn\'t write config file')
 
 # Config helper functions
@@ -654,7 +655,7 @@ def get_cas_version():
     for line in version.stdout.split('\n')[1:]:
         try:
             component, version = line.split(',')
-        except:
+        except Exception:
             continue
         ret[component] = version
 
@@ -714,7 +715,7 @@ def detach_all_cores(flush):
         dev_list = get_caches_list()
     except casadm.CasadmError as e:
         raise Exception(f'Unable to list caches. Reason:\n{e.result.stderr}')
-    except:
+    except Exception:
         raise Exception('Unable to list caches.')
 
     for dev in dev_list:
@@ -728,7 +729,7 @@ def detach_all_cores(flush):
             except casadm.CasadmError as e:
                 error.add_exception(Exception(
                     f"Unable to detach core {dev['disk']}. Reason:\n{e.result.stderr}"))
-            except:
+            except Exception:
                 error.add_exception(Exception(f"Unable to detach core {dev['disk']}."))
 
     error.raise_nonempty()
@@ -741,7 +742,7 @@ def stop_all_caches(flush):
         dev_list = get_caches_list()
     except casadm.CasadmError as e:
         raise Exception(f'Unable to list caches. Reason:\n{e.result.stderr}')
-    except:
+    except Exception:
         raise Exception('Unable to list caches.')
 
     for dev in dev_list:
@@ -753,7 +754,7 @@ def stop_all_caches(flush):
             except casadm.CasadmError as e:
                 error.add_exception(Exception(
                     f"Unable to stop cache {dev['disk']}. Reason:\n{e.result.stderr}"))
-            except:
+            except Exception:
                 error.add_exception(Exception(f"Unable to stop cache {dev['disk']}."))
 
     error.raise_nonempty()
@@ -871,7 +872,7 @@ def wait_for_startup(timeout=300, interval=5):
     if not not_initialized:
         return []
 
-    result = subprocess.run(["udevadm", "settle"])
+    subprocess.run(["udevadm", "settle"])
 
     for dev in not_initialized:
         start_device(dev)

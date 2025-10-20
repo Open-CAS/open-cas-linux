@@ -28,7 +28,7 @@ def create_files_with_md5sums(destination_path, files_count):
 
         md5sums.append(test_file.md5sum())
 
-    TestRun.LOGGER.info(f"Files created and copied to core successfully.")
+    TestRun.LOGGER.info("Files created and copied to core successfully.")
     return md5sums
 
 
@@ -47,7 +47,7 @@ def compare_md5sums(md5_sums_source, files_to_check_path, copy_to_tmp=False):
         if md5_sums_source[i] != file_to_check.md5sum():
             TestRun.fail(f"Source and target files {file_to_check_path} checksums are different.")
 
-    TestRun.LOGGER.info(f"Successful verification, md5sums match.")
+    TestRun.LOGGER.info("Successful verification, md5sums match.")
 
 
 def get_test_configuration():
@@ -62,15 +62,15 @@ def validate_configuration(config_before_reboot, devices_before):
     config_after_reboot, devices_after = get_test_configuration()
 
     if config_after_reboot == config_before_reboot:
-        TestRun.LOGGER.info(f"Configuration is as expected")
+        TestRun.LOGGER.info("Configuration is as expected")
     else:
         TestRun.LOGGER.info(f"Config before reboot: {config_before_reboot}")
         TestRun.LOGGER.info(f"Config after reboot: {config_after_reboot}")
-        TestRun.LOGGER.error(f"Configuration changed after reboot")
+        TestRun.LOGGER.error("Configuration changed after reboot")
 
     if devices_after == devices_before:
-        TestRun.LOGGER.info(f"Device list is as expected")
+        TestRun.LOGGER.info("Device list is as expected")
     else:
         TestRun.LOGGER.info(f"Devices before: {devices_before}")
         TestRun.LOGGER.info(f"Devices after: {devices_after}")
-        TestRun.LOGGER.error(f"Device list changed after reboot")
+        TestRun.LOGGER.error("Device list changed after reboot")

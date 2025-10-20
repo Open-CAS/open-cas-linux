@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -83,7 +83,7 @@ def test_recover_cache_verify_core_device(filesystem):
         if len(get_caches()) > 0:
             TestRun.fail("CAS failed to stop cache")
         if not check_stderr_msg(output, stop_cache_errors):
-            TestRun.fail(f"Wrong error message during cache stop")
+            TestRun.fail("Wrong error message during cache stop")
 
     with TestRun.step("Plug cache device"):
         cache_device.plug_all()
@@ -168,7 +168,7 @@ def test_recover_cache_verify_exp_obj(filesystem):
         if len(get_caches()) > 0:
             TestRun.fail("CAS failed to stop cache")
         if not check_stderr_msg(output, stop_cache_errors):
-            TestRun.fail(f"Wrong error message during cache stop")
+            TestRun.fail("Wrong error message during cache stop")
 
     with TestRun.step("Plug cache device"):
         cache_device.plug_all()

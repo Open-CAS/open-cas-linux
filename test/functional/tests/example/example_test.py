@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -293,4 +293,4 @@ def test_lvm_example():
             if lvm not in lvms:
                 TestRun.LOGGER.error(f"Created LVM {lvm.volume_name} not discovered in system!")
 
-        TestRun.LOGGER.info(f"Created LVMs present in the system.")
+        TestRun.LOGGER.info("Created LVMs present in the system.")

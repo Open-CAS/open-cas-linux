@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -241,7 +241,7 @@ def check_stats_sum(caches, cores):
 
 
 def validate_usage_stats(stats, stats_perc, cache, cache_mode, fail_message):
-    fail_message += f"in 'usage' stats"
+    fail_message += "in 'usage' stats"
     if cache_mode not in CacheMode.with_traits(CacheModeTrait.InsertWrite):
         if stats.usage_stats.occupancy.value != 0:
             TestRun.LOGGER.error(
@@ -353,7 +353,7 @@ def validate_usage_stats(stats, stats_perc, cache, cache_mode, fail_message):
 
 
 def validate_request_stats(stats, stats_perc, cache_mode, fail_message):
-    fail_message += f"in 'request' stats"
+    fail_message += "in 'request' stats"
     if stats.request_stats.read.hits != 0:
         TestRun.LOGGER.error(
             f"{fail_message} 'Read hits' is "
@@ -519,7 +519,7 @@ def validate_request_stats(stats, stats_perc, cache_mode, fail_message):
 
 
 def validate_block_stats(stats, stats_perc, cache_mode, fail_message):
-    fail_message += f"in 'block' stats"
+    fail_message += "in 'block' stats"
     if stats.block_stats.core.reads.value != 0:
         TestRun.LOGGER.error(
             f"{fail_message} 'Core reads' is "
@@ -701,7 +701,7 @@ def validate_block_stats(stats, stats_perc, cache_mode, fail_message):
 
 
 def validate_error_stats(stats, stats_perc, fail_message):
-    fail_message += f"in 'error' stats"
+    fail_message += "in 'error' stats"
     for stat_name, stat_value in stats.items():
         if stat_value != 0:
             TestRun.LOGGER.error(

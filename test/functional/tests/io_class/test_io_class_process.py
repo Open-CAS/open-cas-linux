@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -40,7 +40,7 @@ def test_ioclass_process_name():
             ioclass_id=ioclass_id,
             eviction_priority=1,
             allocation="1.00",
-            rule=f"process_name:dd&done",
+            rule="process_name:dd&done",
             ioclass_config_path=ioclass_config_path,
         )
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)

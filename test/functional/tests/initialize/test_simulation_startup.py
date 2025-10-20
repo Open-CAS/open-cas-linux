@@ -75,7 +75,7 @@ def test_simulation_startup_from_config():
         TestRun.executor.run_expect_success(ctl_stop())
 
     with TestRun.step("Trigger udev"):
-        TestRun.executor.run_expect_success(f"udevadm trigger")
+        TestRun.executor.run_expect_success("udevadm trigger")
 
     with TestRun.step("Verify if cache is working"):
         caches = casadm_parser.get_caches()

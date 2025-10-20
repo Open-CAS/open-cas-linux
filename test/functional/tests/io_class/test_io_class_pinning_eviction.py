@@ -92,7 +92,7 @@ def test_io_class_pinning_eviction():
                     f" Expected 0, got: {occupancy}"
                 )
 
-    with TestRun.step(f"Trigger IO to pinned class directory"):
+    with TestRun.step("Trigger IO to pinned class directory"):
         run_io_dir(
             f"{pinned_io_class.dir_path}/tmp_file",
             int((pinned_io_class.max_occupancy * cache_line_count) / Unit.Blocks4096),
@@ -187,7 +187,7 @@ def test_pinned_ioclasses_eviction():
                     f" Expected 0, got: {occupancy}"
                 )
 
-    with TestRun.step(f"Trigger IO to first pinned class directory"):
+    with TestRun.step("Trigger IO to first pinned class directory"):
         run_io_dir(
             f"{io_classes[0].dir_path}/tmp_file",
             int((io_classes[0].max_occupancy * cache_size) / Unit.Blocks4096),
@@ -204,7 +204,7 @@ def test_pinned_ioclasses_eviction():
                 f"Expected: {expected_occupancy} Actual: {first_io_pinned_occupancy} "
             )
 
-    with TestRun.step(f"Trigger IO to second pinned class directory"):
+    with TestRun.step("Trigger IO to second pinned class directory"):
         run_io_dir(
             f"{io_classes[1].dir_path}/tmp_file",
             int((io_classes[1].max_occupancy * cache_size) / Unit.Blocks4096),

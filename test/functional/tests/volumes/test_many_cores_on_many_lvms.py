@@ -31,7 +31,7 @@ def test_many_cores_on_many_lvms(update_initramfs_before_and_after_test):
       - FIO with verification ran successfully.
       - Configuration after reboot match configuration before.
     """
-    with TestRun.step(f"Prepare devices."):
+    with TestRun.step("Prepare devices."):
         cache_device = TestRun.disks['cache']
         core_device = TestRun.disks['core']
         cache_device.create_partitions([Size(1, Unit.GibiByte)])
@@ -51,7 +51,7 @@ def test_many_cores_on_many_lvms(update_initramfs_before_and_after_test):
 
         lvms = Lvm.create_specific_lvm_configuration([core_dev], config)
 
-    with TestRun.step(f"Create CAS device."):
+    with TestRun.step("Create CAS device."):
         cache = casadm.start_cache(cache_dev, force=True)
         cores = []
         for lvm in lvms:

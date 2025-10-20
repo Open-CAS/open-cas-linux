@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -99,7 +99,7 @@ def test_ioclass_occupancy_load():
                     f" Expected 0, got: {occupancy}"
                 )
 
-    with TestRun.step(f"Perform IO with size equal to cache size"):
+    with TestRun.step("Perform IO with size equal to cache size"):
         for io_class in io_classes:
             run_io_dir(f"{io_class.dir_path}/tmp_file", int(cache_size / blocks4096))
 

@@ -447,7 +447,7 @@ def script_try_add_cmd(cache_id: str, core_dev: str, core_id: str) -> str:
     command = " --script --add-core --try-add"
     command += " --cache-id " + cache_id
     command += " --core-device " + core_dev
-    command += f" --core-id " + core_id
+    command += "--core-id " + core_id
     return casadm_bin + command
 
 

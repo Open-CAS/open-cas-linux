@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -135,7 +135,7 @@ def test_io_class_stats_file_size_core_direct(cache_mode: CacheMode):
             sync()
             drop_caches()
 
-        with TestRun.step(f"Check that statistics increase only for direct IO class"):
+        with TestRun.step("Check that statistics increase only for direct IO class"):
             issued_reqs_no = \
                 result[0].write_requests_number() + result[0].read_requests_number()
             check_statistics(cache, core, io_classes, io_class_direct, issued_reqs_no)

@@ -233,7 +233,7 @@ def test_detached_cache_permitted_cli_management():
         tested_cmd = cli.attach_cache_cmd(cache_device.path, str(cache.cache_id))
         TestRun.LOGGER.info(f"Verify {tested_cmd}")
         TestRun.executor.run_expect_success(tested_cmd)
-        TestRun.LOGGER.info(f"Detach cache after successfully executed attach command")
+        TestRun.LOGGER.info("Detach cache after successfully executed attach command")
         cache.detach()
 
         tested_cmd = cli.stop_cmd(str(cache.cache_id))

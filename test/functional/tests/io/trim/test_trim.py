@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -116,7 +116,7 @@ def test_trim_propagation():
       - No data corruption after power failure.
     """
 
-    with TestRun.step(f"Create partitions"):
+    with TestRun.step("Create partitions"):
         TestRun.disks["ssd1"].create_partitions([Size(43, Unit.MegaByte)])
         TestRun.disks["ssd2"].create_partitions([Size(512, Unit.KiloByte)])
 
@@ -128,17 +128,17 @@ def test_trim_propagation():
         if not check_if_device_supports_trim(core_dev):
             raise Exception("Core device doesn't support discards")
 
-    with TestRun.step(f"Disable udev"):
+    with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Prepare cache instance in WB with one core"):
+    with TestRun.step("Prepare cache instance in WB with one core"):
         cache = casadm.start_cache(cache_dev, CacheMode.WB, force=True)
         core = cache.add_core(core_dev)
         cache.set_cleaning_policy(CleaningPolicy.nop)
         cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
         cache.purge_cache()
 
-    with TestRun.step(f"Fill exported object with dirty data"):
+    with TestRun.step("Fill exported object with dirty data"):
         core_size_4k = core.get_statistics().config_stats.core_size.get_value(Unit.Blocks4096)
         core_size_4k = int(core_size_4k)
 
@@ -154,7 +154,7 @@ def test_trim_propagation():
                 f"actual value {dirty_4k}"
             )
 
-    with TestRun.step(f"Discard 4k of data on exported object"):
+    with TestRun.step("Discard 4k of data on exported object"):
         TestRun.executor.run_expect_success(f"blkdiscard {core.path} --length 4096 --offset 0")
         old_occupancy = cache.get_statistics().usage_stats.occupancy.get_value(Unit.Blocks4096)
 
@@ -205,7 +205,7 @@ def test_trim_device_discard_support(
 
     mount_point = "/mnt"
 
-    with TestRun.step(f"Create partitions on SSD and HDD devices. Create filesystem."):
+    with TestRun.step("Create partitions on SSD and HDD devices. Create filesystem."):
         TestRun.disks["ssd1"].create_partitions([Size(1, Unit.GibiByte)])
         TestRun.disks["ssd2"].create_partitions([Size(1, Unit.GibiByte)])
         disk_not_supporting_trim = None
@@ -221,7 +221,7 @@ def test_trim_device_discard_support(
         ssd2_dev = TestRun.disks["ssd2"].partitions[0]
         dev_not_supporting_trim = disk_not_supporting_trim.partitions[0]
 
-    with TestRun.step(f"Start cache and add core."):
+    with TestRun.step("Start cache and add core."):
         cache_dev = ssd1_dev if trim_support_cache_core[0] else dev_not_supporting_trim
         core_dev = ssd2_dev if trim_support_cache_core[1] else dev_not_supporting_trim
 

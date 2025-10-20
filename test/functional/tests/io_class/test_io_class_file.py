@@ -696,7 +696,7 @@ def load_file_size_io_classes(cache, base_size):
         ioclass_id=6,
         eviction_priority=1,
         allocation="0.00",
-        rule=f"metadata",
+        rule="metadata",
         ioclass_config_path=ioclass_config_path,
     )
     ioclass_config.add_ioclass(

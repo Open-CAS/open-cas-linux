@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -35,7 +35,7 @@ def test_io_class_lvm_on_cas():
           - Increasing proper statistics as expected.
     """
 
-    with TestRun.step(f"Create CAS device."):
+    with TestRun.step("Create CAS device."):
         cache_dev = TestRun.disks['cache']
         core_dev = TestRun.disks['core']
         cache_dev.create_partitions([Size(20, Unit.GibiByte)])

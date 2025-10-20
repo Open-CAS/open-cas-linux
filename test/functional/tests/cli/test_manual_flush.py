@@ -10,7 +10,6 @@ import time
 from core.test_run_utils import TestRun
 from storage_devices.device import Device
 from type_def.size import Size, Unit
-from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine

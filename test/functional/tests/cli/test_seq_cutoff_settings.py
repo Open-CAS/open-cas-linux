@@ -130,9 +130,9 @@ def test_seq_cutoff_set_get_policy_cache(policy):
         cache.set_seq_cutoff_policy(policy)
 
     for i in TestRun.iteration(range(0, len(cores)), "Verifying if proper policy was set"):
-        with TestRun.step(f"Check if proper sequential cutoff policy was set for core"):
+        with TestRun.step("Check if proper sequential cutoff policy was set for core"):
             if cores[i].get_seq_cut_off_policy() != policy:
-                TestRun.fail(f"Wrong core sequential cutoff policy: "
+                TestRun.fail("Wrong core sequential cutoff policy: "
                              f"{cores[i].get_seq_cut_off_policy()} "
                              f"should be {policy}")
 
@@ -186,7 +186,7 @@ def test_seq_cutoff_policy_load():
             enumerate(cores[:-1]),
             "Check if proper policies have been loaded"
     ):
-        with TestRun.step(f"Check if proper sequential cutoff policy was loaded"):
+        with TestRun.step("Check if proper sequential cutoff policy was loaded"):
             if cores[i].get_seq_cut_off_policy() != policies[i]:
                 TestRun.fail(f"Wrong sequential cutoff policy loaded: "
                              f"{cores[i].get_seq_cut_off_policy()} "
@@ -239,8 +239,8 @@ def test_seq_cutoff_set_invalid_threshold(threshold):
                 not in output.stderr:
             TestRun.fail("Command succeeded (should fail)!")
 
-    with TestRun.step(f"Setting cache sequential cutoff threshold "
-                      f"to value passed as a float"):
+    with TestRun.step("Setting cache sequential cutoff threshold "
+                      "to value passed as a float"):
         command = set_param_cutoff_cmd(
             cache_id=str(cache.cache_id), core_id=str(core.core_id),
             threshold=str(_threshold.get_value(Unit.KiloByte)))
