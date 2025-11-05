@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -94,7 +94,7 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
                 f" Expected 0, got: {occupancy}"
             )
 
-    with TestRun.step(f"Perform IO with size equal to cache size"):
+    with TestRun.step("Perform IO with size equal to cache size"):
         run_io_dir(f"{io_class.dir_path}/tmp_file", int(cache_size / Unit.Blocks4096))
 
     with TestRun.step("Check if the ioclass did not exceed specified occupancy"):
@@ -139,7 +139,7 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
 
         casadm.load_io_classes(cache_id=cache.cache_id, file=default_config_file_path)
 
-    with TestRun.step(f"Perform IO with size equal to cache size"):
+    with TestRun.step("Perform IO with size equal to cache size"):
         run_io_dir(f"{io_class.dir_path}/tmp_file", int(cache_size / Unit.Blocks4096))
 
     with TestRun.step("Check if the ioclass did not exceed specified occupancy"):

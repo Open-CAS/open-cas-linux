@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -146,14 +146,14 @@ def test_memory_metadata_consumption_full_cache(cache_line_size):
         occupancy = cache.get_statistics(percentage_val=True).usage_stats.occupancy
         TestRun.LOGGER.info(f"Cache occupancy: {occupancy}")
         if occupancy < (100 - percentage_tolerance):
-            TestRun.LOGGER.warning(f"Cache occupancy is below expectation.")
+            TestRun.LOGGER.warning("Cache occupancy is below expectation.")
 
     with TestRun.step("Measure allocates size of metadata."):
         used_memory = get_module_mem_footprint(cas_cache_module)
         TestRun.LOGGER.info(f"Memory allocated: {used_memory}")
 
     with TestRun.step(
-        "Compare allocated size with cache usage statistics " "and required consumption."
+        "Compare allocated size with cache usage statistics and required consumption."
     ):
         free_mem_after_start = get_mem_available()
 

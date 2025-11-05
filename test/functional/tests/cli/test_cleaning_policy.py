@@ -9,7 +9,6 @@ import time
 
 from core.test_run_utils import TestRun
 from type_def.size import Size, Unit
-from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite, IoEngine
@@ -47,7 +46,7 @@ def test_cleaning_policy_change():
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Start cache in Write-Back mode and set cleaning policy to NOP"):
+    with TestRun.step("Start cache in Write-Back mode and set cleaning policy to NOP"):
         cache = casadm.start_cache(cache_dev, cache_mode=CacheMode.WB, force=True)
         cache.set_cleaning_policy(CleaningPolicy.nop)
 

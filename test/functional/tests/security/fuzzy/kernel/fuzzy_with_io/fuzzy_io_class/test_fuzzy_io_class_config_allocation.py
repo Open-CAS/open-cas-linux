@@ -74,7 +74,7 @@ def test_fuzzy_io_class_config_allocation(
         if not TestRun.executor.check_if_process_exists(fio_pid):
             raise Exception("Fio is not running.")
 
-        io_class = IoClass(class_id=1, rule=f"directory:/", priority=255)
+        io_class = IoClass(class_id=1, rule="directory:/", priority=255)
 
     with TestRun.step("Prepare PeachFuzzer"):
         PeachFuzzer.generate_config(get_fuzz_config("io_class_allocation.yml"))

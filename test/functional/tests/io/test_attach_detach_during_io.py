@@ -10,7 +10,6 @@ from datetime import timedelta
 
 from api.cas.cache_config import CacheMode
 from api.cas.casadm import start_cache
-from core.test_run import TestRun
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
@@ -76,13 +75,14 @@ def test_attach_detach_during_io(cache_mode):
         time.sleep(5)
 
     with TestRun.step("Randomly detach and attach cache during I/O"):
+        cache_to_attach = cache_dev
         while TestRun.executor.check_if_process_exists(fio_pid):
             time.sleep(random.randint(2, 10))
 
             cache.detach()
             if cache.get_statistics().error_stats.cache.total != 0.0:
                 TestRun.LOGGER.error(
-                    f"Cache error(s) occurred after "
+                    "Cache error(s) occurred after "
                     f"{cache_to_attach} detach"
                 )
             time.sleep(5)

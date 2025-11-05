@@ -175,7 +175,7 @@ def test_cache_write_lazy_insert_error(cache_mode, block_size):
             .total_errors()
         )
         if fio_errors == 0:
-            TestRun.fail(f"No I/O ended with error")
+            TestRun.fail("No I/O ended with error")
 
     with TestRun.step("Check error statistics and state on cache"):
         stats = cache.get_statistics()

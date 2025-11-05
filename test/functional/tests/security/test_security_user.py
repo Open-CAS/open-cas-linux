@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -486,7 +486,7 @@ def run_as_other_user(command, user: str, sudo: bool = False):
         command = 'sudo ' + command
     command = f'{prefix} {command}'
     output = TestRun.executor.run(command)
-    if output.exit_code != 0 or output.stderr is not "":
+    if output.exit_code != 0 or output.stderr != "":
         raise CmdException("Must be run as root.", output)
     return output
 

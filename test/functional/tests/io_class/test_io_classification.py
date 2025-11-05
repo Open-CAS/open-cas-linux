@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -63,7 +63,7 @@ def test_ioclass_lba():
     with TestRun.step("Run IO and check if lbas from defined range are cached."):
         dirty_count = 0
         # '8' step is set to prevent writing cache line more than once
-        TestRun.LOGGER.info(f"Writing to one sector in each cache line from range.")
+        TestRun.LOGGER.info("Writing to one sector in each cache line from range.")
         for lba in range(min_cached_lba, max_cached_lba, 8):
             (
                 Dd()
@@ -82,7 +82,7 @@ def test_ioclass_lba():
                 TestRun.LOGGER.error(f"LBA {lba} not cached")
 
     with TestRun.step("Run IO and check if lba outside of defined range are not cached."):
-        TestRun.LOGGER.info(f"Writing to sectors outside of cached range.")
+        TestRun.LOGGER.info("Writing to sectors outside of cached range.")
         test_lba = [max_cached_lba + 1] + random.sample(
             [
                 *range(0, min_cached_lba),
@@ -132,7 +132,7 @@ def test_ioclass_request_size():
             ioclass_id=ioclass_id,
             eviction_priority=1,
             allocation="1.00",
-            rule=f"request_size:ge:8192&request_size:le:16384&done",
+            rule="request_size:ge:8192&request_size:le:16384&done",
             ioclass_config_path=ioclass_config_path,
         )
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)
@@ -728,7 +728,7 @@ def test_ioclass_effective_ioclass():
     """
     filesystem = Filesystem.xfs
 
-    with TestRun.LOGGER.step(f"Test prepare"):
+    with TestRun.LOGGER.step("Test prepare"):
         cache, core = prepare(default_allocation="1.00")
         Udev.disable()
         file_size = Size(10, Unit.Blocks4096)

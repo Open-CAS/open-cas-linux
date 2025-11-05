@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2024-2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -153,7 +153,7 @@ def test_flush_over_640_gibibytes_raw_device(cache_mode):
     with TestRun.step(f"Start cache in {cache_mode} mode."):
         cache = casadm.start_cache(cache_part, cache_mode)
 
-    with TestRun.step(f"Add core to cache."):
+    with TestRun.step("Add core to cache."):
         core = cache.add_core(core_dev)
 
     with TestRun.step("Disable cleaning and sequential cutoff."):

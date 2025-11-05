@@ -222,7 +222,7 @@ def __validate_single_condition(value: str):
     if condition_key in ["file_name_prefix", "extension", "process_name"]:
         if 0 < len(condition_value) <= 256:
             return True
-    if condition_key is "directory":
+    if condition_key == "directory":
         if 0 < len(condition_value) <= 1024:
             return True
     elif condition_key == "io_direction":

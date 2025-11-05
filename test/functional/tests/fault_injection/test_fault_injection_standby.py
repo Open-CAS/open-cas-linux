@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2024-2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -47,8 +47,6 @@ def test_activate_corrupted():
         cache_id = 1
         cls = CacheLineSize.LINE_32KiB
         md_dump = prepare_md_dump(cache_device, core_device, cls, cache_id)
-        dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
-        superblock_size = get_md_section_size("Super block config", dmesg_out)
 
     with TestRun.step("Prepare standby instance"):
         cache = casadm.standby_init(
@@ -61,15 +59,15 @@ def test_activate_corrupted():
     with TestRun.step(f"Corrupt {block_size} on the offset {offset*block_size}"):
         corrupted_md = prepare_corrupted_md(md_dump, offset, block_size)
 
-    with TestRun.step(f"Copy corrupted metadata to the passive instance"):
+    with TestRun.step("Copy corrupted metadata to the passive instance"):
         Dd().input(corrupted_md.full_path).output(f"/dev/cas-cache-{cache_id}").run()
         sync()
 
-    with TestRun.step(f"Standby detach"):
+    with TestRun.step("Standby detach"):
         cache.standby_detach()
 
     with TestRun.step("Try to activate cache instance"):
-        output = TestRun.executor.run(
+        TestRun.executor.run(
             standby_activate_cmd(cache_dev=cache_device.path, cache_id=str(cache_id))
         )
 
@@ -105,13 +103,11 @@ def test_load_corrupted():
         cache_id = 1
         cls = CacheLineSize.LINE_32KiB
         md_dump = prepare_md_dump(cache_device, core_device, cls, cache_id)
-        dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
-        superblock_size = get_md_section_size("Super block config", dmesg_out)
 
     with TestRun.step(f"Corrupt {block_size} on the offset {offset*block_size}"):
         corrupted_md = prepare_corrupted_md(md_dump, offset, block_size)
 
-    with TestRun.step(f"Copy corrupted metadata to the cache-to-be device"):
+    with TestRun.step("Copy corrupted metadata to the cache-to-be device"):
         Dd().input(corrupted_md.full_path).output(cache_device.path).run()
         sync()
 
@@ -151,8 +147,6 @@ def test_activate_corrupted_after_dump():
         cache_id = 1
         cls = CacheLineSize.LINE_32KiB
         md_dump = prepare_md_dump(cache_device, core_device, cls, cache_id)
-        dmesg_out = TestRun.executor.run_expect_success("dmesg").stdout
-        superblock_size = get_md_section_size("Super block config", dmesg_out)
 
     with TestRun.step("Prepare standby instance"):
         cache = casadm.standby_init(
@@ -162,22 +156,22 @@ def test_activate_corrupted_after_dump():
             force=True,
         )
 
-    with TestRun.step(f"Populate the passive instance with valid metadata"):
+    with TestRun.step("Populate the passive instance with valid metadata"):
         Dd().input(md_dump.full_path).output(f"/dev/cas-cache-{cache_id}").run()
         sync()
 
-    with TestRun.step(f"Standby detach"):
+    with TestRun.step("Standby detach"):
         cache.standby_detach()
 
     with TestRun.step(f"Corrupt {block_size} on the offset {offset*block_size}"):
         corrupted_md = prepare_corrupted_md(md_dump, offset, block_size)
 
-    with TestRun.step(f"Copy corrupted metadata to the passive instance"):
+    with TestRun.step("Copy corrupted metadata to the passive instance"):
         Dd().input(corrupted_md.full_path).output(cache_device.path).run()
         sync()
 
     with TestRun.step("Try to activate cache instance"):
-        output = TestRun.executor.run(
+        TestRun.executor.run(
             standby_activate_cmd(cache_dev=cache_device.path, cache_id=str(cache_id))
         )
 

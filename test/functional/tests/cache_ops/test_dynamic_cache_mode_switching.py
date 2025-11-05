@@ -61,7 +61,7 @@ def test_cache_stop_and_load(cache_mode):
         core_dev = TestRun.disks["core"]
         core_dev.create_partitions([Size(2, Unit.GibiByte)])
 
-    with TestRun.step(f"Disable udev"):
+    with TestRun.step("Disable udev"):
         Udev.disable()
 
     with TestRun.step(f"Start cache in {cache_mode[0]} mode"):

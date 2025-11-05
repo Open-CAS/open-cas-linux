@@ -14,7 +14,6 @@ from api.cas.cache_config import CacheLineSize, CacheMode
 from api.cas.cli import attach_cache_cmd
 from api.cas.cli_messages import check_stderr_msg, attach_with_existing_metadata
 from connection.utils.output import CmdException
-from core.test_run import TestRun
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
 from storage_devices.nullblk import NullBlk
@@ -225,7 +224,7 @@ def test_stop_cache_during_attach(cache_mode):
         core_dev.create_partitions([Size(2, Unit.GibiByte)])
         core_dev = core_dev.partitions[0]
 
-    with TestRun.step(f"Start cache and add core"):
+    with TestRun.step("Start cache and add core"):
         cache = casadm.start_cache(cache_dev, force=True, cache_mode=cache_mode)
         cache.add_core(core_dev)
 

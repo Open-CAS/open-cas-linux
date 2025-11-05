@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2024-2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -255,9 +255,6 @@ def test_functional_activate_twice_new_host(filesystem):
     with TestRun.step("Prepare DUTs"):
         prepare_devices(TestRun.duts)
         primary_node, secondary_node = TestRun.duts
-        extra_init_config_flags = (
-            f"cache_line_size={str(cls.value.value//1024)},target_failover_state=standby"
-        )
 
     # THIS IS WHERE THE REAL TEST STARTS
     TestRun.LOGGER.start_group(
@@ -489,14 +486,14 @@ def failover_sequence(standby_node, drbd_resource, filesystem, core):
         TestRun.executor.run_expect_success(f"ls -la /dev/ | grep cas{cache_id}-1")
 
     if filesystem:
-        with TestRun.use_dut(standby_node), TestRun.step(f"Mount core"):
+        with TestRun.use_dut(standby_node), TestRun.step("Mount core"):
             TestRun.executor.run(f"rm -rf {mountpoint}")
             create_directory(path=mountpoint)
             core.mount(mountpoint)
 
 
 def postfailover_check(new_primary_node, data_path, core_md5, cache_stats):
-    with TestRun.use_dut(new_primary_node), TestRun.step(f"Make sure the usage stats are correct"):
+    with TestRun.use_dut(new_primary_node), TestRun.step("Make sure the usage stats are correct"):
         failover_cache_stats = new_primary_node.cache.get_statistics().usage_stats
         if cache_stats.dirty != failover_cache_stats.dirty:
             TestRun.LOGGER.error(
@@ -524,7 +521,7 @@ def new_failover_instance(new_secondary_node, drbd_resource, *, autoload):
         ):
             caches = get_caches()
             if len(caches) < 1:
-                TestRun.LOGGER.error(f"Cache not present in system")
+                TestRun.LOGGER.error("Cache not present in system")
             else:
                 cache_status = caches[0].get_status()
                 if cache_status != CacheStatus.standby:

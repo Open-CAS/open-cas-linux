@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -50,7 +50,7 @@ def test_raid_as_cache(cache_mode):
         )
 
         raid_volume = Raid.create(config, [raid_disk_1, raid_disk_2])
-        TestRun.LOGGER.info(f"RAID created successfully.")
+        TestRun.LOGGER.info("RAID created successfully.")
 
     with TestRun.step("Prepare core device."):
         core_disk = TestRun.disks["core"]
@@ -75,7 +75,7 @@ def test_raid_as_cache(cache_mode):
             remove(test_file.full_path, True)
             remove(test_file_copied.full_path, True)
 
-        TestRun.LOGGER.info(f"Successful verification.")
+        TestRun.LOGGER.info("Successful verification.")
 
 
 @pytest.mark.parametrize("cache_mode", CacheMode)
@@ -111,7 +111,7 @@ def test_many_cores_raid_as_cache(cache_mode):
         )
 
         raid_volume = Raid.create(config, [raid_disk_1, raid_disk_2])
-        TestRun.LOGGER.info(f"RAID created successfully.")
+        TestRun.LOGGER.info("RAID created successfully.")
 
         cache = casadm.start_cache(raid_volume, cache_mode, force=True)
 

@@ -1,12 +1,12 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
 from unittest.mock import patch, Mock
 import time
-import subprocess
 
 import opencas
 
@@ -771,7 +771,7 @@ def test_last_resort_add_01(mock_start, mock_add, mock_exists, mock_run, mock_li
 
     mock_exists.return_value = False
 
-    result = opencas.wait_for_startup(timeout=0, interval=0)
+    opencas.wait_for_startup(timeout=0, interval=0)
 
     mock_add.assert_not_called()
     mock_start.assert_not_called()
@@ -805,7 +805,7 @@ def test_last_resort_add_02(mock_start, mock_add, mock_exists, mock_run, mock_li
 
     mock_exists.return_value = True
 
-    result = opencas.wait_for_startup(timeout=0, interval=0)
+    opencas.wait_for_startup(timeout=0, interval=0)
 
     mock_start.assert_any_call(config.caches[1], load=True)
     mock_start.assert_any_call(config.caches[2], load=True)
@@ -852,7 +852,7 @@ def test_last_resort_add_03(mock_start, mock_add, mock_exists, mock_run, mock_li
 
     mock_exists.side_effect = _exists_mock(time.time() + 10)
 
-    result = opencas.wait_for_startup(timeout=0.5, interval=0.1)
+    opencas.wait_for_startup(timeout=0.5, interval=0.1)
 
     mock_start.assert_not_called()
     mock_add.assert_not_called()
@@ -886,7 +886,7 @@ def test_last_resort_add_04(mock_start, mock_add, mock_exists, mock_run, mock_li
 
     mock_exists.side_effect = _exists_mock(time.time() + 1)
 
-    result = opencas.wait_for_startup(timeout=2, interval=0.1)
+    opencas.wait_for_startup(timeout=2, interval=0.1)
 
     mock_start.assert_any_call(config.caches[1], load=True)
     mock_start.assert_any_call(config.caches[2], load=True)
@@ -922,7 +922,7 @@ def test_last_resort_add_05(mock_start, mock_add, mock_exists, mock_run, mock_li
 
     mock_exists.return_value = True
 
-    result = opencas.wait_for_startup(timeout=0.5, interval=0.1)
+    opencas.wait_for_startup(timeout=0.5, interval=0.1)
 
     mock_start.assert_any_call(config.caches[1], load=True)
     mock_start.assert_any_call(config.caches[2], load=True)
@@ -960,7 +960,7 @@ def test_last_resort_add_06(mock_start, mock_add, mock_exists, mock_run, mock_li
 
     mock_exists.side_effect = _exists_mock(time.time() + 1)
 
-    result = opencas.wait_for_startup(timeout=2, interval=0.5)
+    opencas.wait_for_startup(timeout=2, interval=0.5)
 
     mock_start.assert_not_called()
     mock_add.assert_not_called()

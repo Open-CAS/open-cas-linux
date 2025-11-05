@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2024-2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -141,7 +141,7 @@ def test_activate_incomplete_cache():
         cache = casadm.standby_load(cache_dev)
 
     with TestRun.step("Verify if the cache exported object appeared in the system"):
-        output = TestRun.executor.run_expect_success(f"ls -la /dev/ | grep cas-cache-1")
+        output = TestRun.executor.run_expect_success("ls -la /dev/ | grep cas-cache-1")
         if output.stdout[0] != "b":
             TestRun.fail("The cache exported object is not a block device")
 
@@ -243,7 +243,6 @@ def test_activate_neg_core_size():
         core_disk.create_partitions([core_part_size])
         cache_dev = cache_disk.partitions[0]
         core_dev = core_disk.partitions[0]
-        core_dev_path = core_dev.path
 
     with TestRun.step("Start a regular cache instance with a core"):
         cache = casadm.start_cache(cache_dev, force=True)
@@ -260,7 +259,7 @@ def test_activate_neg_core_size():
         cache = casadm.standby_load(cache_dev)
 
     with TestRun.step("Verify if the cache exported object appeared in the system"):
-        output = TestRun.executor.run_expect_success(f"ls -la /dev/ | grep cas-cache-1")
+        output = TestRun.executor.run_expect_success("ls -la /dev/ | grep cas-cache-1")
         if output.stdout[0] != "b":
             TestRun.fail("The cache exported object is not a block device")
 

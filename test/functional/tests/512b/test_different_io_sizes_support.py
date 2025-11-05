@@ -55,7 +55,7 @@ def test_support_different_io_size(cache_mode):
         core.create_filesystem(Filesystem.xfs)
         core.mount(mountpoint)
 
-    with TestRun.step(f"Run fio"):
+    with TestRun.step("Run fio"):
         bs_list = [Size(x, Unit.KibiByte) for x in block_sizes]
 
         fio = (

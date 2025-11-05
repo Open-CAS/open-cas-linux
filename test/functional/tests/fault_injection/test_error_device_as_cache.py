@@ -61,7 +61,7 @@ def test_error_device_as_cache_clean_wt(cache_line_size):
         cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
         cache.set_cleaning_policy(CleaningPolicy.nop)
 
-    with TestRun.step(f"Add core"):
+    with TestRun.step("Add core"):
         core = cache.add_core(core_dev=core_device.partitions[0])
 
     with TestRun.step("Disable udev"):
@@ -186,7 +186,7 @@ def test_error_device_as_cache_clean_wa(cache_line_size):
         cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
         cache.set_cleaning_policy(CleaningPolicy.nop)
 
-    with TestRun.step(f"Add core"):
+    with TestRun.step("Add core"):
         core = cache.add_core(core_dev=core_device.partitions[0])
 
     with TestRun.step("Disable udev"):
@@ -312,7 +312,7 @@ def test_error_device_as_cache_dirty(cache_mode, cache_line_size):
         cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
         cache.set_cleaning_policy(CleaningPolicy.nop)
 
-    with TestRun.step(f"Add core"):
+    with TestRun.step("Add core"):
         cores = [cache.add_core(core_dev=core) for core in core_parts]
 
     with TestRun.step("Disable udev"):

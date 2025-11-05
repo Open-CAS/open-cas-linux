@@ -51,7 +51,7 @@ def test_cas_version():
 
     with TestRun.step("Compare cmd and file versions"):
         if not all(file_cas_version == cmd_cas_version for cmd_cas_version in cmd_cas_versions):
-            TestRun.LOGGER.error(f"Cmd and file versions doesn't match")
+            TestRun.LOGGER.error("Cmd and file versions doesn't match")
 
 
 @pytest.mark.CI

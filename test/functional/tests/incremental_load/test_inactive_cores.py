@@ -8,8 +8,7 @@ import pytest
 
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
-from api.cas.casadm_parser import get_cas_devices_dict, get_inactive_cores
-from api.cas.core import Core, CoreStatus
+from api.cas.casadm_parser import get_inactive_cores
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd

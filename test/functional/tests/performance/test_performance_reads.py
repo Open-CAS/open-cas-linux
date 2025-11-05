@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -152,7 +152,7 @@ def test_performance_read_hit_wt(cache_line_size, block_size, queue_depth):
             TestRun.LOGGER.info(f"Read ratio: {read_iops_ratio}")
 
             if read_iops_ratio < 85:
-                TestRun.LOGGER.error(f"The read iops ratio is below expected threshold (85%).")
+                TestRun.LOGGER.error("The read iops ratio is below expected threshold (85%).")
 
 
 # TODO: for disks other than Intel Optane, fio ramp is needed before fio tests on raw disk
@@ -274,10 +274,10 @@ def test_performance_read_hit_wb(cache_line_size, block_size, queue_depth):
             TestRun.LOGGER.info(f"Write ratio: {write_iops_ratio}")
 
             if read_iops_ratio < 90:
-                TestRun.LOGGER.error(f"The read iops ratio is below expected threshold (90%).")
+                TestRun.LOGGER.error("The read iops ratio is below expected threshold (90%).")
 
             if write_iops_ratio < 90:
-                TestRun.LOGGER.error(f"The write iops ratio is below expected threshold (90%).")
+                TestRun.LOGGER.error("The write iops ratio is below expected threshold (90%).")
 
 
 @pytest.fixture(scope="session", autouse=True)

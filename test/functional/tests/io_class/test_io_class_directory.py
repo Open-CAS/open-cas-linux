@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -53,7 +53,7 @@ def test_ioclass_directory_depth(filesystem):
     with TestRun.step(f"Create the base directory: {base_dir_path}."):
         create_directory(base_dir_path)
 
-    with TestRun.step(f"Create a nested directory."):
+    with TestRun.step("Create a nested directory."):
         nested_dir_path = base_dir_path
         random_depth = random.randint(40, 80)
         for i in range(random_depth):
@@ -338,7 +338,7 @@ def test_ioclass_directory_dir_operations(filesystem):
             ioclass_id=32,
             eviction_priority=255,
             allocation="0.00",
-            rule=f"metadata",
+            rule="metadata",
             ioclass_config_path=ioclass_config_path,
         )
         casadm.load_io_classes(cache_id=cache.cache_id, file=ioclass_config_path)

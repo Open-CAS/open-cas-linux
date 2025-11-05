@@ -184,7 +184,7 @@ def test_cas_startup_lazy():
         core_disk.create_partitions([Size(200, Unit.MebiByte)] * 4)
 
     with TestRun.step(
-        f"Add a cache configuration with cache device with `lazy_startup` flag"
+        "Add a cache configuration with cache device with `lazy_startup` flag"
     ):
         init_conf = InitConfig()
         init_conf.add_cache(
@@ -196,7 +196,7 @@ def test_cas_startup_lazy():
         expected_core_pool_paths = set(c.path for c in core_disk.partitions[:2])
 
     with TestRun.step(
-        f"Add a cache configuration with core device with `lazy_startup` flag"
+        "Add a cache configuration with core device with `lazy_startup` flag"
     ):
         init_conf.add_cache(2, cache_disk.partitions[1])
         init_conf.add_core(2, 1, core_disk.partitions[2])
@@ -212,7 +212,7 @@ def test_cas_startup_lazy():
         inactive_core_path = core_disk.partitions[3].path
 
     with TestRun.step(
-        f"Start and stop all the configurations using the casctl utility"
+        "Start and stop all the configurations using the casctl utility"
     ):
         output = casctl.init(True)
         if output.exit_code != 0:
@@ -226,7 +226,7 @@ def test_cas_startup_lazy():
     ):
         Udev.disable()
 
-    with TestRun.step(f"Remove one cache partition and one core partition"):
+    with TestRun.step("Remove one cache partition and one core partition"):
         cache_disk.remove_partition(cache_disk.partitions[0])
         core_disk.remove_partition(core_disk.partitions[3])
 
@@ -298,7 +298,7 @@ def test_cas_startup_negative_missing_core():
         core_disk.create_partitions([Size(200, Unit.MebiByte)] * 4)
 
     with TestRun.step(
-        f"Add a cache configuration with cache device with `lazy_startup` flag"
+        "Add a cache configuration with cache device with `lazy_startup` flag"
     ):
         init_conf = InitConfig()
         init_conf.add_cache(
@@ -308,7 +308,7 @@ def test_cas_startup_negative_missing_core():
         init_conf.add_core(1, 2, core_disk.partitions[1])
 
     with TestRun.step(
-        f"Add a cache configuration with core device with `lazy_startup` flag"
+        "Add a cache configuration with core device with `lazy_startup` flag"
     ):
         init_conf.add_cache(2, cache_disk.partitions[1])
         init_conf.add_core(2, 1, core_disk.partitions[2])
@@ -319,7 +319,7 @@ def test_cas_startup_negative_missing_core():
         sync()
 
     with TestRun.step(
-        f"Start and stop all the configurations using the casctl utility"
+        "Start and stop all the configurations using the casctl utility"
     ):
         output = casctl.init(True)
         if output.exit_code != 0:
@@ -333,7 +333,7 @@ def test_cas_startup_negative_missing_core():
     ):
         Udev.disable()
 
-    with TestRun.step(f"Remove core partition"):
+    with TestRun.step("Remove core partition"):
         core_disk.remove_partition(core_disk.partitions[0])
 
     escape = EmergencyEscape()
@@ -375,7 +375,7 @@ def test_cas_startup_negative_missing_cache():
         core_disk.create_partitions([Size(200, Unit.MebiByte)] * 4)
 
     with TestRun.step(
-        f"Add a cache configuration with cache device with `lazy_startup` flag"
+        "Add a cache configuration with cache device with `lazy_startup` flag"
     ):
         init_conf = InitConfig()
         init_conf.add_cache(
@@ -385,7 +385,7 @@ def test_cas_startup_negative_missing_cache():
         init_conf.add_core(1, 2, core_disk.partitions[1])
 
     with TestRun.step(
-        f"Add a cache configuration with core devices with `lazy_startup` flag"
+        "Add a cache configuration with core devices with `lazy_startup` flag"
     ):
         init_conf.add_cache(2, cache_disk.partitions[1])
         init_conf.add_core(
@@ -398,7 +398,7 @@ def test_cas_startup_negative_missing_cache():
         sync()
 
     with TestRun.step(
-        f"Start and stop all the configurations using the casctl utility"
+        "Start and stop all the configurations using the casctl utility"
     ):
         output = casctl.init(True)
         if output.exit_code != 0:
@@ -412,7 +412,7 @@ def test_cas_startup_negative_missing_cache():
     ):
         Udev.disable()
 
-    with TestRun.step(f"Remove second cache partition"):
+    with TestRun.step("Remove second cache partition"):
         cache_disk.remove_partition(cache_disk.partitions[1])
 
     escape = EmergencyEscape()
@@ -458,7 +458,7 @@ def test_failover_config_startup():
         core_disk.create_partitions([Size(200, Unit.MebiByte)])
 
     with TestRun.step(
-        f"Add a cache configuration with cache device with "
+        "Add a cache configuration with cache device with "
         "`target_failover_state=active` flag and a core"
     ):
         init_conf = InitConfig()
@@ -470,7 +470,7 @@ def test_failover_config_startup():
         active_core_device_path = core_disk.partitions[0].path
 
     with TestRun.step(
-        f"Add a cache configuration with cache device with "
+        "Add a cache configuration with cache device with "
         "`target_failover_state=failover` flag"
     ):
         init_conf.add_cache(
@@ -483,7 +483,7 @@ def test_failover_config_startup():
         sync()
 
     with TestRun.step(
-        f"Start and stop all the configurations using the casctl utility"
+        "Start and stop all the configurations using the casctl utility"
     ):
         output = casctl.init(True)
         if output.exit_code != 0:
@@ -566,7 +566,7 @@ def test_failover_config_startup_negative():
         cache_disk = TestRun.disks["cache"]
         cache_disk.create_partitions([Size(200, Unit.MebiByte)])
 
-    with TestRun.step(f"Add a cache configuration with standby cache"):
+    with TestRun.step("Add a cache configuration with standby cache"):
         init_conf = InitConfig()
         init_conf.add_cache(
             1,
@@ -577,7 +577,7 @@ def test_failover_config_startup_negative():
         sync()
 
     with TestRun.step(
-        f"Start and stop all the configurations using the casctl utility"
+        "Start and stop all the configurations using the casctl utility"
     ):
         output = casctl.init(True)
         if output.exit_code != 0:
@@ -591,7 +591,7 @@ def test_failover_config_startup_negative():
     ):
         Udev.disable()
 
-    with TestRun.step(f"Remove second cache partition"):
+    with TestRun.step("Remove second cache partition"):
         cache_disk.remove_partition(cache_disk.partitions[0])
 
     escape = EmergencyEscape()
@@ -685,7 +685,7 @@ def test_lazy_startup_core_path_by_id(cache_mode, reboot_type):
 
     with TestRun.step("Check if cache is not running"):
         if len(casadm_parser.get_caches()) > 0:
-            TestRun.fail(f"Cache is running after system startup but it shouldn't.")
+            TestRun.fail("Cache is running after system startup but it shouldn't.")
 
     with TestRun.step("Check if all cores are detached"):
         listed_cores = casadm_parser.get_cas_devices_dict().get("core_pool")

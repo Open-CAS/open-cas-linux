@@ -271,7 +271,7 @@ def gen_csums(dev_path, seqno, pattern, csums, csums_rev):
 
     for j in range(num_jobs):
         for b in range(job_workset_blocks):
-            if pattern[j][b] != -1 and not pattern[j][b] in csums[j]:
+            if pattern[j][b] != -1 and pattern[j][b] not in csums[j]:
                 csums[j][pattern[j][b]] = cs[j][b]
                 csums_rev[cs[j][b]] = get_data_name(j, b, pattern[j][b])
 

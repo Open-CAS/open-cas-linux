@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 #
 # Copyright(c) 2012-2021 Intel Corporation
+# Copyright(c) 2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -12,7 +13,7 @@ import syslog as sl
 
 try:
     subprocess.call(['/sbin/modprobe', 'cas_cache'])
-except:
+except Exception:
     sl.syslog(sl.LOG_ERR, 'Unable to probe cas_cache module')
     exit(1)
 

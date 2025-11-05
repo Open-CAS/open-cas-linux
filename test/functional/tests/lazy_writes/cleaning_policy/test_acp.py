@@ -123,6 +123,7 @@ def test_acp_functional(cache_mode):
         max_percent = 100
         bucket_chunks = []
         current_chunk = None
+        write_counter = 0
 
         for header in blktrace_output:
             # Sector not in current chunk - search for the next chunk

@@ -1,6 +1,5 @@
 #
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -45,10 +44,10 @@ def test_change_cleaning_policy_during_io_raw():
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Start cache in Write-Back mode"):
+    with TestRun.step("Start cache in Write-Back mode"):
         cache = casadm.start_cache(cache_dev.partitions[0], CacheMode.WB, force=True)
 
-    with TestRun.step(f"Add core to the cache"):
+    with TestRun.step("Add core to the cache"):
         core = cache.add_core(core_dev)
 
     with TestRun.step("Run I/O in background"):
@@ -64,7 +63,7 @@ def test_change_cleaning_policy_during_io_raw():
 
         fio_pid = fio.run_in_background()
 
-    with TestRun.step(f"Start changing the cleaning policy during I/O operations"):
+    with TestRun.step("Start changing the cleaning policy during I/O operations"):
         current_policy = cache.get_cleaning_policy()
         while TestRun.executor.check_if_process_exists(fio_pid):
             random_policy = [policy for policy in list(CleaningPolicy) if policy != current_policy]
@@ -101,13 +100,13 @@ def test_change_cleaning_policy_during_io_fs(filesystem):
     with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(f"Start cache in Write-Back mode"):
+    with TestRun.step("Start cache in Write-Back mode"):
         cache = casadm.start_cache(cache_dev.partitions[0], CacheMode.WB, force=True)
 
-    with TestRun.step(f"Create filesystem on core device"):
+    with TestRun.step("Create filesystem on core device"):
         core_dev.create_filesystem(filesystem)
 
-    with TestRun.step(f"Add core to the cache"):
+    with TestRun.step("Add core to the cache"):
         core = cache.add_core(core_dev)
 
     with TestRun.step("Mount exported object"):
@@ -126,7 +125,7 @@ def test_change_cleaning_policy_during_io_fs(filesystem):
 
         fio_pid = fio.run_in_background()
 
-    with TestRun.step(f"Start changing the cleaning policy during I/O operations"):
+    with TestRun.step("Start changing the cleaning policy during I/O operations"):
         current_policy = cache.get_cleaning_policy()
         while TestRun.executor.check_if_process_exists(fio_pid):
             random_policy = [policy for policy in list(CleaningPolicy) if policy != current_policy]

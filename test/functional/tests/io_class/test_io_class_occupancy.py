@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -239,7 +239,7 @@ def test_io_class_occupancy_directory_read(io_size_multiplication):
                     f" Expected 0, got: {occupancy}"
                 )
 
-    with TestRun.step(f"Read each file and check if data was inserted to appropriate ioclass"):
+    with TestRun.step("Read each file and check if data was inserted to appropriate ioclass"):
         for io_class in io_classes:
             original_occupancies = {}
             tmp_io_class_list = [i for i in io_classes if i != io_class]
@@ -387,7 +387,7 @@ def test_ioclass_occupancy_sum_cache():
                 f"Particular stats {all_io_class_usage_stats}"
             )
 
-    with TestRun.step(f"Trigger IO to each directory"):
+    with TestRun.step("Trigger IO to each directory"):
         for io_class in io_classes:
             run_io_dir(
                 f"{io_class.dir_path}/tmp_file",

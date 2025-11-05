@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 from datetime import timedelta, datetime
@@ -66,7 +66,7 @@ def test_cache_activation_time(prefill):
         cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
         cache.set_cleaning_policy(CleaningPolicy.nop)
 
-    with TestRun.step(f"Pre-filling the cache with dirty data to target threshold"):
+    with TestRun.step("Pre-filling the cache with dirty data to target threshold"):
         if prefill is True:
             TestRun.LOGGER.info(f"Target prefill threshold: {prefill_threshold}%")
 
@@ -85,7 +85,7 @@ def test_cache_activation_time(prefill):
                 .run()
             )
         else:
-            TestRun.LOGGER.info(f"Target prefill threshold: 0% - prefill skipped")
+            TestRun.LOGGER.info("Target prefill threshold: 0% - prefill skipped")
 
     with TestRun.step("Check usage statistics after pre-fill"):
         stats = cache.get_statistics(percentage_val=True)
@@ -116,7 +116,7 @@ def test_cache_activation_time(prefill):
                                             cache_id=current_cache_id)
 
     with TestRun.step("verify cache exported object has appeared"):
-        output = TestRun.executor.run_expect_success(f"ls -la /dev/ | grep cas-cache-1")
+        output = TestRun.executor.run_expect_success("ls -la /dev/ | grep cas-cache-1")
         if output.stdout[0] != "b":
             TestRun.fail("The cache exported object is not a block device")
 
@@ -135,7 +135,7 @@ def test_cache_activation_time(prefill):
         standby_cache.standby_detach()
 
     with TestRun.step("Verify exp. obj. disappeared"):
-        TestRun.executor.run_expect_fail(f"ls -la /dev/ | grep cas-cache-1")
+        TestRun.executor.run_expect_fail("ls -la /dev/ | grep cas-cache-1")
 
     with TestRun.step("Activate passive cache and measure the activation time"):
         start_time = datetime.now()

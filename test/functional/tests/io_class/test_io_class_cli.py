@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -31,12 +31,12 @@ def test_io_class_export_configuration():
     """
     cache_mode = CacheMode.WB
 
-    with TestRun.LOGGER.step(f"Test prepare"):
+    with TestRun.LOGGER.step("Test prepare"):
         cache, core = prepare(cache_mode)
         saved_config_path = "/tmp/opencas_saved.conf"
         default_list = [IoClass.default()]
 
-    with TestRun.LOGGER.step(f"Check IO class configuration (should contain only default class)"):
+    with TestRun.LOGGER.step("Check IO class configuration (should contain only default class)"):
         csv = casadm.list_io_classes(cache.cache_id, OutputFormat.csv).stdout
         if not IoClass.compare_ioclass_lists(IoClass.csv_to_list(csv), default_list):
             TestRun.LOGGER.error(
@@ -97,7 +97,7 @@ def test_io_class_export_configuration():
                 f"Expected:{IoClass.list_to_csv(random_list)}"
             )
 
-    with TestRun.LOGGER.step(f"Test cleanup"):
+    with TestRun.LOGGER.step("Test cleanup"):
         remove(saved_config_path)
 
 
@@ -112,9 +112,9 @@ def prepare(cache_mode: CacheMode = None):
     cache_device = cache_device.partitions[0]
     core_device = core_device.partitions[0]
 
-    TestRun.LOGGER.info(f"Starting cache")
+    TestRun.LOGGER.info("Starting cache")
     cache = casadm.start_cache(cache_device, cache_mode=cache_mode, force=True)
-    TestRun.LOGGER.info(f"Adding core device")
+    TestRun.LOGGER.info("Adding core device")
     core = casadm.add_core(cache, core_dev=core_device)
 
     return cache, core

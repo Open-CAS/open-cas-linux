@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2024-2025 Huawei Technologies
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -45,7 +45,7 @@ def test_stop_no_flush_load_cache(cache_mode):
     with TestRun.step("Add core to cache."):
         core = cache.add_core(core_part)
 
-    with TestRun.step(f"Create test file in mount point of exported object and check its md5 sum."):
+    with TestRun.step("Create test file in mount point of exported object and check its md5 sum."):
         test_file_size = Size(48, Unit.MebiByte)
         test_file = create_random_test_file(test_file_path, test_file_size)
         test_file_md5_before = test_file.md5sum()

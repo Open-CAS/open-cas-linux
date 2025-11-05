@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -103,7 +103,7 @@ def test_stress_small_cas_device(cache_line_size, cores_number, cache_config):
 
     with TestRun.step("Compare md5 sum of exported objects and cores."):
         if md5sum_core_dev != md5sum_core:
-            TestRun.LOGGER.error(f"Md5 sums of core devices and of exported objects are different.")
+            TestRun.LOGGER.error("Md5 sums of core devices and of exported objects are different.")
 
     with TestRun.step("Stop all caches"):
         casadm.stop_all_caches()

@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -150,7 +150,7 @@ def try_load_malformed_config(cache, config_io_classes, expected_err_msg):
         TestRun.LOGGER.error("Open CAS accepts malformed configuration.")
         create_and_load_default_io_class_config(cache)
     except CmdException as e:
-        TestRun.LOGGER.info(f"Open CAS did not load malformed config file as expected.")
+        TestRun.LOGGER.info("Open CAS did not load malformed config file as expected.")
         cli_messages.check_stderr_msg(e.output, expected_err_msg)
         output_io_classes = cache.list_io_classes()
         if not IoClass.compare_ioclass_lists(output_io_classes, config_io_classes):

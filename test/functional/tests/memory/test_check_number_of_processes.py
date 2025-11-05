@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -40,7 +40,7 @@ def test_check_number_of_processes():
         core_dev = core_disk.partitions[0]
 
         cache = casadm.start_cache(cache_dev, force=True)
-        core = cache.add_core(core_dev)
+        cache.add_core(core_dev)
 
     with TestRun.step("Check number of IO threads."):
         number_of_processors = get_number_of_processors_from_cpuinfo()

@@ -1,6 +1,6 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
-# Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -29,40 +29,40 @@ def test_ioclass_wlth():
      - IO with wlth is cached
      - IO without wlth is not cached
     """
-    with TestRun.step(f"Start cache with one core with NOP and disabled seq cutoff"):
+    with TestRun.step("Start cache with one core with NOP and disabled seq cutoff"):
         cache, core = prepare()
 
-    with TestRun.step(f"Add wlth based classification rules"):
+    with TestRun.step("Add wlth based classification rules"):
         cached_ioclass_id = 10
         ioclass_config.create_ioclass_config(add_default_rule=False)
         ioclass_config.add_ioclass(
             ioclass_id=0,
             eviction_priority=22,
             allocation="0",
-            rule=f"unclassified",
+            rule="unclassified",
             ioclass_config_path=ioclass_config.default_config_file_path,
         )
         ioclass_config.add_ioclass(
             ioclass_id=cached_ioclass_id,
             eviction_priority=22,
             allocation="1.00",
-            rule=f"wlth:eq:4&done",
+            rule="wlth:eq:4&done",
             ioclass_config_path=ioclass_config.default_config_file_path,
         )
 
-    with TestRun.step(f"Load ioclass config file"):
+    with TestRun.step("Load ioclass config file"):
         casadm.load_io_classes(
             cache_id=cache.cache_id, file=ioclass_config.default_config_file_path
         )
 
-    with TestRun.step(f"Reset counters"):
+    with TestRun.step("Reset counters"):
         sync()
         drop_caches()
         Udev.disable()
         cache.purge_cache()
         cache.reset_counters()
 
-    with TestRun.step(f"Trigger IO with a write life time hint"):
+    with TestRun.step("Trigger IO with a write life time hint"):
         # Fio adds hints only to direct IO. Even if `write_hint` param isn't provided, direct IO
         # has assigned a hint by default
         io_count = 12345
@@ -81,7 +81,7 @@ def test_ioclass_wlth():
             .run()
         )
 
-    with TestRun.step(f"Trigger IO without write life time hint"):
+    with TestRun.step("Trigger IO without write life time hint"):
         (
             Fio()
             .create_command()
@@ -96,7 +96,7 @@ def test_ioclass_wlth():
         sync()
         drop_caches()
 
-    with TestRun.step(f"Check stats"):
+    with TestRun.step("Check stats"):
         default_io_class_stats = core.get_io_class_statistics(io_class_id=0)
         wlth_io_class_stats = core.get_io_class_statistics(io_class_id=10)
 
