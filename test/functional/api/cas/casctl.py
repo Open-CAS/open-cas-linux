@@ -1,9 +1,10 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
+# Copyright(c) 2025 Huawei Technologies Co., Ltd.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-from .cli import *
+from .cli import * # noqa: F403
 from core.test_run import TestRun
 
 

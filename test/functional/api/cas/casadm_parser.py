@@ -12,8 +12,8 @@ from datetime import timedelta, datetime
 from typing import List
 
 from api.cas import casadm
-from api.cas.cache_config import *
-from api.cas.casadm_params import *
+from api.cas.cache_config import * # noqa: F403
+from api.cas.casadm_params import * # noqa: F403
 from api.cas.core_config import CoreStatus
 from api.cas.ioclass_config import IoClass
 from api.cas.version import CasVersion

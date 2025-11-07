@@ -6,7 +6,7 @@
 
 import pytest
 
-from api.cas.cli_help_messages import *
+from api.cas.cli_help_messages import * # noqa: F403
 from api.cas.cli_messages import check_stderr_msg, check_stdout_msg
 from core.test_run import TestRun
 
