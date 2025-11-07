@@ -31,7 +31,7 @@ def test_many_lvms_on_single_core(update_initramfs_before_and_after_test):
       - FIO with verification ran successfully.
       - Configuration after reboot match configuration before.
     """
-    with TestRun.step(f"Create CAS device."):
+    with TestRun.step("Create CAS device."):
         cache_dev = TestRun.disks['cache']
         core_dev = TestRun.disks['core']
         cache_dev.create_partitions([Size(8, Unit.GibiByte)])
