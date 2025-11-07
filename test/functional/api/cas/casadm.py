@@ -16,7 +16,7 @@ from api.cas.cache_config import (
     PromotionPolicy,
 )
 from api.cas.casadm_params import OutputFormat, StatsFilter
-from api.cas.cli import *
+from api.cas.cli import * # noqa: F403
 from api.cas.core import Core
 from core.test_run import TestRun
 from storage_devices.device import Device

@@ -27,7 +27,6 @@ from tests.security.fuzzy.kernel.fuzzy_with_io.common.common import (
     get_basic_workload,
     mount_point,
 )
-from type_def.size import Unit
 
 dirty_ratio_inertia_min, dirty_ratio_inertia_max = FlushParametersAlru.alru_params_range().dirty_ratio_inertia
 

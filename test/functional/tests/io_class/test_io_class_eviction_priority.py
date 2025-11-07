@@ -11,7 +11,7 @@ from math import isclose
 
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fs_tools import Filesystem, create_directory
-from .io_class_common import *
+from .io_class_common import * # noqa: F403
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
