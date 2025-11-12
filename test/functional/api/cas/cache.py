@@ -30,7 +30,7 @@ from api.cas.statistics import CacheStats, CacheIoClassStats
 from connection.utils.output import Output
 from storage_devices.device import Device
 from test_tools.os_tools import sync
-from type_def.size import Size
+from type_def.size import Size, Unit
 
 
 class Cache:
@@ -210,7 +210,11 @@ class Cache:
                 else None
             ),
             (alru_params.dirty_ratio_threshold if alru_params.dirty_ratio_threshold else None),
-            (alru_params.dirty_ratio_inertia if alru_params.dirty_ratio_inertia else None),
+            (
+                int(alru_params.dirty_ratio_inertia.get_value(Unit.MebiByte))
+                if alru_params.dirty_ratio_inertia
+                else None
+            ),
         )
 
     def set_promotion_policy(self, policy: PromotionPolicy) -> Output:
