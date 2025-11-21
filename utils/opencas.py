@@ -1,9 +1,9 @@
 #
 # Copyright(c) 2012-2021 Intel Corporation
 # Copyright(c) 2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2025 Liyi Meng
 # SPDX-License-Identifier: BSD-3-Clause
 #
-
 import subprocess
 import csv
 import re
@@ -855,7 +855,7 @@ def wait_for_startup(timeout=300, interval=5):
     def start_device(dev):
         if os.path.exists(dev.device):
             if type(dev) is cas_config.core_config:
-                add_core(dev, try_add=True)
+                add_core(dev, attach=True)
             elif type(dev) is cas_config.cache_config:
                 start_cache(dev, load=True)
 
