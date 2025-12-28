@@ -3,7 +3,7 @@
 [![Build Status](https://d1rxsi9lvcwnz5.cloudfront.net/master-status/ocl/build/curr-badge.svg)](https://d1rxsi9lvcwnz5.cloudfront.net/master-status/ocl/build/build.html)
 [![Tests Status](https://d1rxsi9lvcwnz5.cloudfront.net/master-status/ocl/tests/curr-badge.svg)](https://d1rxsi9lvcwnz5.cloudfront.net/master-status/ocl/tests/tests.html)
 [![Coverity status](https://scan.coverity.com/projects/19084/badge.svg)](https://scan.coverity.com/projects/open-cas-open-cas-linux)
-[![License](https://d1rxsi9lvcwnz5.cloudfront.net/master-status/license-badge.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
 
 Open CAS  accelerates Linux applications by caching active (hot) data to
 a local flash device inside servers. Open CAS implements caching at the
