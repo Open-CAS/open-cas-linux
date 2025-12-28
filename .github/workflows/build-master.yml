@@ -1,0 +1,20 @@
+name: Build Status
+permissions:
+  contents: read
+  pull-requests: read
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    name: Build Status
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: 'Update submodule'
+      run: git submodule update --init
+    - name: 'Configure module'
+      run: ./configure
+    - name: 'Build module'
+      run: make
