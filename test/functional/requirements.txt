@@ -16,3 +16,5 @@ py==1.11.0
 portalocker>=2.3.1
 pytest-asyncio>=0.14.0
 schema==0.7.2
+recordclass>=0.18
+numpy>=2.1.0
