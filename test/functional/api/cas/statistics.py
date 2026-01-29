@@ -1,9 +1,11 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import copy
 import csv
 
 from datetime import timedelta
@@ -452,7 +454,7 @@ class IoClassUsageStats:
 
 
 class RequestStats:
-    def __init__(self, stats_dict, percentage_val):
+    def __init__(self, stats_dict, percentage_val: bool = False):
         unit = UnitType.percentage if percentage_val else UnitType.requests
         self.read = RequestStatsChunk(
             stats_dict=stats_dict,
@@ -511,8 +513,39 @@ class RequestStats:
             and self.requests_total == other.requests_total
         )
 
+    def __add__(self, other):
+        if not other:
+            return False
+        stats = copy.copy(self)
+        stats.read = self.read + other.read
+        stats.write = self.write + other.write
+        stats.pass_through_reads = self.pass_through_reads + other.pass_through_reads
+        stats.pass_through_writes = self.pass_through_writes + other.pass_through_writes
+        stats.requests_serviced = self.requests_serviced + other.requests_serviced
+        stats.requests_total = self.requests_total + other.requests_total
+        return stats
+
     def __iter__(self):
         return iter([getattr(self, stats_item) for stats_item in self.__dict__])
+
+    @classmethod
+    def zero(cls, percentage_val: bool = False):
+        stats_dict = {}
+        for unit in [UnitType.percentage, UnitType.requests]:
+            for operation in [OperationType.read, OperationType.write]:
+                stats_dict.update({
+                    f"{operation} hits {unit}" : 0,
+                    f"{operation} partial misses {unit}" : 0,
+                    f"{operation} full misses {unit}" : 0,
+                    f"{operation} total {unit}" : 0,
+                    })
+            stats_dict.update({
+                f"Pass-Through reads {unit}" : 0,
+                f"Pass-Through writes {unit}" : 0,
+                f"Serviced requests {unit}" : 0,
+                f"Total requests {unit}" : 0,
+                })
+        return cls(stats_dict, percentage_val)
 
 
 class RequestStatsChunk:
@@ -545,12 +578,22 @@ class RequestStatsChunk:
             and self.total == other.total
         )
 
+    def __add__(self, other):
+        if not other:
+            return False
+        chunk = copy.copy(self)
+        chunk.hits = self.hits + other.hits
+        chunk.part_misses = self.part_misses + other.part_misses
+        chunk.full_misses = self.full_misses + other.full_misses
+        chunk.total = self.total + other.total
+        return chunk
+
     def __iter__(self):
         return iter([getattr(self, stats_item) for stats_item in self.__dict__])
 
 
 class BlockStats:
-    def __init__(self, stats_dict, percentage_val):
+    def __init__(self, stats_dict, percentage_val: bool = False):
         self.core = BasicStatsChunk(
             stats_dict=stats_dict, percentage_val=percentage_val, device="core"
         )
@@ -584,12 +627,33 @@ class BlockStats:
             self.core == other.core and self.cache == other.cache and self.exp_obj == other.exp_obj
         )
 
+    def __add__(self, other):
+        if not other:
+            return False
+        stats = copy.copy(self)
+        stats.core = self.core + other.core
+        stats.cache = self.cache + other.cache
+        stats.exp_obj = self.exp_obj + other.exp_obj
+        return stats
+
     def __iter__(self):
         return iter([getattr(self, stats_item) for stats_item in self.__dict__])
 
+    @classmethod
+    def zero(cls, percentage_val: bool = False):
+        stats_dict = {}
+        for unit in [UnitType.percentage, UnitType.block_4k]:
+            for device in ["core", "cache", "exported object"]:
+                stats_dict.update({
+                    f"Reads from {device} {unit}" : 0,
+                    f"Writes to {device} {unit}" : 0,
+                    f"Total to/from {device} {unit}" : 0,
+                    })
+        return cls(stats_dict, percentage_val)
+
 
 class ErrorStats:
-    def __init__(self, stats_dict, percentage_val):
+    def __init__(self, stats_dict, percentage_val: bool = False):
         unit = UnitType.percentage if percentage_val else UnitType.requests
         self.cache = BasicStatsChunkError(
             stats_dict=stats_dict, percentage_val=percentage_val, device="Cache"
@@ -623,8 +687,36 @@ class ErrorStats:
             and self.total_errors == other.total_errors
         )
 
+    def __add__(self, other):
+        if not other:
+            return False
+        stats = copy.copy(self)
+        stats.core = self.core + other.core
+        stats.cache = self.cache + other.cache
+        stats.total = self.total + other.total
+        return stats
+
     def __iter__(self):
         return iter([getattr(self, stats_item) for stats_item in self.__dict__])
+
+    @classmethod
+    def zero(cls, percentage_val: bool = False):
+        stats_dict = {}
+        for unit in [UnitType.percentage, UnitType.block_4k]:
+            for device in ["core", "cache", "exported object"]:
+                stats_dict += {
+                        f"Reads from {device} {unit}" : 0,
+                        f"Writes to {device} {unit}" : 0,
+                        f"Total to/from {device} {unit}" : 0,
+                        }
+        for unit in [UnitType.percentage, UnitType.requests]:
+            for device in ["Core", "Cache"]:
+                stats_dict += {
+                        f"{device} read errors {unit}" : 0,
+                        f"{device} write errors {unit}" : 0,
+                        f"{device} total errors {unit}" : 0,
+                        }
+        return cls(stats_dict, percentage_val)
 
 
 class BasicStatsChunk:
@@ -643,6 +735,15 @@ class BasicStatsChunk:
         return (
             self.reads == other.reads and self.writes == other.writes and self.total == other.total
         )
+
+    def __add__(self, other):
+        if not other:
+            return False
+        chunk = copy.copy(self)
+        chunk.reads = self.reads + other.reads
+        chunk.writes = self.writes + other.writes
+        chunk.total = self.total + other.total
+        return chunk
 
     def __iter__(self):
         return iter([getattr(self, stats_item) for stats_item in self.__dict__])
@@ -664,6 +765,15 @@ class BasicStatsChunkError:
         return (
             self.reads == other.reads and self.writes == other.writes and self.total == other.total
         )
+
+    def __add__(self, other):
+        if not other:
+            return False
+        chunk = copy.copy(self)
+        chunk.reads = self.reads + other.reads
+        chunk.writes = self.writes + other.writes
+        chunk.total = self.total + other.total
+        return chunk
 
     def __iter__(self):
         return iter([getattr(self, stats_item) for stats_item in self.__dict__])
