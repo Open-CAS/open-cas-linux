@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -19,9 +20,7 @@ from api.cas.cache_config import (
 )
 from api.cas.casadm import StatsFilter
 from api.cas.core import CoreStatus
-from api.cas.statistics import (
-    usage_stats, request_stats, block_stats_core, block_stats_cache, error_stats
-)
+from api.cas.statistics import get_stats_dict
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
@@ -33,6 +32,82 @@ caches_count = len(CacheMode)
 cores_per_cache = 4
 # Time to wait after fio (in seconds):
 time_to_wait = 30
+
+usage_stats = [
+    "Occupancy [4KiB Blocks]",
+    "Occupancy [%]",
+    "Free [4KiB Blocks]",
+    "Free [%]",
+    "Clean [4KiB Blocks]",
+    "Clean [%]",
+    "Dirty [4KiB Blocks]",
+    "Dirty [%]"
+]
+
+request_stats = [
+    "Read hits [Requests]",
+    "Read hits [%]",
+    "Read partial misses [Requests]",
+    "Read partial misses [%]",
+    "Read full misses [Requests]",
+    "Read full misses [%]",
+    "Read total [Requests]",
+    "Read total [%]",
+    "Write hits [Requests]",
+    "Write hits [%]",
+    "Write partial misses [Requests]",
+    "Write partial misses [%]",
+    "Write full misses [Requests]",
+    "Write full misses [%]",
+    "Write total [Requests]",
+    "Write total [%]",
+    "Pass-Through reads [Requests]",
+    "Pass-Through reads [%]",
+    "Pass-Through writes [Requests]",
+    "Pass-Through writes [%]",
+    "Serviced requests [Requests]",
+    "Serviced requests [%]",
+    "Total requests [Requests]",
+    "Total requests [%]"
+]
+
+block_stats = [
+    "Reads from core [4KiB Blocks]",
+    "Reads from core [%]",
+    "Writes to core [4KiB Blocks]",
+    "Writes to core [%]",
+    "Total to/from core [4KiB Blocks]",
+    "Total to/from core [%]",
+    "Reads from cache [4KiB Blocks]",
+    "Reads from cache [%]",
+    "Writes to cache [4KiB Blocks]",
+    "Writes to cache [%]",
+    "Total to/from cache [4KiB Blocks]",
+    "Total to/from cache [%]",
+    "Reads from exported object [4KiB Blocks]",
+    "Reads from exported object [%]",
+    "Writes to exported object [4KiB Blocks]",
+    "Writes to exported object [%]",
+    "Total to/from exported object [4KiB Blocks]",
+    "Total to/from exported object [%]"
+]
+
+error_stats = [
+    "Cache read errors [Requests]",
+    "Cache read errors [%]",
+    "Cache write errors [Requests]",
+    "Cache write errors [%]",
+    "Cache total errors [Requests]",
+    "Cache total errors [%]",
+    "Core read errors [Requests]",
+    "Core read errors [%]",
+    "Core write errors [Requests]",
+    "Core write errors [%]",
+    "Core total errors [Requests]",
+    "Core total errors [%]",
+    "Total errors [Requests]",
+    "Total errors [%]"
+]
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -145,7 +220,7 @@ def test_cache_nonconfig_stats(stat_filter):
 
     with TestRun.step(f"Get {stat_filter} statistics for each cache and validate them"):
         caches_stats = [
-            caches[i].get_statistics_flat(stat_filter=[stat_filter])
+            get_stats_dict([stat_filter], caches[i].cache_id)
             for i in range(caches_count)
         ]
         failed_stats = ""
@@ -189,7 +264,7 @@ def test_core_nonconfig_stats(stat_filter):
         failed_stats = ""
         for i in range(caches_count):
             cores_stats = [
-                cores[i][j].get_statistics_flat(stat_filter=[stat_filter])
+                get_stats_dict([stat_filter], cores[i][j].cache_id, cores[i][j].core_id)
                 for j in range(cores_per_cache)
             ]
             for j in range(cores_per_cache):
@@ -204,7 +279,7 @@ def test_core_nonconfig_stats(stat_filter):
 
 def storage_prepare():
     cache_dev = TestRun.disks["cache"]
-    cache_parts = [Size(20, Unit.GibiByte)] * caches_count
+    cache_parts = [Size(10, Unit.GibiByte)] * caches_count
     cache_dev.create_partitions(cache_parts)
     core_dev = TestRun.disks["core"]
     core_parts = [Size(10, Unit.GibiByte)] * cores_per_cache * caches_count
@@ -268,7 +343,7 @@ def validate_cache_config_statistics(caches, after_io: bool = False):
                 f"For cache number {caches[i].cache_id} number of core devices is "
                 f"{caches_stats[i].config_stats.core_dev}, "
                 f"should be {cores_per_cache}\n")
-        if caches_stats[i].config_stats.inactive_core_dev != 0:
+        if caches_stats[i].config_stats.inactive_core_devices != 0:
             failed_stats += (
                 f"For cache number {caches[i].cache_id} number of inactive core devices is "
                 f"{caches_stats[i].config_stats.inactive_core_dev}, should be 0\n")
@@ -405,7 +480,7 @@ def validate_statistics_flat(device, stats, stat_filter, per_core: bool):
     if stat_filter == StatsFilter.usage:
         current_stats = usage_stats
     if stat_filter == StatsFilter.blk:
-        current_stats = block_stats_core if per_core else block_stats_cache
+        current_stats = block_stats
     if stat_filter == StatsFilter.req:
         current_stats = request_stats
     if stat_filter == StatsFilter.err:
