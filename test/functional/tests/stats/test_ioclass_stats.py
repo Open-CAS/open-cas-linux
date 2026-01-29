@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -17,13 +18,7 @@ from api.cas.cli_messages import (
     get_stats_ioclass_id_not_configured,
     get_stats_ioclass_id_out_of_range
 )
-from api.cas.statistics import (
-    config_stats_ioclass,
-    usage_stats_ioclass,
-    request_stats,
-    block_stats_core,
-    block_stats_cache
-)
+from api.cas.statistics import RequestStats, BlockStats, get_stats_dict
 from connection.utils.output import CmdException
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
@@ -37,6 +32,87 @@ IoClass = ioclass_config.IoClass
 
 mountpoint = "/tmp/cas1-1"
 cache_id = 1
+
+config_stats_ioclass = [
+    "IO class ID",
+    "IO class name",
+    "Eviction priority",
+    "Max size"
+]
+
+usage_stats_ioclass = [
+    "Occupancy [4KiB Blocks]",
+    "Occupancy [%]",
+    "Clean [4KiB Blocks]",
+    "Clean [%]",
+    "Dirty [4KiB Blocks]",
+    "Dirty [%]"
+]
+
+request_stats = [
+    "Read hits [Requests]",
+    "Read hits [%]",
+    "Read partial misses [Requests]",
+    "Read partial misses [%]",
+    "Read full misses [Requests]",
+    "Read full misses [%]",
+    "Read total [Requests]",
+    "Read total [%]",
+    "Write hits [Requests]",
+    "Write hits [%]",
+    "Write partial misses [Requests]",
+    "Write partial misses [%]",
+    "Write full misses [Requests]",
+    "Write full misses [%]",
+    "Write total [Requests]",
+    "Write total [%]",
+    "Pass-Through reads [Requests]",
+    "Pass-Through reads [%]",
+    "Pass-Through writes [Requests]",
+    "Pass-Through writes [%]",
+    "Serviced requests [Requests]",
+    "Serviced requests [%]",
+    "Total requests [Requests]",
+    "Total requests [%]"
+]
+
+block_stats = [
+    "Reads from core [4KiB Blocks]",
+    "Reads from core [%]",
+    "Writes to core [4KiB Blocks]",
+    "Writes to core [%]",
+    "Total to/from core [4KiB Blocks]",
+    "Total to/from core [%]",
+    "Reads from cache [4KiB Blocks]",
+    "Reads from cache [%]",
+    "Writes to cache [4KiB Blocks]",
+    "Writes to cache [%]",
+    "Total to/from cache [4KiB Blocks]",
+    "Total to/from cache [%]",
+    "Reads from exported object [4KiB Blocks]",
+    "Reads from exported object [%]",
+    "Writes to exported object [4KiB Blocks]",
+    "Writes to exported object [%]",
+    "Total to/from exported object [4KiB Blocks]",
+    "Total to/from exported object [%]"
+]
+
+error_stats = [
+    "Cache read errors [Requests]",
+    "Cache read errors [%]",
+    "Cache write errors [Requests]",
+    "Cache write errors [%]",
+    "Cache total errors [Requests]",
+    "Cache total errors [%]",
+    "Core read errors [Requests]",
+    "Core read errors [%]",
+    "Core write errors [Requests]",
+    "Core write errors [%]",
+    "Core total errors [Requests]",
+    "Core total errors [%]",
+    "Total errors [Requests]",
+    "Total errors [%]"
+]
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -82,7 +158,7 @@ def test_ioclass_stats_basic(random_cls):
                     casadm.print_statistics(
                         cache_id=cache_id,
                         io_class_id=class_id,
-                        per_io_class=True)
+                        io_class=True)
                     if not expected:
                         TestRun.LOGGER.error(
                             f"Stats retrieved for not configured IO class {class_id}")
@@ -118,6 +194,8 @@ def test_ioclass_stats_sum(random_cls):
     with TestRun.step("Test prepare"):
         caches, cores = prepare(random_cls)
         cache, core = caches[0], cores[0]
+        # Include mandatory io class 0
+        ioclass_id_list = [0] + list(range(min_ioclass_id, max_ioclass_id))
 
     with TestRun.step("Prepare IO class config file"):
         ioclass_list = []
@@ -152,74 +230,99 @@ def test_ioclass_stats_sum(random_cls):
         core.unmount()
         sync()
 
-    with TestRun.step("Check if per class cache IO class statistics sum up to cache statistics"):
-        # Name of stats, which should not be compared
-        not_compare_stats = ["clean", "occupancy", "free"]
-        ioclass_id_list = list(range(min_ioclass_id, max_ioclass_id))
-        # Append default IO class id
-        ioclass_id_list.append(0)
-
-        cache_stats = cache.get_statistics_flat(
-            stat_filter=[StatsFilter.usage, StatsFilter.req, StatsFilter.blk]
-        )
+    with TestRun.step("Accumulate IO class statistics"):
+        occupancy = Size.zero()
+        dirty = Size.zero()
+        request_stats = RequestStats.zero()
+        block_stats = BlockStats.zero()
         for ioclass_id in ioclass_id_list:
-            ioclass_stats = cache.get_statistics_flat(
+            ioclass_stats = cache.get_io_class_statistics(
                 stat_filter=[StatsFilter.usage, StatsFilter.req, StatsFilter.blk],
                 io_class_id=ioclass_id,
             )
-            for stat_name in cache_stats:
-                if stat_name in not_compare_stats:
-                    continue
-                cache_stats[stat_name] -= ioclass_stats[stat_name]
+            occupancy += ioclass_stats.usage_stats.occupancy
+            dirty += ioclass_stats.usage_stats.dirty
+            request_stats += ioclass_stats.request_stats
+            block_stats += ioclass_stats.block_stats
 
-        for stat_name in cache_stats:
-            if stat_name in not_compare_stats:
-                continue
-            stat_val = (
-                cache_stats[stat_name].get_value()
-                if isinstance(cache_stats[stat_name], Size)
-                else cache_stats[stat_name]
-            )
-            if stat_val != 0:
-                TestRun.LOGGER.error(f"{stat_name} diverged for cache!\n")
+    with TestRun.step("Check if per class cache IO class statistics sum up to cache statistics"):
+        cache_stats = cache.get_statistics(
+            stat_filter=[StatsFilter.usage, StatsFilter.req, StatsFilter.blk]
+        )
+        if occupancy != cache_stats.usage_stats.occupancy:
+            TestRun.LOGGER.error("Occupancy diverged for cache!")
+        if dirty != cache_stats.usage_stats.dirty:
+            TestRun.LOGGER.error("Dirty diverged for cache!")
+        if request_stats != cache_stats.request_stats:
+            TestRun.LOGGER.error("Request statistics diverged for cache!\n")
+        if block_stats != cache_stats.block_stats:
+            TestRun.LOGGER.error("Block statistics diverged for cache!\n")
 
     with TestRun.step("Check if per class core IO class statistics sum up to core statistics"):
-        core_stats = core.get_statistics_flat(
+        core_stats = core.get_statistics(
             stat_filter=[StatsFilter.usage, StatsFilter.req, StatsFilter.blk]
         )
-        for ioclass_id in ioclass_id_list:
-            ioclass_stats = core.get_statistics_flat(
-                stat_filter=[StatsFilter.usage, StatsFilter.req, StatsFilter.blk],
-                io_class_id=ioclass_id,
-            )
-            for stat_name in core_stats:
-                if stat_name in not_compare_stats:
-                    continue
-                core_stats[stat_name] -= ioclass_stats[stat_name]
+        if occupancy != core_stats.usage_stats.occupancy:
+            TestRun.LOGGER.error("Occupancy diverged for core!")
+        if dirty != core_stats.usage_stats.dirty:
+            TestRun.LOGGER.error("Dirty diverged for core!")
+        if request_stats != core_stats.request_stats:
+            TestRun.LOGGER.error("Request statistics diverged for core!\n")
+        if block_stats != core_stats.block_stats:
+            TestRun.LOGGER.error("Block statistics diverged for core!\n")
 
-        for stat_name in core_stats:
-            if stat_name in not_compare_stats:
-                continue
-            stat_val = (
-                core_stats[stat_name].get_value()
-                if isinstance(core_stats[stat_name], Size)
-                else core_stats[stat_name]
-            )
-            if stat_val != 0:
-                TestRun.LOGGER.error(f"{stat_name} diverged for core!\n")
+    with TestRun.step("Test cleanup"):
+        for f in files_list:
+            f.remove()
 
-        with TestRun.step("Test cleanup"):
-            for f in files_list:
-                f.remove()
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.parametrize(
+        "stat_filter",
+        [StatsFilter.usage, StatsFilter.conf, StatsFilter.req, StatsFilter.blk, StatsFilter.err])
+@pytest.mark.parametrize("random_cls", [random.choice(list(CacheLineSize))])
+def test_ioclass_stats_sections_cache(stat_filter, random_cls):
+    """
+        title: Test for cache/core IO class statistics sections.
+        description: |
+            Check if IO class statistics sections for cache/core print all required entries and
+            no additional ones.
+        pass_criteria:
+          - Section statistics contain all required entries.
+          - Section statistics do not contain any additional entries.
+    """
+    with TestRun.step("Test prepare"):
+        caches, cores = prepare(random_cls, cache_count=4, cores_per_cache=1)
+
+    with TestRun.group("Default IO class config statistics"):
+        for cache in caches:
+            with TestRun.step(f"Cache {cache.cache_id}"):
+                statistics = get_stats_dict(
+                        filter=[stat_filter], cache_id=cache.cache_id, io_class_id=0)
+                validate_statistics(statistics, stat_filter)
+
+    with TestRun.step("Load random IO class configuration for each cache"):
+        for cache in caches:
+            random_list = IoClass.generate_random_ioclass_list(ioclass_config.MAX_IO_CLASS_ID + 1)
+            IoClass.save_list_to_config_file(random_list, add_default_rule=False)
+            cache.load_io_class(ioclass_config.default_config_file_path)
+
+    with TestRun.group("Random IO class config statistics"):
+        for cache in caches:
+            with TestRun.step(f"Cache {cache.cache_id}"):
+                for class_id in range(ioclass_config.MAX_IO_CLASS_ID + 1):
+                    statistics = get_stats_dict(
+                            filter=[stat_filter], cache_id=cache.cache_id, io_class_id=class_id)
+                    validate_statistics(statistics, stat_filter)
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("stat_filter", [StatsFilter.req, StatsFilter.usage, StatsFilter.conf,
                                          StatsFilter.blk])
-@pytest.mark.parametrize("per_core", [True, False])
 @pytest.mark.parametrize("random_cls", [random.choice(list(CacheLineSize))])
-def test_ioclass_stats_sections(stat_filter, per_core, random_cls):
+def test_ioclass_stats_sections_core(stat_filter, random_cls):
     """
         title: Test for cache/core IO class statistics sections.
         description: |
@@ -232,21 +335,13 @@ def test_ioclass_stats_sections(stat_filter, per_core, random_cls):
     with TestRun.step("Test prepare"):
         caches, cores = prepare(random_cls, cache_count=4, cores_per_cache=3)
 
-    with TestRun.step(f"Validate displayed {stat_filter.name} statistics for default IO class for "
-                      f"{'cores' if per_core else 'caches'}"):
+    with TestRun.group("Default IO class config statistics"):
         for cache in caches:
-            with TestRun.group(f"Cache {cache.cache_id}"):
-                for core in cache.get_cores():
-                    if per_core:
-                        TestRun.LOGGER.info(f"Core {core.cache_id}-{core.core_id}")
-                    statistics = (
-                        core.get_statistics_flat(
-                            io_class_id=0, stat_filter=[stat_filter]) if per_core
-                        else cache.get_statistics_flat(
-                            io_class_id=0, stat_filter=[stat_filter]))
-                    validate_statistics(statistics, stat_filter, per_core)
-                    if not per_core:
-                        break
+            for core in cache.get_cores():
+                with TestRun.step(f"Core {core.cache_id}-{core.core_id}"):
+                    statistics = get_stats_dict(
+                            [stat_filter], core.cache_id, core.core_id, 0)
+                    validate_statistics(statistics, stat_filter)
 
     with TestRun.step("Load random IO class configuration for each cache"):
         for cache in caches:
@@ -254,43 +349,31 @@ def test_ioclass_stats_sections(stat_filter, per_core, random_cls):
             IoClass.save_list_to_config_file(random_list, add_default_rule=False)
             cache.load_io_class(ioclass_config.default_config_file_path)
 
-    with TestRun.step(f"Validate displayed {stat_filter.name} statistics for every configured IO "
-                      f"class for all {'cores' if per_core else 'caches'}"):
+    with TestRun.group("Random IO class config statistics"):
         for cache in caches:
-            with TestRun.group(f"Cache {cache.cache_id}"):
-                for core in cache.get_cores():
-                    core_info = f"Core {core.cache_id}-{core.core_id} ," if per_core else ""
+            for core in cache.get_cores():
+                with TestRun.step(f"Core {core.cache_id}-{core.core_id}"):
                     for class_id in range(ioclass_config.MAX_IO_CLASS_ID + 1):
-                        with TestRun.group(core_info + f"IO class id {class_id}"):
-                            statistics = (
-                                core.get_statistics_flat(class_id, [stat_filter]) if per_core
-                                else cache.get_statistics_flat(class_id, [stat_filter]))
-                            validate_statistics(statistics, stat_filter, per_core)
-                            if stat_filter == StatsFilter.conf:  # no percentage statistics for conf
-                                continue
-                            statistics_percents = (
-                                core.get_statistics_flat(
-                                    class_id, [stat_filter], percentage_val=True) if per_core
-                                else cache.get_statistics_flat(
-                                    class_id, [stat_filter], percentage_val=True))
-                            validate_statistics(statistics_percents, stat_filter, per_core)
-                    if not per_core:
-                        break
+                        statistics = get_stats_dict(
+                                [stat_filter], core.cache_id, core.core_id, class_id)
+                        validate_statistics(statistics, stat_filter)
 
 
-def get_checked_statistics(stat_filter: StatsFilter, per_core: bool):
+def get_checked_statistics(stat_filter: StatsFilter):
     if stat_filter == StatsFilter.conf:
         return config_stats_ioclass
     if stat_filter == StatsFilter.usage:
         return usage_stats_ioclass
-    if stat_filter == StatsFilter.blk:
-        return block_stats_core if per_core else block_stats_cache
     if stat_filter == StatsFilter.req:
         return request_stats
+    if stat_filter == StatsFilter.blk:
+        return block_stats
+    if stat_filter == StatsFilter.err:
+        return error_stats
 
 
-def validate_statistics(statistics: dict, stat_filter: StatsFilter, per_core: bool):
-    for stat_name in get_checked_statistics(stat_filter, per_core):
+def validate_statistics(statistics: dict, stat_filter: StatsFilter):
+    for stat_name in get_checked_statistics(stat_filter):
         if stat_name not in statistics.keys():
             TestRun.LOGGER.error(f"Value for {stat_name} not displayed in output")
         else:
