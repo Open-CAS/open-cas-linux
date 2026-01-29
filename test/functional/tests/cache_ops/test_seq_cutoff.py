@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -407,7 +408,7 @@ def test_seq_cutoff_thresh_fill(cache_line_size, io_dir):
         fio_additional_size = Size(10, Unit.Blocks4096)
         threshold = Size.generate_random_size(
             min_size=1,
-            max_size=SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte),
+            max_size=int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte)),
             unit=Unit.KibiByte,
         )
         io_size = (threshold + fio_additional_size).align_down(0x1000)
