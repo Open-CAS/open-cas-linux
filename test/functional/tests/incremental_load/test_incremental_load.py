@@ -613,7 +613,6 @@ def test_print_statistics_inactive(cache_mode):
             cache.stop()
 
     with TestRun.step("Remove both core devices from OS."):
-        Udev.enable()  # enable udev back because it's necessary now
         first_plug_device.unplug()
         second_plug_device.unplug()
 
@@ -631,6 +630,7 @@ def test_print_statistics_inactive(cache_mode):
     with TestRun.step("Attach one of detached core devices and add it to cache."):
         first_plug_device.plug_all()
         second_plug_device.unplug()
+        Udev.enable()  # enable udev back because it's necessary now
         time.sleep(1)
         first_core_status = first_core.get_status()
         if first_core_status != CoreStatus.active:
