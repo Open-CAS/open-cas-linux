@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -15,7 +16,7 @@ from api.cas.casadm import OutputFormat, print_statistics, start_cache
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.dd import Dd
-from test_utils.size import Size, Unit
+from type_def.size import Size, Unit
 
 iterations = 4
 cache_size = Size(4, Unit.GibiByte)

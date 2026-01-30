@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -166,7 +167,9 @@ class IoClass:
             "file_offset",
             "request_size",
         ]
-        if get_kernel_version() >= version.Version("4.13"):
+        if (version.Version("4.13") <= get_kernel_version() <= version.Version("5.17") or
+            version.Version("6.9") <= get_kernel_version()
+        ):
             rules.append("wlth")
 
         rule = random.choice(rules)
