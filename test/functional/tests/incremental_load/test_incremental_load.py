@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -18,10 +19,11 @@ from api.cas.cache_config import (
     CleaningPolicy,
     FlushParametersAlru,
 )
+from api.cas.casadm import StatsFilter
 from api.cas.casadm_params import OutputFormat
 from api.cas.core import CoreStatus
 from api.cas.init_config import InitConfig
-from api.cas.statistics import CacheStats
+from api.cas.statistics import CacheStats, get_stats_dict
 from connection.utils.output import CmdException
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
@@ -601,8 +603,8 @@ def test_print_statistics_inactive(cache_mode):
         run_fio([first_core.path, second_core.path])
 
     with TestRun.step("Print statistics and check if there is no inactive usage section."):
-        active_stats = cache.get_statistics()
-        check_if_inactive_section_exists(active_stats, False)
+        active_stats_usage = get_stats_dict([StatsFilter.usage], cache.cache_id)
+        check_if_inactive_section_exists(active_stats_usage, False)
 
     with TestRun.step("Stop cache."):
         if CacheModeTrait.LazyWrites in cache_mode_traits:
@@ -611,7 +613,6 @@ def test_print_statistics_inactive(cache_mode):
             cache.stop()
 
     with TestRun.step("Remove both core devices from OS."):
-        Udev.enable()  # enable udev back because it's necessary now
         first_plug_device.unplug()
         second_plug_device.unplug()
 
@@ -621,13 +622,15 @@ def test_print_statistics_inactive(cache_mode):
     with TestRun.step(
         "Check if inactive devices section appeared and contains appropriate " "information."
     ):
+        inactive_stats_usage = get_stats_dict([StatsFilter.usage], cache.cache_id)
+        check_if_inactive_section_exists(inactive_stats_usage)
         inactive_stats_before = cache.get_statistics()
-        check_if_inactive_section_exists(inactive_stats_before)
         check_number_of_inactive_devices(inactive_stats_before, 2)
 
     with TestRun.step("Attach one of detached core devices and add it to cache."):
         first_plug_device.plug_all()
         second_plug_device.unplug()
+        Udev.enable()  # enable udev back because it's necessary now
         time.sleep(1)
         first_core_status = first_core.get_status()
         if first_core_status != CoreStatus.active:
@@ -637,8 +640,9 @@ def test_print_statistics_inactive(cache_mode):
             )
 
     with TestRun.step("Check cache statistics section of inactive devices."):
+        inactive_stats_usage = get_stats_dict([StatsFilter.usage], cache.cache_id)
+        check_if_inactive_section_exists(inactive_stats_usage)
         inactive_stats_after = cache.get_statistics()
-        check_if_inactive_section_exists(inactive_stats_after)
         check_number_of_inactive_devices(inactive_stats_after, 1)
         # criteria for checks below
         insert_write_traits = CacheModeTrait.InsertWrite in cache_mode_traits
@@ -693,8 +697,9 @@ def test_print_statistics_inactive(cache_mode):
         "Check if there is no inactive devices statistics section and if cache has "
         "Running status."
     ):
+        active_stats_usage = get_stats_dict([StatsFilter.usage], cache.cache_id)
+        check_if_inactive_section_exists(active_stats_usage, False)
         cache_stats = cache.get_statistics()
-        check_if_inactive_section_exists(cache_stats, False)
         check_number_of_inactive_devices(cache_stats, 0)
 
     with TestRun.step("Plug missing disk and stop cache."):
@@ -1017,9 +1022,9 @@ def check_number_of_inactive_devices(stats: CacheStats, expected_num):
 
 def check_if_inactive_section_exists(stats, should_exist: bool = True):
     TestRun.LOGGER.info(str(stats))
-    if not should_exist and "inactive_occupancy" in stats.usage_stats:
+    if not should_exist and "Inactive Occupancy [4KiB Blocks]" in stats.keys():
         TestRun.fail("There is an inactive section in cache usage statistics.")
-    elif should_exist and "inactive_occupancy" not in stats.usage_stats:
+    elif should_exist and "Inactive Occupancy [4KiB Blocks]" not in stats.keys():
         TestRun.fail("There is no inactive section in cache usage statistics.")
 
 
