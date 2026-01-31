@@ -4,8 +4,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import random
 import time
 import pytest
+
+from datetime import timedelta
 
 from api.cas import casadm
 from api.cas.cache_config import (
@@ -14,9 +17,11 @@ from api.cas.cache_config import (
     FlushParametersAcp,
     FlushParametersAlru,
     Time,
+    SeqCutOffPolicy,
 )
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from core.test_run import TestRun
+from test_tools.iostat import IOstatBasic
 from type_def.size import Size, Unit
 from test_tools.udev import Udev
 from test_tools.fio.fio import Fio
@@ -106,7 +111,7 @@ def test_cleaning_policies_in_write_back(cleaning_policy: CleaningPolicy):
 @pytest.mark.parametrize("cleaning_policy", CleaningPolicy)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_cleaning_policies_in_write_through(cleaning_policy):
+def test_cleaning_policies_in_write_through(cleaning_policy: CleaningPolicy):
     """
     title: Test for cleaning policy operation in Write-Through cache mode.
     description: |
@@ -269,7 +274,7 @@ def check_cleaning_policy_operation(
         case CleaningPolicy.nop:
             if (
                 core_writes_after_wait_for_cleaning != Size.zero()
-                    or core_writes_before_wait_for_cleaning != Size.zero()
+                or core_writes_before_wait_for_cleaning != Size.zero()
             ):
                 TestRun.LOGGER.error(
                     "NOP cleaning policy is not working properly! "
@@ -287,3 +292,121 @@ def check_cleaning_policy_operation(
                     "ACP cleaning policy is not working properly! "
                     "Core writes should increase in time while cleaning dirty data"
                 )
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_alru_change_trigger_dirty_ratio_during_io():
+    """
+    title: Test ALRU with trigger dirty ratio param during I/O
+    description: |
+        Verify that ALRU is able to start cleaning to expected dirty ratio under constant I/O.
+    pass_criteria:
+      - Dirty cache lines are being cleaned after trigger dirty ratio change during I/O.
+      - Dirty cache lines are cleaned to expected dirty ratio after stopping I/O
+    """
+    iterations = 10
+
+    with TestRun.step("Prepare cache and core devices"):
+        cache_dev = TestRun.disks["cache"]
+        core_dev = TestRun.disks["core"]
+
+        cache_size = Size(1, Unit.GiB)
+        cache_dev.create_partitions([cache_size])
+        core_dev.create_partitions([Size(2, Unit.GiB)])
+
+    with TestRun.step(f"Disable udev"):
+        Udev.disable()
+
+    with TestRun.step("Start cache"):
+        cache = casadm.start_cache(cache_dev.partitions[0], force=True, cache_mode=CacheMode.WB)
+
+    with TestRun.step("Add core"):
+        core = cache.add_core(core_dev.partitions[0])
+
+    with TestRun.step("Set params for ALRU cleaning policy"):
+        params = FlushParametersAlru.default_alru_params()
+        params.wake_up_time = Time(seconds=1)
+        params.staleness_time = Time(seconds=3600)
+        cache.set_params_alru(alru_params=params)
+
+    with TestRun.step("Disable sequential cut-off and set cleaning to ALRU"):
+        cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+        cache.set_cleaning_policy(CleaningPolicy.alru)
+
+    for _ in TestRun.iteration(
+        range(0, iterations),
+        "Start changing trigger dirty ratio param during I/O and check if flush occurred",
+    ):
+
+        params = FlushParametersAlru.default_alru_params()
+
+        fio = (
+            Fio()
+            .create_command()
+            .io_engine(IoEngine.libaio)
+            .block_size(Size(4, Unit.KiB))
+            .target(core)
+            .direct()
+            .time_based()
+            .run_time(timedelta(minutes=10))
+            .read_write(ReadWrite.randwrite)
+        )
+
+        dirty_ratio_test_threshold = random.randint(0, 100)
+
+        with TestRun.step("Disable cache cleaning"):
+            cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+
+        with TestRun.step("Start running I/O to exported object in background"):
+            fio_pid = fio.run_in_background()
+
+        with TestRun.step("Wait until dirty data on cache exceed dirty ratio threshold"):
+
+            while TestRun.executor.check_if_process_exists(fio_pid):
+                dirty_blocks_percentage_on_cache = cache.get_statistics(
+                    percentage_val=True
+                ).usage_stats.dirty
+
+                if dirty_blocks_percentage_on_cache >= dirty_ratio_test_threshold:
+                    break
+                time.sleep(5)
+
+        with TestRun.step("Set cache cleaning policy to alru"):
+            params.trigger_dirty_ratio = dirty_ratio_test_threshold
+            cache.set_params_alru(alru_params=params)
+
+        with TestRun.step("Check if cleaning started after changing cleaning policy"):
+            time.sleep(5)
+
+            iostat_core = IOstatBasic.get_iostat_list([core_dev.get_device_id()])
+            core_writes = iostat_core[0].total_writes
+
+            if core_writes == Size.zero():
+                TestRun.fail(f"Cleaning on cache haven`t started")
+
+        with TestRun.step("Stop I/O to exported object"):
+            TestRun.executor.kill_process(fio_pid)
+
+        with TestRun.step("Check if cache has been cleaned to set threshold after stopping I/O"):
+            max_cleaning_time = timedelta(seconds=60)
+            t_end = time.time() + max_cleaning_time.seconds
+
+            while time.time() < t_end:
+                dirty_blocks_on_cache_before = cache.get_statistics(
+                    percentage_val=True).usage_stats.dirty
+                time.sleep(20)
+                dirty_blocks_on_cache_after = cache.get_statistics(
+                    percentage_val=True).usage_stats.dirty
+                if dirty_blocks_on_cache_before == dirty_blocks_on_cache_after:
+                    break
+
+            dirty_blocks_cache_percentage = cache.get_statistics(
+                percentage_val=True
+            ).usage_stats.dirty
+
+            if not dirty_ratio_test_threshold == dirty_blocks_cache_percentage:
+                TestRun.fail("Dirty block percentage outside of defined range")
+
+        with TestRun.step("Purge cache"):
+            casadm.purge_cache(cache_id=cache.cache_id)
