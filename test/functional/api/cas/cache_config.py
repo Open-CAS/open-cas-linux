@@ -1,8 +1,11 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
+
+import copy
 
 from enum import Enum, IntFlag
 
@@ -149,13 +152,27 @@ class FlushParametersAlru:
         self.dirty_ratio_inertia = dirty_ratio_inertia
 
     def __eq__(self, other):
+        def fill_default(p):
+            default = self.default_alru_params()
+            p = copy.copy(p)
+            p.activity_threshold = p.activity_threshold or default.activity_threshold
+            p.flush_max_buffers = p.flush_max_buffers or default.flush_max_buffers
+            p.staleness_time = p.staleness_time or default.staleness_time
+            p.wake_up_time = p.wake_up_time or default.wake_up_time
+            p.dirty_ratio_threshold = p.dirty_ratio_threshold or default.dirty_ratio_threshold
+            p.dirty_ratio_inertia = p.dirty_ratio_inertia or default.dirty_ratio_inertia
+            return p
+
+        a = fill_default(self)
+        b = fill_default(other)
+
         return (
-            self.activity_threshold == other.activity_threshold
-            and self.flush_max_buffers == other.flush_max_buffers
-            and self.staleness_time == other.staleness_time
-            and self.wake_up_time == other.wake_up_time
-            and self.dirty_ratio_threshold == other.dirty_ratio_threshold
-            and self.dirty_ratio_inertia == other.dirty_ratio_inertia
+            a.activity_threshold == b.activity_threshold
+            and a.flush_max_buffers == b.flush_max_buffers
+            and a.staleness_time == b.staleness_time
+            and a.wake_up_time == b.wake_up_time
+            and a.dirty_ratio_threshold == b.dirty_ratio_threshold
+            and a.dirty_ratio_inertia == b.dirty_ratio_inertia
         )
 
     def __str__(self):
@@ -204,9 +221,19 @@ class FlushParametersAcp:
         self.wake_up_time = wake_up_time
 
     def __eq__(self, other):
+        def fill_default(p):
+            default = self.default_acp_params()
+            p = copy.copy(p)
+            p.flush_max_buffers = p.flush_max_buffers or default.flush_max_buffers
+            p.wake_up_time = p.wake_up_time or default.wake_up_time
+            return p
+
+        a = fill_default(self)
+        b = fill_default(other)
+
         return (
-            self.flush_max_buffers == other.flush_max_buffers
-            and self.wake_up_time == other.wake_up_time
+            a.flush_max_buffers == b.flush_max_buffers
+            and a.wake_up_time == b.wake_up_time
         )
 
     def __str__(self):
@@ -242,10 +269,21 @@ class SeqCutOffParameters:
         self.promotion_count = promotion_count
 
     def __eq__(self, other):
+        def fill_default(p):
+            default = self.default_seq_cut_off_params()
+            p = copy.copy(p)
+            p.policy = p.policy or default.policy
+            p.threshold = p.threshold or default.threshold
+            p.promotion_count = p.promotion_count or default.promotion_count
+            return p
+
+        a = fill_default(self)
+        b = fill_default(other)
+
         return (
-            self.policy == other.policy
-            and self.threshold == other.threshold
-            and self.promotion_count == other.promotion_count
+            a.policy == b.policy
+            and a.threshold == b.threshold
+            and a.promotion_count == b.promotion_count
         )
 
     @staticmethod
@@ -263,7 +301,17 @@ class PromotionParametersNhit:
         self.trigger = trigger
 
     def __eq__(self, other):
-        return self.threshold == other.threshold and self.trigger == other.trigger
+        def fill_default(p):
+            default = self.default_nhit_params()
+            p = copy.copy(p)
+            p.threshold = p.threshold or default.threshold
+            p.trigger = p.trigger or default.trigger
+            return p
+
+        a = fill_default(self)
+        b = fill_default(other)
+
+        return a.threshold == b.threshold and a.trigger == b.trigger
 
     @staticmethod
     def nhit_params_range():
