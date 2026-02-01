@@ -591,6 +591,7 @@ def test_print_statistics_inactive(cache_mode):
         first_core = cache.add_core(first_core_dev)
         second_core = cache.add_core(second_core_dev)
         cache_mode_traits = CacheMode.get_traits(cache.get_cache_mode())
+        cache.purge_cache()  # purge cache to zero the initial kernel reads in stats
 
     with TestRun.step("Disable cleaning and sequential cutoff policies."):
         cache.set_cleaning_policy(CleaningPolicy.nop)
