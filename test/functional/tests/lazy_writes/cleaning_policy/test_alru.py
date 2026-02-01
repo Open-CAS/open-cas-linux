@@ -10,7 +10,13 @@ import pytest
 from datetime import timedelta
 
 from api.cas import casadm
-from api.cas.cache_config import CacheMode, CleaningPolicy, FlushParametersAlru, SeqCutOffPolicy
+from api.cas.cache_config import (
+    CacheMode,
+    CleaningPolicy,
+    FlushParametersAlru,
+    SeqCutOffPolicy,
+    CacheLineSize,
+)
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
@@ -118,3 +124,90 @@ def prepare():
     )
 
     return cache, core
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.parametrize("inertia", [Size.zero(), Size(1500, Unit.MiB)])
+@pytest.mark.parametrizex(
+    "cache_line_size",
+    [CacheLineSize.LINE_4KiB, CacheLineSize.LINE_64KiB],
+)
+def test_alru_dirty_ratio_inertia_no_cleaning_if_dirty_below_threshold(
+    cache_line_size: CacheLineSize, inertia: Unit
+):
+    """
+    title: Test ALRU dirty ratio inertia — no cleaning below threshold
+    description: |
+      Verify that ALRU cleaning is not triggered when the number of dirty cache lines is lower than
+      (threshold - intertia)
+    pass_criteria:
+      - The cleaning is not triggered when dirty data doesn't exceed the specified threshold.
+    """
+    with TestRun.step("Prepare disks for cache and core"):
+        cache_dev = TestRun.disks["cache"]
+        core_dev = TestRun.disks["core"]
+
+        cache_dev.create_partitions([Size(3, Unit.GiB)])
+        core_dev.create_partitions([Size(10, Unit.GiB)])
+
+    with TestRun.step("Disable udev"):
+        Udev.disable()
+
+    with TestRun.step("Start cache and add core"):
+        cache = casadm.start_cache(
+            cache_dev.partitions[0],
+            cache_line_size=cache_line_size,
+            force=True,
+            cache_mode=CacheMode.WB,
+        )
+        core = cache.add_core(core_dev.partitions[0])
+
+    with TestRun.step("Set ALRU and disable sequential cutoff"):
+        cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+        cache.set_cleaning_policy(CleaningPolicy.alru)
+
+    with TestRun.step("Set alru params"):
+        dirty_ratio_threshold = 90
+        cache.set_params_alru(
+            FlushParametersAlru(
+                staleness_time=Time(seconds=3600),
+                wake_up_time=Time(seconds=1),
+                activity_threshold=Time(milliseconds=1000),
+                dirty_ratio_threshold=dirty_ratio_threshold,
+                dirty_ratio_inertia=inertia,
+            )
+        )
+
+    with TestRun.step("Run write workload to reach ~2GiB (≈66% of 3GiB) dirty data"):
+        fio = (
+            Fio()
+            .create_command()
+            .io_engine(IoEngine.libaio)
+            .size(cache.size * 0.66)
+            .block_size(Size(4, Unit.KiB))
+            .target(core)
+            .direct()
+            .read_write(ReadWrite.randwrite)
+        )
+        fio.run()
+
+    with TestRun.step("Capture baseline dirty usage after I/O settles"):
+        time.sleep(2)
+        dirty_before_pct = cache.get_statistics(percentage_val=True).usage_stats.dirty
+        dirty_before = cache.get_statistics().usage_stats.dirty
+        if dirty_before_pct <= 60:
+            TestRun.fail(
+                f"Exception: Precondition not met: dirty cache lines must exceed 60% after "
+                f"I/O settles (dirty={dirty_before}, dirty%={dirty_before_pct}%). Aborting test."
+            )
+
+    with TestRun.step("Idle and verify dirty cache lines do not change and remain below threshold"):
+        time.sleep(30)
+        dirty_after = cache.get_statistics().usage_stats.dirty
+
+        if dirty_before > dirty_after:
+            TestRun.fail(
+                f"No flushing shall occur when dirty < threshold (dirty before={dirty_before}, "
+                f"dirty after={dirty_after}, threshold={dirty_ratio_threshold}%)"
+            )
