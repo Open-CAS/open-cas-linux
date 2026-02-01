@@ -79,7 +79,7 @@ def test_incremental_load_basic():
     with TestRun.step("Add cores to core pool"):
         core_pool_list = [
             casadm.try_add(core_device=core_dev, cache_id=1, core_id=core_id)
-            for core_dev, core_id in zip(core_dev_list, range(1, core_count))
+            for core_id, core_dev in enumerate(core_dev_list, 1)
         ]
 
     with TestRun.step("Check if all cores in core pool have detached status"):
