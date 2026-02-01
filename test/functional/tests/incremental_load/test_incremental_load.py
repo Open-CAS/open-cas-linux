@@ -640,6 +640,28 @@ def test_print_statistics_inactive(cache_mode):
                 f"Actual state: {first_core_status}."
             )
 
+    def check_stat_zero(stat_before, stat_after, stat_name):
+        if stat_before == Size.zero() and stat_after == Size.zero():
+            TestRun.LOGGER.info(f"{stat_name} value before and after equals 0 as expected.")
+        if stat_before != Size.zero():
+            TestRun.LOGGER.error(f"{stat_name} ({stat_before}) value before does not equal 0.")
+        if stat_after != Size.zero():
+            TestRun.LOGGER.error(f"{stat_name} ({stat_after}) value after does not equal 0.")
+
+    def check_stat_lower(stat_before, stat_after, stat_name):
+        if stat_after < stat_before:
+            TestRun.LOGGER.info(f"{stat_name} is lower than before as expected.")
+        else:
+            TestRun.LOGGER.error(
+                f"{stat_name} ({stat_after}) is not lower than before " f"({stat_before})."
+            )
+
+    def check_stat(stat_before, stat_after, stat_name, should_be_zero):
+        if should_be_zero:
+            check_stat_zero(stat_before, stat_after, stat_name)
+        else:
+            check_stat_lower(stat_before, stat_after, stat_name)
+
     with TestRun.step("Check cache statistics section of inactive devices."):
         inactive_stats_usage = get_stats_dict([StatsFilter.usage], cache.cache_id)
         check_if_inactive_section_exists(inactive_stats_usage)
@@ -650,19 +672,19 @@ def test_print_statistics_inactive(cache_mode):
         lazy_write_traits = CacheModeTrait.LazyWrites in cache_mode_traits
         lazy_writes_or_no_insert_write_traits = not insert_write_traits or lazy_write_traits
 
-        check_usage_stats(
+        check_stat(
             inactive_stats_before.usage_stats.inactive_occupancy,
             inactive_stats_after.usage_stats.inactive_occupancy,
             "inactive occupancy",
             not insert_write_traits,
         )
-        check_usage_stats(
+        check_stat(
             inactive_stats_before.usage_stats.inactive_clean,
             inactive_stats_after.usage_stats.inactive_clean,
             "inactive clean",
             lazy_writes_or_no_insert_write_traits,
         )
-        check_usage_stats(
+        check_stat(
             inactive_stats_before.usage_stats.inactive_dirty,
             inactive_stats_after.usage_stats.inactive_dirty,
             "inactive dirty",
@@ -999,17 +1021,6 @@ def try_stop_incomplete_cache(cache):
     except CmdException as e:
         TestRun.LOGGER.info("Stopping cache without 'no data flush' option is blocked as expected.")
         cli_messages.check_stderr_msg(e.output, cli_messages.stop_cache_incomplete)
-
-
-def check_usage_stats(stats_before, stats_after, stat_name, should_be_zero):
-    if should_be_zero and stats_before == Size.zero() and stats_after == Size.zero():
-        TestRun.LOGGER.info(f"{stat_name} value before and after equals 0 as expected.")
-    elif not should_be_zero and stats_after < stats_before:
-        TestRun.LOGGER.info(f"{stat_name} is lower than before as expected.")
-    else:
-        TestRun.LOGGER.error(
-            f"{stat_name} ({stats_after}) is not lower than before " f"({stats_before})."
-        )
 
 
 def check_number_of_inactive_devices(stats: CacheStats, expected_num):
