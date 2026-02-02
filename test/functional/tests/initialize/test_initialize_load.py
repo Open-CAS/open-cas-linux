@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -9,10 +10,12 @@ import pytest
 from api.cas import casadm, casadm_parser
 from api.cas.cache_config import (CleaningPolicy,
                                   CacheMode,
+                                  CacheModeTrait,
                                   CacheLineSize,
                                   FlushParametersAlru,
                                   Time,
                                   FlushParametersAcp)
+from api.cas.casadm_params import StatsFilter
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.fio.fio import Fio
@@ -142,3 +145,72 @@ def test_load_x_cores_to_one_cache(cache_mode, cleaning_policy, cache_line_size,
     with TestRun.step("Check if there are no error statistics."):
         if cache.get_statistics().error_stats.total_errors != 0:
             TestRun.fail("There are errors in the cache.")
+
+@pytest.mark.parametrize("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
+@pytest.mark.parametrizex("cache_line_size", CacheLineSize)
+@pytest.mark.parametrizex("cleaning_policy", CleaningPolicy)
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_load_cache_dirty(cache_mode, cache_line_size, cleaning_policy):
+    """
+        title: Load cache with dirty data after stopping it without flush
+        description: |
+          Verify that cache loads properly after being stopped with dirty data and no flush.
+        pass_criteria:
+          - Cache loads successfully.
+          - There is dirty data on the cache after load.
+    """
+    with TestRun.step("Prepare cache and core devices"):
+        cache_dev = TestRun.disks['cache']
+        cache_dev.create_partitions([Size(512, Unit.MebiByte)])
+        cache_dev = cache_dev.partitions[0]
+        core_dev = TestRun.disks['core']
+        core_dev.create_partitions([Size(1, Unit.GibiByte)])
+        core_dev = core_dev.partitions[0]
+
+    with TestRun.step("Start cache and add core"):
+        cache = casadm.start_cache(cache_dev, cache_mode, cache_line_size, force=True)
+        core = cache.add_core(core_dev)
+
+    with TestRun.step("Configure cleaning policy"):
+        cache.set_cleaning_policy(cleaning_policy)
+        if cleaning_policy == CleaningPolicy.alru:
+            alru = FlushParametersAlru()
+            alru.wake_up_time = Time(seconds=5)
+            cache.set_params_alru(alru)
+        if cleaning_policy == CleaningPolicy.acp:
+            acp = FlushParametersAcp()
+            acp.wake_up_time = Time(seconds=5)
+            cache.set_params_acp(acp)
+
+    with TestRun.step("Run FIO on exported object"):
+        fio = (Fio().create_command()
+               .io_engine(IoEngine.libaio)
+               .read_write(ReadWrite.write)
+               .block_size(cache_line_size)
+               .io_depth(64)
+               .direct()
+               .sync()
+               .size(Size(1, Unit.GibiByte))
+               .target(core.path)
+        )
+        fio.run()
+
+    with TestRun.step("Verify that cache has dirty data"):
+        cache_stats = cache.get_statistics([StatsFilter.usage], percentage_val=True)
+        if cache_stats.usage_stats.dirty < 0.5:
+            TestRun.block("Ditry lower than 50%")
+
+    with TestRun.step("Stop cache without flush"):
+        cache.stop(no_data_flush=True)
+
+    with TestRun.step("Load cache"):
+        cache = casadm.load_cache(cache_dev)
+
+    with TestRun.step("Verify that cache still has dirty data"):
+        cache_stats = cache.get_statistics([StatsFilter.usage], percentage_val=True)
+        if cache_stats.usage_stats.dirty < 0.5:
+            TestRun.fail("Ditry lower than 50%")
+
+    with TestRun.step("Stop cache"):
+        cache.stop()
