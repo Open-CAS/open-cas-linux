@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024-2025 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -26,18 +27,18 @@ struct cas_reserve_pool *cas_bvec_pages_rpool;
 
 static inline void _cas_page_set_priv(struct page *page)
 {
-	set_bit(PG_cas , &page->flags);
+	cas_page_flag_set(PG_cas, page);
 }
 
 static inline void _cas_page_clear_priv(struct page *page)
 {
-	clear_bit(PG_cas , &page->flags);
+	cas_page_flag_clear(PG_cas, page);
 	page->private = 0;
 }
 
 static inline int _cas_page_test_priv(struct page *page)
 {
-	return test_bit(PG_cas , &page->flags);
+	return cas_page_flag_test(PG_cas, page);
 }
 
 static void _cas_free_page_rpool(void *allocator_ctx, void *item)
