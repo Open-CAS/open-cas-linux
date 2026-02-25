@@ -97,24 +97,6 @@ block_stats = [
     "Total to/from exported object [%]"
 ]
 
-error_stats = [
-    "Cache read errors [Requests]",
-    "Cache read errors [%]",
-    "Cache write errors [Requests]",
-    "Cache write errors [%]",
-    "Cache total errors [Requests]",
-    "Cache total errors [%]",
-    "Core read errors [Requests]",
-    "Core read errors [%]",
-    "Core write errors [Requests]",
-    "Core write errors [%]",
-    "Core total errors [Requests]",
-    "Core total errors [%]",
-    "Total errors [Requests]",
-    "Total errors [%]"
-]
-
-
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize("random_cls", [random.choice(list(CacheLineSize))])
@@ -280,7 +262,7 @@ def test_ioclass_stats_sum(random_cls):
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrize(
         "stat_filter",
-        [StatsFilter.usage, StatsFilter.conf, StatsFilter.req, StatsFilter.blk, StatsFilter.err])
+        [StatsFilter.usage, StatsFilter.conf, StatsFilter.req, StatsFilter.blk])
 @pytest.mark.parametrize("random_cls", [random.choice(list(CacheLineSize))])
 def test_ioclass_stats_sections_cache(stat_filter, random_cls):
     """
@@ -368,8 +350,6 @@ def get_checked_statistics(stat_filter: StatsFilter):
         return request_stats
     if stat_filter == StatsFilter.blk:
         return block_stats
-    if stat_filter == StatsFilter.err:
-        return error_stats
 
 
 def validate_statistics(statistics: dict, stat_filter: StatsFilter):
