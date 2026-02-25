@@ -1,5 +1,7 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2023 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -256,6 +258,9 @@ static void print_req_stats(const struct ocf_stats_requests *stats,
 	print_val_perc_table_section(outfile, "Read hits",
 				     UNIT_REQUESTS, stats->rd_hits.fraction, "%lu",
 					 stats->rd_hits.value);
+	print_val_perc_table_row(outfile, "Read deferred",
+				     UNIT_REQUESTS, stats->rd_deferred.fraction, "%lu",
+					 stats->rd_deferred.value);
 	print_val_perc_table_row(outfile, "Read partial misses",
 				     UNIT_REQUESTS, stats->rd_partial_misses.fraction, "%lu",
 					 stats->rd_partial_misses.value);
@@ -269,6 +274,9 @@ static void print_req_stats(const struct ocf_stats_requests *stats,
 	print_val_perc_table_section(outfile, "Write hits",
 				     UNIT_REQUESTS, stats->wr_hits.fraction, "%lu",
 					 stats->wr_hits.value);
+	print_val_perc_table_row(outfile, "Write deferred",
+				     UNIT_REQUESTS, stats->wr_deferred.fraction, "%lu",
+					 stats->wr_deferred.value);
 	print_val_perc_table_row(outfile, "Write partial misses",
 				     UNIT_REQUESTS, stats->wr_partial_misses.fraction, "%lu",
 					 stats->wr_partial_misses.value);

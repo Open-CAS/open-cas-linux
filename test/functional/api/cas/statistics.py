@@ -481,6 +481,7 @@ class RequestStats:
         for unit in [UnitType.percentage, UnitType.requests]:
             for operation in [OperationType.read, OperationType.write]:
                 del stats_dict[f"{operation} hits {unit}"]
+                del stats_dict[f"{operation} deferred {unit}"]
                 del stats_dict[f"{operation} partial misses {unit}"]
                 del stats_dict[f"{operation} full misses {unit}"]
                 del stats_dict[f"{operation} total {unit}"]
@@ -534,6 +535,7 @@ class RequestStats:
             for operation in [OperationType.read, OperationType.write]:
                 stats_dict.update({
                     f"{operation} hits {unit}" : 0,
+                    f"{operation} deferred {unit}" : 0,
                     f"{operation} partial misses {unit}" : 0,
                     f"{operation} full misses {unit}" : 0,
                     f"{operation} total {unit}" : 0,
@@ -551,6 +553,9 @@ class RequestStatsChunk:
     def __init__(self, stats_dict, percentage_val: bool, operation: OperationType):
         unit = UnitType.percentage if percentage_val else UnitType.requests
         self.hits = parse_value(value=stats_dict[f"{operation} hits {unit}"], unit_type=unit)
+        self.deferred = parse_value(
+            value=stats_dict[f"{operation} deferred {unit}"], unit_type=unit
+        )
         self.part_misses = parse_value(
             value=stats_dict[f"{operation} partial misses {unit}"], unit_type=unit
         )
@@ -562,6 +567,7 @@ class RequestStatsChunk:
     def __str__(self):
         return (
             f"Hits: {self.hits}\n"
+            f"Deferred: {self.deferred}\n"
             f"Partial misses: {self.part_misses}\n"
             f"Full misses: {self.full_misses}\n"
             f"Total: {self.total}\n"
@@ -572,6 +578,7 @@ class RequestStatsChunk:
             return False
         return (
             self.hits == other.hits
+            and self.deferred == other.deferred
             and self.part_misses == other.part_misses
             and self.full_misses == other.full_misses
             and self.total == other.total
@@ -582,6 +589,7 @@ class RequestStatsChunk:
             return False
         chunk = copy.copy(self)
         chunk.hits = self.hits + other.hits
+        chunk.deferred = self.deferred + other.deferred
         chunk.part_misses = self.part_misses + other.part_misses
         chunk.full_misses = self.full_misses + other.full_misses
         chunk.total = self.total + other.total
