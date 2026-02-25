@@ -13,7 +13,6 @@ from enum import Enum
 from typing import List
 from api.cas import casadm
 from api.cas.casadm_params import StatsFilter
-from connection.utils.output import CmdException
 from type_def.size import Size, Unit
 
 
@@ -62,7 +61,7 @@ class CacheStats:
                     self.error_stats = ErrorStats(stats_dict, percentage_val)
 
         if stats_dict:
-            raise CmdException(f"Unknown stat(s) left after parsing output cmd\n{stats_dict}")
+            raise Exception(f"Unknown stat(s) left after parsing output cmd\n{stats_dict}")
 
     def __str__(self):
         # stats_list contains all Class.__str__ methods initialized in CacheStats
@@ -103,7 +102,7 @@ class CoreStats:
                     self.error_stats = ErrorStats(stats_dict, percentage_val)
 
         if stats_dict:
-            raise CmdException(f"Unknown stat(s) left after parsing output cmd\n{stats_dict}")
+            raise Exception(f"Unknown stat(s) left after parsing output cmd\n{stats_dict}")
 
     def __str__(self):
         # stats_list contains all Class.__str__ methods initialized in CacheStats
@@ -145,7 +144,7 @@ class CoreIoClassStats:
                     self.block_stats = BlockStats(stats_dict, percentage_val)
 
         if stats_dict:
-            raise CmdException(f"Unknown stat(s) left after parsing output cmd\n{stats_dict}")
+            raise Exception(f"Unknown stat(s) left after parsing output cmd\n{stats_dict}")
 
     def __eq__(self, other):
         # check if all initialized variable in self(CacheStats) match other(CacheStats)
