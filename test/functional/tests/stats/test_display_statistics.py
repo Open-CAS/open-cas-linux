@@ -279,10 +279,10 @@ def test_core_nonconfig_stats(stat_filter):
 
 def storage_prepare():
     cache_dev = TestRun.disks["cache"]
-    cache_parts = [Size(10, Unit.GibiByte)] * caches_count
+    cache_parts = [Size(1, Unit.GibiByte)] * caches_count
     cache_dev.create_partitions(cache_parts)
     core_dev = TestRun.disks["core"]
-    core_parts = [Size(10, Unit.GibiByte)] * cores_per_cache * caches_count
+    core_parts = [Size(1, Unit.GibiByte)] * cores_per_cache * caches_count
     core_dev.create_partitions(core_parts)
 
     return cache_dev, core_dev
