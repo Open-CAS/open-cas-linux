@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -164,5 +165,6 @@ def test_data_integrity(filesystem, cache_mode, cache_line_size):
     with TestRun.step("Mount the core device and check for file"):
         core_part.mount(mountpoint)
         md5_after = test_file.md5sum()
+        core_part.unmount()
         if md5_before != md5_after:
             TestRun.fail("md5 checksum mismatch!")
