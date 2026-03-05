@@ -2,6 +2,7 @@
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2022      David Lee <live4thee@gmail.com>
 * Copyright(c) 2024-2025 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -309,7 +310,7 @@ int start_cache_command_handle_option(char *opt, const char **arg)
 #define CACHE_ID_DESC "Identifier of cache instance <"xstr(OCF_CACHE_ID_MIN)"-"xstr(OCF_CACHE_ID_MAX)">"
 #define CACHE_ID_DESC_LONG CACHE_ID_DESC " (if not provided, the first available number will be used)"
 
-/* OCF_CORE_ID_MAX is defined by arithmetic operations on OCF_CORE_MAX. As a result there is no easy way
+/* OCF_CORE_ID_MAX is defined by arithmetic operations on OCF_CORE_NUM. As a result there is no easy way
  * to stringify OCF_CORE_ID_MAX. To work around this, additional definition for max core id is introduced here.
  * In case of mismatch between header and local definition preprocessor error is triggered. */
 #define _CASADM_CORE_ID_MAX 4095

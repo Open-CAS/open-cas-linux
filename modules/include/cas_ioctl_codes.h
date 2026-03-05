@@ -2,6 +2,7 @@
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2022      David Lee <live4thee@gmail.com>
 * Copyright(c) 2024-2025 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -179,7 +180,7 @@ struct kcas_cache_info {
 	/**
 	 * IDs of cores associated with this cache.
 	 */
-	uint16_t core_id[OCF_CORE_MAX];
+	uint16_t core_id[OCF_CORE_NUM];
 
 	struct ocf_cache_info info;
 
