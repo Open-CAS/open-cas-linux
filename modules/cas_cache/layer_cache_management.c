@@ -2,6 +2,7 @@
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2022      David Lee <live4thee@gmail.com>
 * Copyright(c) 2024-2025 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -732,14 +733,14 @@ static uint64_t _ffz(uint64_t word)
 
 static uint16_t find_free_core_id(uint64_t *bitmap)
 {
-	uint16_t i, ret = OCF_CORE_MAX;
+	uint16_t i, ret = OCF_CORE_NUM;
 	bool zero_core_free = !(*bitmap & 0x1UL);
 
 	/* check if any core id is free except 0 */
-	for (i = 0; i * sizeof(uint64_t) * 8 < OCF_CORE_MAX; i++) {
+	for (i = 0; i * sizeof(uint64_t) * 8 < OCF_CORE_NUM; i++) {
 		uint64_t ignore_mask = (i == 0) ? 1UL : 0UL;
 		if (~(bitmap[i] | ignore_mask)) {
-			ret = min((uint64_t)OCF_CORE_MAX,
+			ret = min((uint64_t)OCF_CORE_NUM,
 					(uint64_t)(i * sizeof(uint64_t) * 8
 					+ _ffz(bitmap[i] | ignore_mask)));
 			break;
@@ -747,7 +748,7 @@ static uint16_t find_free_core_id(uint64_t *bitmap)
 	}
 
 	/* return 0 only if no other core is free */
-	if (ret == OCF_CORE_MAX && zero_core_free)
+	if (ret == OCF_CORE_NUM && zero_core_free)
 		return 0;
 
 	return ret;
@@ -1187,7 +1188,7 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 	if (strnlen(cmd_info->core_path_name, MAX_STR_LEN) >= MAX_STR_LEN)
 		return -OCF_ERR_INVAL;
 	
-	if (cmd_info->try_add && cmd_info->core_id == OCF_CORE_MAX)
+	if (cmd_info->try_add && cmd_info->core_id == OCF_CORE_NUM)
 		return -OCF_ERR_INVAL;
 	
 	result = mngt_get_cache_by_id(cas_ctx, cmd_info->cache_id, &cache);
@@ -1198,7 +1199,7 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 		return -OCF_ERR_CACHE_STANDBY;
 	}
 
-	if (cmd_info->core_id == OCF_CORE_MAX) {
+	if (cmd_info->core_id == OCF_CORE_NUM) {
 		struct cache_priv *cache_priv;
 
 		if (!cache)
@@ -1206,7 +1207,7 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 
 		cache_priv = ocf_cache_get_priv(cache);
 		core_id = find_free_core_id(cache_priv->core_id_bitmap);
-		if (core_id == OCF_CORE_MAX)
+		if (core_id == OCF_CORE_NUM)
 			return -OCF_ERR_INVAL;
 
 		cmd_info->core_id = core_id;
@@ -3447,7 +3448,7 @@ int cache_mngt_get_info(struct kcas_cache_info *info)
 
 	/* Collect cores IDs */
 	for (i = 0, j = 0; j < info->info.core_count &&
-			i < OCF_CORE_MAX; i++) {
+			i < OCF_CORE_NUM; i++) {
 		if (get_core_by_id(cache, i, &core))
 			continue;
 

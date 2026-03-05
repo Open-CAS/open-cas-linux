@@ -1,6 +1,7 @@
 /*
  * Copyright(c) 2012-2022 Intel Corporation
  * Copyright(c) 2024 Huawei Technologies
+ * Copyright(c) 2026 Unvertical
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -64,7 +65,7 @@ extern struct cas_module cas_module;
 struct cas_classifier;
 
 struct cache_priv {
-	uint64_t core_id_bitmap[DIV_ROUND_UP(OCF_CORE_MAX, 8*sizeof(uint64_t))];
+	uint64_t core_id_bitmap[DIV_ROUND_UP(OCF_CORE_NUM, 8*sizeof(uint64_t))];
 	struct cas_classifier *classifier;
 	struct _cache_mngt_stop_context *stop_context;
 	atomic_t flush_interrupt_enabled;
