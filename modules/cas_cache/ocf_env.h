@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024-2025 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -294,8 +295,61 @@ static inline void env_completion_destroy(env_completion *completion)
 
 /* *** ATOMIC VARIABLES *** */
 
+typedef struct {
+	volatile uint8_t counter;
+} env_atomic8;
 typedef atomic_t env_atomic;
 typedef atomic64_t env_atomic64;
+
+static inline uint8_t env_atomic8_read(const env_atomic8 *a)
+{
+	return READ_ONCE(a->counter);
+}
+
+static inline void env_atomic8_set(env_atomic8 *a, uint8_t i)
+{
+	WRITE_ONCE(a->counter, i);
+}
+
+static inline uint8_t env_atomic8_cmpxchg(env_atomic8 *a,
+		uint8_t old, uint8_t new_value)
+{
+	return cmpxchg(&a->counter, old, new_value);
+}
+
+static inline void env_atomic8_sub(uint8_t i, env_atomic8 *a)
+{
+	uint8_t c;
+
+	for (;;) {
+		c = env_atomic8_read(a);
+		if (env_atomic8_cmpxchg(a, c, c - i) == c)
+			break;
+		/* the kernel does not yield here, neither do us */
+	}
+}
+
+static inline void env_atomic8_dec(env_atomic8 *a)
+{
+	env_atomic8_sub(1, a);
+}
+
+static inline uint8_t env_atomic8_add_unless(env_atomic8 *a,
+		uint8_t i, uint8_t u)
+{
+	uint8_t c, old;
+
+	c = env_atomic8_read(a);
+	for (;;) {
+		if (unlikely(c == (u)))
+			break;
+		old = env_atomic8_cmpxchg((a), c, c + (i));
+		if (likely(old == c))
+			break;
+		c = old;
+	}
+	return c != (u);
+}
 
 static inline int env_atomic_read(const env_atomic *a)
 {
