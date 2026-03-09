@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024-2025 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -112,7 +113,7 @@ int vcaslog(int log_level, const char *template, va_list args)
 	vfprintf(log, template, args);
 	fflush(log);
 
-	lockf(fileno(log), F_ULOCK, 0);
+	ret = lockf(fileno(log), F_ULOCK, 0);
 
 out:
 	fclose(log);
