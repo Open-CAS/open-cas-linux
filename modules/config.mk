@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2012-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -35,7 +36,7 @@ ccflags-y += -Werror
 ldflags-y += -z noexecstack -z relro -z now
 
 # workaround for missing objtool in kernel devel package
-ifeq ($(shell expr $(KERNEL_VERSION) == 4 \& $(KERNEL_MAJOR) == 14),1)
+ifeq ($(shell expr $(KERNEL_VERSION) = 4 \& $(KERNEL_MAJOR) = 14),1)
 ifeq ($(CONFIG_STACK_VALIDATION), y)
 OBJTOOL=$(shell [ -f tools/objtool/objtool ] && echo "y")
 ifneq ($(OBJTOOL), y)
