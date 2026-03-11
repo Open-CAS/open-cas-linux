@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
 # Copyright(c) 2023-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -70,6 +71,9 @@ def test_insufficient_memory_for_cas_module():
             TestRun.LOGGER.info(f"Cannot load CAS kernel module as expected.\n{output.stderr}")
         else:
             TestRun.LOGGER.error("Loading CAS kernel module successfully finished, but should fail.")
+
+    with TestRun.step("Unlock RAM memory"):
+        unmount_ramfs()
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
