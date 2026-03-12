@@ -73,7 +73,6 @@ def test_insufficient_memory_for_cas_module():
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
-@pytest.mark.require_disk("cache2", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_attach_cache_min_ram():
     """
@@ -87,13 +86,13 @@ def test_attach_cache_min_ram():
 
     with TestRun.step("Prepare devices"):
         cache_dev = TestRun.disks["cache"]
-        cache_dev.create_partitions([Size(2, Unit.GibiByte)])
-        cache_dev = cache_dev.partitions[0]
-        cache_dev2 = TestRun.disks["cache2"]
+        cache_dev.create_partitions([Size(2, Unit.GibiByte), Size(100, Unit.GibiByte)])
+        cache_part1 = cache_dev.partitions[0]
+        cache_part2 = cache_dev.partitions[1]
         core_dev = TestRun.disks["core"]
 
     with TestRun.step("Start cache and add core"):
-        cache = casadm.start_cache(cache_dev, force=True)
+        cache = casadm.start_cache(cache_part1, force=True)
         cache.add_core(core_dev)
 
     with TestRun.step("Detach cache"):
@@ -108,7 +107,7 @@ def test_attach_cache_min_ram():
             TestRun.LOGGER.info(
                 f"There is {get_mem_available().unit.MebiByte.value} available memory left"
             )
-            cache.attach(device=cache_dev2, force=True)
+            cache.attach(device=cache_part2, force=True)
             TestRun.LOGGER.error(
                 f"Cache attached not as expected."
                 f"{get_mem_available()} is enough memory to complete operation")

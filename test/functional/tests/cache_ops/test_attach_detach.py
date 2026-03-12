@@ -27,9 +27,7 @@ test_file_path = f"{mountpoint}/test_file"
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
-@pytest.mark.require_disk("cache2", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.require_disk("core2", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 def test_attach_device_with_existing_metadata(cache_mode, cache_line_size):
@@ -55,34 +53,31 @@ def test_attach_device_with_existing_metadata(cache_mode, cache_line_size):
 
     with TestRun.step("Prepare devices for caches and cores"):
         cache_dev = TestRun.disks["cache"]
-        cache_dev.create_partitions([Size(2, Unit.GibiByte)])
-        cache_dev = cache_dev.partitions[0]
+        cache_dev.create_partitions([Size(2, Unit.GibiByte)] * 2)
+        cache_part1 = cache_dev.partitions[0]
+        cache_part2 = cache_dev.partitions[1]
 
-        cache_dev2 = TestRun.disks["cache2"]
-        cache_dev2.create_partitions([Size(2, Unit.GibiByte)])
-        cache_dev2 = cache_dev2.partitions[0]
-
-        core_dev1 = TestRun.disks["core"]
-        core_dev2 = TestRun.disks["core2"]
-        core_dev1.create_partitions([Size(2, Unit.GibiByte)] * 2)
-        core_dev2.create_partitions([Size(2, Unit.GibiByte)] * 2)
+        core_dev = TestRun.disks["core"]
+        core_dev.create_partitions([Size(2, Unit.GibiByte)] * 4)
+        core_parts1 = core_dev.partitions[:2]
+        core_parts2 = core_dev.partitions[2:]
 
     with TestRun.step("Start 2 caches with different parameters and add core to each"):
         cache1 = casadm.start_cache(
-            cache_dev, force=True, cache_line_size=cache_line_size1
+            cache_part1, force=True, cache_line_size=cache_line_size1
         )
 
         if cache1.has_volatile_metadata():
             pytest.skip("Non-volatile metadata needed to run this test")
 
-        for core in core_dev1.partitions:
+        for core in core_parts1:
             cache1.add_core(core)
 
         cache2 = casadm.start_cache(
-            cache_dev2, force=True, cache_line_size=cache_line_size2
+            cache_part2, force=True, cache_line_size=cache_line_size2
         )
 
-        for core in core_dev2.partitions:
+        for core in core_parts2:
             cache2.add_core(core)
 
         cores_in_cache1_before = {
@@ -101,7 +96,7 @@ def test_attach_device_with_existing_metadata(cache_mode, cache_line_size):
 
     with TestRun.step("Try to attach the other cache device to first cache without force flag"):
         try:
-            cache1.attach(device=cache_dev2)
+            cache1.attach(device=cache_part2)
             TestRun.fail("Cache attached successfully"
                          "Expected: cache fail to attach")
         except CmdException as exc:
@@ -109,7 +104,7 @@ def test_attach_device_with_existing_metadata(cache_mode, cache_line_size):
             TestRun.LOGGER.info("Cache attach failed as expected")
 
     with TestRun.step("Attach the other cache device to first cache with force flag"):
-        cache1.attach(device=cache_dev2, force=True)
+        cache1.attach(device=cache_part2, force=True)
         cores_after_attach = casadm_parser.get_cores(cache_id=cache1.cache_id)
 
     with TestRun.step("Verify if old configuration doesn`t affect new cache"):
@@ -136,7 +131,6 @@ def test_attach_device_with_existing_metadata(cache_mode, cache_line_size):
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
-@pytest.mark.require_disk("cache2", DiskTypeSet([DiskType.nand, DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("cache_mode", [CacheMode.WB, CacheMode.WT])
 def test_attach_detach_md5sum(cache_mode):
@@ -151,19 +145,16 @@ def test_attach_detach_md5sum(cache_mode):
 
     with TestRun.step("Prepare cache and core devices"):
         cache_dev = TestRun.disks["cache"]
-        cache_dev.create_partitions([Size(2, Unit.GibiByte)])
-        cache_dev = cache_dev.partitions[0]
-
-        cache_dev2 = TestRun.disks["cache2"]
-        cache_dev2.create_partitions([Size(3, Unit.GibiByte)])
-        cache_dev2 = cache_dev2.partitions[0]
+        cache_dev.create_partitions([Size(2, Unit.GibiByte), Size(3, Unit.GibiByte)])
+        cache_part1 = cache_dev.partitions[0]
+        cache_part2 = cache_dev.partitions[1]
 
         core_dev = TestRun.disks["core"]
         core_dev.create_partitions([Size(6, Unit.GibiByte)])
         core_dev = core_dev.partitions[0]
 
     with TestRun.step("Start cache and add core"):
-        cache = casadm.start_cache(cache_dev, force=True, cache_mode=cache_mode)
+        cache = casadm.start_cache(cache_part1, force=True, cache_mode=cache_mode)
         core = cache.add_core(core_dev)
 
     with TestRun.step(f"Change cache mode to {cache_mode}"):
@@ -189,7 +180,7 @@ def test_attach_detach_md5sum(cache_mode):
         cache.detach()
 
     with TestRun.step("Attach different cache device"):
-        cache.attach(device=cache_dev2, force=True)
+        cache.attach(device=cache_part2, force=True)
 
     with TestRun.step("Calculate cache test file md5sums after cache attach"):
         test_file_md5sum_after = test_file_main.md5sum()
