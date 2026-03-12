@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2023-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -207,7 +208,7 @@ def test_stop_cache_during_attach(cache_mode):
     """
 
     with TestRun.step("Create null_blk device for cache"):
-        nullblk = NullBlk.create(size_gb=1500)
+        nullblk = NullBlk.create(size_gb=100)
 
     with TestRun.step("Prepare cache and core devices"):
         cache_dev = nullblk[0]
