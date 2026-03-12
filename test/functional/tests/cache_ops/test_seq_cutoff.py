@@ -86,7 +86,7 @@ def test_seq_cutoff_multi_core(cache_mode, io_type, io_type_last, cache_line_siz
         thresholds_list = [
             Size.generate_random_size(
                 min_size=1,
-                max_size=SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte),
+                max_size=int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte)),
                 unit=Unit.KibiByte,
             )
             for _ in core_list
@@ -207,7 +207,7 @@ def test_seq_cutoff_multi_core_cpu_pinned(cache_mode, io_type, io_type_last, cac
         thresholds_list = [
             Size.generate_random_size(
                 min_size=1,
-                max_size=SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte),
+                max_size=int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte)),
                 unit=Unit.KibiByte,
             )
             for _ in core_list
@@ -324,7 +324,7 @@ def test_seq_cutoff_thresh(cache_line_size, io_dir, policy, verify_type):
         fio_additional_size = Size(10, Unit.Blocks4096)
         threshold = Size.generate_random_size(
             min_size=1,
-            max_size=SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte),
+            max_size=int(SEQ_CUTOFF_THRESHOLD_MAX.get_value(Unit.KibiByte)),
             unit=Unit.KibiByte,
         )
         io_size = (threshold + fio_additional_size).align_down(0x1000)
