@@ -27,6 +27,10 @@ class VerifyType(Enum):
     EQUAL = auto()
 
 
+core_size = SEQ_CUTOFF_THRESHOLD_MAX + Size(10, Unit.GibiByte)
+core_size = core_size.align_up(Unit.Blocks4096.value)
+
+
 @pytest.mark.parametrize(
     "cache_mode, io_type, io_type_last",
     [
@@ -55,12 +59,11 @@ def test_seq_cutoff_multi_core(cache_mode, io_type, io_type_last, cache_line_siz
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
 
-        cache_device.create_partitions(
-            [(SEQ_CUTOFF_THRESHOLD_MAX * 4 + Size(value=5, unit=Unit.GibiByte))]
-        )
-        core_device.create_partitions(
-            [(SEQ_CUTOFF_THRESHOLD_MAX + Size(value=10, unit=Unit.GibiByte))] * 4
-        )
+        cache_size = SEQ_CUTOFF_THRESHOLD_MAX * 4 + Size(5, Unit.GibiByte)
+        cache_size = cache_size.align_up(Unit.Blocks4096.value)
+
+        cache_device.create_partitions([cache_size])
+        core_device.create_partitions([core_size] * 4)
 
         cache_part = cache_device.partitions[0]
         core_parts = core_device.partitions
@@ -178,12 +181,13 @@ def test_seq_cutoff_multi_core_cpu_pinned(cache_mode, io_type, io_type_last, cac
     with TestRun.step("Partition cache and core devices"):
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
-        cache_device.create_partitions(
-            [(SEQ_CUTOFF_THRESHOLD_MAX * 4 + Size(value=5, unit=Unit.GibiByte))]
-        )
-        core_device.create_partitions(
-            [(SEQ_CUTOFF_THRESHOLD_MAX + Size(value=10, unit=Unit.GibiByte))] * 4
-        )
+
+        cache_size = SEQ_CUTOFF_THRESHOLD_MAX * 4 + Size(5, Unit.GibiByte)
+        cache_size = cache_size.align_up(Unit.Blocks4096.value)
+
+        cache_device.create_partitions([cache_size])
+        core_device.create_partitions([core_size] * 4)
+
         cache_part = cache_device.partitions[0]
         core_parts = core_device.partitions
 
@@ -301,12 +305,13 @@ def test_seq_cutoff_thresh(cache_line_size, io_dir, policy, verify_type):
     with TestRun.step("Partition cache and core devices"):
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
-        cache_device.create_partitions(
-            [(SEQ_CUTOFF_THRESHOLD_MAX * 4 + Size(value=5, unit=Unit.GibiByte))]
-        )
-        core_device.create_partitions(
-            [(SEQ_CUTOFF_THRESHOLD_MAX + Size(value=10, unit=Unit.GibiByte))]
-        )
+
+        cache_size = SEQ_CUTOFF_THRESHOLD_MAX * 4 + Size(5, Unit.GibiByte)
+        cache_size = cache_size.align_up(Unit.Blocks4096.value)
+
+        cache_device.create_partitions([cache_size])
+        core_device.create_partitions([core_size] * 4)
+
         cache_part = cache_device.partitions[0]
         core_part = core_device.partitions[0]
 
@@ -385,12 +390,13 @@ def test_seq_cutoff_thresh_fill(cache_line_size, io_dir):
     with TestRun.step("Partition cache and core devices"):
         cache_device = TestRun.disks["cache"]
         core_device = TestRun.disks["core"]
-        cache_device.create_partitions(
-            [(SEQ_CUTOFF_THRESHOLD_MAX + Size(value=5, unit=Unit.GibiByte))]
-        )
-        core_device.create_partitions(
-            [(SEQ_CUTOFF_THRESHOLD_MAX + Size(value=10, unit=Unit.GibiByte))]
-        )
+
+        cache_size = SEQ_CUTOFF_THRESHOLD_MAX + Size(5, Unit.GibiByte)
+        cache_size = cache_size.align_up(Unit.Blocks4096.value)
+
+        cache_device.create_partitions([cache_size])
+        core_device.create_partitions([core_size])
+
         cache_part = cache_device.partitions[0]
         core_part = core_device.partitions[0]
 
