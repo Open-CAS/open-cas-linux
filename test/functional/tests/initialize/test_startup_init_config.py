@@ -236,7 +236,7 @@ def test_cas_startup_lazy():
         power_control.power_cycle(wait_for_connection=True)
 
     with TestRun.step("Verify if all the devices are initialized properly"):
-        core_pool_list = casadm_parser.get_cas_devices_dict()["core_pool"]
+        core_pool_list = casadm_parser.get_cas_devices_dict()["core_pool"].values()
         caches_list = casadm_parser.get_cas_devices_dict()["caches"].values()
         cores_list = casadm_parser.get_cas_devices_dict()["cores"].values()
 
