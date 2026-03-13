@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -124,8 +125,9 @@ def get_cas_devices_dict() -> dict:
                 ("exp_obj", device["device"]),
             ]
             if core_pool:
-                params.append(("core_pool", device))
-                devices["core_pool"][device["disk"]] = dict([(key, value) for key, value in params])
+                devices["core_pool"][device["disk"]] = dict([
+                    (key, value) for key, value in params]
+                )
             else:
                 devices["cores"][(cache_id, int(device["id"]))] = dict(
                     [(key, value) for key, value in params]
