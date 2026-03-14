@@ -118,8 +118,8 @@ def test_trim_propagation():
     """
 
     with TestRun.step("Create partitions"):
-        TestRun.disks["ssd1"].create_partitions([Size(43, Unit.MegaByte)])
-        TestRun.disks["ssd2"].create_partitions([Size(512, Unit.KiloByte)])
+        TestRun.disks["ssd1"].create_partitions([Size(43, Unit.MebiByte)])
+        TestRun.disks["ssd2"].create_partitions([Size(2, Unit.MebiByte)])
 
         cache_dev = TestRun.disks["ssd1"].partitions[0]
         core_dev = TestRun.disks["ssd2"].partitions[0]
@@ -156,7 +156,11 @@ def test_trim_propagation():
             )
 
     with TestRun.step("Discard 4k of data on exported object"):
-        TestRun.executor.run_expect_success(f"blkdiscard {core.path} --length 4096 --offset 0")
+        TestRun.executor.run_expect_success(
+            f"blkdiscard {core.path} " +
+            f"--offset {Unit.MebiByte.value} " +
+            f"--length {Unit.Blocks4096.value}"
+        )
         old_occupancy = cache.get_statistics().usage_stats.occupancy.get_value(Unit.Blocks4096)
 
     with TestRun.step("Power cycle"):
@@ -177,7 +181,13 @@ def test_trim_propagation():
 
     with TestRun.step("Verify data after dirty shutdown"):
         cas_fio.read_write(ReadWrite.read)
-        cas_fio.offset(Unit.Blocks4096)
+
+        cas_fio.offset(Size(0, Unit.Blocks4096))
+        cas_fio.size(Size(255, Unit.Blocks4096))
+        cas_fio.run()
+
+        cas_fio.offset(Size(257, Unit.Blocks4096))
+        cas_fio.size(Size(255, Unit.Blocks4096))
         cas_fio.run()
 
 
