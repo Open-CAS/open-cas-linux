@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -153,7 +154,7 @@ def test_clean_stop_cache(cache_mode):
         test_file_3.remove(True)
 
 
-@pytest.mark.parametrizex("fs", Filesystem)
+@pytest.mark.parametrizex("fs", Filesystem.regular())
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))

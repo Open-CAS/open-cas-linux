@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -34,7 +35,7 @@ other_pattern = "0x0000"
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.parametrizex("cleaning_policy", CleaningPolicy)
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.require_plugin("power_control")
 def test_recovery_all_options(cache_mode, cache_line_size, cleaning_policy, filesystem):
     """

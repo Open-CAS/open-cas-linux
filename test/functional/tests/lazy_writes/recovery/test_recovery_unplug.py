@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -26,7 +27,7 @@ test_file_path = os.path.join(mount_point, "test_file")
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.parametrizex("cls", [CacheLineSize.LINE_4KiB, CacheLineSize.LINE_64KiB])
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.parametrizex("direct", [True, False])
 @pytest.mark.require_plugin("power_control")
 def test_recovery_unplug_cache_fs(cache_mode, cls, filesystem, direct):

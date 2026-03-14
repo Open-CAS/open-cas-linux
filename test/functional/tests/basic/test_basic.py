@@ -108,7 +108,7 @@ def test_negative_start_cache():
 
 
 @pytest.mark.CI
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

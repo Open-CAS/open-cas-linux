@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -182,7 +183,7 @@ def test_trim_propagation():
 
 @pytest.mark.os_dependent
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.InsertWrite))
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.parametrizex("cleaning_policy", CleaningPolicy)
 @pytest.mark.parametrizex("trim_support_cache_core", [(False, True), (True, False), (True, True)])
 @pytest.mark.require_disk("ssd1", DiskTypeSet([DiskType.optane, DiskType.nand]))

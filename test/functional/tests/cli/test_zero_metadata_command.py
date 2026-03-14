@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 import time
@@ -86,7 +87,7 @@ def test_zero_metadata_negative_cases():
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 def test_zero_metadata_filesystem(filesystem):
     """
     title: Test for '--zero-metadata' and filesystem.

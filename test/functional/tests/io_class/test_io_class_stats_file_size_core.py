@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -22,7 +23,7 @@ from tests.io_class.io_class_common import template_config_path
 
 
 @pytest.mark.parametrizex("cache_mode", CacheMode)
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_io_class_stats_file_size_core_fs(cache_mode: CacheMode, filesystem: Filesystem):

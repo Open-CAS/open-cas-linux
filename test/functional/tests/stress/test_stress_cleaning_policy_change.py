@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -75,7 +76,7 @@ def test_change_cleaning_policy_during_io_raw():
             current_policy = cache_policy
 
 
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_change_cleaning_policy_during_io_fs(filesystem):

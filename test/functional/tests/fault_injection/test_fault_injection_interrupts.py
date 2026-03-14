@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2023-2025 Huawei Technologies
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -32,7 +33,7 @@ test_file_path = f"{mount_point}/test_file"
 
 
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_interrupt_core_flush(cache_mode: CacheMode, filesystem: Filesystem):
@@ -150,7 +151,7 @@ def test_interrupt_core_flush(cache_mode: CacheMode, filesystem: Filesystem):
             core_part.unmount()
 
 
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
@@ -263,7 +264,7 @@ def test_interrupt_cache_flush(cache_mode: CacheMode, filesystem: Filesystem):
             core_part.unmount()
 
 
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
@@ -504,7 +505,7 @@ def test_interrupt_cache_mode_switch_parametrized(cache_mode, stop_percentage):
             compare_files(test_file_checksum_before, test_file_checksum_after)
 
 
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
@@ -671,7 +672,7 @@ def test_interrupt_attach(cache_mode):
             )
 
 
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
