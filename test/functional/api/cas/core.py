@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -26,8 +27,17 @@ SEQ_CUT_OFF_THRESHOLD_DEFAULT = Size(1, Unit.MebiByte)
 
 
 class Core(Device):
-    def __init__(self, core_device: str, cache_id: int):
-        self.core_device = Device(core_device)
+    def __init__(
+        self,
+        core_device_path: str,
+        cache_id: int,
+        status: CoreStatus = CoreStatus.active
+    ):
+        self.core_device_path = core_device_path
+        if status == CoreStatus.active:
+            self.core_device = Device(core_device_path)
+        else:
+            self.core_device = None
         self.path = None
         self.cache_id = cache_id
         core_info = self.__get_core_info()
@@ -45,7 +55,7 @@ class Core(Device):
         core_device = [
             core
             for core in core_dicts
-            if core["cache_id"] == self.cache_id and core["device_path"] == self.core_device.path
+            if core["cache_id"] == self.cache_id and core["device_path"] == self.core_device_path
         ]
         if core_device:
             return core_device[0]
@@ -53,7 +63,7 @@ class Core(Device):
         # for core pool
         core_pool_dicts = get_cas_devices_dict()["core_pool"].values()
         core_pool_device = [
-            core for core in core_pool_dicts if core["device_path"] == self.core_device.path
+            core for core in core_pool_dicts if core["device_path"] == self.core_device_path
         ]
         return core_pool_device[0]
 
