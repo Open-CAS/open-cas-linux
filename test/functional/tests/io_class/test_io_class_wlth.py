@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -29,6 +30,9 @@ def test_ioclass_wlth():
      - IO with wlth is cached
      - IO without wlth is not cached
     """
+    if not ioclass_config.is_wlth_supported():
+        pytest.skip("WLTH is not supported on this kernel version")
+
     with TestRun.step("Start cache with one core with NOP and disabled seq cutoff"):
         cache, core = prepare()
 
