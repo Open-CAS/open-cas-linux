@@ -161,7 +161,7 @@ def test_trim_propagation():
 
     with TestRun.step("Power cycle"):
         power_control = TestRun.plugin_manager.get_plugin("power_control")
-        power_control.power_cycle()
+        power_control.power_cycle(wait_for_connection=True)
         Udev.disable()
 
     with TestRun.step("Load cache"):
