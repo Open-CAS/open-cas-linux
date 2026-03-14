@@ -149,6 +149,7 @@ def test_partition_create_cas(partition_table, filesystem, cache_mode):
         cache.stop()
 
     with TestRun.step("Read partitions on core device."):
+        TestRun.executor.run_expect_success("partprobe")
         for part in core.partitions:
             part.parent_device = core_dev
             new_part = Partition(part.parent_device, part.type, part.number, part.begin, part.end)
