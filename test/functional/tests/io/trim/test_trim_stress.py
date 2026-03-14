@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -47,9 +48,8 @@ def test_trim_stress(cache_mode, cache_line_size):
         for d in core_devices:
             cores.append(cache.add_core(d))
 
-    with TestRun.step("Run I/O workload."):
-        for _ in TestRun.iteration(range(1, 6)):
-            run_fio([core.path for core in cores])
+    for _ in TestRun.iteration(range(1, 6), "Run I/O workload"):
+        run_fio([core.path for core in cores])
 
     with TestRun.step("Stop CAS."):
         for c in cores:
