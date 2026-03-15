@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -39,8 +40,8 @@ def test_concurrent_cores_flush(cache_mode: CacheMode):
         cache_dev = TestRun.disks["cache"]
         core_dev = TestRun.disks["core"]
 
-        cache_dev.create_partitions([Size(2, Unit.GibiByte)])
-        core_dev.create_partitions([Size(2, Unit.GibiByte)] * 2)
+        cache_dev.create_partitions([Size(10, Unit.GibiByte)])
+        core_dev.create_partitions([Size(10, Unit.GibiByte)] * 2)
 
         cache_part = cache_dev.partitions[0]
         core_part1 = core_dev.partitions[0]
