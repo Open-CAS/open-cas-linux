@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -35,15 +36,15 @@ def test_multilevel_cache_3():
         core_dev_1 = TestRun.disks["core_1"]
 
         cache_hdd = TestRun.disks["cache_3"]
-        cache_hdd.create_partitions([Size(3.2, Unit.GibiByte)])
+        cache_hdd.create_partitions([Size(3, Unit.GibiByte)])
         cache_hdd = cache_hdd.partitions[0]
 
         cache_dev_1 = TestRun.disks["cache_1"]
-        cache_dev_1.create_partitions([Size(3.2, Unit.GibiByte)])
+        cache_dev_1.create_partitions([Size(3, Unit.GibiByte)])
         cache_dev_1 = cache_dev_1.partitions[0]
 
         cache_dev_2 = TestRun.disks["cache_2"]
-        cache_dev_2.create_partitions([Size(3.2, Unit.GibiByte)])
+        cache_dev_2.create_partitions([Size(3, Unit.GibiByte)])
         cache_dev_2 = cache_dev_2.partitions[0]
 
     with TestRun.step("Create cache in WT mode and add core to it"):
