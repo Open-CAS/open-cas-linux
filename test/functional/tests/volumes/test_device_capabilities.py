@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -102,8 +103,8 @@ def create_scsi_debug_device(sector_size: int, physblk_exp: int, dev_size_mb=102
 def prepare_cas_device(cache_device, core_device):
     cache = casadm.start_cache(cache_device, cache_line_size=CacheLineSize.LINE_64KiB, force=True)
     try:
-        cache_dev_bs = get_block_size(cache_device.device_id)
-        core_dev_bs = get_block_size(core_device.device_id)
+        cache_dev_bs = get_block_size(cache_device.get_device_id())
+        core_dev_bs = get_block_size(core_device.get_device_id())
         core = cache.add_core(core_device)
         if cache_dev_bs > core_dev_bs:
             TestRun.LOGGER.error(
@@ -152,11 +153,10 @@ def compare_capabilities(cache_device, core_device, cache, core, msg):
         cli_messages.check_stderr_msg(msg,
                                       cli_messages.try_add_core_sector_size_mismatch)
     else:
-        core_dev_sectors_num = \
-            get_size(core_device.device_id) / get_block_size(
-                core_device.device_id)
-        core_sectors_num = get_size(core.device_id) / get_block_size(
-            core.device_id)
+        core_dev_sectors_num = get_size(core_device.get_device_id()) / \
+            get_block_size(core_device.get_device_id())
+        core_sectors_num = get_size(core.get_device_id()) / \
+            get_block_size(core.get_device_id())
         if core_dev_sectors_num != core_sectors_num:
             TestRun.LOGGER.error(
                 "Number of sectors in CAS device and attached core device is different.")
