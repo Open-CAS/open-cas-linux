@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -39,6 +40,7 @@ io_size = Size(10000, Unit.Blocks4096)
         (CacheMode.WO, CacheMode.PT),
         (CacheMode.WO, CacheMode.WA),
     ],
+    ids=lambda modes: f"{modes[0].name}->{modes[1].name}",
 )
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
