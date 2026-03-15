@@ -79,9 +79,9 @@ def test_seq_cutoff_multi_core(cache_mode, io_type, io_type_last, cache_line_siz
         )
         core_list = [cache.add_core(core_dev=core_part) for core_part in core_parts]
 
-        with TestRun.step("Purge cache and reset cache counters"):
-            cache.purge_cache()
-            cache.reset_counters()
+    with TestRun.step("Purge cache and reset cache counters"):
+        cache.purge_cache()
+        cache.reset_counters()
 
     with TestRun.step("Set sequential cutoff parameters for all cores"):
         writes_before_list = []
@@ -204,6 +204,10 @@ def test_seq_cutoff_multi_core_cpu_pinned(cache_mode, io_type, io_type_last, cac
             cache_line_size=cache_line_size,
         )
         core_list = [cache.add_core(core_dev=core_part) for core_part in core_parts]
+
+    with TestRun.step("Purge cache and reset cache counters"):
+        cache.purge_cache()
+        cache.reset_counters()
 
     with TestRun.step("Set sequential cutoff parameters for all cores"):
         writes_before_list = []
@@ -418,6 +422,10 @@ def test_seq_cutoff_thresh_fill(cache_line_size, io_dir):
             unit=Unit.KibiByte,
         )
         io_size = (threshold + fio_additional_size).align_down(0x1000)
+
+    with TestRun.step("Purge cache and reset cache counters"):
+        cache.purge_cache()
+        cache.reset_counters()
 
     with TestRun.step(f"Setting cache sequential cutoff policy mode to {SeqCutOffPolicy.never}"):
         cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
