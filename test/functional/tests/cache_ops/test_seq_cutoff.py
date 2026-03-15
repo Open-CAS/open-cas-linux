@@ -429,6 +429,8 @@ def test_seq_cutoff_thresh_fill(cache_line_size, io_dir):
             .create_command()
             .io_engine(IoEngine.libaio)
             .size(cache.size)
+            .io_depth(32)
+            .block_size(Size(1, Unit.MebiByte))
             .read_write(io_dir)
             .target(f"{core.path}")
             .direct()
