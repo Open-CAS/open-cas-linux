@@ -120,6 +120,11 @@ set_params_help = [
     r"cleaning cycle \<1-10000\> \(default: 100\)",
     r"-t  --activity-threshold \<NUMBER\>    Cache idle time before flushing thread can start "
     r"\<0-1000000\>\[ms\] \(default: 10000 ms\)",
+    r"-d  --dirty-ratio-threshold \<NUMBER\> Dirty ratio of the cache device at which cleaning "
+    r"will be triggered \<0-100\>\[\%\] \(default: 100\%\)",
+    r"    --dirty-ratio-inertia \<NUMBER\>   Inertia for dirty ratio triggered cleaning - "
+    r"the trigger will be disabled after dirty ratio falls below "
+    r"\(threshold - inertia\) \<0-4095\>\[MiB\] \(default: 128 MiB\)",
     r"Options that are valid with --set-param \(-X\) --name \(-n\) cleaning-acp are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
     r"-w  --wake-up \<NUMBER\>               Time between ACP cleaning thread iterations "
