@@ -671,6 +671,7 @@ def test_lazy_startup_core_path_by_id(cache_mode, reboot_type):
         InitConfig.create_init_config_from_running_configuration(
             cache_extra_flags="lazy_startup=true", core_extra_flags="lazy_startup=true"
         )
+        sync()
 
     with TestRun.step("Stop cache and clear metadata before reboot"):
         cache.stop()
@@ -733,6 +734,7 @@ def test_lazy_startup_core_path_not_by_id(cache_mode, reboot_type):
         create_init_config(
             cache, cores, [readlink(part.path) for part in core_dev.partitions]
         )
+        sync()
 
     with TestRun.step("Stop cache and clear metadata before reboot"):
         cache.stop()
