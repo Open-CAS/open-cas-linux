@@ -85,7 +85,7 @@ def test_io_class_stats_file_size_core_fs(cache_mode: CacheMode, filesystem: Fil
         with TestRun.step(f"Check that statistics increase only for IO class {io_class.id}"):
             issued_reqs_no = \
                 result[0].write_requests_number() + result[0].read_requests_number()
-            check_statistics(cache, core, io_classes, io_class, issued_reqs_no)
+            check_statistics(cache, core, file_size_based_io_classes, io_class, issued_reqs_no)
             remove(f"{core.mount_point}/*", force=True, recursive=True)
 
             size_min = size + Size(512, Unit.Byte)
