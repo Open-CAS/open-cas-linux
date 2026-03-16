@@ -205,8 +205,9 @@ class Operator(enum.Enum):
 # TODO: replace below methods with methods using IoClass
 
 def is_wlth_supported():
-    return (version.Version("4.13") <= get_kernel_version() <= version.Version("5.17") or
-            version.Version("6.9") <= get_kernel_version()
+    kernel_version = get_kernel_version()
+    return (version.Version("4.13") <= kernel_version <= version.Version("5.17") or
+            version.Version("6.9") <= kernel_version
     )
 
 def create_ioclass_config(

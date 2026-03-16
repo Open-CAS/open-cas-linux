@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -42,7 +43,7 @@ def test_weak_modules():
 
         if not re.search("rhel|fedora", distro_id_like):
             distro_id_like = distro_id_like.split("=")[1].strip("\"'")
-            TestRun.LOGGER.error(
+            pytest.skip(
                 f"OS type - {distro_id_like}: this distribution "
                 f"does not support weak-modules mechanism"
             )
