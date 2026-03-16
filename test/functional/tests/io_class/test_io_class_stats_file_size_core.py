@@ -73,6 +73,9 @@ def test_io_class_stats_file_size_core_fs(cache_mode: CacheMode, filesystem: Fil
     ):
         with TestRun.step(f"Run fio with IO class {io_class.id} file sizes"):
             TestRun.LOGGER.info(f"Testing {core.filesystem.name} filesystem.")
+            precreate_fio_files(core, size_min, size)
+            sync()
+            drop_caches()
             core.reset_counters()
             fio = fio_params(core, size_min, size)
             result = fio.run(fio_timeout=timedelta(minutes=5))
@@ -143,6 +146,13 @@ def test_io_class_stats_file_size_core_direct(cache_mode: CacheMode):
             remove(f"{core.path}/*", force=True, recursive=True)
 
             size_min = size + Size(512, Unit.Byte)
+
+
+def precreate_fio_files(core, size_min, size_max):
+    for size in [size_min, size_max]:
+        path = f"{core.mount_point}/{round(size.get_value())}"
+        bytes_count = round(size.get_value())
+        TestRun.executor.run_expect_success(f"truncate -s {bytes_count} {path}")
 
 
 def fio_params(core, size_min, size_max, direct=False):
