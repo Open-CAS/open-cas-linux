@@ -167,9 +167,7 @@ class IoClass:
             "file_offset",
             "request_size",
         ]
-        if (version.Version("4.13") <= get_kernel_version() <= version.Version("5.17") or
-            version.Version("6.9") <= get_kernel_version()
-        ):
+        if is_wlth_supported():
             rules.append("wlth")
 
         rule = random.choice(rules)
@@ -205,6 +203,13 @@ class Operator(enum.Enum):
 
 
 # TODO: replace below methods with methods using IoClass
+
+def is_wlth_supported():
+    kernel_version = get_kernel_version()
+    return (version.Version("4.13") <= kernel_version <= version.Version("5.17") or
+            version.Version("6.9") <= kernel_version
+    )
+
 def create_ioclass_config(
     add_default_rule: bool = True, ioclass_config_path: str = default_config_file_path
 ):

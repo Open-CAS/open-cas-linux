@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -79,10 +80,9 @@ def test_raid_as_cache(cache_mode):
 
 
 @pytest.mark.parametrize("cache_mode", CacheMode)
-@pytest.mark.require_disk("cache1", DiskTypeSet([DiskType.optane, DiskType.nand]))
-@pytest.mark.require_disk("cache2", DiskTypeSet([DiskType.optane, DiskType.nand]))
-@pytest.mark.require_disk("core1", DiskTypeLowerThan("cache1"))
-@pytest.mark.require_disk("core2", DiskTypeLowerThan("cache1"))
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core1", DiskTypeLowerThan("cache"))
+@pytest.mark.require_disk("core2", DiskTypeLowerThan("cache"))
 def test_many_cores_raid_as_cache(cache_mode):
     """
     title: Test if CAS is working with many core devices using RAID0 as cache device.
@@ -96,12 +96,10 @@ def test_many_cores_raid_as_cache(cache_mode):
       - Successful creation and copy files to each core and verification of theirs md5sum.
     """
     with TestRun.step("Create cache with RAID0 as caching device."):
-        raid_disk = TestRun.disks["cache1"]
-        raid_disk.create_partitions([Size(2, Unit.GibiByte)])
-        raid_disk_1 = raid_disk.partitions[0]
-        raid_disk2 = TestRun.disks["cache2"]
-        raid_disk2.create_partitions([Size(2, Unit.GibiByte)])
-        raid_disk_2 = raid_disk2.partitions[0]
+        raid_disk = TestRun.disks["cache"]
+        raid_disk.create_partitions([Size(2, Unit.GibiByte), Size(2, Unit.GibiByte)])
+        raid_part_1 = raid_disk.partitions[0]
+        raid_part_2 = raid_disk.partitions[1]
 
         config = RaidConfiguration(
             level=Level.Raid0,
@@ -110,7 +108,7 @@ def test_many_cores_raid_as_cache(cache_mode):
             size=Size(1, Unit.GiB),
         )
 
-        raid_volume = Raid.create(config, [raid_disk_1, raid_disk_2])
+        raid_volume = Raid.create(config, [raid_part_1, raid_part_2])
         TestRun.LOGGER.info("RAID created successfully.")
 
         cache = casadm.start_cache(raid_volume, cache_mode, force=True)

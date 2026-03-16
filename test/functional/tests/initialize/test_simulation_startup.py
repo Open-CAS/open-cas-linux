@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -13,8 +14,8 @@ from api.cas.core import CoreStatus
 from api.cas.init_config import InitConfig
 from core.test_run import TestRun
 from storage_devices.disk import DiskTypeLowerThan, DiskTypeSet, DiskType
+from test_tools.udev import Udev
 from type_def.size import Size, Unit
-
 
 @pytest.mark.CI
 @pytest.mark.os_dependent
@@ -75,7 +76,8 @@ def test_simulation_startup_from_config():
         TestRun.executor.run_expect_success(ctl_stop())
 
     with TestRun.step("Trigger udev"):
-        TestRun.executor.run_expect_success("udevadm trigger")
+        Udev.trigger()
+        Udev.settle()
 
     with TestRun.step("Verify if cache is working"):
         caches = casadm_parser.get_caches()

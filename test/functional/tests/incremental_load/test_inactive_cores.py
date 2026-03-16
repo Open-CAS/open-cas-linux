@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -235,6 +236,6 @@ def test_core_inactive_stats_usage():
             TestRun.LOGGER.error(
                 "Wrong clean blocks percentage in usage stats\n"
                 "Actual number of clean blocks percentage: "
-                f"{cache_usage_stats.inactive_clean}\n"
-                f"Expected number of clean blocks percentage: {inactive_cores_clean_stats}"
+                f"{cache_usage_stats_percentage.inactive_clean}\n"
+                f"Expected number of clean blocks percentage: {inactive_clean_perc}"
             )

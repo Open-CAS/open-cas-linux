@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -25,7 +26,7 @@ runtime = timedelta(minutes=15)
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("cache_mode", CacheMode)
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.parametrizex("io_engine", [IoEngine.sync, IoEngine.libaio, IoEngine.psync,
                           IoEngine.vsync, IoEngine.pvsync, IoEngine.posixaio, IoEngine.mmap])
 def test_io_engines(cache_mode, filesystem, io_engine):

@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -39,6 +40,7 @@ io_size = Size(10000, Unit.Blocks4096)
         (CacheMode.WO, CacheMode.PT),
         (CacheMode.WO, CacheMode.WA),
     ],
+    ids=lambda modes: f"{modes[0].name}->{modes[1].name}",
 )
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
@@ -105,11 +107,12 @@ def test_cache_stop_and_load(cache_mode):
                 )
             TestRun.fail(f"Parameters do not match after reload:\n{failed_params}")
 
+    with TestRun.step("Purge cache and reset cache counters"):
+        cache.purge_cache()
+        cache.reset_counters()
+
     with TestRun.step(f"Check if {cache_mode[1]} cache mode works properly after reload"):
-        if cache_mode[1] == CacheMode.WA or cache_mode[1] == CacheMode.WO:
-            check_separated_read_write_after_reload(cache, core, cache_mode[1], io_size)
-        else:
-            check_cache_mode_operation(cache, core, cache_mode[1])
+        check_cache_mode_operation(cache, core, cache_mode[1])
 
 
 @pytest.mark.parametrize(
@@ -283,64 +286,6 @@ def run_io_and_verify(cache, core, io_mode):
                         "Write-Only cache mode is not working properly for data writes! "
                         "All writes should be passed to CAS device and none to the core"
                     )
-
-
-def check_separated_read_write_after_reload(cache, core, cache_mode, io_size):
-    # io_size_after_reload should be set to a greater value then global io_size value
-    io_size_after_reload = Size(12000, Unit.Blocks4096)
-    if io_size_after_reload <= io_size:
-        TestRun.fail("io_size_after_reload value is not greater then global io_size value!")
-
-    io_mode = ReadWrite.randread
-    fio_prepare(core, io_mode, io_size_after_reload).run()
-    sync()
-    cache_block_stats = cache.get_statistics().block_stats
-    io_new_data = io_size_after_reload - io_size
-
-    if cache_mode == CacheMode.WA:
-        if (
-            cache_block_stats.cache.writes != io_new_data
-            or cache_block_stats.core.reads != io_new_data
-        ):
-            TestRun.fail(
-                "Write-Around cache mode is not working properly for data reads after reload! "
-                "'cache writes' and 'core reads' should equal "
-                "the difference from previous data reads"
-            )
-    if cache_mode == CacheMode.WO:
-        if (
-            cache_block_stats.cache.writes != Size.zero()
-            or cache_block_stats.cache.reads != io_size
-        ):
-            TestRun.fail(
-                "Write-Only cache mode is not working properly for data reads after reload! "
-                "There should be no writes to cache and reads "
-                "from cache should equal previous writes to it"
-            )
-
-    cache.reset_counters()
-    io_mode = ReadWrite.randwrite
-    fio_prepare(core, io_mode, io_size_after_reload).run()
-    sync()
-    cache_block_stats = cache.get_statistics().block_stats
-    core_block_stats = core.get_statistics().block_stats
-
-    match cache_mode:
-        case CacheMode.WA:
-            if cache_block_stats.cache.writes != io_size_after_reload:
-                TestRun.fail(
-                    "Write-Around cache mode is not working properly for data writes after reload! "
-                    "There should be no writes to cache since previous read operation"
-                )
-        case CacheMode.WO:
-            if (
-                core_block_stats.core.writes != Size.zero()
-                or core_block_stats.exp_obj.writes != io_size_after_reload
-            ):
-                TestRun.fail(
-                    "Write-Only cache mode is not working properly for data writes after reload! "
-                    "All writes should be passed to CAS device and none to the core"
-                )
 
 
 def fio_prepare(core, io_mode, io_size=io_size):

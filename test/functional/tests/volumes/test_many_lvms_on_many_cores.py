@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -97,3 +98,6 @@ def test_many_lvms_on_many_cores(update_initramfs_before_and_after_test):
 
     with TestRun.step("Run FIO with verification on LVM."):
         fio_run.run()
+
+    with TestRun.step("Remove LVMs."):
+        Lvm.remove_all()

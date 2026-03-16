@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -35,7 +36,7 @@ cores_number = 4
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 @pytest.mark.parametrizex("cache_mode", CacheMode)
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 def test_cas_startup(cache_mode, filesystem):
     """
     title: Test for starting CAS on system startup.
@@ -235,7 +236,7 @@ def test_cas_startup_lazy():
         power_control.power_cycle(wait_for_connection=True)
 
     with TestRun.step("Verify if all the devices are initialized properly"):
-        core_pool_list = casadm_parser.get_cas_devices_dict()["core_pool"]
+        core_pool_list = casadm_parser.get_cas_devices_dict()["core_pool"].values()
         caches_list = casadm_parser.get_cas_devices_dict()["caches"].values()
         cores_list = casadm_parser.get_cas_devices_dict()["cores"].values()
 
@@ -670,6 +671,7 @@ def test_lazy_startup_core_path_by_id(cache_mode, reboot_type):
         InitConfig.create_init_config_from_running_configuration(
             cache_extra_flags="lazy_startup=true", core_extra_flags="lazy_startup=true"
         )
+        sync()
 
     with TestRun.step("Stop cache and clear metadata before reboot"):
         cache.stop()
@@ -732,6 +734,7 @@ def test_lazy_startup_core_path_not_by_id(cache_mode, reboot_type):
         create_init_config(
             cache, cores, [readlink(part.path) for part in core_dev.partitions]
         )
+        sync()
 
     with TestRun.step("Stop cache and clear metadata before reboot"):
         cache.stop()

@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -65,10 +66,12 @@ repo_files_perms_exceptions = {
     "utils/open-cas.shutdown": 755,
     "ocf/.github/verify_header.sh": 755,
     "ocf/tests/functional/utils/configure_random.py": 755,
+    "ocf/tests/functional/run_with_sanitizers.sh": 755,
     "ocf/tests/unit/framework/add_new_test_file.py": 755,
     "ocf/tests/unit/framework/prepare_sources_for_testing.py": 755,
     "ocf/tests/unit/framework/run_unit_tests.py": 755,
     "ocf/tests/unit/tests/add_new_test_file.py": 755,
+    "test/functional/test-framework/.github/verify_header.sh": 755,
     "test/functional/test-framework/test_tools/checksec.sh": 744,
 }
 

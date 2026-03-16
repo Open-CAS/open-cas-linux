@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -59,7 +60,7 @@ def test_io_class_eviction_pinned_after_unpin():
             )
 
     with TestRun.step("Run IO on pinned IO class"):
-        run_io_dir(f"{pinned_io_class.core.path}", int(cache_line_count / Unit.Blocks4096))
+        run_io_dir(f"{pinned_io_class.core.path}", int(cache_line_count / Unit.Blocks4096.value))
         occupancy_after = get_io_class_occupancy(cache, pinned_io_class.id, percent=True)
 
     with TestRun.step("Unpin ioclass to and set its priority to be lower than second IO class"):
@@ -67,7 +68,7 @@ def test_io_class_eviction_pinned_after_unpin():
         _add_and_load_io_classes(cache.cache_id, io_classes)
 
     with TestRun.step("Run dd on second io ioclass "):
-        run_io_dir(f"{io_classes[1].core.path}", int(cache_line_count / Unit.Blocks4096))
+        run_io_dir(f"{io_classes[1].core.path}", int(cache_line_count / Unit.Blocks4096.value))
 
     with TestRun.step("Check if data from 'was pinned' IO class was evicted"):
         occupancy_after_change = get_io_class_occupancy(cache, pinned_io_class.id, percent=True)

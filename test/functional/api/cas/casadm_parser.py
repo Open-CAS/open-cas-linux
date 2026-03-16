@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -59,13 +60,10 @@ def get_cores(cache_id: int) -> list:
 
     cores_dict = get_cas_devices_dict()["cores"].values()
 
-    def is_active(core):
-        return core["status"] == CoreStatus.active
-
     return [
-        Core(core["device_path"], core["cache_id"])
+        Core(core["device_path"], core["cache_id"], core["status"])
         for core in cores_dict
-        if is_active(core) and core["cache_id"] == cache_id
+        if core["status"] == CoreStatus.active and core["cache_id"] == cache_id
     ]
 
 
@@ -74,13 +72,10 @@ def get_inactive_cores(cache_id: int) -> list:
 
     cores_dict = get_cas_devices_dict()["cores"].values()
 
-    def is_inactive(core):
-        return core["status"] == CoreStatus.inactive
-
     return [
-        Core(core["device_path"], core["cache_id"])
+        Core(core["device_path"], core["cache_id"], core["status"])
         for core in cores_dict
-        if is_inactive(core) and core["cache_id"] == cache_id
+        if core["status"] == CoreStatus.inactive and core["cache_id"] == cache_id
     ]
 
 
@@ -89,13 +84,10 @@ def get_detached_cores(cache_id: int) -> list:
 
     cores_dict = get_cas_devices_dict()["cores"].values()
 
-    def is_detached(core):
-        return core["status"] == CoreStatus.detached
-
     return [
-        Core(core["device_path"], core["cache_id"])
+        Core(core["device_path"], core["cache_id"], core["status"])
         for core in cores_dict
-        if is_detached(core) and core["cache_id"] == cache_id
+        if core["status"] == CoreStatus.detached and core["cache_id"] == cache_id
     ]
 
 
@@ -124,8 +116,9 @@ def get_cas_devices_dict() -> dict:
                 ("exp_obj", device["device"]),
             ]
             if core_pool:
-                params.append(("core_pool", device))
-                devices["core_pool"][device["disk"]] = dict([(key, value) for key, value in params])
+                devices["core_pool"][device["disk"]] = dict([
+                    (key, value) for key, value in params]
+                )
             else:
                 devices["cores"][(cache_id, int(device["id"]))] = dict(
                     [(key, value) for key, value in params]

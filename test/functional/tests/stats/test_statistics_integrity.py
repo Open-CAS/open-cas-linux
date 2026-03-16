@@ -20,714 +20,486 @@ from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_tools.udev import Udev
 from type_def.size import Size, Unit
 
-# One cache instance per every cache mode:
-caches_count = len(CacheMode)
 cores_per_cache = 4
 cache_size = Size(20, Unit.GibiByte)
 core_size = Size(10, Unit.GibiByte)
 io_value = 1000
 io_size = Size(io_value, Unit.Blocks4096)
-# Error stats not included in 'stat_filter' because all of them
-# should equal 0 and can be checked easier, shorter way.
-default_stat_filter = [StatsFilter.usage, StatsFilter.req, StatsFilter.blk]
+# Offset fio past the area the kernel partition scan touches, so that
+# scan-inserted and IO-inserted cache lines never overlap.
+fio_offset = Size(1, Unit.MebiByte)
+# The kernel reads ~3 × 4 KiB blocks from each exported object right
+# after the core is added (and again after a cache reload).
+scan_count = 3
+scan_size = Size(scan_count, Unit.Blocks4096)
+stat_filter = [StatsFilter.usage, StatsFilter.req, StatsFilter.blk]
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_stats_values():
+@pytest.mark.parametrizex("cache_mode", CacheMode)
+def test_stats_values(cache_mode):
     """
         title: Check for proper statistics values.
         description: |
           Check if CAS displays proper usage, request, block and error statistics values
-          for core devices in every cache mode - at the start, after IO and after cache
+          for core devices - at the start (after partition scan), after IO and after cache
           reload. Also check if cores' statistics match cache's statistics.
         pass_criteria:
           - Usage, request, block and error statistics have proper values.
           - Cores' statistics match cache's statistics.
     """
 
+    inserts_reads = cache_mode in CacheMode.with_traits(CacheModeTrait.InsertRead)
+    inserts_writes = cache_mode in CacheMode.with_traits(CacheModeTrait.InsertWrite)
+    lazy_writes = cache_mode in CacheMode.with_traits(CacheModeTrait.LazyWrites)
+    # PT is the only mode that truly passes reads through; all other modes
+    # process scan reads as read full misses (serviced), even if they don't
+    # insert the data (WO).
+    pass_through = cache_mode == CacheMode.PT
+
     with TestRun.step("Partition cache and core devices"):
-        cache_dev, core_dev = storage_prepare()
+        cache_dev = TestRun.disks["cache"]
+        cache_dev.create_partitions([cache_size])
+        core_dev = TestRun.disks["core"]
+        core_dev.create_partitions([core_size] * cores_per_cache)
+
+    with TestRun.step("Disable udev"):
         Udev.disable()
 
-    with TestRun.step(
-        f"Start {caches_count} caches (one for every cache mode) "
-        f"and add {cores_per_cache} cores per cache"
-    ):
-        caches, cores = cache_prepare(cache_dev, core_dev)
+    with TestRun.step(f"Start cache in {cache_mode} mode and add {cores_per_cache} cores"):
+        cache = casadm.start_cache(cache_dev.partitions[0], cache_mode, force=True)
+        cores = [cache.add_core(core_dev.partitions[j]) for j in range(cores_per_cache)]
 
-    with TestRun.step("Check initial statistics values for each core"):
-        check_stats_initial(caches, cores)
+    # -- Initial statistics (partition scan only) -------------------------
 
-    with TestRun.step("Run 'fio'"):
-        fio = fio_prepare()
-        for i in range(caches_count):
-            for j in range(cores_per_cache):
-                fio.add_job().target(cores[i][j].path)
+    with TestRun.step("Check initial usage statistics (partition scan effects)"):
+        # InsertRead modes cache the scan blocks as clean data;
+        # other modes pass the reads through — nothing is cached.
+        expected_occupancy = scan_size.value if inserts_reads else 0
+        expected_free = cache.size.value - expected_occupancy * cores_per_cache
+        expected_clean = expected_occupancy
+        expected_occupancy_perc = round(100 * expected_occupancy / cache.size.value, 1)
+        expected_free_perc = round(100 * expected_free / cache.size.value, 1)
+        expected_clean_perc = 100 if inserts_reads else 0
+
+        for core in cores:
+            stats = core.get_statistics(stat_filter=stat_filter)
+            stats_perc = core.get_statistics(stat_filter=stat_filter, percentage_val=True)
+            msg = f"Core {core.path} ({cache_mode}) initial: "
+
+            usage_checks = [
+                ("occupancy", stats.usage_stats.occupancy.value,
+                 stats_perc.usage_stats.occupancy,
+                 expected_occupancy, expected_occupancy_perc),
+                ("free", stats.usage_stats.free.value,
+                 stats_perc.usage_stats.free,
+                 expected_free, expected_free_perc),
+                ("clean", stats.usage_stats.clean.value,
+                 stats_perc.usage_stats.clean,
+                 expected_clean, expected_clean_perc),
+                ("dirty", stats.usage_stats.dirty.value,
+                 stats_perc.usage_stats.dirty, 0, 0),
+            ]
+            for name, val, val_perc, exp, exp_perc in usage_checks:
+                if val != exp:
+                    TestRun.LOGGER.error(f"{msg}{name} is {val}, expected {exp}\n")
+                if val_perc != exp_perc:
+                    TestRun.LOGGER.error(f"{msg}{name} % is {val_perc}, expected {exp_perc}\n")
+
+    with TestRun.step("Check initial request statistics (partition scan effects)"):
+        for core in cores:
+            stats = core.get_statistics(stat_filter=stat_filter)
+            stats_perc = core.get_statistics(stat_filter=stat_filter, percentage_val=True)
+            msg = f"Core {core.path} ({cache_mode}) initial: "
+
+            # Only PT passes scan reads through; all other modes process
+            # them as read full misses (serviced), even without InsertRead.
+            expected_read_misses = 0 if pass_through else scan_count
+            expected_pt_reads = scan_count if pass_through else 0
+            expected_serviced = 0 if pass_through else scan_count
+
+            req_checks = [
+                ("read hits", stats.request_stats.read.hits,
+                 stats_perc.request_stats.read.hits, 0, 0),
+                ("read deferred", stats.request_stats.read.deferred,
+                 stats_perc.request_stats.read.deferred, 0, 0),
+                ("read part_misses", stats.request_stats.read.part_misses,
+                 stats_perc.request_stats.read.part_misses, 0, 0),
+                ("read full_misses", stats.request_stats.read.full_misses,
+                 stats_perc.request_stats.read.full_misses,
+                 expected_read_misses, 100 if not pass_through else 0),
+                ("read total", stats.request_stats.read.total,
+                 stats_perc.request_stats.read.total,
+                 expected_read_misses, 100 if not pass_through else 0),
+                ("write hits", stats.request_stats.write.hits,
+                 stats_perc.request_stats.write.hits, 0, 0),
+                ("write deferred", stats.request_stats.write.deferred,
+                 stats_perc.request_stats.write.deferred, 0, 0),
+                ("write part_misses", stats.request_stats.write.part_misses,
+                 stats_perc.request_stats.write.part_misses, 0, 0),
+                ("write full_misses", stats.request_stats.write.full_misses,
+                 stats_perc.request_stats.write.full_misses, 0, 0),
+                ("write total", stats.request_stats.write.total,
+                 stats_perc.request_stats.write.total, 0, 0),
+                ("pass-through reads", stats.request_stats.pass_through_reads,
+                 stats_perc.request_stats.pass_through_reads,
+                 expected_pt_reads, 100 if pass_through else 0),
+                ("pass-through writes", stats.request_stats.pass_through_writes,
+                 stats_perc.request_stats.pass_through_writes, 0, 0),
+                ("serviced", stats.request_stats.requests_serviced,
+                 stats_perc.request_stats.requests_serviced,
+                 expected_serviced, 100 if not pass_through else 0),
+                ("total", stats.request_stats.requests_total,
+                 stats_perc.request_stats.requests_total, scan_count, 100),
+            ]
+            for name, val, val_perc, exp, exp_perc in req_checks:
+                if val != exp:
+                    TestRun.LOGGER.error(f"{msg}request {name} is {val}, expected {exp}\n")
+                if val_perc != exp_perc:
+                    TestRun.LOGGER.error(
+                        f"{msg}request {name} % is {val_perc}, expected {exp_perc}\n")
+
+    with TestRun.step("Check initial block statistics (partition scan effects)"):
+        expected_cache_writes = scan_size.value if inserts_reads else 0
+
+        for core in cores:
+            stats = core.get_statistics(stat_filter=stat_filter)
+            stats_perc = core.get_statistics(stat_filter=stat_filter, percentage_val=True)
+            msg = f"Core {core.path} ({cache_mode}) initial: "
+
+            blk_checks = [
+                ("exp_obj reads", stats.block_stats.exp_obj.reads.value,
+                 stats_perc.block_stats.exp_obj.reads,
+                 scan_size.value, 100),
+                ("exp_obj writes", stats.block_stats.exp_obj.writes.value,
+                 stats_perc.block_stats.exp_obj.writes, 0, 0),
+                ("exp_obj total", stats.block_stats.exp_obj.total.value,
+                 stats_perc.block_stats.exp_obj.total,
+                 scan_size.value, 100),
+                ("core reads", stats.block_stats.core.reads.value,
+                 stats_perc.block_stats.core.reads,
+                 scan_size.value, 100),
+                ("core writes", stats.block_stats.core.writes.value,
+                 stats_perc.block_stats.core.writes, 0, 0),
+                ("core total", stats.block_stats.core.total.value,
+                 stats_perc.block_stats.core.total,
+                 scan_size.value, 100),
+                ("cache reads", stats.block_stats.cache.reads.value,
+                 stats_perc.block_stats.cache.reads, 0, 0),
+                ("cache writes", stats.block_stats.cache.writes.value,
+                 stats_perc.block_stats.cache.writes,
+                 expected_cache_writes, 100 if inserts_reads else 0),
+                ("cache total", stats.block_stats.cache.total.value,
+                 stats_perc.block_stats.cache.total,
+                 expected_cache_writes, 100 if inserts_reads else 0),
+            ]
+            for name, val, val_perc, exp, exp_perc in blk_checks:
+                if val != exp:
+                    TestRun.LOGGER.error(f"{msg}block {name} is {val}, expected {exp}\n")
+                if val_perc != exp_perc:
+                    TestRun.LOGGER.error(
+                        f"{msg}block {name} % is {val_perc}, expected {exp_perc}\n")
+
+    with TestRun.step("Check initial error statistics"):
+        for core in cores:
+            error_stats = get_stats_dict(
+                filter=[StatsFilter.err], cache_id=core.cache_id, core_id=core.core_id
+            )
+            msg = f"Core {core.path} ({cache_mode}) initial: "
+            for stat_name in error_stats:
+                value = get_stat_value(error_stats, stat_name)
+                if value != 0:
+                    TestRun.LOGGER.error(
+                        f"{msg}error stat '{stat_name}' is {value}, expected 0\n")
+
+    # -- IO ---------------------------------------------------------------
+
+    with TestRun.step("Run fio"):
+        fio = (
+            Fio()
+            .create_command()
+            .io_engine(IoEngine.libaio)
+            .read_write(ReadWrite.randwrite)
+            .size(io_size)
+            .offset(fio_offset)
+            .direct()
+        )
+        for core in cores:
+            fio.add_job().target(core.path)
         fio.run()
         sleep(3)
 
-    with TestRun.step("Check statistics values after IO"):
-        check_stats_after_io(caches, cores)
+    # -- Post-IO statistics -----------------------------------------------
+    #
+    # Expected values combine partition scan effects with fio results.
+    # Scan contributed reads (cached for InsertRead modes, pass-through
+    # otherwise).  Fio contributed writes (cached for InsertWrite modes,
+    # pass-through otherwise).  The 1 MiB fio offset keeps the two sets
+    # of blocks apart so both effects are independently visible.
 
-    with TestRun.step("Check if cache's statistics match cores' statistics"):
-        check_stats_sum(caches, cores)
-
-    with TestRun.step("Stop and load caches back"):
-        casadm.stop_all_caches()
-        caches = cache_load(cache_dev)
-
-    with TestRun.step("Check statistics values after reload"):
-        check_stats_after_io(caches, cores, after_reload=True)
-
-
-def storage_prepare():
-    cache_dev = TestRun.disks["cache"]
-    cache_parts = [cache_size] * caches_count
-    cache_dev.create_partitions(cache_parts)
-    core_dev = TestRun.disks["core"]
-    core_parts = [core_size] * cores_per_cache * caches_count
-    core_dev.create_partitions(core_parts)
-
-    return cache_dev, core_dev
-
-
-def cache_prepare(cache_dev, core_dev):
-    caches = []
-    for i, cache_mode in enumerate(CacheMode):
-        caches.append(
-            casadm.start_cache(cache_dev.partitions[i], cache_mode, force=True)
+    with TestRun.step("Check usage statistics after IO"):
+        expected_occupancy = (
+            (scan_size.value if inserts_reads else 0)
+            + (io_size.value if inserts_writes else 0)
         )
-    cores = [[] for _ in range(caches_count)]
-    for i in range(caches_count):
-        for j in range(cores_per_cache):
-            core_partition_number = i * cores_per_cache + j
-            cores[i].append(caches[i].add_core(core_dev.partitions[core_partition_number]))
+        expected_free = cache.size.value - expected_occupancy * cores_per_cache
+        expected_clean = (
+            (scan_size.value if inserts_reads else 0)
+            + (io_size.value if (inserts_writes and not lazy_writes) else 0)
+        )
+        expected_dirty = io_size.value if (inserts_writes and lazy_writes) else 0
+        expected_occupancy_perc = round(100 * expected_occupancy / cache.size.value, 1)
+        expected_free_perc = round(100 * expected_free / cache.size.value, 1)
+        if expected_occupancy > 0:
+            expected_clean_perc = round(100 * expected_clean / expected_occupancy, 1)
+            expected_dirty_perc = round(100 * expected_dirty / expected_occupancy, 1)
+        else:
+            expected_clean_perc = 0
+            expected_dirty_perc = 0
 
-    return caches, cores
+        for core in cores:
+            stats = core.get_statistics(stat_filter=stat_filter)
+            stats_perc = core.get_statistics(stat_filter=stat_filter, percentage_val=True)
+            msg = f"Core {core.path} ({cache_mode}): "
 
+            usage_checks = [
+                ("occupancy", stats.usage_stats.occupancy.value,
+                 stats_perc.usage_stats.occupancy,
+                 expected_occupancy, expected_occupancy_perc),
+                ("free", stats.usage_stats.free.value,
+                 stats_perc.usage_stats.free,
+                 expected_free, expected_free_perc),
+                ("clean", stats.usage_stats.clean.value,
+                 stats_perc.usage_stats.clean,
+                 expected_clean, expected_clean_perc),
+                ("dirty", stats.usage_stats.dirty.value,
+                 stats_perc.usage_stats.dirty,
+                 expected_dirty, expected_dirty_perc),
+            ]
+            for name, val, val_perc, exp, exp_perc in usage_checks:
+                if val != exp:
+                    TestRun.LOGGER.error(f"{msg}{name} is {val}, expected {exp}\n")
+                if val_perc != exp_perc:
+                    TestRun.LOGGER.error(f"{msg}{name} % is {val_perc}, expected {exp_perc}\n")
 
-def cache_load(cache_dev):
-    caches = []
-    for i in range(caches_count):
-        caches.append(casadm.load_cache(cache_dev.partitions[i]))
+    with TestRun.step("Check request statistics after IO"):
+        total_reqs = scan_count + io_value
+        expected_read_misses = 0 if pass_through else scan_count
+        expected_pt_reads = scan_count if pass_through else 0
+        expected_write_misses = io_value if inserts_writes else 0
+        expected_pt_writes = io_value if not inserts_writes else 0
+        expected_serviced = (
+            (0 if pass_through else scan_count)
+            + (io_value if inserts_writes else 0)
+        )
 
-    return caches
+        def req_perc(n):
+            return round(100 * n / total_reqs, 1)
 
+        for core in cores:
+            stats = core.get_statistics(stat_filter=stat_filter)
+            stats_perc = core.get_statistics(stat_filter=stat_filter, percentage_val=True)
+            msg = f"Core {core.path} ({cache_mode}): "
 
-def fio_prepare():
-    fio = (
-        Fio()
-        .create_command()
-        .io_engine(IoEngine.libaio)
-        .read_write(ReadWrite.randwrite)
-        .size(io_size)
-        .direct()
-    )
+            req_checks = [
+                ("read hits", stats.request_stats.read.hits,
+                 stats_perc.request_stats.read.hits, 0, 0),
+                ("read deferred", stats.request_stats.read.deferred,
+                 stats_perc.request_stats.read.deferred, 0, 0),
+                ("read part_misses", stats.request_stats.read.part_misses,
+                 stats_perc.request_stats.read.part_misses, 0, 0),
+                ("read full_misses", stats.request_stats.read.full_misses,
+                 stats_perc.request_stats.read.full_misses,
+                 expected_read_misses, req_perc(expected_read_misses)),
+                ("read total", stats.request_stats.read.total,
+                 stats_perc.request_stats.read.total,
+                 expected_read_misses, req_perc(expected_read_misses)),
+                ("write hits", stats.request_stats.write.hits,
+                 stats_perc.request_stats.write.hits, 0, 0),
+                ("write deferred", stats.request_stats.write.deferred,
+                 stats_perc.request_stats.write.deferred, 0, 0),
+                ("write part_misses", stats.request_stats.write.part_misses,
+                 stats_perc.request_stats.write.part_misses, 0, 0),
+                ("write full_misses", stats.request_stats.write.full_misses,
+                 stats_perc.request_stats.write.full_misses,
+                 expected_write_misses, req_perc(expected_write_misses)),
+                ("write total", stats.request_stats.write.total,
+                 stats_perc.request_stats.write.total,
+                 expected_write_misses, req_perc(expected_write_misses)),
+                ("pass-through reads", stats.request_stats.pass_through_reads,
+                 stats_perc.request_stats.pass_through_reads,
+                 expected_pt_reads, req_perc(expected_pt_reads)),
+                ("pass-through writes", stats.request_stats.pass_through_writes,
+                 stats_perc.request_stats.pass_through_writes,
+                 expected_pt_writes, req_perc(expected_pt_writes)),
+                ("serviced", stats.request_stats.requests_serviced,
+                 stats_perc.request_stats.requests_serviced,
+                 expected_serviced, req_perc(expected_serviced)),
+                ("total", stats.request_stats.requests_total,
+                 stats_perc.request_stats.requests_total, total_reqs, 100),
+            ]
+            for name, val, val_perc, exp, exp_perc in req_checks:
+                if val != exp:
+                    TestRun.LOGGER.error(f"{msg}request {name} is {val}, expected {exp}\n")
+                if val_perc != exp_perc:
+                    TestRun.LOGGER.error(
+                        f"{msg}request {name} % is {val_perc}, expected {exp_perc}\n")
 
-    return fio
+    with TestRun.step("Check block statistics after IO"):
+        expected_exp_obj_total = scan_size.value + io_size.value
+        expected_core_writes = (
+            0 if (inserts_writes and lazy_writes) else io_size.value
+        )
+        expected_cache_writes = (
+            (scan_size.value if inserts_reads else 0)
+            + (io_size.value if inserts_writes else 0)
+        )
+        expected_core_total = scan_size.value + expected_core_writes
+        expected_cache_total = expected_cache_writes
 
+        def perc_of(n, total):
+            return round(100 * n / total, 1) if total else 0
 
-def get_stats(stat_filter, cores, cache=None):
-    cores_stats = [
-        get_stats_dict(
-            filter=stat_filter, cache_id=cores[j].cache_id, core_id=cores[j].core_id
-        ) for j in range(cores_per_cache)
-    ]
-    cores_stats_perc = [
-        {k: get_stat_value(cores_stats[j], k) for k in cores_stats[j] if k.endswith("[%]")}
-        for j in range(cores_per_cache)
-    ]
-    cores_stats_values = [
-        {k: get_stat_value(cores_stats[j], k) for k in cores_stats[j] if not k.endswith("[%]")}
-        for j in range(cores_per_cache)
-    ]
+        for core in cores:
+            stats = core.get_statistics(stat_filter=stat_filter)
+            stats_perc = core.get_statistics(stat_filter=stat_filter, percentage_val=True)
+            msg = f"Core {core.path} ({cache_mode}): "
 
-    if cache:
-        cache_stats = get_stats_dict(filter=stat_filter, cache_id=cache.cache_id)
+            blk_checks = [
+                ("exp_obj reads", stats.block_stats.exp_obj.reads.value,
+                 stats_perc.block_stats.exp_obj.reads,
+                 scan_size.value, perc_of(scan_size.value, expected_exp_obj_total)),
+                ("exp_obj writes", stats.block_stats.exp_obj.writes.value,
+                 stats_perc.block_stats.exp_obj.writes,
+                 io_size.value, perc_of(io_size.value, expected_exp_obj_total)),
+                ("exp_obj total", stats.block_stats.exp_obj.total.value,
+                 stats_perc.block_stats.exp_obj.total,
+                 expected_exp_obj_total, 100),
+                ("core reads", stats.block_stats.core.reads.value,
+                 stats_perc.block_stats.core.reads,
+                 scan_size.value, perc_of(scan_size.value, expected_core_total)),
+                ("core writes", stats.block_stats.core.writes.value,
+                 stats_perc.block_stats.core.writes,
+                 expected_core_writes, perc_of(expected_core_writes, expected_core_total)),
+                ("core total", stats.block_stats.core.total.value,
+                 stats_perc.block_stats.core.total,
+                 expected_core_total, 100),
+                ("cache reads", stats.block_stats.cache.reads.value,
+                 stats_perc.block_stats.cache.reads, 0, 0),
+                ("cache writes", stats.block_stats.cache.writes.value,
+                 stats_perc.block_stats.cache.writes,
+                 expected_cache_writes, perc_of(expected_cache_writes, expected_cache_total)),
+                ("cache total", stats.block_stats.cache.total.value,
+                 stats_perc.block_stats.cache.total,
+                 expected_cache_total, perc_of(expected_cache_total, expected_cache_total)),
+            ]
+            for name, val, val_perc, exp, exp_perc in blk_checks:
+                if val != exp:
+                    TestRun.LOGGER.error(f"{msg}block {name} is {val}, expected {exp}\n")
+                if val_perc != exp_perc:
+                    TestRun.LOGGER.error(
+                        f"{msg}block {name} % is {val_perc}, expected {exp_perc}\n")
+
+    with TestRun.step("Check error statistics after IO"):
+        for core in cores:
+            error_stats = get_stats_dict(
+                filter=[StatsFilter.err], cache_id=core.cache_id, core_id=core.core_id
+            )
+            msg = f"Core {core.path} ({cache_mode}): "
+            for stat_name in error_stats:
+                value = get_stat_value(error_stats, stat_name)
+                if value != 0:
+                    TestRun.LOGGER.error(
+                        f"{msg}error stat '{stat_name}' is {value}, expected 0\n")
+
+    # -- Cache-vs-cores sum check -----------------------------------------
+
+    with TestRun.step("Check if cache statistics match sum of cores' statistics"):
+        cache_stats_dict = get_stats_dict(filter=stat_filter, cache_id=cache.cache_id)
         cache_stats_values = {
-            k: get_stat_value(cache_stats, k) for k in cache_stats if not k.endswith("[%]")
+            k: get_stat_value(cache_stats_dict, k)
+            for k in cache_stats_dict if not k.endswith("[%]")
         }
-        return cores_stats_values, cores_stats_perc, cache_stats_values
-    else:
-        return cores_stats_values, cores_stats_perc
-
-
-def check_stats_initial(caches, cores):
-    for i in range(caches_count):
-        cores_stats, cores_stats_perc = get_stats(stat_filter=default_stat_filter, cores=cores[i])
-        for j in range(cores_per_cache):
-            for stat_name, stat_value in cores_stats[j].items():
-                try:
-                    stat_value = stat_value.value
-                except AttributeError:
-                    pass
-                if stat_name.startswith("Free"):
-                    if stat_value != caches[i].size.value:
-                        TestRun.LOGGER.error(
-                            f"For core device {cores[i][j].path} "
-                            f"value for '{stat_name}' is {stat_value}, "
-                            f"should equal cache size: {caches[i].size.value}\n")
-                elif stat_value != 0:
-                    TestRun.LOGGER.error(
-                        f"For core device {cores[i][j].path} value for "
-                        f"'{stat_name}' is {stat_value}, should equal 0\n")
-            for stat_name, stat_value in cores_stats_perc[j].items():
-                if stat_name.startswith("Free"):
-                    if stat_value != 100:
-                        TestRun.LOGGER.error(
-                            f"For core device {cores[i][j].path} percentage value "
-                            f"for '{stat_name}' is {stat_value}, should equal 100\n")
-                elif stat_value != 0:
-                    TestRun.LOGGER.error(
-                        f"For core device {cores[i][j].path} percentage value "
-                        f"for '{stat_name}' is {stat_value}, should equal 0\n")
-
-
-def check_stats_after_io(caches, cores, after_reload: bool = False):
-    for i in range(caches_count):
-        cache_mode = caches[i].get_cache_mode()
-        cores_stats = [
-            cores[i][j].get_statistics(stat_filter=default_stat_filter)
-            for j in range(cores_per_cache)
+        cores_stats_dicts = [
+            get_stats_dict(filter=stat_filter, cache_id=core.cache_id, core_id=core.core_id)
+            for core in cores
         ]
-        cores_stats_perc = [
-            cores[i][j].get_statistics(stat_filter=default_stat_filter, percentage_val=True)
-            for j in range(cores_per_cache)
+        cores_stats_values = [
+            {k: get_stat_value(d, k) for k in d if not k.endswith("[%]")}
+            for d in cores_stats_dicts
         ]
-        cores_error_stats, cores_error_stats_perc = get_stats(
-            stat_filter=[StatsFilter.err], cores=cores[i]
-        )
-        for j in range(cores_per_cache):
-            fail_message = (
-                f"For core device {cores[i][j].path} in {cache_mode} cache mode ")
-            if after_reload:
-                validate_usage_stats(
-                    cores_stats[j], cores_stats_perc[j], caches[i], cache_mode, fail_message)
-                validate_error_stats(
-                    cores_error_stats[j], cores_error_stats_perc[j], fail_message)
-            else:
-                validate_usage_stats(
-                    cores_stats[j], cores_stats_perc[j], caches[i], cache_mode, fail_message)
-                validate_request_stats(
-                    cores_stats[j], cores_stats_perc[j], cache_mode, fail_message)
-                validate_block_stats(
-                    cores_stats[j], cores_stats_perc[j], cache_mode, fail_message)
-                validate_error_stats(
-                    cores_error_stats[j], cores_error_stats_perc[j], fail_message)
 
-
-def check_stats_sum(caches, cores):
-    for i in range(caches_count):
-        cores_stats, cores_stats_perc, cache_stats = (
-            get_stats(stat_filter=default_stat_filter, cores=cores[i], cache=caches[i])
-        )
-        for stat_name in cache_stats.keys():
+        for stat_name in cache_stats_values:
             if stat_name.startswith("Free"):
                 continue
-            core_stat_sum = 0
+            cache_val = cache_stats_values[stat_name]
             try:
-                cache_stats[stat_name] = cache_stats[stat_name].value
-                for j in range(cores_per_cache):
-                    cores_stats[j][stat_name] = cores_stats[j][stat_name].value
+                cache_val = cache_val.value
             except AttributeError:
                 pass
+            core_sum = 0
             for j in range(cores_per_cache):
-                core_stat_sum += cores_stats[j][stat_name]
-            if core_stat_sum != cache_stats[stat_name]:
+                val = cores_stats_values[j][stat_name]
+                try:
+                    val = val.value
+                except AttributeError:
+                    pass
+                core_sum += val
+            if core_sum != cache_val:
                 TestRun.LOGGER.error(
-                    f"For cache ID {caches[i].cache_id} sum of cores' "
-                    f"'{stat_name}' values is {core_stat_sum}, "
-                    f"should equal {cache_stats[stat_name]}\n")
+                    f"Cache {cache.cache_id}: sum of cores' '{stat_name}' "
+                    f"is {core_sum}, expected {cache_val}\n")
 
+    # -- Reload -----------------------------------------------------------
+    #
+    # After reload, cached data persists but counters are reset.  The
+    # kernel partition scan runs again on each exported object.  For
+    # InsertRead modes the scan blocks are already cached → read hits,
+    # no usage change.  For other modes the scan passes through, also
+    # no usage change.
 
-def validate_usage_stats(stats, stats_perc, cache, cache_mode, fail_message):
-    fail_message += "in 'usage' stats"
-    if cache_mode not in CacheMode.with_traits(CacheModeTrait.InsertWrite):
-        if stats.usage_stats.occupancy.value != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'occupancy' is "
-                f"{stats.usage_stats.occupancy.value}, "
-                f"should equal 0\n")
-        if stats_perc.usage_stats.occupancy != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'occupancy' percentage is "
-                f"{stats_perc.usage_stats.occupancy}, "
-                f"should equal 0\n")
-        if stats.usage_stats.free != cache.size:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'free' is "
-                f"{stats.usage_stats.free.value}, "
-                f"should equal cache size: {cache.size.value}\n")
-        if stats_perc.usage_stats.free != 100:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'free' percentage is "
-                f"{stats_perc.usage_stats.free}, "
-                f"should equal 100\n")
-        if stats.usage_stats.clean.value != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'clean' is "
-                f"{stats.usage_stats.clean.value}, "
-                f"should equal 0\n")
-        if stats_perc.usage_stats.clean != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'clean' percentage is "
-                f"{stats_perc.usage_stats.clean}, "
-                f"should equal 0\n")
-        if stats.usage_stats.dirty.value != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'dirty' is "
-                f"{stats.usage_stats.dirty.value}, "
-                f"should equal 0\n")
-        if stats_perc.usage_stats.dirty != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'dirty' percentage is "
-                f"{stats_perc.usage_stats.dirty}, "
-                f"should equal 0\n")
-    else:
-        occupancy_perc = round(100 * io_size.value / cache.size.value, 1)
-        free = cache.size.value - io_size.value * cores_per_cache
-        free_perc = round(100 * (cache.size.value - io_size.value
-                          * cores_per_cache) / cache.size.value, 1)
-        if stats.usage_stats.occupancy.value != io_size.value:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'occupancy' is "
-                f"{stats.usage_stats.occupancy.value}, "
-                f"should equal IO size: {io_size.value}\n")
-        if stats_perc.usage_stats.occupancy != occupancy_perc:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'occupancy' percentage is "
-                f"{stats_perc.usage_stats.occupancy}, "
-                f"should equal {occupancy_perc}\n")
-        if stats.usage_stats.free.value != free:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'free' is "
-                f"{stats.usage_stats.free.value}, "
-                f"should equal {free}\n")
-        if stats_perc.usage_stats.free != free_perc:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'free' percentage is "
-                f"{stats_perc.usage_stats.free}, "
-                f"should equal {free_perc}\n")
-        if cache_mode not in CacheMode.with_traits(CacheModeTrait.LazyWrites):
-            if stats.usage_stats.clean.value != io_size.value:
-                TestRun.LOGGER.error(
-                    f"{fail_message} 'clean' is "
-                    f"{stats.usage_stats.clean.value}, "
-                    f"should equal IO size: {io_size.value}\n")
-            if stats_perc.usage_stats.clean != 100:
-                TestRun.LOGGER.error(
-                    f"{fail_message} 'clean' percentage is "
-                    f"{stats_perc.usage_stats.clean}, "
-                    f"should equal 100\n")
-            if stats.usage_stats.dirty.value != 0:
-                TestRun.LOGGER.error(
-                    f"{fail_message} 'dirty' is "
-                    f"{stats.usage_stats.dirty.value}, "
-                    f"should equal 0\n")
-            if stats_perc.usage_stats.dirty != 0:
-                TestRun.LOGGER.error(
-                    f"{fail_message} 'dirty' percentage is "
-                    f"{stats_perc.usage_stats.dirty}, "
-                    f"should equal 0\n")
-        else:
-            if stats.usage_stats.clean.value != 0:
-                TestRun.LOGGER.error(
-                    f"{fail_message} 'clean' is "
-                    f"{stats.usage_stats.clean.value}, "
-                    f"should equal 0\n")
-            if stats_perc.usage_stats.clean != 0:
-                TestRun.LOGGER.error(
-                    f"{fail_message} 'clean' percentage is "
-                    f"{stats_perc.usage_stats.clean}, "
-                    f"should equal 0\n")
-            if stats.usage_stats.dirty.value != io_size.value:
-                TestRun.LOGGER.error(
-                    f"{fail_message} 'dirty' is "
-                    f"{stats.usage_stats.dirty.value}, "
-                    f"should equal IO size: {io_size.value}\n")
-            if stats_perc.usage_stats.dirty != 100:
-                TestRun.LOGGER.error(
-                    f"{fail_message} 'dirty' percentage is "
-                    f"{stats_perc.usage_stats.dirty}, "
-                    f"should equal 100\n")
+    with TestRun.step("Stop and load cache back"):
+        casadm.stop_all_caches()
+        cache = casadm.load_cache(cache_dev.partitions[0])
 
+    with TestRun.step("Check usage statistics after reload"):
+        # Usage expectations are unchanged — cached data persists and the
+        # reload scan does not alter occupancy (hits for InsertRead modes,
+        # pass-through for others).
+        for core in cores:
+            stats = core.get_statistics(stat_filter=stat_filter)
+            stats_perc = core.get_statistics(stat_filter=stat_filter, percentage_val=True)
+            msg = f"Core {core.path} ({cache_mode}) after reload: "
 
-def validate_request_stats(stats, stats_perc, cache_mode, fail_message):
-    fail_message += "in 'request' stats"
-    if stats.request_stats.read.hits != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Read hits' is "
-            f"{stats.request_stats.read.hits}, "
-            f"should equal 0\n")
-    if stats_perc.request_stats.read.hits != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Read hits' percentage is "
-            f"{stats_perc.request_stats.read.hits}, "
-            f"should equal 0\n")
-    if stats.request_stats.read.deferred != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Read deferred' is "
-            f"{stats.request_stats.read.deferred}, "
-            f"should equal 0\n")
-    if stats_perc.request_stats.read.deferred != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Read deferred' percentage is "
-            f"{stats_perc.request_stats.read.deferred}, "
-            f"should equal 0\n")
-    if stats.request_stats.read.part_misses != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Read partial misses' is "
-            f"{stats.request_stats.read.part_misses}, "
-            f"should equal 0\n")
-    if stats_perc.request_stats.read.part_misses != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Read partial misses' percentage is "
-            f"{stats_perc.request_stats.read.part_misses}, "
-            f"should equal 0\n")
-    if stats.request_stats.read.full_misses != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Read full misses' is "
-            f"{stats.request_stats.read.full_misses}, "
-            f"should equal 0\n")
-    if stats_perc.request_stats.read.full_misses != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Read full misses' percentage is "
-            f"{stats_perc.request_stats.read.full_misses}, "
-            f"should equal 0\n")
-    if stats.request_stats.read.total != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Read total' is "
-            f"{stats.request_stats.read.total}, "
-            f"should equal 0\n")
-    if stats_perc.request_stats.read.total != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Read total' percentage is "
-            f"{stats_perc.request_stats.read.total}, "
-            f"should equal 0\n")
-    if stats.request_stats.write.hits != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Write hits' is "
-            f"{stats.request_stats.write.hits}, "
-            f"should equal 0\n")
-    if stats_perc.request_stats.write.hits != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Write hits' percentage is "
-            f"{stats_perc.request_stats.write.hits}, "
-            f"should equal 0\n")
-    if stats.request_stats.write.deferred != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Write deferred' is "
-            f"{stats.request_stats.write.deferred}, "
-            f"should equal 0\n")
-    if stats_perc.request_stats.write.deferred != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Write deferred' percentage is "
-            f"{stats_perc.request_stats.write.deferred}, "
-            f"should equal 0\n")
-    if stats.request_stats.write.part_misses != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Write partial misses' is "
-            f"{stats.request_stats.write.part_misses}, "
-            f"should equal 0\n")
-    if stats_perc.request_stats.write.part_misses != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Write partial misses' percentage is "
-            f"{stats_perc.request_stats.write.part_misses}, "
-            f"should equal 0\n")
-    if stats.request_stats.pass_through_reads != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Pass-through reads' is "
-            f"{stats.request_stats.pass_through_reads}, "
-            f"should equal 0\n")
-    if stats_perc.request_stats.pass_through_reads != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Pass-through reads' percentage is "
-            f"{stats_perc.request_stats.pass_through_reads}, "
-            f"should equal 0\n")
-    if stats.request_stats.requests_total != io_value:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Total requests' is "
-            f"{stats.request_stats.requests_total}, "
-            f"should equal IO size value: {io_value}\n")
-    if stats_perc.request_stats.requests_total != 100:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Total requests' percentage is "
-            f"{stats_perc.request_stats.requests_total}, "
-            f"should equal 100\n")
-    if cache_mode in CacheMode.with_traits(CacheModeTrait.InsertWrite):
-        if stats.request_stats.write.full_misses != io_value:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Write full misses' is "
-                f"{stats.request_stats.write.full_misses}, "
-                f"should equal IO size value: {io_value}\n")
-        if stats_perc.request_stats.write.full_misses != 100:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Write full misses' percentage is "
-                f"{stats_perc.request_stats.write.full_misses}, "
-                f"should equal 100\n")
-        if stats.request_stats.write.total != io_value:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Write total' is "
-                f"{stats.request_stats.write.total}, "
-                f"should equal IO size value: {io_value}\n")
-        if stats_perc.request_stats.write.total != 100:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Write total' percentage is "
-                f"{stats_perc.request_stats.write.total}, "
-                f"should equal 100\n")
-        if stats.request_stats.pass_through_writes != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Pass-through writes' is "
-                f"{stats.request_stats.pass_through_writes}, "
-                f"should equal 0\n")
-        if stats_perc.request_stats.pass_through_writes != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Pass-through writes' percentage is "
-                f"{stats_perc.request_stats.pass_through_writes}, "
-                f"should equal 0\n")
-        if stats.request_stats.requests_serviced != io_value:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Serviced requests' is "
-                f"{stats.request_stats.requests_serviced}, "
-                f"should equal IO size value: {io_value}\n")
-        if stats_perc.request_stats.requests_serviced != 100:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Serviced requests' percentage is "
-                f"{stats_perc.request_stats.requests_serviced}, "
-                f"should equal 100\n")
-    else:
-        if stats.request_stats.write.full_misses != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Write full misses' is "
-                f"{stats.request_stats.write.full_misses}, "
-                f"should equal 0\n")
-        if stats_perc.request_stats.write.full_misses != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Write full misses' percentage is "
-                f"{stats_perc.request_stats.write.full_misses}, "
-                f"should equal 0\n")
-        if stats.request_stats.write.total != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Write total' is "
-                f"{stats.request_stats.write.total}, "
-                f"should equal 0\n")
-        if stats_perc.request_stats.write.total != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Write total' percentage is "
-                f"{stats_perc.request_stats.write.total}, "
-                f"should equal 0\n")
-        if stats.request_stats.pass_through_writes != io_value:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Pass-through writes' is "
-                f"{stats.request_stats.pass_through_writes}, "
-                f"should equal IO size value: {io_value}\n")
-        if stats_perc.request_stats.pass_through_writes != 100:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Pass-through writes' percentage is "
-                f"{stats_perc.request_stats.pass_through_writes}, "
-                f"should equal 100\n")
-        if stats.request_stats.requests_serviced != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Serviced requests' is "
-                f"{stats.request_stats.requests_serviced}, "
-                f"should equal 0\n")
-        if stats_perc.request_stats.requests_serviced != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Serviced requests' percentage is "
-                f"{stats_perc.request_stats.requests_serviced}, "
-                f"should equal 0\n")
+            usage_checks = [
+                ("occupancy", stats.usage_stats.occupancy.value,
+                 stats_perc.usage_stats.occupancy,
+                 expected_occupancy, expected_occupancy_perc),
+                ("free", stats.usage_stats.free.value,
+                 stats_perc.usage_stats.free,
+                 expected_free, expected_free_perc),
+                ("clean", stats.usage_stats.clean.value,
+                 stats_perc.usage_stats.clean,
+                 expected_clean, expected_clean_perc),
+                ("dirty", stats.usage_stats.dirty.value,
+                 stats_perc.usage_stats.dirty,
+                 expected_dirty, expected_dirty_perc),
+            ]
+            for name, val, val_perc, exp, exp_perc in usage_checks:
+                if val != exp:
+                    TestRun.LOGGER.error(f"{msg}{name} is {val}, expected {exp}\n")
+                if val_perc != exp_perc:
+                    TestRun.LOGGER.error(f"{msg}{name} % is {val_perc}, expected {exp_perc}\n")
 
-
-def validate_block_stats(stats, stats_perc, cache_mode, fail_message):
-    fail_message += "in 'block' stats"
-    if stats.block_stats.core.reads.value != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Core reads' is "
-            f"{stats.block_stats.core.reads.value}, "
-            f"should equal 0\n")
-    if stats_perc.block_stats.core.reads != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Core reads' percentage is "
-            f"{stats_perc.block_stats.core.reads}, "
-            f"should equal 0\n")
-    if stats.block_stats.cache.reads.value != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Cache reads' is "
-            f"{stats.block_stats.cache.reads.value}, "
-            f"should equal 0\n")
-    if stats_perc.block_stats.cache.reads != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Cache reads' percentage is "
-            f"{stats_perc.block_stats.cache.reads}, "
-            f"should equal 0\n")
-    if stats.block_stats.exp_obj.reads.value != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Exported object reads' is "
-            f"{stats.block_stats.exp_obj.reads.value}, "
-            f"should equal 0\n")
-    if stats_perc.block_stats.exp_obj.reads != 0:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Exported object reads' percentage is "
-            f"{stats_perc.block_stats.exp_obj.reads}, "
-            f"should equal 0\n")
-    if stats.block_stats.exp_obj.writes.value != io_size.value:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Exported object writes' is "
-            f"{stats.block_stats.exp_obj.writes.value}, "
-            f"should equal IO size: {io_size.value}\n")
-    if stats_perc.block_stats.exp_obj.writes != 100:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Exported object writes' percentage is "
-            f"{stats_perc.block_stats.exp_obj.writes}, "
-            f"should equal 100\n")
-    if stats.block_stats.exp_obj.total.value != io_size.value:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Exported object total' is "
-            f"{stats.block_stats.exp_obj.total.value}, "
-            f"should equal IO size: {io_size.value}\n")
-    if stats_perc.block_stats.exp_obj.total != 100:
-        TestRun.LOGGER.error(
-            f"{fail_message} 'Exported object total' percentage is "
-            f"{stats_perc.block_stats.exp_obj.total}, "
-            f"should equal 100\n")
-    if cache_mode not in CacheMode.with_traits(CacheModeTrait.InsertWrite):
-        if stats.block_stats.core.writes.value != io_size.value:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Core writes' is "
-                f"{stats.block_stats.core.writes.value}, "
-                f"should equal IO size: {io_size.value}\n")
-        if stats_perc.block_stats.core.writes != 100:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Core writes' percentage is "
-                f"{stats_perc.block_stats.core.writes}, "
-                f"should equal 100\n")
-        if stats.block_stats.core.total.value != io_size.value:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Core total' is "
-                f"{stats.block_stats.core.total.value}, "
-                f"should equal IO size: {io_size.value}\n")
-        if stats_perc.block_stats.core.total != 100:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Core total' percentage is "
-                f"{stats_perc.block_stats.core.total}, "
-                f"should equal 100\n")
-        if stats.block_stats.cache.writes.value != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Cache writes' is "
-                f"{stats.block_stats.cache.writes.value}, "
-                f"should equal 0\n")
-        if stats_perc.block_stats.cache.writes != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Cache writes' percentage is "
-                f"{stats_perc.block_stats.cache.writes}, "
-                f"should equal 0\n")
-        if stats.block_stats.cache.total.value != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Cache total' is "
-                f"{stats.block_stats.cache.total.value}, "
-                f"should equal 0\n")
-        if stats_perc.block_stats.cache.total != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Cache total' percentage is "
-                f"{stats_perc.block_stats.cache.total}, "
-                f"should equal 0\n")
-    elif cache_mode in CacheMode.with_traits(
-        CacheModeTrait.InsertWrite | CacheModeTrait.LazyWrites
-    ):
-        if stats.block_stats.core.writes.value != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Core writes' is "
-                f"{stats.block_stats.core.writes.value}, "
-                f"should equal 0\n")
-        if stats_perc.block_stats.core.writes != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Core writes' percentage is "
-                f"{stats_perc.block_stats.core.writes}, "
-                f"should equal 0\n")
-        if stats.block_stats.core.total.value != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Core total' is "
-                f"{stats.block_stats.core.total.value}, "
-                f"should equal 0\n")
-        if stats_perc.block_stats.core.total != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Core total' percentage is "
-                f"{stats_perc.block_stats.core.total}, "
-                f"should equal 0\n")
-        if stats.block_stats.cache.writes.value != io_size.value:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Cache writes' is "
-                f"{stats.block_stats.cache.writes.value}, "
-                f"should equal IO size: {io_size.value}\n")
-        if stats_perc.block_stats.cache.writes != 100:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Cache writes' percentage is "
-                f"{stats_perc.block_stats.cache.writes}, "
-                f"should equal 100\n")
-        if stats.block_stats.cache.total.value != io_size.value:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Cache total' is "
-                f"{stats.block_stats.cache.total.value}, "
-                f"should equal IO size: {io_size.value}\n")
-        if stats_perc.block_stats.cache.total != 100:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Cache total' percentage is "
-                f"{stats_perc.block_stats.cache.total}, "
-                f"should equal 100\n")
-    elif (
-        cache_mode in CacheMode.with_traits(CacheModeTrait.InsertWrite)
-        and cache_mode not in CacheMode.with_traits(CacheModeTrait.LazyWrites)
-    ):
-        if stats.block_stats.core.writes.value != io_size.value:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Core writes' is "
-                f"{stats.block_stats.core.writes.value}, "
-                f"should equal IO size: {io_size.value}\n")
-        if stats_perc.block_stats.core.writes != 100:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Core writes' percentage is "
-                f"{stats_perc.block_stats.core.writes}, "
-                f"should equal 100\n")
-        if stats.block_stats.core.total.value != io_size.value:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Core total' is "
-                f"{stats.block_stats.core.total.value}, "
-                f"should equal IO size: {io_size.value}\n")
-        if stats_perc.block_stats.core.total != 100:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Core total' percentage is "
-                f"{stats_perc.block_stats.core.total}, "
-                f"should equal 100\n")
-        if stats.block_stats.cache.writes.value != io_size.value:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Cache writes' is "
-                f"{stats.block_stats.cache.writes.value}, "
-                f"should equal IO size: {io_size.value}\n")
-        if stats_perc.block_stats.cache.writes != 100:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Cache writes' percentage is "
-                f"{stats_perc.block_stats.cache.writes}, "
-                f"should equal 100\n")
-        if stats.block_stats.cache.total.value != io_size.value:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Cache total' is "
-                f"{stats.block_stats.cache.total.value}, "
-                f"should equal IO size: {io_size.value}\n")
-        if stats_perc.block_stats.cache.total != 100:
-            TestRun.LOGGER.error(
-                f"{fail_message} 'Cache total' percentage is "
-                f"{stats_perc.block_stats.cache.total}, "
-                f"should equal 100\n")
-
-
-def validate_error_stats(stats, stats_perc, fail_message):
-    fail_message += "in 'error' stats"
-    for stat_name, stat_value in stats.items():
-        if stat_value != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} '{stat_name}' is {stat_value}, should equal 0\n")
-    for stat_name, stat_value in stats_perc.items():
-        if stat_value != 0:
-            TestRun.LOGGER.error(
-                f"{fail_message} '{stat_name}' percentage is {stat_value}, should equal 0\n")
+    with TestRun.step("Check error statistics after reload"):
+        for core in cores:
+            error_stats = get_stats_dict(
+                filter=[StatsFilter.err], cache_id=core.cache_id, core_id=core.core_id
+            )
+            msg = f"Core {core.path} ({cache_mode}) after reload: "
+            for stat_name in error_stats:
+                value = get_stat_value(error_stats, stat_name)
+                if value != 0:
+                    TestRun.LOGGER.error(
+                        f"{msg}error stat '{stat_name}' is {value}, expected 0\n")

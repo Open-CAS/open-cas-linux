@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -22,7 +23,7 @@ from tests.io_class.io_class_common import template_config_path
 
 
 @pytest.mark.parametrizex("cache_mode", CacheMode)
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_io_class_stats_file_size_core_fs(cache_mode: CacheMode, filesystem: Filesystem):
@@ -72,6 +73,9 @@ def test_io_class_stats_file_size_core_fs(cache_mode: CacheMode, filesystem: Fil
     ):
         with TestRun.step(f"Run fio with IO class {io_class.id} file sizes"):
             TestRun.LOGGER.info(f"Testing {core.filesystem.name} filesystem.")
+            precreate_fio_files(core, size_min, size)
+            sync()
+            drop_caches()
             core.reset_counters()
             fio = fio_params(core, size_min, size)
             result = fio.run(fio_timeout=timedelta(minutes=5))
@@ -81,7 +85,7 @@ def test_io_class_stats_file_size_core_fs(cache_mode: CacheMode, filesystem: Fil
         with TestRun.step(f"Check that statistics increase only for IO class {io_class.id}"):
             issued_reqs_no = \
                 result[0].write_requests_number() + result[0].read_requests_number()
-            check_statistics(cache, core, io_classes, io_class, issued_reqs_no)
+            check_statistics(cache, core, file_size_based_io_classes, io_class, issued_reqs_no)
             remove(f"{core.mount_point}/*", force=True, recursive=True)
 
             size_min = size + Size(512, Unit.Byte)
@@ -142,6 +146,13 @@ def test_io_class_stats_file_size_core_direct(cache_mode: CacheMode):
             remove(f"{core.path}/*", force=True, recursive=True)
 
             size_min = size + Size(512, Unit.Byte)
+
+
+def precreate_fio_files(core, size_min, size_max):
+    for size in [size_min, size_max]:
+        path = f"{core.mount_point}/{round(size.get_value())}"
+        bytes_count = round(size.get_value())
+        TestRun.executor.run_expect_success(f"truncate -s {bytes_count} {path}")
 
 
 def fio_params(core, size_min, size_max, direct=False):

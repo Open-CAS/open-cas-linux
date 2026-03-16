@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -21,7 +22,7 @@ cores_number = 16
 
 @pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.parametrizex("partition_table", PartitionTable)
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_cas_preserves_partitions(partition_table, filesystem, cache_mode):
@@ -95,7 +96,7 @@ def test_cas_preserves_partitions(partition_table, filesystem, cache_mode):
 
 @pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.parametrizex("partition_table", PartitionTable)
-@pytest.mark.parametrizex("filesystem", Filesystem)
+@pytest.mark.parametrizex("filesystem", Filesystem.regular())
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
 def test_partition_create_cas(partition_table, filesystem, cache_mode):
@@ -148,6 +149,7 @@ def test_partition_create_cas(partition_table, filesystem, cache_mode):
         cache.stop()
 
     with TestRun.step("Read partitions on core device."):
+        TestRun.executor.run_expect_success("partprobe")
         for part in core.partitions:
             part.parent_device = core_dev
             new_part = Partition(part.parent_device, part.type, part.number, part.begin, part.end)

@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -95,7 +96,7 @@ def test_io_class_pinning_eviction():
     with TestRun.step("Trigger IO to pinned class directory"):
         run_io_dir(
             f"{pinned_io_class.dir_path}/tmp_file",
-            int((pinned_io_class.max_occupancy * cache_line_count) / Unit.Blocks4096),
+            int((pinned_io_class.max_occupancy * cache_line_count) / Unit.Blocks4096.value),
         )
         pinned_occupancy = get_io_class_occupancy(cache, pinned_io_class.id)
 
@@ -115,7 +116,7 @@ def test_io_class_pinning_eviction():
         for io_class in io_classes[1:]:
             run_io_dir(
                 f"{io_class.dir_path}/tmp_file",
-                int((io_class.max_occupancy * cache_size) / Unit.Blocks4096),
+                int((io_class.max_occupancy * cache_size) / Unit.Blocks4096.value),
             )
             after_op_occupancy = get_io_class_occupancy(cache, pinned_io_class.id)
             if pinned_occupancy != after_op_occupancy:
@@ -190,7 +191,7 @@ def test_pinned_ioclasses_eviction():
     with TestRun.step("Trigger IO to first pinned class directory"):
         run_io_dir(
             f"{io_classes[0].dir_path}/tmp_file",
-            int((io_classes[0].max_occupancy * cache_size) / Unit.Blocks4096),
+            int((io_classes[0].max_occupancy * cache_size) / Unit.Blocks4096.value),
         )
         first_io_pinned_occupancy = get_io_class_occupancy(cache, io_classes[0].id)
 
@@ -207,7 +208,7 @@ def test_pinned_ioclasses_eviction():
     with TestRun.step("Trigger IO to second pinned class directory"):
         run_io_dir(
             f"{io_classes[1].dir_path}/tmp_file",
-            int((io_classes[1].max_occupancy * cache_size) / Unit.Blocks4096),
+            int((io_classes[1].max_occupancy * cache_size) / Unit.Blocks4096.value),
         )
         after_op_occupancy = get_io_class_occupancy(cache, io_classes[0].id)
 

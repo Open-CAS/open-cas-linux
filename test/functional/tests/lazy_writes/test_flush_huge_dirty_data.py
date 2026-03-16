@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -28,7 +29,7 @@ bs = Size(64, Unit.MebiByte)
 mnt_point = "/mnt/cas/"
 
 
-@pytest.mark.parametrizex("fs", Filesystem)
+@pytest.mark.parametrizex("fs", Filesystem.regular())
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("separate_dev", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))

@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -431,8 +432,6 @@ def test_ioclass_occupancy_sum_cache():
 
 
 def get_io_count(io_class, cache_size, cls, io_size_multiplication):
-    io_count = int((io_class.max_occupancy * cache_size) / Unit.Blocks4096 * io_size_multiplication)
-    # io size needs to be aligned to cache line size
-    io_count -= int(io_count % (cls.value / Unit.Blocks4096))
-
-    return io_count
+    data_size = io_class.max_occupancy * cache_size * io_size_multiplication
+    # total io size needs to be aligned to cache line size
+    return data_size.align_down(cls.value.value) // Size(1, Unit.Blocks4096)

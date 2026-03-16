@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -287,13 +288,22 @@ def check_stdout_msg(output: Output, expected_messages, negate=False):
 def __check_string_msg(text: str, expected_messages, negate=False):
     msg_ok = True
     for msg in expected_messages:
+        msg_printable = re.sub(r"\\(.)", r"\1", msg)
         matches = re.search(msg, text)
         if not matches and not negate:
-            TestRun.LOGGER.error(f"Message is incorrect, expected: {msg}\n actual: {text}.")
+            TestRun.LOGGER.error(
+                "Message is incorrect,\n" +
+                f"=== expected ===\n{msg_printable}\n" +
+                f"=== actual ===\n{text}\n" +
+                "=== end ==="
+            )
             msg_ok = False
         elif matches and negate:
             TestRun.LOGGER.error(
-                f"Message is incorrect, expected to not find: {msg}\n actual: {text}."
+                "Message is incorrect,\n" +
+                f"=== expected not to find ===\n{msg_printable}\n" +
+                f"=== actual ===\n{text}\n" +
+                "=== end ==="
             )
             msg_ok = False
     return msg_ok
