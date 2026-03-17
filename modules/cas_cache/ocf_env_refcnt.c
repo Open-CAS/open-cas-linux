@@ -1,6 +1,7 @@
 /*
  * Copyright(c) 2019-2021 Intel Corporation
  * Copyright(c) 2023-2025 Huawei Technologies Co., Ltd.
+ * Copyright(c) 2026 Unvertical
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -130,6 +131,9 @@ void env_refcnt_deinit(struct env_refcnt *rc)
 	env_spinlock_destroy(&rc->freeze.lock);
 
 	ENV_BUG_ON(env_atomic_read(&rc->notify.to_notify));
+	destroy_workqueue(rc->notify.notify_work_queue);
+	rc->notify.notify_work_queue = NULL;
+
 	for_each_online_cpu(cpu_no) {
 		if (rc->notify.notify_work_items[cpu_no]) {
 			env_vfree(rc->notify.notify_work_items[cpu_no]);
@@ -139,8 +143,6 @@ void env_refcnt_deinit(struct env_refcnt *rc)
 
 	env_vfree(rc->notify.notify_work_items);
 	rc->notify.notify_work_items = NULL;
-	destroy_workqueue(rc->notify.notify_work_queue);
-	rc->notify.notify_work_queue = NULL;
 
 	free_percpu(rc->pcpu);
 	rc->pcpu = NULL;
