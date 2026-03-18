@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2021 Intel Corporation
 # Copyright(c) 2023-2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -96,6 +97,8 @@ def test_load_corrupted_metadata(cache_mode, cache_line_size, cleaning_policy,
                 except CmdException:
                     TestRun.LOGGER.error("Sending I/O requests to cached volume caused error.")
                     break
+            with TestRun.step("Stop cache."):
+                cache.stop()
 
 
 def corrupt_metadata(cache_dev: Device, iteration: int, metadata_size: int):
