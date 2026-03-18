@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2019-2021 Intel Corporation
 * Copyright(c) 2024-2025 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -856,6 +857,13 @@ static struct cas_cls_condition *_cas_cls_parse_condition(
 	 * string (token or operand) */
 	op = *ptr;
 	*ptr = '\0';
+
+	/* Trailing operator with no following condition is a syntax error */
+	if (*(ptr + 1) == '\0') {
+		CAS_CLS_MSG(KERN_ERR,
+				"Missing condition after '%c' operator\n", op);
+		return ERR_PTR(-EINVAL);
+	}
 
 create:
 	c = _cas_cls_create_condition(cls, token, operand, *l_op);
