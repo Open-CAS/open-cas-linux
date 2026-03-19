@@ -62,7 +62,7 @@ def test_flush_request_core(cache_mode):
         cache.set_cleaning_policy(CleaningPolicy.nop)
 
     with TestRun.step("Create temporary file on exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Flush cache."):
@@ -75,7 +75,7 @@ def test_flush_request_core(cache_mode):
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Flush core."):
@@ -93,8 +93,8 @@ def test_flush_request_core(cache_mode):
             Time(milliseconds=5000), 10000, Time(seconds=10), Time(seconds=10))
         )
 
-    with TestRun.step("Create big temporary file on exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(5, Unit.GibiByte))
+    with TestRun.step("Create temporary file on exported object."):
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(5, Unit.MebiByte))
         sync()
 
     with TestRun.step("Wait for automatic flush from alru cleaning policy and check log."):
@@ -112,7 +112,7 @@ def test_flush_request_core(cache_mode):
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on exported object."):
-        create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
+        create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Unmount exported object and remove it from cache."):
@@ -168,7 +168,7 @@ def test_flush_request_cache(cache_mode):
         cache.set_cleaning_policy(CleaningPolicy.nop)
 
     with TestRun.step("Create temporary file on exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Flush cache."):
@@ -181,7 +181,7 @@ def test_flush_request_cache(cache_mode):
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Flush core."):
@@ -199,8 +199,8 @@ def test_flush_request_cache(cache_mode):
             Time(milliseconds=5000), 10000, Time(seconds=10), Time(seconds=10))
         )
 
-    with TestRun.step("Create big temporary file on exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(5, Unit.GibiByte))
+    with TestRun.step("Create temporary file on exported object."):
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(5, Unit.MebiByte))
         sync()
 
     with TestRun.step("Wait for automatic flush from alru cleaning policy and check log."):
@@ -218,7 +218,7 @@ def test_flush_request_cache(cache_mode):
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on exported object."):
-        create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
+        create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Unmount exported object and remove it from cache."):
@@ -280,7 +280,7 @@ def test_flush_request_multilevel_cache(cache_mode):
         cache2.set_cleaning_policy(CleaningPolicy.nop)
 
     with TestRun.step("Create temporary file on the 2nd exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(512, Unit.MebiByte))
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Flush both caches."):
@@ -294,7 +294,7 @@ def test_flush_request_multilevel_cache(cache_mode):
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on the 2nd exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(512, Unit.MebiByte))
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Flush both cores."):
@@ -317,8 +317,8 @@ def test_flush_request_multilevel_cache(cache_mode):
             Time(milliseconds=5000), 10000, Time(seconds=10), Time(seconds=10))
         )
 
-    with TestRun.step("Create big temporary file on the 2nd exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(3, Unit.GibiByte))
+    with TestRun.step("Create temporary file on the 2nd exported object."):
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(5, Unit.MebiByte))
         sync()
 
     with TestRun.step("Wait for automatic flush from alru cleaning policy and check log."):
@@ -336,7 +336,7 @@ def test_flush_request_multilevel_cache(cache_mode):
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on the 2nd exported object."):
-        create_random_test_file(f"{mount_point}/tmp.file", Size(512, Unit.MebiByte))
+        create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Unmount the 2nd exported object and remove cores from caches."):
