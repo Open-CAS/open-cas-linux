@@ -36,7 +36,7 @@ def test_flush_request_propagation_cache():
       - FLUSH requests should be propagated to cache device.
     """
     with TestRun.step("Load scsi_debug module."):
-        scsi_debug = ScsiDebug({"dev_size_mb": "8192", "opts": "1"})
+        scsi_debug = ScsiDebug({"dev_size_mb": "4096", "opts": "1"})
 
     with TestRun.step("Set mark in syslog to not read entries existing before the test."):
         scsi_debug.reset_stats()
@@ -93,7 +93,7 @@ def test_flush_request_propagation_core():
       - FLUSH requests should be propagated to core device.
     """
     with TestRun.step("Load scsi_debug module."):
-        scsi_debug = ScsiDebug({"dev_size_mb": "8192", "opts": "1"})
+        scsi_debug = ScsiDebug({"dev_size_mb": "4096", "opts": "1"})
 
     with TestRun.step("Set mark in syslog to not read entries existing before the test."):
         scsi_debug.reset_stats()
