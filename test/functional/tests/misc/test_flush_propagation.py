@@ -17,6 +17,7 @@ from api.cas.cache_config import (
 )
 from storage_devices.disk import DiskType, DiskTypeSet
 from core.test_run import TestRun
+from test_tools.dd import Dd
 from test_tools.os_tools import sync
 from test_tools.scsi_debug import ScsiDebug
 from test_tools.fs_tools import create_random_test_file, Filesystem
@@ -131,6 +132,56 @@ def test_flush_request_propagation_core():
 
     with TestRun.step("Unmount exported object."):
         core.unmount()
+
+    with TestRun.step("Stop cache."):
+        cache.stop()
+
+    with TestRun.step("Unload scsi_debug module."):
+        scsi_debug.unload()
+
+
+@pytest.mark.os_dependent
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+def test_fua_request_propagation_core():
+    """
+    title: Test for FUA requests propagation to core device
+    description: |
+      Test if OpenCAS propagates FUA requests to underlaying core device
+    pass_criteria:
+      - FUA requests should be propagated to core device.
+    """
+    with TestRun.step("Load scsi_debug module."):
+        scsi_debug = ScsiDebug({"dev_size_mb": "4096", "opts": "1"})
+
+    with TestRun.step("Prepare devices for cache and core."):
+        cache_dev = TestRun.disks["cache"]
+        core_dev = scsi_debug.get_devices()[0]
+        cache_dev.create_partitions([Size(2, Unit.GibiByte)])
+        cache_dev = cache_dev.partitions[0]
+
+    with TestRun.step("Start cache and add SCSI device as core."):
+        cache = casadm.start_cache(cache_dev, CacheMode.WT)
+        core = cache.add_core(core_dev)
+
+    with TestRun.step("Turn off cleaning policy and sequential cutoff"):
+        cache.set_cleaning_policy(CleaningPolicy.nop)
+        cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+
+    with TestRun.step("Write to exported object with FUA flag."):
+        scsi_debug.reset_stats()
+        (
+            Dd()
+            .input("/dev/zero")
+            .output(core.path)
+            .count(100)
+            .block_size(Size(1, Unit.Blocks4096))
+            .oflag("direct", "dsync")
+        ).run()
+        sleep(3)
+
+    with TestRun.step("Check for FUA request."):
+        if scsi_debug.get_fua_count() == 0:
+            TestRun.LOGGER.error("FUA request not occured")
 
     with TestRun.step("Stop cache."):
         cache.stop()
