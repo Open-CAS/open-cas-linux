@@ -21,6 +21,7 @@
 #include "classifier.h"
 #include "context.h"
 #include <linux/kallsyms.h>
+#include <linux/idr.h>
 #include "disk.h"
 #include "exp_obj.h"
 
@@ -54,7 +55,7 @@ enum {
 
 struct cas_module {
 	int disk_major;
-	int next_minor;
+	struct ida minor_ida;
 
 	struct kmem_cache *disk_cache;
 	struct kmem_cache *exp_obj_cache;

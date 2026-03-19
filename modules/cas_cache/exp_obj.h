@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024-2025 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #ifndef __CASDISK_EXP_OBJ_H__
@@ -51,6 +52,7 @@ struct cas_exp_obj {
 
 	int gd_flags;
 	int gd_minors;
+	int minor_slot;
 
 	struct blk_mq_tag_set tag_set;
 
