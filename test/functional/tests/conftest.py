@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2023-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -29,6 +30,7 @@ from test_tools.disk_tools import PartitionTable, create_partition_table
 from test_tools.device_mapper import DeviceMapper
 from test_tools.mdadm import Mdadm
 from test_tools.fs_tools import remove, check_if_directory_exists, create_directory
+from test_tools.scsi_debug import ScsiDebug
 from test_tools import initramfs, git
 from log.logger import create_log, Log
 from test_utils.common.singleton import Singleton
@@ -272,6 +274,7 @@ def pytest_runtest_teardown():
 
                 DeviceMapper.remove_all()
                 RamDisk.remove_all()
+                ScsiDebug.unload()
 
                 if check_if_directory_exists(path=TestRun.TEST_RUN_DATA_PATH):
                     remove(

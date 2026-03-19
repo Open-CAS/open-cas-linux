@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -9,13 +10,13 @@ import pytest
 from api.cas import casadm
 from storage_devices.disk import DiskType, DiskTypeSet
 from core.test_run import TestRun
+from test_tools.scsi_debug import ScsiDebug
 from type_def.size import Size, Unit
 
 scsi_dev_size_gb = str(40 * 1024)
 
 
 @pytest.mark.os_dependent
-@pytest.mark.require_plugin("scsi_debug", virtual_gb=scsi_dev_size_gb, opts="1")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 def test_discard_on_huge_core():
     """
@@ -28,6 +29,9 @@ def test_discard_on_huge_core():
           - Discard request is handled without errors.
           - There is no RCU-sched type stall in dmesg log.
     """
+    with TestRun.step("Load scsi_debug module."):
+        scsi_debug = ScsiDebug({"virtual_gb": scsi_dev_size_gb, "opts": "1"})
+
     with TestRun.step("Clear dmesg log."):
         TestRun.executor.run_expect_success("dmesg -c")
 
@@ -35,7 +39,7 @@ def test_discard_on_huge_core():
         cache_dev = TestRun.disks['cache']
         cache_dev.create_partitions([Size(10, Unit.GibiByte)])
         cache_part = cache_dev.partitions[0]
-        core_dev = TestRun.scsi_debug_devices[0]
+        core_dev = scsi_debug.get_devices()[0]
 
     with TestRun.step("Start cache and add SCSI device as core."):
         cache = casadm.start_cache(cache_part, force=True)
@@ -49,6 +53,9 @@ def test_discard_on_huge_core():
 
     with TestRun.step("Check dmesg for RCU-sched stall."):
         check_for_rcu_sched_type_stall()
+
+    with TestRun.step("Unload scsi_debug module."):
+        scsi_debug.unload()
 
 
 def check_for_rcu_sched_type_stall():
