@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024-2025 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #include <linux/module.h>
@@ -17,6 +18,8 @@
 #include "debug.h"
 
 #define CAS_DEV_MINORS 16
+#define CAS_MINOR_SLOT_SIZE 256
+#define CAS_MINOR_SLOT_MAX ((1 << MINORBITS) / CAS_MINOR_SLOT_SIZE - 1)
 #define KMEM_CACHE_MIN_SIZE sizeof(void *)
 
 static inline int bd_claim_by_disk(struct block_device *bdev, void *holder,
@@ -43,9 +46,12 @@ int __init cas_init_exp_objs(void)
 	}
 	CAS_DEBUG_PARAM("Allocated major number: %d", cas_module.disk_major);
 
+	ida_init(&cas_module.minor_ida);
+
 	cas_module.exp_obj_cache = kmem_cache_create("cas_exp_obj",
 			sizeof(struct cas_exp_obj), 0, 0, NULL);
 	if (!cas_module.exp_obj_cache) {
+		ida_destroy(&cas_module.minor_ida);
 		unregister_blkdev(cas_module.disk_major, "cas");
 		return -ENOMEM;
 	}
@@ -58,6 +64,7 @@ void cas_deinit_exp_objs(void)
 	CAS_DEBUG_TRACE();
 
 	kmem_cache_destroy(cas_module.exp_obj_cache);
+	ida_destroy(&cas_module.minor_ida);
 	unregister_blkdev(cas_module.disk_major, "cas");
 }
 
@@ -184,16 +191,15 @@ static int _cas_exp_obj_hide_parts(struct cas_disk *dsk)
 	return 0;
 }
 
-static int _cas_exp_obj_allocate_minors(int count)
+static int _cas_exp_obj_allocate_minor_slot(void)
 {
-	int minor = -1;
+	return ida_alloc_max(&cas_module.minor_ida,
+			CAS_MINOR_SLOT_MAX, GFP_KERNEL);
+}
 
-	if (cas_module.next_minor + count <= (1 << MINORBITS)) {
-		minor = cas_module.next_minor;
-		cas_module.next_minor += count;
-	}
-
-	return minor;
+static void _cas_exp_obj_free_minor_slot(int slot)
+{
+	ida_free(&cas_module.minor_ida, slot);
 }
 
 static int _cas_exp_obj_set_dev_t(struct cas_disk *dsk, struct gendisk *gd)
@@ -215,11 +221,12 @@ static int _cas_exp_obj_set_dev_t(struct cas_disk *dsk, struct gendisk *gd)
 		flags = exp_obj->gd_flags;
 	}
 
-	gd->first_minor = _cas_exp_obj_allocate_minors(minors);
-	if (gd->first_minor < 0) {
-		CAS_DEBUG_DISK_ERROR(dsk, "Cannot allocate %d minors", minors);
-		return -EINVAL;
+	exp_obj->minor_slot = _cas_exp_obj_allocate_minor_slot();
+	if (exp_obj->minor_slot < 0) {
+		CAS_DEBUG_DISK_ERROR(dsk, "Cannot allocate minor slot");
+		return -ENOSPC;
 	}
+	gd->first_minor = exp_obj->minor_slot * CAS_MINOR_SLOT_SIZE;
 	gd->minors = minors;
 
 	gd->major = cas_module.disk_major;
@@ -233,6 +240,8 @@ static void _cas_exp_obj_clear_dev_t(struct cas_disk *dsk)
 	struct cas_exp_obj *exp_obj = dsk->exp_obj;
 	struct block_device *bdev = cas_disk_get_blkdev(dsk);
 	struct gendisk *gdsk = cas_disk_get_gendisk(dsk);
+
+	_cas_exp_obj_free_minor_slot(exp_obj->minor_slot);
 
 	if (cas_bdev_whole(bdev) == bdev) {
 		/* Restore previous configuration of bottom disk */
