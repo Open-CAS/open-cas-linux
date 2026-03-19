@@ -40,7 +40,7 @@ def test_flush_request_core(cache_mode):
         scsi_debug = ScsiDebug({"dev_size_mb": "4096", "opts": "1"})
 
     with TestRun.step("Set mark in syslog to not read entries existing before the test."):
-        scsi_debug.mark()
+        scsi_debug.reset_stats()
 
     with TestRun.step("Prepare devices for cache and core."):
         cache_dev = TestRun.disks['cache']
@@ -70,7 +70,8 @@ def test_flush_request_core(cache_mode):
         sync()
 
     with TestRun.step("Check for flush request and delete temporary file."):
-        scsi_debug.check_for_flush()
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on exported object."):
@@ -82,7 +83,8 @@ def test_flush_request_core(cache_mode):
         sync()
 
     with TestRun.step("Check for flush request and delete temporary file."):
-        scsi_debug.check_for_flush()
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Turn on alru cleaning policy and set policy params."):
@@ -105,7 +107,8 @@ def test_flush_request_core(cache_mode):
         sleep(wait_time)
 
     with TestRun.step("Check for flush request and delete temporary file."):
-        scsi_debug.check_for_flush()
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on exported object."):
@@ -118,7 +121,8 @@ def test_flush_request_core(cache_mode):
         sync()
 
     with TestRun.step("Check for flush request."):
-        scsi_debug.check_for_flush()
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
 
     with TestRun.step("Stop cache."):
         cache.stop()
@@ -142,7 +146,7 @@ def test_flush_request_cache(cache_mode):
         scsi_debug = ScsiDebug({"dev_size_mb": "2048", "opts": "1"})
 
     with TestRun.step("Set mark in syslog to not read entries existing before the test."):
-        scsi_debug.mark()
+        scsi_debug.reset_stats()
 
     with TestRun.step("Prepare devices for cache and core."):
         core_dev = TestRun.disks['core']
@@ -172,7 +176,8 @@ def test_flush_request_cache(cache_mode):
         sync()
 
     with TestRun.step("Check for flush requests and delete temporary file."):
-        scsi_debug.check_for_flush()
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on exported object."):
@@ -184,7 +189,8 @@ def test_flush_request_cache(cache_mode):
         sync()
 
     with TestRun.step("Check for flush request and delete temporary file."):
-        scsi_debug.check_for_flush()
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Turn on alru cleaning policy and set policy params."):
@@ -207,7 +213,8 @@ def test_flush_request_cache(cache_mode):
         sleep(wait_time)
 
     with TestRun.step("Check for flush requests and delete temporary file."):
-        scsi_debug.check_for_flush()
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on exported object."):
@@ -220,7 +227,8 @@ def test_flush_request_cache(cache_mode):
         sync()
 
     with TestRun.step("Check for flush requests."):
-        scsi_debug.check_for_flush()
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
 
     with TestRun.step("Stop cache."):
         cache.stop()
@@ -244,7 +252,7 @@ def test_flush_request_multilevel_cache(cache_mode):
         scsi_debug = ScsiDebug({"dev_size_mb": "2048", "opts": "1"})
 
     with TestRun.step("Set mark in syslog to not read entries existing before the test."):
-        scsi_debug.mark()
+        scsi_debug.reset_stats()
 
     with TestRun.step("Prepare devices for multilevel cache."):
         cache_dev = TestRun.disks['cache']
@@ -281,7 +289,8 @@ def test_flush_request_multilevel_cache(cache_mode):
         sync()
 
     with TestRun.step("Check for flush requests and delete temporary file."):
-        scsi_debug.check_for_flush()
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on the 2nd exported object."):
@@ -294,7 +303,8 @@ def test_flush_request_multilevel_cache(cache_mode):
         sync()
 
     with TestRun.step("Check for flush request and delete temporary file."):
-        scsi_debug.check_for_flush()
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Turn on alru cleaning policy and set policy params on both caches."):
@@ -321,7 +331,8 @@ def test_flush_request_multilevel_cache(cache_mode):
         sleep(wait_time)
 
     with TestRun.step("Check for flush requests and delete temporary file."):
-        scsi_debug.check_for_flush()
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on the 2nd exported object."):
@@ -335,7 +346,8 @@ def test_flush_request_multilevel_cache(cache_mode):
         sync()
 
     with TestRun.step("Check for flush request."):
-        scsi_debug.check_for_flush()
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
 
     with TestRun.step("Stop both caches."):
         cache2.stop()

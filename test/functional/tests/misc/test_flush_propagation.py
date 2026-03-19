@@ -39,7 +39,7 @@ def test_flush_request_propagation_cache():
         scsi_debug = ScsiDebug({"dev_size_mb": "8192", "opts": "1"})
 
     with TestRun.step("Set mark in syslog to not read entries existing before the test."):
-        scsi_debug.mark()
+        scsi_debug.reset_stats()
 
     with TestRun.step("Prepare devices for cache and core."):
         cache_dev = scsi_debug.get_devices()[0]
@@ -63,13 +63,14 @@ def test_flush_request_propagation_cache():
         sync()
 
     with TestRun.step("Create temporary file on the exported object."):
-        scsi_debug.mark()
+        scsi_debug.reset_stats()
         create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
         sync()
         sleep(3)
 
     with TestRun.step("Check for flush request."):
-        scsi_debug.check_for_flush()
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
 
     with TestRun.step("Unmount exported object."):
         core.unmount()
@@ -95,7 +96,7 @@ def test_flush_request_propagation_core():
         scsi_debug = ScsiDebug({"dev_size_mb": "8192", "opts": "1"})
 
     with TestRun.step("Set mark in syslog to not read entries existing before the test."):
-        scsi_debug.mark()
+        scsi_debug.reset_stats()
 
     with TestRun.step("Prepare devices for cache and core."):
         cache_dev = TestRun.disks["cache"]
@@ -119,13 +120,14 @@ def test_flush_request_propagation_core():
         sync()
 
     with TestRun.step("Create temporary file on the exported object."):
-        scsi_debug.mark()
+        scsi_debug.reset_stats()
         create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
         sync()
         sleep(3)
 
     with TestRun.step("Check for flush request."):
-        scsi_debug.check_for_flush()
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
 
     with TestRun.step("Unmount exported object."):
         core.unmount()
