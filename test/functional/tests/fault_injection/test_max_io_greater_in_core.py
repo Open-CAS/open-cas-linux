@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 import pytest
@@ -10,6 +11,7 @@ from api.cas.cache_config import CacheMode, CacheLineSize
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet
 from test_tools.dd import Dd
+from test_tools.scsi_debug import ScsiDebug
 from test_tools.udev import Udev
 from type_def.size import Size, Unit
 
@@ -17,8 +19,6 @@ from type_def.size import Size, Unit
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.parametrizex("cache_line_size", CacheLineSize)
-@pytest.mark.require_plugin("scsi_debug", delay="0", virtual_gb="4", dev_size_mb="500",
-                            sector_size="512", physblk_exp="4")
 def test_max_io_greater_in_core(cache_mode, cache_line_size):
     """
         title: Test behavior when core's max IO (max_sectors_kb) is greater than cache's.
@@ -29,8 +29,14 @@ def test_max_io_greater_in_core(cache_mode, cache_line_size):
           - No kernel bug.
           - Running workload successfully.
     """
+    with TestRun.step("Load scsi_debug module."):
+        scsi_debug = ScsiDebug({
+            "delay": "0", "virtual_gb": "4", "dev_size_mb": "500",
+            "sector_size": "512", "physblk_exp": "4",
+        })
+
     with TestRun.step("Prepare devices."):
-        core_scsi_debug_disk = TestRun.scsi_debug_devices[0]
+        core_scsi_debug_disk = scsi_debug.get_devices()[0]
 
         cache_disk = TestRun.disks['cache']
         cache_disk.create_partitions([Size(1, Unit.GibiByte)])
@@ -83,3 +89,6 @@ def test_max_io_greater_in_core(cache_mode, cache_line_size):
                 TestRun.fail(f"Failed to execute dd.\n {output.stdout}\n{output.stderr}")
 
             seek_bytes += block_size * 20   # each iteration will cover different disk part
+
+    with TestRun.step("Unload scsi_debug module."):
+        scsi_debug.unload()

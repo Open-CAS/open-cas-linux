@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -16,8 +17,9 @@ from api.cas.cache_config import (
 )
 from storage_devices.disk import DiskType, DiskTypeSet
 from core.test_run import TestRun
+from test_tools.dd import Dd
 from test_tools.os_tools import sync
-from test_tools.scsi_debug import Logs, syslog_path
+from test_tools.scsi_debug import ScsiDebug
 from test_tools.fs_tools import create_random_test_file, Filesystem
 from type_def.size import Size, Unit
 
@@ -25,21 +27,23 @@ mount_point = "/mnt/cas"
 
 
 @pytest.mark.os_dependent
-@pytest.mark.require_plugin("scsi_debug_fua_signals", dev_size_mb="8192", opts="1")
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.optane, DiskType.nand]))
-def test_flush_signal_propagation_cache():
+def test_flush_request_propagation_cache():
     """
-    title: Test for FLUSH signals propagation to cache device
+    title: Test for FLUSH requests propagation to cache device
     description: |
-      Test if OpenCAS propagates FLUSH signal to underlaying cache device
+      Test if OpenCAS propagates FLUSH requests to underlaying cache device
     pass_criteria:
       - FLUSH requests should be propagated to cache device.
     """
+    with TestRun.step("Load scsi_debug module."):
+        scsi_debug = ScsiDebug({"dev_size_mb": "4096", "opts": "1"})
+
     with TestRun.step("Set mark in syslog to not read entries existing before the test."):
-        Logs._read_syslog(Logs.last_read_line)
+        scsi_debug.reset_stats()
 
     with TestRun.step("Prepare devices for cache and core."):
-        cache_dev = TestRun.scsi_debug_devices[0]
+        cache_dev = scsi_debug.get_devices()[0]
         core_dev = TestRun.disks["core"]
         core_dev.create_partitions([Size(2, Unit.GibiByte)])
         core_dev = core_dev.partitions[0]
@@ -60,33 +64,44 @@ def test_flush_signal_propagation_cache():
         sync()
 
     with TestRun.step("Create temporary file on the exported object."):
-        Logs._read_syslog(Logs.last_read_line)
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
+        scsi_debug.reset_stats()
+        create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
         sync()
         sleep(3)
 
-    with TestRun.step(f"Check {syslog_path} for flush request and delete temporary file."):
-        Logs.check_syslog_for_flush()
-        tmp_file.remove(True)
+    with TestRun.step("Check for flush request."):
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
+
+    with TestRun.step("Unmount exported object."):
+        core.unmount()
+
+    with TestRun.step("Stop cache."):
+        cache.stop()
+
+    with TestRun.step("Unload scsi_debug module."):
+        scsi_debug.unload()
 
 
 @pytest.mark.os_dependent
-@pytest.mark.require_plugin("scsi_debug_fua_signals", dev_size_mb="8192", opts="1")
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-def test_flush_signal_propagation_core():
+def test_flush_request_propagation_core():
     """
-    title: Test for FLUSH signals propagation to core device
+    title: Test for FLUSH requests propagation to core device
     description: |
-      Test if OpenCAS propagates FLUSH signal to underlaying core device
+      Test if OpenCAS propagates FLUSH requests to underlaying core device
     pass_criteria:
       - FLUSH requests should be propagated to core device.
     """
+    with TestRun.step("Load scsi_debug module."):
+        scsi_debug = ScsiDebug({"dev_size_mb": "4096", "opts": "1"})
+
     with TestRun.step("Set mark in syslog to not read entries existing before the test."):
-        Logs._read_syslog(Logs.last_read_line)
+        scsi_debug.reset_stats()
 
     with TestRun.step("Prepare devices for cache and core."):
         cache_dev = TestRun.disks["cache"]
-        core_dev = TestRun.scsi_debug_devices[0]
+        core_dev = scsi_debug.get_devices()[0]
         cache_dev.create_partitions([Size(2, Unit.GibiByte)])
         cache_dev = cache_dev.partitions[0]
 
@@ -106,11 +121,70 @@ def test_flush_signal_propagation_core():
         sync()
 
     with TestRun.step("Create temporary file on the exported object."):
-        Logs._read_syslog(Logs.last_read_line)
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
+        scsi_debug.reset_stats()
+        create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
         sync()
         sleep(3)
 
-    with TestRun.step(f"Check {syslog_path} for flush request and delete temporary file."):
-        Logs.check_syslog_for_flush()
-        tmp_file.remove(True)
+    with TestRun.step("Check for flush request."):
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
+
+    with TestRun.step("Unmount exported object."):
+        core.unmount()
+
+    with TestRun.step("Stop cache."):
+        cache.stop()
+
+    with TestRun.step("Unload scsi_debug module."):
+        scsi_debug.unload()
+
+
+@pytest.mark.os_dependent
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+def test_fua_request_propagation_core():
+    """
+    title: Test for FUA requests propagation to core device
+    description: |
+      Test if OpenCAS propagates FUA requests to underlaying core device
+    pass_criteria:
+      - FUA requests should be propagated to core device.
+    """
+    with TestRun.step("Load scsi_debug module."):
+        scsi_debug = ScsiDebug({"dev_size_mb": "4096", "opts": "1"})
+
+    with TestRun.step("Prepare devices for cache and core."):
+        cache_dev = TestRun.disks["cache"]
+        core_dev = scsi_debug.get_devices()[0]
+        cache_dev.create_partitions([Size(2, Unit.GibiByte)])
+        cache_dev = cache_dev.partitions[0]
+
+    with TestRun.step("Start cache and add SCSI device as core."):
+        cache = casadm.start_cache(cache_dev, CacheMode.WT)
+        core = cache.add_core(core_dev)
+
+    with TestRun.step("Turn off cleaning policy and sequential cutoff"):
+        cache.set_cleaning_policy(CleaningPolicy.nop)
+        cache.set_seq_cutoff_policy(SeqCutOffPolicy.never)
+
+    with TestRun.step("Write to exported object with FUA flag."):
+        scsi_debug.reset_stats()
+        (
+            Dd()
+            .input("/dev/zero")
+            .output(core.path)
+            .count(100)
+            .block_size(Size(1, Unit.Blocks4096))
+            .oflag("direct", "dsync")
+        ).run()
+        sleep(3)
+
+    with TestRun.step("Check for FUA request."):
+        if scsi_debug.get_fua_count() == 0:
+            TestRun.LOGGER.error("FUA request not occured")
+
+    with TestRun.step("Stop cache."):
+        cache.stop()
+
+    with TestRun.step("Unload scsi_debug module."):
+        scsi_debug.unload()

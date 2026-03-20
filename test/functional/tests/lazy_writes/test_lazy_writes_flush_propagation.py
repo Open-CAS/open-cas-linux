@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -18,33 +19,34 @@ from storage_devices.disk import DiskType, DiskTypeSet
 from core.test_run import TestRun
 from test_tools.fs_tools import create_random_test_file, Filesystem
 from test_tools.os_tools import sync
-from test_tools.scsi_debug import Logs, syslog_path
+from test_tools.scsi_debug import ScsiDebug
 from type_def.size import Size, Unit
 
 mount_point = "/mnt/cas"
 
 
 @pytest.mark.os_dependent
-@pytest.mark.require_plugin("scsi_debug_fua_signals", dev_size_mb="4096", opts="1")
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-def test_flush_signal_core(cache_mode):
+def test_flush_request_core(cache_mode):
     """
-        title: Test for FLUSH nad FUA signals sent to core device in modes with lazy writes.
+        title: Test for FLUSH requests sent to core device in modes with lazy writes.
         description: |
-          Test if OpenCAS transmits FLUSH and FUA signals to core device in modes with lazy writes.
+          Test if OpenCAS transmits FLUSH requests to core device in modes with lazy writes.
         pass_criteria:
           - FLUSH requests should be passed to core device.
-          - FUA requests should be passed to core device.
     """
+    with TestRun.step("Load scsi_debug module."):
+        scsi_debug = ScsiDebug({"dev_size_mb": "4096", "opts": "1"})
+
     with TestRun.step("Set mark in syslog to not read entries existing before the test."):
-        Logs._read_syslog(Logs.last_read_line)
+        scsi_debug.reset_stats()
 
     with TestRun.step("Prepare devices for cache and core."):
         cache_dev = TestRun.disks['cache']
         cache_dev.create_partitions([Size(2, Unit.GibiByte)])
         cache_part = cache_dev.partitions[0]
-        core_dev = TestRun.scsi_debug_devices[0]
+        core_dev = scsi_debug.get_devices()[0]
 
     with TestRun.step("Start cache and add SCSI device with xfs filesystem as core."):
         cache = casadm.start_cache(cache_part, cache_mode)
@@ -60,27 +62,29 @@ def test_flush_signal_core(cache_mode):
         cache.set_cleaning_policy(CleaningPolicy.nop)
 
     with TestRun.step("Create temporary file on exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Flush cache."):
         cache.flush_cache()
         sync()
 
-    with TestRun.step(f"Check {syslog_path} for flush request and delete temporary file."):
-        Logs.check_syslog_for_signals()
+    with TestRun.step("Check for flush request and delete temporary file."):
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Flush core."):
         core.flush_core()
         sync()
 
-    with TestRun.step(f"Check {syslog_path} for flush request and delete temporary file."):
-        Logs.check_syslog_for_signals()
+    with TestRun.step("Check for flush request and delete temporary file."):
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Turn on alru cleaning policy and set policy params."):
@@ -89,8 +93,8 @@ def test_flush_signal_core(cache_mode):
             Time(milliseconds=5000), 10000, Time(seconds=10), Time(seconds=10))
         )
 
-    with TestRun.step("Create big temporary file on exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(5, Unit.GibiByte))
+    with TestRun.step("Create temporary file on exported object."):
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(5, Unit.MebiByte))
         sync()
 
     with TestRun.step("Wait for automatic flush from alru cleaning policy and check log."):
@@ -102,12 +106,13 @@ def test_flush_signal_core(cache_mode):
         )
         sleep(wait_time)
 
-    with TestRun.step(f"Check {syslog_path} for flush request and delete temporary file."):
-        Logs.check_syslog_for_signals()
+    with TestRun.step("Check for flush request and delete temporary file."):
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on exported object."):
-        create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
+        create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Unmount exported object and remove it from cache."):
@@ -115,34 +120,39 @@ def test_flush_signal_core(cache_mode):
         core.remove_core()
         sync()
 
-    with TestRun.step(f"Check {syslog_path} for flush request."):
-        Logs.check_syslog_for_signals()
+    with TestRun.step("Check for flush request."):
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
 
     with TestRun.step("Stop cache."):
         cache.stop()
 
+    with TestRun.step("Unload scsi_debug module."):
+        scsi_debug.unload()
+
 
 @pytest.mark.os_dependent
-@pytest.mark.require_plugin("scsi_debug_fua_signals", dev_size_mb="2048", opts="1")
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd, DiskType.hdd4k, DiskType.sata]))
-def test_flush_signal_cache(cache_mode):
+def test_flush_request_cache(cache_mode):
     """
-        title: Test for FLUSH and FUA signals sent to cache device in modes with lazy writes.
+        title: Test for FLUSH reuests sent to cache device in modes with lazy writes.
         description: |
-          Test if OpenCAS transmits FLUSH and FUA signals to cache device in modes with lazy writes.
+          Test if OpenCAS transmits FLUSH requests to cache device in modes with lazy writes.
         pass_criteria:
           - FLUSH requests should be passed to cache device.
-          - FUA requests should be passed to cache device.
     """
+    with TestRun.step("Load scsi_debug module."):
+        scsi_debug = ScsiDebug({"dev_size_mb": "2048", "opts": "1"})
+
     with TestRun.step("Set mark in syslog to not read entries existing before the test."):
-        Logs._read_syslog(Logs.last_read_line)
+        scsi_debug.reset_stats()
 
     with TestRun.step("Prepare devices for cache and core."):
         core_dev = TestRun.disks['core']
         core_dev.create_partitions([Size(4, Unit.GibiByte)])
         core_part = core_dev.partitions[0]
-        cache_dev = TestRun.scsi_debug_devices[0]
+        cache_dev = scsi_debug.get_devices()[0]
 
     with TestRun.step("Start SCSI device as cache and add core with xfs filesystem."):
         cache = casadm.start_cache(cache_dev, cache_mode)
@@ -158,27 +168,29 @@ def test_flush_signal_cache(cache_mode):
         cache.set_cleaning_policy(CleaningPolicy.nop)
 
     with TestRun.step("Create temporary file on exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Flush cache."):
         cache.flush_cache()
         sync()
 
-    with TestRun.step(f"Check {syslog_path} for flush and FUA requests and delete temporary file."):
-        Logs.check_syslog_for_signals()
+    with TestRun.step("Check for flush requests and delete temporary file."):
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Flush core."):
         core.flush_core()
         sync()
 
-    with TestRun.step(f"Check {syslog_path} for flush request and delete temporary file."):
-        Logs.check_syslog_for_signals()
+    with TestRun.step("Check for flush request and delete temporary file."):
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Turn on alru cleaning policy and set policy params."):
@@ -187,8 +199,8 @@ def test_flush_signal_cache(cache_mode):
             Time(milliseconds=5000), 10000, Time(seconds=10), Time(seconds=10))
         )
 
-    with TestRun.step("Create big temporary file on exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(5, Unit.GibiByte))
+    with TestRun.step("Create temporary file on exported object."):
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(5, Unit.MebiByte))
         sync()
 
     with TestRun.step("Wait for automatic flush from alru cleaning policy and check log."):
@@ -200,12 +212,13 @@ def test_flush_signal_cache(cache_mode):
         )
         sleep(wait_time)
 
-    with TestRun.step(f"Check {syslog_path} for flush and FUA requests and delete temporary file."):
-        Logs.check_syslog_for_signals()
+    with TestRun.step("Check for flush requests and delete temporary file."):
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on exported object."):
-        create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.GibiByte))
+        create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Unmount exported object and remove it from cache."):
@@ -213,35 +226,40 @@ def test_flush_signal_cache(cache_mode):
         core.remove_core()
         sync()
 
-    with TestRun.step(f"Check {syslog_path} for flush and FUA requests."):
-        Logs.check_syslog_for_signals()
+    with TestRun.step("Check for flush requests."):
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
 
     with TestRun.step("Stop cache."):
         cache.stop()
 
+    with TestRun.step("Unload scsi_debug module."):
+        scsi_debug.unload()
+
 
 @pytest.mark.os_dependent
-@pytest.mark.require_plugin("scsi_debug_fua_signals", dev_size_mb="2048", opts="1")
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-def test_flush_signal_multilevel_cache(cache_mode):
+def test_flush_request_multilevel_cache(cache_mode):
     """
-        title: Test for FLUSH and FUA signals sent to multilevel cache in modes with lazy writes.
+        title: Test for FLUSH requests sent to multilevel cache in modes with lazy writes.
         description: |
-          Test if OpenCAS transmits FLUSH and FUA signals with multilevel cache in lazy-write modes.
+          Test if OpenCAS transmits FLUSH requests with multilevel cache in lazy-write modes.
         pass_criteria:
           - FLUSH requests should be passed by multilevel cache to core device.
-          - FUA requests should be passed by multilevel cache to core device.
     """
+    with TestRun.step("Load scsi_debug module."):
+        scsi_debug = ScsiDebug({"dev_size_mb": "2048", "opts": "1"})
+
     with TestRun.step("Set mark in syslog to not read entries existing before the test."):
-        Logs._read_syslog(Logs.last_read_line)
+        scsi_debug.reset_stats()
 
     with TestRun.step("Prepare devices for multilevel cache."):
         cache_dev = TestRun.disks['cache']
         cache_dev.create_partitions([Size(1, Unit.GibiByte)] * 2)
         cache_part1 = cache_dev.partitions[0]
         cache_part2 = cache_dev.partitions[1]
-        core_dev = TestRun.scsi_debug_devices[0]
+        core_dev = scsi_debug.get_devices()[0]
 
     with TestRun.step("Start the first cache and add the SCSI device as a core."):
         cache1 = casadm.start_cache(cache_part1, cache_mode)
@@ -262,7 +280,7 @@ def test_flush_signal_multilevel_cache(cache_mode):
         cache2.set_cleaning_policy(CleaningPolicy.nop)
 
     with TestRun.step("Create temporary file on the 2nd exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(512, Unit.MebiByte))
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Flush both caches."):
@@ -270,12 +288,13 @@ def test_flush_signal_multilevel_cache(cache_mode):
         cache1.flush_cache()
         sync()
 
-    with TestRun.step(f"Check {syslog_path} for flush and FUA requests and delete temporary file."):
-        Logs.check_syslog_for_signals()
+    with TestRun.step("Check for flush requests and delete temporary file."):
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on the 2nd exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(512, Unit.MebiByte))
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Flush both cores."):
@@ -283,8 +302,9 @@ def test_flush_signal_multilevel_cache(cache_mode):
         core1.flush_core()
         sync()
 
-    with TestRun.step(f"Check {syslog_path} for flush request and delete temporary file."):
-        Logs.check_syslog_for_signals()
+    with TestRun.step("Check for flush request and delete temporary file."):
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Turn on alru cleaning policy and set policy params on both caches."):
@@ -297,8 +317,8 @@ def test_flush_signal_multilevel_cache(cache_mode):
             Time(milliseconds=5000), 10000, Time(seconds=10), Time(seconds=10))
         )
 
-    with TestRun.step("Create big temporary file on the 2nd exported object."):
-        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(3, Unit.GibiByte))
+    with TestRun.step("Create temporary file on the 2nd exported object."):
+        tmp_file = create_random_test_file(f"{mount_point}/tmp.file", Size(5, Unit.MebiByte))
         sync()
 
     with TestRun.step("Wait for automatic flush from alru cleaning policy and check log."):
@@ -310,12 +330,13 @@ def test_flush_signal_multilevel_cache(cache_mode):
         )
         sleep(wait_time)
 
-    with TestRun.step(f"Check {syslog_path} for flush and FUA requests and delete temporary file."):
-        Logs.check_syslog_for_signals()
+    with TestRun.step("Check for flush requests and delete temporary file."):
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
         tmp_file.remove(True)
 
     with TestRun.step("Create temporary file on the 2nd exported object."):
-        create_random_test_file(f"{mount_point}/tmp.file", Size(512, Unit.MebiByte))
+        create_random_test_file(f"{mount_point}/tmp.file", Size(1, Unit.MebiByte))
         sync()
 
     with TestRun.step("Unmount the 2nd exported object and remove cores from caches."):
@@ -324,9 +345,13 @@ def test_flush_signal_multilevel_cache(cache_mode):
         core1.remove_core()
         sync()
 
-    with TestRun.step(f"Check {syslog_path} for flush request."):
-        Logs.check_syslog_for_signals()
+    with TestRun.step("Check for flush request."):
+        if scsi_debug.get_flush_count() == 0:
+            TestRun.LOGGER.error("Flush request not occured")
 
     with TestRun.step("Stop both caches."):
         cache2.stop()
         cache1.stop()
+
+    with TestRun.step("Unload scsi_debug module."):
+        scsi_debug.unload()

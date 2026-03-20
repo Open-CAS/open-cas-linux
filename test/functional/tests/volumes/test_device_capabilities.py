@@ -15,13 +15,13 @@ from storage_devices.device import Device
 from storage_devices.disk import DiskTypeSet, DiskType
 from connection.utils.output import CmdException
 from test_tools.disk_tools import get_block_size, get_size
+from test_tools.scsi_debug import ScsiDebug
 from type_def.size import Size, Unit
 
 
 @pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane]))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.nand]))
-@pytest.mark.require_plugin("scsi_debug")
 def test_device_capabilities():
     """
     title: Test whether CAS device capabilities are properly set.
@@ -49,6 +49,8 @@ def test_device_capabilities():
         {"device": "standard core device", "max_sectors_kb": 128}
     ]
 
+    scsi_debug = ScsiDebug({})
+
     for i in range(0, len(iteration_settings)):
         device = iteration_settings[i]["device"]
         group_title = f"{device} | "
@@ -59,7 +61,7 @@ def test_device_capabilities():
 
         with TestRun.group(group_title):
             with TestRun.step("Prepare devices."):
-                core_device = prepare_core_device(iteration_settings[i])
+                core_device = prepare_core_device(iteration_settings[i], scsi_debug)
                 cache_device = TestRun.disks['cache']
 
             with TestRun.step("Start cache and add prepared core device as core."):
@@ -73,31 +75,31 @@ def test_device_capabilities():
                               "(or check proper error if logical sector mismatch occurs)."):
                 compare_capabilities(core_device, cache_device, cache, core, error_output)
 
+    scsi_debug.unload()
+
 
 # Methods used in test
 
-def prepare_core_device(settings):
+def prepare_core_device(settings, scsi_debug):
     if settings["device"] == "SCSI-debug module":
         core_device = create_scsi_debug_device(
-            settings["logical_block_size"], 4, settings["dev_size_mb"])
+            scsi_debug, settings["logical_block_size"], 4, settings["dev_size_mb"])
     else:
         core_device = TestRun.disks['core']
     core_device.set_max_io_size(Size(settings["max_sectors_kb"], Unit.KibiByte))
     return core_device
 
 
-def create_scsi_debug_device(sector_size: int, physblk_exp: int, dev_size_mb=1024):
-    scsi_debug_params = {
+def create_scsi_debug_device(scsi_debug, sector_size: int, physblk_exp: int, dev_size_mb=1024):
+    scsi_debug.params = {
         "delay": "0",
         "virtual_gb": "200",
         "dev_size_mb": str(dev_size_mb),
         "sector_size": str(sector_size),
         "physblk_exp": str(physblk_exp)
     }
-    scsi_debug = TestRun.plugin_manager.get_plugin('scsi_debug')
-    scsi_debug.params = scsi_debug_params
     scsi_debug.reload()
-    return TestRun.scsi_debug_devices[0]
+    return scsi_debug.get_devices()[0]
 
 
 def prepare_cas_device(cache_device, core_device):
