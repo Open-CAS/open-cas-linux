@@ -3921,3 +3921,8 @@ int cache_mngt_get_cache_params(struct kcas_get_cache_param *info)
 	ocf_mngt_cache_put(cache);
 	return result;
 }
+
+int cache_mngt_read_lock_sync(ocf_cache_t cache)
+{
+	return _cache_mngt_read_lock_sync(cache);
+}
