@@ -59,6 +59,8 @@ def pytest_generate_tests(metafunc):
 
 
 def pytest_collection_modifyitems(config, items):
+    TestRun.post_collect(items)
+
     if config.option.collectonly:
         for item in items:
             multidut = next(item.iter_markers(name="multidut"), None)
@@ -145,6 +147,8 @@ def pytest_runtest_setup(item):
         base_prepare(item)
     TestRun.LOGGER.write_to_command_log("Test body")
     TestRun.LOGGER.start_group("Test body")
+
+    TestRun.post_setup(item)
 
 
 def base_prepare(item):
