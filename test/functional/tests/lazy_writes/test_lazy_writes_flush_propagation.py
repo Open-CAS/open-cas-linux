@@ -28,7 +28,7 @@ mount_point = "/mnt/cas"
 @pytest.mark.os_dependent
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-def test_flush_signal_core(cache_mode):
+def test_flush_request_core(cache_mode):
     """
         title: Test for FLUSH requests sent to core device in modes with lazy writes.
         description: |
@@ -130,7 +130,7 @@ def test_flush_signal_core(cache_mode):
 @pytest.mark.os_dependent
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.hdd, DiskType.hdd4k, DiskType.sata]))
-def test_flush_signal_cache(cache_mode):
+def test_flush_request_cache(cache_mode):
     """
         title: Test for FLUSH reuests sent to cache device in modes with lazy writes.
         description: |
@@ -232,7 +232,7 @@ def test_flush_signal_cache(cache_mode):
 @pytest.mark.os_dependent
 @pytest.mark.parametrizex("cache_mode", CacheMode.with_traits(CacheModeTrait.LazyWrites))
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-def test_flush_signal_multilevel_cache(cache_mode):
+def test_flush_request_multilevel_cache(cache_mode):
     """
         title: Test for FLUSH requests sent to multilevel cache in modes with lazy writes.
         description: |

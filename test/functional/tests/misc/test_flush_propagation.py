@@ -27,11 +27,11 @@ mount_point = "/mnt/cas"
 
 @pytest.mark.os_dependent
 @pytest.mark.require_disk("core", DiskTypeSet([DiskType.optane, DiskType.nand]))
-def test_flush_signal_propagation_cache():
+def test_flush_request_propagation_cache():
     """
-    title: Test for FLUSH signals propagation to cache device
+    title: Test for FLUSH requests propagation to cache device
     description: |
-      Test if OpenCAS propagates FLUSH signal to underlaying cache device
+      Test if OpenCAS propagates FLUSH requests to underlaying cache device
     pass_criteria:
       - FLUSH requests should be propagated to cache device.
     """
@@ -83,11 +83,11 @@ def test_flush_signal_propagation_cache():
 
 @pytest.mark.os_dependent
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
-def test_flush_signal_propagation_core():
+def test_flush_request_propagation_core():
     """
-    title: Test for FLUSH signals propagation to core device
+    title: Test for FLUSH requests propagation to core device
     description: |
-      Test if OpenCAS propagates FLUSH signal to underlaying core device
+      Test if OpenCAS propagates FLUSH requests to underlaying core device
     pass_criteria:
       - FLUSH requests should be propagated to core device.
     """
