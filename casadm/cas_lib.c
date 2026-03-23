@@ -428,6 +428,33 @@ inline const char *promotion_policy_to_name(uint8_t policy)
 	return val_to_short_name(policy, promotion_policy_names, "Unknown");
 }
 
+static struct name_to_val_mapping prefetch_policy_names[] = {
+	{ .short_name = "readahead", .value = ocf_pf_readahead },
+	{ NULL }
+};
+
+const char *prefetch_mask_to_name(uint8_t mask)
+{
+	static char buf[128];
+	int pos = 0;
+	int i;
+
+	if (mask == 0)
+		return "none";
+
+	for (i = 0; prefetch_policy_names[i].short_name; i++) {
+		if (mask & (1 << prefetch_policy_names[i].value)) {
+			if (pos > 0)
+				buf[pos++] = ',';
+			pos += snprintf(buf + pos, sizeof(buf) - pos, "%s",
+					prefetch_policy_names[i].short_name);
+		}
+	}
+
+	buf[pos] = '\0';
+	return buf;
+}
+
 const char *seq_cutoff_policy_to_name(uint8_t seq_cutoff_policy)
 {
 	return val_to_short_name(seq_cutoff_policy,
@@ -1288,7 +1315,10 @@ int set_cache_mode(unsigned int cache_mode, unsigned int cache_id, int flush)
 
 static void print_param(FILE *intermediate_file, struct cas_param *param)
 {
-	if (param->value_names) {
+	if (param->format_value) {
+		fprintf(intermediate_file, "%s%s,%s\n", TAG(TABLE_ROW),
+			param->name, param->format_value(param->value));
+	} else if (param->value_names) {
 		fprintf(intermediate_file, "%s%s,%s\n", TAG(TABLE_ROW),
 			param->name, param->value_names[param->value]);
 	} else {
