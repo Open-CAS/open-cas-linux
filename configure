@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # Copyright(c) 2012-2022 Intel Corporation
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -24,6 +25,7 @@ check_util sed
 check_util make
 check_util gcc
 check_util lsblk
+check_util go
 
 SCRIPTPATH=`dirname $0`
 SCRIPTPATH=`realpath $SCRIPTPATH`

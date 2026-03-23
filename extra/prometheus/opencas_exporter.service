@@ -1,0 +1,16 @@
+#
+# Copyright(c) 2026 Unvertical
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+[Unit]
+Description=Open CAS Linux Prometheus Exporter
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/opencas_exporter
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
