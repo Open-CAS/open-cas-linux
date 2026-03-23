@@ -693,8 +693,12 @@ static struct cas_param cas_core_params[] = {
 		.name = "Sequential cutoff policy",
 		.value_names = seq_cutoff_policy_values,
 	},
-	[core_param_seq_cutoff_promotion_count] = {
-		.name = "Sequential cutoff promotion request count threshold",
+	[core_param_seq_detect_promotion_count] = {
+		.name = "Sequence detector promotion request count",
+	},
+	[core_param_seq_detect_promotion_threshold] = {
+		.name = "Sequence detector promotion threshold [KiB]",
+		.transform_value = seq_cutoff_threshold_transform,
 	},
 	{0},
 };
@@ -776,7 +780,8 @@ static struct cas_param cas_cache_params[] = {
 #define SEQ_CUT_OFF_THRESHOLD_DESC "Sequential cutoff activation threshold [KiB]"
 #define SEQ_CUT_OFF_POLICY_DESC "Sequential cutoff policy. " \
 	"Available policies: {always|full|never}"
-#define SEQ_CUT_OFF_PROMO_COUNT_DESC "Sequential cutoff stream promotion request count threshold"
+#define SEQ_DETECT_PROMO_COUNT_DESC "Sequence detector stream promotion request count"
+#define SEQ_DETECT_PROMO_THRESHOLD_DESC "Sequence detector stream promotion threshold [KiB]"
 
 #define CLEANING_POLICY_TYPE_DESC "Cleaning policy type. " \
 	"Available policy types: {nop|alru|acp}"
@@ -810,10 +815,14 @@ static cli_namespace set_param_namespace = {
 	.short_name = 'n',
 	.long_name = "name",
 	.entries = {
+		CORE_PARAMS_NS_BEGIN("seq-detect", "Sequence detector parameters")
+			{0, "promotion-count", SEQ_DETECT_PROMO_COUNT_DESC, 1, "NUMBER", 0},
+			{0, "promotion-threshold", SEQ_DETECT_PROMO_THRESHOLD_DESC, 1, "KiB", 0},
+		CORE_PARAMS_NS_END()
+
 		CORE_PARAMS_NS_BEGIN("seq-cutoff", "Sequential cutoff parameters")
 			{'t', "threshold", SEQ_CUT_OFF_THRESHOLD_DESC, 1, "KiB", 0},
 			{'p', "policy", SEQ_CUT_OFF_POLICY_DESC, 1, "POLICY", 0},
-			{0, "promotion-count", SEQ_CUT_OFF_PROMO_COUNT_DESC, 1, "NUMBER", 0},
 		CORE_PARAMS_NS_END()
 
 		CACHE_PARAMS_NS_BEGIN("cleaning", "Cleaning policy parameters")
@@ -900,13 +909,34 @@ int set_param_seq_cutoff_handle_option(char *opt, const char **arg)
 			cas_printf(LOG_ERR, "Error: Invalid policy name.\n");
 			return FAILURE;
 		}
-	} else if (!strcmp(opt, "promotion-count")) {
-		if (validate_str_num(arg[0], "sequential cutoff promotion request count",
-					OCF_SEQ_CUTOFF_MIN_PROMOTION_COUNT,
-				OCF_SEQ_CUTOFF_MAX_PROMOTION_COUNT) == FAILURE)
+	} else {
+		return FAILURE;
+	}
+
+	return SUCCESS;
+}
+
+int set_param_seq_detect_handle_option(char *opt, const char **arg)
+{
+	if (!strcmp(opt, "promotion-count")) {
+		if (validate_str_num(arg[0],
+				"sequence detector promotion request count",
+				OCF_SEQ_DETECT_MIN_PROMOTION_COUNT,
+				OCF_SEQ_DETECT_MAX_PROMOTION_COUNT) == FAILURE)
 			return FAILURE;
 
-		SET_CORE_PARAM(core_param_seq_cutoff_promotion_count, atoi(arg[0]));
+		SET_CORE_PARAM(core_param_seq_detect_promotion_count,
+				atoi(arg[0]));
+	} else if (!strcmp(opt, "promotion-threshold")) {
+		if (validate_str_num(arg[0],
+				"sequence detector promotion threshold",
+				DIV_ROUND_UP(OCF_SEQ_DETECT_MIN_PROMOTION_THRESHOLD, KiB),
+				OCF_SEQ_DETECT_MAX_PROMOTION_THRESHOLD / KiB)
+				== FAILURE)
+			return FAILURE;
+
+		SET_CORE_PARAM(core_param_seq_detect_promotion_threshold,
+				atoi(arg[0]) * KiB);
 	} else {
 		return FAILURE;
 	}
@@ -1064,7 +1094,10 @@ int set_param_promotion_nhit_handle_option(char *opt, const char **arg)
 
 int set_param_namespace_handle_option(char *namespace, char *opt, const char **arg)
 {
-	if (!strcmp(namespace, "seq-cutoff")) {
+	if (!strcmp(namespace, "seq-detect")) {
+		return core_param_handle_option_generic(opt, arg,
+				set_param_seq_detect_handle_option);
+	} else if (!strcmp(namespace, "seq-cutoff")) {
 		return core_param_handle_option_generic(opt, arg,
 				set_param_seq_cutoff_handle_option);
 	} else if (!strcmp(namespace, "cleaning")) {
@@ -1126,6 +1159,7 @@ static cli_namespace get_param_namespace = {
 	.short_name = 'n',
 	.long_name = "name",
 	.entries = {
+		GET_CORE_PARAMS_NS("seq-detect", "Sequence detector parameters")
 		GET_CORE_PARAMS_NS("seq-cutoff", "Sequential cutoff parameters")
 		GET_CACHE_PARAMS_NS("cleaning", "Cleaning policy parameters")
 		GET_CACHE_PARAMS_NS("cleaning-alru", "Cleaning policy ALRU parameters")
@@ -1152,10 +1186,14 @@ int get_param_handle_option(char *opt, const char **arg)
 
 int get_param_namespace_handle_option(char *namespace, char *opt, const char **arg)
 {
-	if (!strcmp(namespace, "seq-cutoff")) {
+	if (!strcmp(namespace, "seq-detect")) {
+		SELECT_CORE_PARAM(core_param_seq_detect_promotion_count);
+		SELECT_CORE_PARAM(core_param_seq_detect_promotion_threshold);
+		return core_param_handle_option_generic(opt, arg,
+				get_param_handle_option);
+	} else if (!strcmp(namespace, "seq-cutoff")) {
 		SELECT_CORE_PARAM(core_param_seq_cutoff_threshold);
 		SELECT_CORE_PARAM(core_param_seq_cutoff_policy);
-		SELECT_CORE_PARAM(core_param_seq_cutoff_promotion_count);
 		return core_param_handle_option_generic(opt, arg,
 				get_param_handle_option);
 	} else if (!strcmp(namespace, "cleaning")) {

@@ -1226,8 +1226,6 @@ int cache_mngt_prepare_core_cfg(struct ocf_mngt_core_config *cfg,
 	cfg->uuid.data = cmd_info->core_path_name;
 	cfg->uuid.size = strnlen(cmd_info->core_path_name, MAX_STR_LEN) + 1;
 	cfg->try_add = cmd_info->try_add;
-	cfg->seq_cutoff_promote_on_threshold = true;
-
 	if (!cas_bdev_exist(cfg->uuid.data))
 		return -OCF_ERR_INVAL_VOLUME_TYPE;
 
@@ -1375,7 +1373,7 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	}
 
 	cfg->seq_cutoff_threshold = seq_cut_off_mb * MiB;
-	cfg->seq_cutoff_promotion_count = 8;
+	cfg->seq_detect_promotion_count = 8;
 
 	/* Due to linux thread scheduling nature, we prefer to promote streams
 	 * as early as we reasonably can. One way to achieve that is to set
@@ -1384,7 +1382,7 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 	 * streams which reach cutoff threshold, as we can reasonably assume that
 	 * they are likely be continued after thread is rescheduled to another CPU.
 	 */
-	cfg->seq_cutoff_promote_on_threshold = true;
+	cfg->seq_detect_promotion_threshold = seq_cut_off_mb * MiB;
 
 	init_completion(&add_context.cmpl);
 	add_context.core = &core;
@@ -2968,7 +2966,7 @@ out:
  * nonzero exit code means failure
  */
 
-static int cache_mngt_set_seq_cutoff_promotion_count(ocf_cache_t cache,
+static int cache_mngt_set_seq_detect_promotion_count(ocf_cache_t cache,
 		ocf_core_t core, uint32_t count)
 {
 	int result;
@@ -2978,11 +2976,49 @@ static int cache_mngt_set_seq_cutoff_promotion_count(ocf_cache_t cache,
 		return result;
 
 	if (core) {
-		result = ocf_mngt_core_set_seq_cutoff_promotion_count(core,
+		result = ocf_mngt_core_set_seq_detect_promotion_count(core,
 				count);
 	} else {
-		result = ocf_mngt_core_set_seq_cutoff_promotion_count_all(cache,
-				count);
+		result = ocf_mngt_core_set_seq_detect_promotion_count_all(
+				cache, count);
+	}
+
+	if (result)
+		goto out;
+
+	result = _cache_mngt_save_sync(cache);
+
+out:
+	ocf_mngt_cache_unlock(cache);
+	return result;
+}
+
+/**
+ * @brief routine implementing dynamic sequence detector promotion threshold
+ * switching
+ * @param[in] cache cache to which the change pertains
+ * @param[in] core core to which the change pertains
+ * or NULL for setting value for all cores attached to specified cache
+ * @param[in] threshold new sequence detector promotion threshold value
+ * @return exit code of successful completion is 0;
+ * nonzero exit code means failure
+ */
+
+static int cache_mngt_set_seq_detect_promotion_threshold(ocf_cache_t cache,
+		ocf_core_t core, uint32_t threshold)
+{
+	int result;
+
+	result = _cache_mngt_lock_sync(cache);
+	if (result)
+		return result;
+
+	if (core) {
+		result = ocf_mngt_core_set_seq_detect_promotion_threshold(
+				core, threshold);
+	} else {
+		result = ocf_mngt_core_set_seq_detect_promotion_threshold_all(
+				cache, threshold);
 	}
 
 	if (result)
@@ -3043,14 +3079,14 @@ int cache_mngt_get_seq_cutoff_policy(ocf_core_t core,
 }
 
 /**
- * @brief Get sequential cutoff promotion request count value
+ * @brief Get sequence detector promotion request count value
  * @param[in] core OCF core
- * @param[out] count sequential cutoff promotion request count value
+ * @param[out] count sequence detector promotion request count value
  * @return exit code of successful completion is 0;
  * nonzero exit code means failure
  */
 
-static int cache_mngt_get_seq_cutoff_promotion_count(ocf_core_t core,
+static int cache_mngt_get_seq_detect_promotion_count(ocf_core_t core,
 		uint32_t *count)
 {
 	ocf_cache_t cache = ocf_core_get_cache(core);
@@ -3060,7 +3096,32 @@ static int cache_mngt_get_seq_cutoff_promotion_count(ocf_core_t core,
 	if (result)
 		return result;
 
-	result = ocf_mngt_core_get_seq_cutoff_promotion_count(core, count);
+	result = ocf_mngt_core_get_seq_detect_promotion_count(core, count);
+
+	ocf_mngt_cache_read_unlock(cache);
+	return result;
+}
+
+/**
+ * @brief Get sequence detector promotion threshold value
+ * @param[in] core OCF core
+ * @param[out] threshold sequence detector promotion threshold value
+ * @return exit code of successful completion is 0;
+ * nonzero exit code means failure
+ */
+
+static int cache_mngt_get_seq_detect_promotion_threshold(ocf_core_t core,
+		uint32_t *threshold)
+{
+	ocf_cache_t cache = ocf_core_get_cache(core);
+	int result;
+
+	result = _cache_mngt_read_lock_sync(cache);
+	if (result)
+		return result;
+
+	result = ocf_mngt_core_get_seq_detect_promotion_threshold(core,
+			threshold);
 
 	ocf_mngt_cache_read_unlock(cache);
 	return result;
@@ -3562,8 +3623,12 @@ int cache_mngt_set_core_params(struct kcas_set_core_param *info)
 		result = cache_mngt_set_seq_cutoff_policy(cache, core,
 				info->param_value);
 		break;
-	case core_param_seq_cutoff_promotion_count:
-		result = cache_mngt_set_seq_cutoff_promotion_count(cache,
+	case core_param_seq_detect_promotion_count:
+		result = cache_mngt_set_seq_detect_promotion_count(cache,
+				core, info->param_value);
+		break;
+	case core_param_seq_detect_promotion_threshold:
+		result = cache_mngt_set_seq_detect_promotion_threshold(cache,
 				core, info->param_value);
 		break;
 	default:
@@ -3598,8 +3663,12 @@ int cache_mngt_get_core_params(struct kcas_get_core_param *info)
 		result = cache_mngt_get_seq_cutoff_policy(core,
 				&info->param_value);
 		break;
-	case core_param_seq_cutoff_promotion_count:
-		result = cache_mngt_get_seq_cutoff_promotion_count(core,
+	case core_param_seq_detect_promotion_count:
+		result = cache_mngt_get_seq_detect_promotion_count(core,
+				&info->param_value);
+		break;
+	case core_param_seq_detect_promotion_threshold:
+		result = cache_mngt_get_seq_detect_promotion_threshold(core,
 				&info->param_value);
 		break;
 	default:
