@@ -13,6 +13,7 @@ tags
 Module.symvers
 Module.markers
 *.mod
+!go.mod
 *.mod.c
 *.out
 modules.order
