@@ -297,7 +297,16 @@ static void print_req_stats(const struct ocf_stats_requests *stats,
 				     UNIT_REQUESTS, stats->serviced.fraction, "%lu",
 					 stats->serviced.value);
 
-	print_val_perc_table_section(outfile, "Total requests",
+	print_val_perc_table_section(outfile, "Prefetch: readahead",
+				     UNIT_REQUESTS,
+				     stats->prefetch[ocf_pf_readahead].fraction,
+				     "%lu",
+				     stats->prefetch[ocf_pf_readahead].value);
+
+	print_val_perc_table_section(outfile, "User requests",
+				     UNIT_REQUESTS, stats->user.fraction, "%lu",
+					 stats->user.value);
+	print_val_perc_table_row(outfile, "Total requests",
 				     UNIT_REQUESTS, stats->total.fraction, "%lu",
 					 stats->total.value);
 }
@@ -361,6 +370,18 @@ static void print_blk_stats(const struct ocf_stats_blocks *stats,
 	print_val_perc_table_row(outfile, stat_name,
 				     UNIT_BLOCKS, stats->volume_total.fraction, "%lu",
 					 stats->volume_total.value);
+
+	print_val_perc_table_section(outfile, "Prefetch core reads: readahead",
+				     UNIT_BLOCKS,
+				     stats->prefetch_core_rd[ocf_pf_readahead].fraction,
+				     "%lu",
+				     stats->prefetch_core_rd[ocf_pf_readahead].value);
+
+	print_val_perc_table_row(outfile, "Prefetch cache writes: readahead",
+				     UNIT_BLOCKS,
+				     stats->prefetch_cache_wr[ocf_pf_readahead].fraction,
+				     "%lu",
+				     stats->prefetch_cache_wr[ocf_pf_readahead].value);
 }
 
 static void print_err_stats(const struct ocf_stats_errors *stats,
@@ -598,6 +619,8 @@ int cache_stats_conf(int ctrl_fd, const struct kcas_cache_info *cache_info,
 		      cleaning_policy_to_name(cache_info->info.cleaning_policy));
 	print_kv_pair(outfile, "Promotion Policy", "%s", standby ? "-" :
 		      promotion_policy_to_name(cache_info->info.promotion_policy));
+	print_kv_pair(outfile, "Prefetch Policy", "%s", standby ? "-" :
+		      prefetch_mask_to_name(cache_info->info.prefetch_mask));
 	print_kv_pair(outfile, "Cache line size", "%llu, [KiB]",
 		      cache_info->info.cache_line_size / KiB);
 

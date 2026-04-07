@@ -953,8 +953,30 @@ static struct cas_cls_rule *_cas_cls_rule_create(struct cas_classifier *cls,
 	struct cas_cls_rule *r;
 	int result;
 
-	if (part_id == 0 || rule[0] == '\0')
+	if (rule[0] == '\0')
 		return NULL;
+
+	if (part_id == OCF_IO_CLASS_UNCLASSIFIED) {
+		if (strcmp(rule, OCF_IO_CLASS_UNCLASSIFIED_NAME) != 0) {
+			CAS_CLS_MSG(KERN_ERR,
+				"IO class %u:'%s', expected %u:'%s'\n",
+				part_id, rule, OCF_IO_CLASS_UNCLASSIFIED,
+				OCF_IO_CLASS_UNCLASSIFIED_NAME);
+			return ERR_PTR(-EINVAL);
+		}
+		return NULL;
+	}
+
+	if (strcmp(rule, OCF_IO_CLASS_PREFETCH_NAME) == 0) {
+		if (part_id != OCF_IO_CLASS_PREFETCH) {
+			CAS_CLS_MSG(KERN_ERR,
+				"IO class %u:'%s', expected %u:'%s'\n",
+				part_id, rule, OCF_IO_CLASS_PREFETCH,
+				OCF_IO_CLASS_PREFETCH_NAME);
+			return ERR_PTR(-EINVAL);
+		}
+		return NULL;
+	}
 
 	r = kmalloc(sizeof(*r), GFP_KERNEL);
 	if (!r)

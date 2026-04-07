@@ -716,6 +716,33 @@ static char *promotion_policy_type_values[] = {
 	NULL,
 };
 
+static char *prefetch_policy_names[] = {
+	[ocf_pf_readahead] = "readahead",
+	NULL,
+};
+
+static const char *prefetch_mask_format(uint32_t mask)
+{
+	static char buf[128];
+	int pos = 0;
+	int i;
+
+	if (mask == 0)
+		return "none";
+
+	for (i = 0; prefetch_policy_names[i]; i++) {
+		if (mask & (1 << i)) {
+			if (pos > 0)
+				buf[pos++] = ',';
+			pos += snprintf(buf + pos, sizeof(buf) - pos, "%s",
+					prefetch_policy_names[i]);
+		}
+	}
+
+	buf[pos] = '\0';
+	return buf;
+}
+
 uint32_t dirty_ratio_inertia_transform(uint32_t value)
 {
 	return value / MiB;
@@ -770,6 +797,18 @@ static struct cas_param cas_cache_params[] = {
 	[cache_param_promotion_nhit_trigger_threshold] = {
 		.name = "Policy trigger [%]",
 	},
+
+	/* Prefetch policy */
+	[cache_param_prefetch_policy_mask] = {
+		.name = "Prefetch policy",
+		.format_value = prefetch_mask_format,
+	},
+
+	/* Prefetch readahead params */
+	[cache_param_prefetch_readahead_threshold] = {
+		.name = "Readahead threshold [KiB]",
+		.transform_value = seq_cutoff_threshold_transform,
+	},
 	{0},
 };
 
@@ -802,6 +841,12 @@ static struct cas_param cas_cache_params[] = {
 #define CLEANING_ACP_MAX_BUFFERS_DESC "Number of cache lines flushed in single ACP cleaning thread iteration" \
 	" <%d-%d> (default: %d)"
 
+#define PREFETCH_POLICY_DESC "Prefetch policy. " \
+	"Comma-separated list of: {readahead|none}"
+
+#define PREFETCH_READAHEAD_THRESHOLD_DESC "Readahead threshold - minimum sequential " \
+	"stream bytes before prefetching [KiB]"
+
 #define PROMOTION_POLICY_TYPE_DESC "Promotion policy type. "\
 	"Available policy types: {always|nhit}"
 
@@ -824,6 +869,18 @@ static cli_namespace set_param_namespace = {
 			{'t', "threshold", SEQ_CUT_OFF_THRESHOLD_DESC, 1, "KiB", 0},
 			{'p', "policy", SEQ_CUT_OFF_POLICY_DESC, 1, "POLICY", 0},
 		CORE_PARAMS_NS_END()
+
+		CACHE_PARAMS_NS_BEGIN("prefetch", "Prefetch policy parameters")
+			{'p', "policy", PREFETCH_POLICY_DESC, 1, "POLICY", 0},
+		CACHE_PARAMS_NS_END()
+
+		CACHE_PARAMS_NS_BEGIN("prefetch-readahead", "Prefetch readahead parameters")
+			{'t', "threshold", PREFETCH_READAHEAD_THRESHOLD_DESC, 1, "KiB",
+				CLI_OPTION_RANGE_INT | CLI_OPTION_DEFAULT_INT,
+				OCF_PF_READAHEAD_MIN_THRESHOLD / KiB,
+				OCF_PF_READAHEAD_MAX_THRESHOLD / KiB,
+				OCF_PF_READAHEAD_DEFAULT_THRESHOLD / KiB},
+		CACHE_PARAMS_NS_END()
 
 		CACHE_PARAMS_NS_BEGIN("cleaning", "Cleaning policy parameters")
 			{'p', "policy", CLEANING_POLICY_TYPE_DESC, 1, "POLICY", 0},
@@ -1047,6 +1104,64 @@ int set_param_cleaning_acp_handle_option(char *opt, const char **arg)
 	return SUCCESS;
 }
 
+int set_param_prefetch_handle_option(char *opt, const char **arg)
+{
+	if (!strcmp(opt, "policy")) {
+		uint32_t mask = 0;
+		char buf[256];
+		char *token, *saveptr;
+
+		if (!strcmp("none", arg[0])) {
+			SET_CACHE_PARAM(cache_param_prefetch_policy_mask, 0);
+			return SUCCESS;
+		}
+
+		snprintf(buf, sizeof(buf), "%s", arg[0]);
+		token = strtok_r(buf, ",", &saveptr);
+		while (token) {
+			int i, found = 0;
+
+			for (i = 0; prefetch_policy_names[i]; i++) {
+				if (!strcmp(token, prefetch_policy_names[i])) {
+					mask |= (1 << i);
+					found = 1;
+					break;
+				}
+			}
+			if (!found) {
+				cas_printf(LOG_ERR,
+					"Error: Invalid prefetch policy "
+					"name '%s'.\n", token);
+				return FAILURE;
+			}
+			token = strtok_r(NULL, ",", &saveptr);
+		}
+
+		SET_CACHE_PARAM(cache_param_prefetch_policy_mask, mask);
+	} else {
+		return FAILURE;
+	}
+
+	return SUCCESS;
+}
+
+int set_param_prefetch_readahead_handle_option(char *opt, const char **arg)
+{
+	if (!strcmp(opt, "threshold")) {
+		if (validate_str_num(arg[0], "readahead threshold",
+				OCF_PF_READAHEAD_MIN_THRESHOLD / KiB,
+				OCF_PF_READAHEAD_MAX_THRESHOLD / KiB) == FAILURE)
+			return FAILURE;
+
+		SET_CACHE_PARAM(cache_param_prefetch_readahead_threshold,
+				atoi(arg[0]) * KiB);
+	} else {
+		return FAILURE;
+	}
+
+	return SUCCESS;
+}
+
 int set_param_promotion_handle_option(char *opt, const char **arg)
 {
 	if (!strcmp(opt, "policy")) {
@@ -1100,6 +1215,12 @@ int set_param_namespace_handle_option(char *namespace, char *opt, const char **a
 	} else if (!strcmp(namespace, "seq-cutoff")) {
 		return core_param_handle_option_generic(opt, arg,
 				set_param_seq_cutoff_handle_option);
+	} else if (!strcmp(namespace, "prefetch")) {
+		return cache_param_handle_option_generic(opt, arg,
+				set_param_prefetch_handle_option);
+	} else if (!strcmp(namespace, "prefetch-readahead")) {
+		return cache_param_handle_option_generic(opt, arg,
+				set_param_prefetch_readahead_handle_option);
 	} else if (!strcmp(namespace, "cleaning")) {
 		return cache_param_handle_option_generic(opt, arg,
 				set_param_cleaning_handle_option);
@@ -1161,6 +1282,8 @@ static cli_namespace get_param_namespace = {
 	.entries = {
 		GET_CORE_PARAMS_NS("seq-detect", "Sequence detector parameters")
 		GET_CORE_PARAMS_NS("seq-cutoff", "Sequential cutoff parameters")
+		GET_CACHE_PARAMS_NS("prefetch", "Prefetch policy parameters")
+		GET_CACHE_PARAMS_NS("prefetch-readahead", "Prefetch readahead parameters")
 		GET_CACHE_PARAMS_NS("cleaning", "Cleaning policy parameters")
 		GET_CACHE_PARAMS_NS("cleaning-alru", "Cleaning policy ALRU parameters")
 		GET_CACHE_PARAMS_NS("cleaning-acp", "Cleaning policy ACP parameters")
@@ -1195,6 +1318,14 @@ int get_param_namespace_handle_option(char *namespace, char *opt, const char **a
 		SELECT_CORE_PARAM(core_param_seq_cutoff_threshold);
 		SELECT_CORE_PARAM(core_param_seq_cutoff_policy);
 		return core_param_handle_option_generic(opt, arg,
+				get_param_handle_option);
+	} else if (!strcmp(namespace, "prefetch")) {
+		SELECT_CACHE_PARAM(cache_param_prefetch_policy_mask);
+		return cache_param_handle_option_generic(opt, arg,
+				get_param_handle_option);
+	} else if (!strcmp(namespace, "prefetch-readahead")) {
+		SELECT_CACHE_PARAM(cache_param_prefetch_readahead_threshold);
+		return cache_param_handle_option_generic(opt, arg,
 				get_param_handle_option);
 	} else if (!strcmp(namespace, "cleaning")) {
 		SELECT_CACHE_PARAM(cache_param_cleaning_policy_type);

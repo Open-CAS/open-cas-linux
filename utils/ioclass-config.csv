@@ -13,3 +13,4 @@ IO class id,IO class name,Eviction priority,Allocation
 20,file_size:le:1073741824&done,18,1
 21,file_size:gt:1073741824&done,19,1
 22,direct&done,20,1
+33,prefetch,21,1

@@ -335,6 +335,8 @@ enum kcas_cache_param_id {
 	cache_param_promotion_policy_type,
 	cache_param_promotion_nhit_insertion_threshold,
 	cache_param_promotion_nhit_trigger_threshold,
+	cache_param_prefetch_policy_mask,
+	cache_param_prefetch_readahead_threshold,
 	cache_param_id_max,
 };
 

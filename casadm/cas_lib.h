@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -59,6 +60,7 @@ struct cas_param {
 	char *unit;
 	char **value_names;
 	uint32_t (*transform_value)(uint32_t value);
+	const char *(*format_value)(uint32_t value);
 	uint32_t value;
 	bool select;
 };
@@ -88,6 +90,7 @@ enum output_format_t {
 
 const char *cleaning_policy_to_name(uint8_t policy);
 const char *promotion_policy_to_name(uint8_t policy);
+const char *prefetch_mask_to_name(uint8_t mask);
 const char *cache_mode_to_name(uint8_t cache_mode);
 const char *get_cache_state_name(int cache_state, bool detached);
 const char *get_core_state_name(int core_state);

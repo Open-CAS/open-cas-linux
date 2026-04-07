@@ -1048,6 +1048,76 @@ int cache_mngt_get_promotion_param(ocf_cache_t cache, ocf_promotion_t type,
 	return result;
 }
 
+int cache_mngt_set_prefetch_policy(ocf_cache_t cache, ocf_pf_mask_t mask)
+{
+	int result;
+
+	result = _cache_mngt_lock_sync(cache);
+	if (result)
+		return result;
+
+	result = ocf_mngt_cache_prefetch_set_policy(cache, mask);
+	if (result)
+		goto out;
+
+	result = _cache_mngt_save_sync(cache);
+
+out:
+	ocf_mngt_cache_unlock(cache);
+	return result;
+}
+
+int cache_mngt_get_prefetch_policy(ocf_cache_t cache, ocf_pf_mask_t *mask)
+{
+	int result;
+
+	result = _cache_mngt_read_lock_sync(cache);
+	if (result)
+		return result;
+
+	result = ocf_mngt_cache_prefetch_get_policy(cache, mask);
+
+	ocf_mngt_cache_read_unlock(cache);
+	return result;
+}
+
+int cache_mngt_set_prefetch_param(ocf_cache_t cache, ocf_pf_id_t pf_id,
+		uint32_t param_id, uint32_t param_value)
+{
+	int result;
+
+	result = _cache_mngt_lock_sync(cache);
+	if (result)
+		return result;
+
+	result = ocf_mngt_cache_prefetch_set_param(cache, pf_id,
+			param_id, param_value);
+	if (result)
+		goto out;
+
+	result = _cache_mngt_save_sync(cache);
+
+out:
+	ocf_mngt_cache_unlock(cache);
+	return result;
+}
+
+int cache_mngt_get_prefetch_param(ocf_cache_t cache, ocf_pf_id_t pf_id,
+		uint32_t param_id, uint32_t *param_value)
+{
+	int result;
+
+	result = _cache_mngt_read_lock_sync(cache);
+	if (result)
+		return result;
+
+	result = ocf_mngt_cache_prefetch_get_param(cache, pf_id,
+			param_id, param_value);
+
+	ocf_mngt_cache_read_unlock(cache);
+	return result;
+}
+
 struct get_paths_ctx {
 	char *core_path_name_tab;
 	int max_count;
@@ -3748,6 +3818,15 @@ int cache_mngt_set_cache_params(struct kcas_set_cache_param *info)
 		result = cache_mngt_set_promotion_param(cache, ocf_promotion_nhit,
 				ocf_nhit_trigger_threshold, info->param_value);
 		break;
+	case cache_param_prefetch_policy_mask:
+		result = cache_mngt_set_prefetch_policy(cache,
+				info->param_value);
+		break;
+	case cache_param_prefetch_readahead_threshold:
+		result = cache_mngt_set_prefetch_param(cache,
+				ocf_pf_readahead, ocf_readahead_threshold,
+				info->param_value);
+		break;
 	default:
 		result = -EINVAL;
 	}
@@ -3759,6 +3838,7 @@ int cache_mngt_set_cache_params(struct kcas_set_cache_param *info)
 int cache_mngt_get_cache_params(struct kcas_get_cache_param *info)
 {
 	ocf_cache_t cache;
+	ocf_pf_mask_t mask;
 	int result;
 
 	result = mngt_get_cache_by_id(cas_ctx, info->cache_id, &cache);
@@ -3822,6 +3902,17 @@ int cache_mngt_get_cache_params(struct kcas_get_cache_param *info)
 	case cache_param_promotion_nhit_trigger_threshold:
 		result = cache_mngt_get_promotion_param(cache, ocf_promotion_nhit,
 				ocf_nhit_trigger_threshold, &info->param_value);
+		break;
+	case cache_param_prefetch_policy_mask: {
+		result = cache_mngt_get_prefetch_policy(cache, &mask);
+		if (!result)
+			info->param_value = mask;
+		break;
+	}
+	case cache_param_prefetch_readahead_threshold:
+		result = cache_mngt_get_prefetch_param(cache,
+				ocf_pf_readahead, ocf_readahead_threshold,
+				&info->param_value);
 		break;
 	default:
 		result = -EINVAL;

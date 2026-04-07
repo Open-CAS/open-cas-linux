@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #ifndef __LAYER_CACHE_MANAGEMENT_H__
@@ -27,6 +28,16 @@ int cache_mngt_set_promotion_param(ocf_cache_t cache, ocf_promotion_t type,
 		uint32_t param_id, uint32_t param_value);
 
 int cache_mngt_get_promotion_param(ocf_cache_t cache, ocf_promotion_t type,
+		uint32_t param_id, uint32_t *param_value);
+
+int cache_mngt_set_prefetch_policy(ocf_cache_t cache, ocf_pf_mask_t mask);
+
+int cache_mngt_get_prefetch_policy(ocf_cache_t cache, ocf_pf_mask_t *mask);
+
+int cache_mngt_set_prefetch_param(ocf_cache_t cache, ocf_pf_id_t pf_id,
+		uint32_t param_id, uint32_t param_value);
+
+int cache_mngt_get_prefetch_param(ocf_cache_t cache, ocf_pf_id_t pf_id,
 		uint32_t param_id, uint32_t *param_value);
 
 int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
