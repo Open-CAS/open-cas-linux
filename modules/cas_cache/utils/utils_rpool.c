@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024-2025 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -75,7 +76,7 @@ static void _cas_rpool_pre_alloc_do(struct work_struct *ws)
 
 	CAS_DEBUG_TRACE();
 
-	cpu = smp_processor_id();
+	cpu = raw_smp_processor_id();
 	current_rpool = &rpool_master->rpools[cpu];
 
 	for (i = 0; i < rpool_master->limit; i++) {
@@ -208,12 +209,9 @@ void *cas_rpool_try_get(struct cas_reserve_pool *rpool_master, int *cpu)
 
 	CAS_DEBUG_TRACE();
 
-	get_cpu();
+	*cpu = get_cpu();
 
-	*cpu = smp_processor_id();
 	current_rpool = &rpool_master->rpools[*cpu];
-
-	put_cpu();
 
 	spin_lock_irqsave(&current_rpool->lock, flags);
 
@@ -230,6 +228,8 @@ void *cas_rpool_try_get(struct cas_reserve_pool *rpool_master, int *cpu)
 		/* The actual allocation - kmemleak should start tracking page */
 		kmemleak_alloc(entry, rpool_master->entry_size, 1, GFP_NOIO);
 	}
+
+	put_cpu();
 
 	CAS_DEBUG_PARAM("[%s]Removed item from reserve pool [%s] for cpu [%d], "
 				"items in pool %d", rpool_master->name,
