@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -254,9 +255,7 @@ static int blkdev_handle_data_single(struct bd_object *bvol, struct bio *bio,
 	uint64_t flags = CAS_BIO_OP_FLAGS(bio);
 	int ret;
 
-	get_cpu();
-	queue = cache_priv->io_queues[smp_processor_id()];
-	put_cpu();
+	queue = cache_priv->io_queues[raw_smp_processor_id()];
 
 	data = cas_alloc_blk_data(bio_segments(bio), GFP_NOIO);
 	if (!data) {
@@ -370,9 +369,7 @@ static void blkdev_handle_discard(struct bd_object *bvol, struct bio *bio)
 	ocf_queue_t queue;
 	ocf_io_t io;
 
-	get_cpu();
-	queue = cache_priv->io_queues[smp_processor_id()];
-	put_cpu();
+	queue = cache_priv->io_queues[raw_smp_processor_id()];
 
 	io = ocf_volume_new_io(bvol->front_volume, queue,
 			CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
@@ -422,9 +419,7 @@ static void blkdev_handle_flush(struct bd_object *bvol, struct bio *bio)
 	ocf_queue_t queue;
 	ocf_io_t io;
 
-	get_cpu();
-	queue = cache_priv->io_queues[smp_processor_id()];
-	put_cpu();
+	queue = cache_priv->io_queues[raw_smp_processor_id()];
 
 	io = ocf_volume_new_io(bvol->front_volume, queue, 0, 0, OCF_WRITE, 0,
 			CAS_SET_FLUSH(0));
