@@ -47,7 +47,7 @@ void cas_vfree(const void *addr)
 	cpu = get_cpu();
 	item = this_cpu_ptr(&cas_vfree_item);
 	if (llist_add((struct llist_node *)addr, &item->list))
-		schedule_work(&item->ws);
+		schedule_work_on(cpu, &item->ws);
 	put_cpu();
 
 }
