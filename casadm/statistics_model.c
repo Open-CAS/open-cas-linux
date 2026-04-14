@@ -302,6 +302,9 @@ static void print_req_stats(const struct ocf_stats_requests *stats,
 				     stats->prefetch[ocf_pf_readahead].fraction,
 				     "%lu",
 				     stats->prefetch[ocf_pf_readahead].value);
+	print_val_perc_table_row(outfile, "Cleaner",
+				     UNIT_REQUESTS, stats->cleaner.fraction, "%lu",
+					 stats->cleaner.value);
 
 	print_val_perc_table_section(outfile, "User requests",
 				     UNIT_REQUESTS, stats->user.fraction, "%lu",
@@ -382,6 +385,12 @@ static void print_blk_stats(const struct ocf_stats_blocks *stats,
 				     stats->prefetch_cache_wr[ocf_pf_readahead].fraction,
 				     "%lu",
 				     stats->prefetch_cache_wr[ocf_pf_readahead].value);
+	print_val_perc_table_row(outfile, "Cleaner cache reads",
+				     UNIT_BLOCKS, stats->cleaner_cache_rd.fraction, "%lu",
+					 stats->cleaner_cache_rd.value);
+	print_val_perc_table_row(outfile, "Cleaner core writes",
+				     UNIT_BLOCKS, stats->cleaner_core_wr.fraction, "%lu",
+					 stats->cleaner_core_wr.value);
 }
 
 static void print_err_stats(const struct ocf_stats_errors *stats,
