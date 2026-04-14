@@ -2248,7 +2248,7 @@ static void _cache_mngt_start_complete(ocf_cache_t cache, void *priv, int error)
 static int _cache_mngt_cache_priv_init(ocf_cache_t cache)
 {
 	struct cache_priv *cache_priv;
-	uint32_t cpus_no = num_online_cpus();
+	uint32_t cpus_no = num_possible_cpus();
 
 	cache_priv = vzalloc(sizeof(*cache_priv) +
 			cpus_no * sizeof(*cache_priv->io_queues));
