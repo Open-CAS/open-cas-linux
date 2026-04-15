@@ -691,7 +691,7 @@ int kcas_cache_destroy_exported_object(ocf_cache_t cache)
 	return kcas_volume_destroy_exported_object(volume);
 }
 
-static int kcas_core_lock_exported_object(ocf_core_t core, void *cntx)
+static int kcas_core_lock_exported_object(ocf_core_t core)
 {
 	int result;
 	struct bd_object *bvol = bd_object(
@@ -718,7 +718,7 @@ static int kcas_core_lock_exported_object(ocf_core_t core, void *cntx)
 }
 
 
-static int kcas_core_unlock_exported_object(ocf_core_t core, void *cntx)
+static void kcas_core_unlock_exported_object(ocf_core_t core)
 {
 	struct bd_object *bvol = bd_object(ocf_core_get_volume(core));
 
@@ -726,11 +726,9 @@ static int kcas_core_unlock_exported_object(ocf_core_t core, void *cntx)
 		cas_exp_obj_unlock(bvol->dsk);
 		bvol->expobj_locked = false;
 	}
-
-	return 0;
 }
 
-static int kcas_core_stop_exported_object(ocf_core_t core, void *cntx)
+static void kcas_core_stop_exported_object(ocf_core_t core)
 {
 	struct bd_object *bvol = bd_object(
 			ocf_core_get_volume(core));
@@ -753,35 +751,37 @@ static int kcas_core_stop_exported_object(ocf_core_t core, void *cntx)
 		cas_exp_obj_unlock(bvol->dsk);
 		bvol->expobj_locked = false;
 	}
-
-	return 0;
 }
 
-static int kcas_core_cleanup_exported_object(ocf_core_t core, void *cntx)
+static void kcas_core_cleanup_exported_object(ocf_core_t core)
 {
 	struct bd_object *bvol = bd_object(ocf_core_get_volume(core));
 
 	cas_exp_obj_cleanup(bvol->dsk);
-
-	return 0;
 }
 
 int kcas_cache_destroy_all_core_exported_objects(ocf_cache_t cache)
 {
-	int result;
+	ocf_core_t core;
+	int result = 0;
 
 	/* Try lock exported objects */
-	result = ocf_core_visit(cache, kcas_core_lock_exported_object, NULL,
-			true);
+	ocf_core_for_each(core, cache, true) {
+		result = kcas_core_lock_exported_object(core);
+		if (result)
+			break;
+	}
 	if (result) {
 		/* Failure, unlock already locked exported objects */
-		ocf_core_visit(cache, kcas_core_unlock_exported_object, NULL,
-				true);
+		ocf_core_for_each(core, cache, true)
+			kcas_core_unlock_exported_object(core);
 		return result;
 	}
 
-	ocf_core_visit(cache, kcas_core_stop_exported_object, NULL, true);
-	ocf_core_visit(cache, kcas_core_cleanup_exported_object, NULL, true);
+	ocf_core_for_each(core, cache, true)
+		kcas_core_stop_exported_object(core);
+	ocf_core_for_each(core, cache, true)
+		kcas_core_cleanup_exported_object(core);
 
 	return 0;
 }

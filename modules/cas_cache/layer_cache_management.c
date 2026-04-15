@@ -1360,18 +1360,20 @@ static void _cache_mngt_log_core_device_path(ocf_core_t core)
 			ocf_core_get_name(core), ocf_cache_get_name(cache));
 }
 
-static int _cache_mngt_core_device_loaded_visitor(ocf_core_t core, void *cntx)
+static void _cache_mngt_log_core_devices_loaded(ocf_cache_t cache)
 {
-	uint16_t core_id = OCF_CORE_ID_INVALID;
-	ocf_cache_t cache = ocf_core_get_cache(core);
+	uint16_t core_id;
+	ocf_core_t core;
 
-	_cache_mngt_log_core_device_path(core);
+	ocf_core_for_each(core, cache, false) {
+		core_id = OCF_CORE_ID_INVALID;
 
-	core_id_from_name(&core_id, ocf_core_get_name(core));
+		_cache_mngt_log_core_device_path(core);
 
-	mark_core_id_used(cache, core_id);
+		core_id_from_name(&core_id, ocf_core_get_name(core));
 
-	return 0;
+		mark_core_id_used(cache, core_id);
+	}
 }
 
 struct _cache_mngt_add_core_context {
@@ -1846,40 +1848,27 @@ out_get:
 	return result;
 }
 
-static int _cache_mngt_create_core_exp_obj(ocf_core_t core, void *cntx)
-{
-	int result;
-
-	result = kcas_core_create_exported_object(core);
-	if (result)
-		return result;
-
-	return result;
-}
-
-static int _cache_mngt_destroy_core_exp_obj(ocf_core_t core, void *cntx)
-{
-	if (kcas_core_destroy_exported_object(core)) {
-		ocf_cache_t cache = ocf_core_get_cache(core);
-
-		printk(KERN_ERR "Cannot to destroy exported object, %s.%s\n",
-				ocf_cache_get_name(cache),
-				ocf_core_get_name(core));
-	}
-
-	return 0;
-}
-
 static int cache_mngt_initialize_core_exported_objects(ocf_cache_t cache)
 {
-	int result;
+	ocf_core_t core;
+	int result = 0;
 
-	result = ocf_core_visit(cache, _cache_mngt_create_core_exp_obj, NULL,
-			true);
+	ocf_core_for_each(core, cache, true) {
+		result = kcas_core_create_exported_object(core);
+		if (result)
+			break;
+	}
+
 	if (result) {
 		/* Need to cleanup */
-		ocf_core_visit(cache, _cache_mngt_destroy_core_exp_obj, NULL,
-				true);
+		ocf_core_for_each(core, cache, true) {
+			if (kcas_core_destroy_exported_object(core)) {
+				printk(KERN_ERR "Cannot to destroy exported "
+						"object, %s.%s\n",
+						ocf_cache_get_name(cache),
+						ocf_core_get_name(core));
+			}
+		}
 	}
 
 	return result;
@@ -2419,8 +2408,7 @@ static int _cache_start_finalize(ocf_cache_t cache, int init_mode,
 			ctx->ocf_start_error = result;
 			return result;
 		}
-		ocf_core_visit(cache, _cache_mngt_core_device_loaded_visitor,
-				NULL, false);
+		_cache_mngt_log_core_devices_loaded(cache);
 		break;
 	case CACHE_INIT_STANDBY_NEW:
 	case CACHE_INIT_STANDBY_LOAD:
