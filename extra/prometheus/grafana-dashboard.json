@@ -1,0 +1,1676 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "gauge",
+      "name": "Gauge",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "barchart",
+      "name": "Bar chart",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "description": "Dashboard for Open CAS Linux Prometheus exporter",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "title": "Cache Instances",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "filterable": true,
+            "align": "left"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cache_id"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "type"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "id"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cache line size (KiB)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cache size (GiB)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "mode"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cleaning policy"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "promotion policy"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "seq cutoff policy"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "seq cutoff threshold (KiB)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "id": 7,
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "cache_id",
+            "desc": false
+          },
+          {
+            "displayName": "type",
+            "desc": false
+          },
+          {
+            "displayName": "id",
+            "desc": false
+          }
+        ]
+      },
+      "title": "Cache Instances",
+      "type": "table",
+      "targets": [
+        {
+          "expr": "label_replace(label_replace(label_replace(label_replace(opencas_cache_info, \"type\", \"cache\", \"\", \"\"), \"id\", \"$1\", \"cache_id\", \"(.+)\"), \"disk\", \"$1\", \"short_path\", \"(.+)\"), \"status\", \"$1\", \"state\", \"(.+)\")",
+          "legendFormat": "",
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        },
+        {
+          "expr": "label_replace(label_replace(label_replace(opencas_core_info, \"type\", \"core\", \"\", \"\"), \"id\", \"$1\", \"core_id\", \"(.+)\"), \"disk\", \"$1\", \"short_path\", \"(.+)\")",
+          "legendFormat": "",
+          "refId": "B",
+          "format": "table",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        },
+        {
+          "expr": "label_replace(opencas_cache_line_size_bytes / 1024, \"id\", \"$1\", \"cache_id\", \"(.+)\")",
+          "legendFormat": "",
+          "refId": "C",
+          "format": "table",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        },
+        {
+          "expr": "label_replace(opencas_cache_size_blocks * 4 / 1048576, \"id\", \"$1\", \"cache_id\", \"(.+)\")",
+          "legendFormat": "",
+          "refId": "D",
+          "format": "table",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        },
+        {
+          "expr": "label_replace(opencas_core_seq_cutoff_threshold_bytes / 1024, \"id\", \"$1\", \"core_id\", \"(.+)\")",
+          "legendFormat": "",
+          "refId": "E",
+          "format": "table",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "cache_id": 0,
+              "type": 1,
+              "id": 2,
+              "disk": 3,
+              "status": 4,
+              "Value #D": 5,
+              "Value #C": 6,
+              "mode": 7,
+              "cleaning_policy": 8,
+              "promotion_policy": 9,
+              "seq_cutoff_policy": 10,
+              "Value #E": 11
+            },
+            "includeByName": {
+              "cache_id": true,
+              "type": true,
+              "id": true,
+              "disk": true,
+              "status": true,
+              "Value #C": true,
+              "Value #D": true,
+              "mode": true,
+              "cleaning_policy": true,
+              "promotion_policy": true,
+              "seq_cutoff_policy": true,
+              "Value #E": true
+            },
+            "renameByName": {
+              "Value #C": "cache line size (KiB)",
+              "Value #D": "cache size (GiB)",
+              "cleaning_policy": "cleaning policy",
+              "promotion_policy": "promotion policy",
+              "seq_cutoff_policy": "seq cutoff policy",
+              "Value #E": "seq cutoff threshold (KiB)"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "id": 200,
+      "title": "Cache Usage",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "percentunit",
+          "min": -1,
+          "max": 1,
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "id": 10,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "title": "Cache Usage",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "label_replace(opencas_cache_usage_clean_blocks{cache_id=~\"$cache_id\"} / (opencas_cache_usage_occupancy_blocks{cache_id=~\"$cache_id\"} + opencas_cache_usage_free_blocks{cache_id=~\"$cache_id\"}), \"type\", \"clean\", \"\", \"\") or label_replace(-(opencas_cache_usage_dirty_blocks{cache_id=~\"$cache_id\"} / (opencas_cache_usage_occupancy_blocks{cache_id=~\"$cache_id\"} + opencas_cache_usage_free_blocks{cache_id=~\"$cache_id\"})), \"type\", \"dirty\", \"\", \"\")",
+          "legendFormat": "Cache {{cache_id}} {{type}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 250,
+      "title": "Hit Ratio",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "percentunit",
+          "min": -1,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "id": 23,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "title": "Hit Ratio",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "label_replace(-(opencas_cache_requests_read_hits_total{cache_id=~\"$cache_id\"} / (opencas_cache_requests_read_total{cache_id=~\"$cache_id\"} + (opencas_cache_requests_read_total{cache_id=~\"$cache_id\"} == bool 0))), \"type\", \"read\", \"\", \"\") or label_replace(opencas_cache_requests_write_hits_total{cache_id=~\"$cache_id\"} / (opencas_cache_requests_write_total{cache_id=~\"$cache_id\"} + (opencas_cache_requests_write_total{cache_id=~\"$cache_id\"} == bool 0)), \"type\", \"write\", \"\", \"\")",
+          "legendFormat": "Cache {{cache_id}} {{type}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "id": 300,
+      "title": "Cache Request Rates",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "id": 24,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "title": "Request Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "label_replace(-rate(opencas_cache_requests_read_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"reads\", \"\", \"\") or label_replace(rate(opencas_cache_requests_write_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"writes\", \"\", \"\")",
+          "legendFormat": "Cache {{cache_id}} {{type}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 30,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 39
+      },
+      "id": 25,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "title": "Request Breakdown",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "label_replace(-rate(opencas_cache_requests_read_hits_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"read hits\", \"\", \"\") or label_replace(-rate(opencas_cache_requests_read_partial_misses_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"read partial misses\", \"\", \"\") or label_replace(-rate(opencas_cache_requests_read_full_misses_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"read full misses\", \"\", \"\") or label_replace(-rate(opencas_cache_requests_read_passthrough_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"read passthrough\", \"\", \"\") or label_replace(rate(opencas_cache_requests_write_hits_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"write hits\", \"\", \"\") or label_replace(rate(opencas_cache_requests_write_partial_misses_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"write partial misses\", \"\", \"\") or label_replace(rate(opencas_cache_requests_write_full_misses_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"write full misses\", \"\", \"\") or label_replace(rate(opencas_cache_requests_write_passthrough_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"write passthrough\", \"\", \"\")",
+          "legendFormat": "Cache {{cache_id}} {{type}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 46
+      },
+      "id": 400,
+      "title": "Devices Throughput",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "id": 30,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "title": "Cache Device Throughput",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "label_replace(-rate(opencas_cache_blocks_cache_read_total{cache_id=~\"$cache_id\"}[$__rate_interval]) * 4096, \"type\", \"read\", \"\", \"\") or label_replace(rate(opencas_cache_blocks_cache_write_total{cache_id=~\"$cache_id\"}[$__rate_interval]) * 4096, \"type\", \"write\", \"\", \"\")",
+          "legendFormat": "Cache {{cache_id}} {{type}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "id": 31,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "title": "Core Device Throughput",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "label_replace(-rate(opencas_core_blocks_core_read_total{cache_id=~\"$cache_id\"}[$__rate_interval]) * 4096, \"type\", \"read\", \"\", \"\") or label_replace(rate(opencas_core_blocks_core_write_total{cache_id=~\"$cache_id\"}[$__rate_interval]) * 4096, \"type\", \"write\", \"\", \"\")",
+          "legendFormat": "Cache {{cache_id}} Core {{core_id}} {{type}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 54
+      },
+      "id": 32,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "title": "Exported Object Throughput",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "label_replace(-rate(opencas_core_blocks_exported_read_total{cache_id=~\"$cache_id\"}[$__rate_interval]) * 4096, \"type\", \"read\", \"\", \"\") or label_replace(rate(opencas_core_blocks_exported_write_total{cache_id=~\"$cache_id\"}[$__rate_interval]) * 4096, \"type\", \"write\", \"\", \"\")",
+          "legendFormat": "Cache {{cache_id}} Core {{core_id}} {{type}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 54
+      },
+      "id": 450,
+      "title": "Operations Throughput",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 55
+      },
+      "id": 33,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "title": "Pass-Through Throughput",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "label_replace(-rate(opencas_cache_blocks_passthrough_read_total{cache_id=~\"$cache_id\"}[$__rate_interval]) * 4096, \"type\", \"read\", \"\", \"\") or label_replace(rate(opencas_cache_blocks_passthrough_write_total{cache_id=~\"$cache_id\"}[$__rate_interval]) * 4096, \"type\", \"write\", \"\", \"\")",
+          "legendFormat": "Cache {{cache_id}} {{type}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "id": 34,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "title": "Prefetch Throughput",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "label_replace(-rate(opencas_cache_blocks_prefetch_core_read_readahead_total{cache_id=~\"$cache_id\"}[$__rate_interval]) * 4096, \"type\", \"core read\", \"\", \"\") or label_replace(rate(opencas_cache_blocks_prefetch_cache_write_readahead_total{cache_id=~\"$cache_id\"}[$__rate_interval]) * 4096, \"type\", \"cache write\", \"\", \"\")",
+          "legendFormat": "Cache {{cache_id}} readahead {{type}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 69
+      },
+      "id": 35,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "title": "Cleaner Throughput",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "label_replace(-rate(opencas_cache_blocks_cleaner_cache_read_total{cache_id=~\"$cache_id\"}[$__rate_interval]) * 4096, \"type\", \"cache read\", \"\", \"\") or label_replace(rate(opencas_cache_blocks_cleaner_core_write_total{cache_id=~\"$cache_id\"}[$__rate_interval]) * 4096, \"type\", \"core write\", \"\", \"\")",
+          "legendFormat": "Cache {{cache_id}} {{type}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 75
+      },
+      "id": 500,
+      "title": "Errors",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 76
+      },
+      "id": 40,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "title": "Cache Device Error Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "label_replace(-rate(opencas_cache_errors_cache_read_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"read\", \"\", \"\") or label_replace(rate(opencas_cache_errors_cache_write_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"write\", \"\", \"\")",
+          "legendFormat": "Cache {{cache_id}} {{type}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 76
+      },
+      "id": 41,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "title": "Core Device Error Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "label_replace(-rate(opencas_cache_errors_core_read_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"read\", \"\", \"\") or label_replace(rate(opencas_cache_errors_core_write_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"write\", \"\", \"\")",
+          "legendFormat": "Cache {{cache_id}} {{type}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 83
+      },
+      "id": 42,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "title": "Fallback Pass-Through Error Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(opencas_cache_fallback_pt_errors_total{cache_id=~\"$cache_id\"}[$__rate_interval])",
+          "legendFormat": "Cache {{cache_id}} ({{short_path}})",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 83
+      },
+      "id": 43,
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "title": "Total Error Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(opencas_cache_errors_total{cache_id=~\"$cache_id\"}[$__rate_interval])",
+          "legendFormat": "Cache {{cache_id}} ({{short_path}})",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 90
+      },
+      "id": 600,
+      "title": "Core Details",
+      "type": "row",
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "percentunit",
+              "min": -1,
+              "max": 1,
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 91
+          },
+          "id": 50,
+          "options": {
+            "tooltip": {
+              "mode": "multi"
+            },
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          },
+          "title": "Cache Usage",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "label_replace(opencas_core_usage_clean_blocks{cache_id=~\"$cache_id\", core_id=~\"$core_id\"} / on(cache_id) group_left() (opencas_cache_usage_occupancy_blocks{cache_id=~\"$cache_id\"} + opencas_cache_usage_free_blocks{cache_id=~\"$cache_id\"}), \"type\", \"clean\", \"\", \"\") or label_replace(-(opencas_core_usage_dirty_blocks{cache_id=~\"$cache_id\", core_id=~\"$core_id\"} / on(cache_id) group_left() (opencas_cache_usage_occupancy_blocks{cache_id=~\"$cache_id\"} + opencas_cache_usage_free_blocks{cache_id=~\"$cache_id\"})), \"type\", \"dirty\", \"\", \"\")",
+              "legendFormat": "Cache {{cache_id}} Core {{core_id}} {{type}}",
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              }
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "percentunit",
+              "min": -1,
+              "max": 1
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 98
+          },
+          "id": 52,
+          "options": {
+            "tooltip": {
+              "mode": "multi"
+            },
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          },
+          "title": "Hit Ratio",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "label_replace(-(opencas_core_requests_read_hits_total{cache_id=~\"$cache_id\", core_id=~\"$core_id\"} / (opencas_core_requests_read_total{cache_id=~\"$cache_id\", core_id=~\"$core_id\"} + (opencas_core_requests_read_total{cache_id=~\"$cache_id\", core_id=~\"$core_id\"} == bool 0))), \"type\", \"read\", \"\", \"\") or label_replace(opencas_core_requests_write_hits_total{cache_id=~\"$cache_id\", core_id=~\"$core_id\"} / (opencas_core_requests_write_total{cache_id=~\"$cache_id\", core_id=~\"$core_id\"} + (opencas_core_requests_write_total{cache_id=~\"$cache_id\", core_id=~\"$core_id\"} == bool 0)), \"type\", \"write\", \"\", \"\")",
+              "legendFormat": "Cache {{cache_id}} Core {{core_id}} {{type}}",
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              }
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "ops"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 105
+          },
+          "id": 54,
+          "options": {
+            "tooltip": {
+              "mode": "multi"
+            },
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          },
+          "title": "Core Request Rate",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "label_replace(-rate(opencas_core_requests_read_total{cache_id=~\"$cache_id\", core_id=~\"$core_id\"}[$__rate_interval]), \"type\", \"reads\", \"\", \"\") or label_replace(rate(opencas_core_requests_write_total{cache_id=~\"$cache_id\", core_id=~\"$core_id\"}[$__rate_interval]), \"type\", \"writes\", \"\", \"\")",
+              "legendFormat": "Cache {{cache_id}} Core {{core_id}} {{type}}",
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              }
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "ops"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 112
+          },
+          "id": 55,
+          "options": {
+            "tooltip": {
+              "mode": "multi"
+            },
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          },
+          "title": "Core Error Rate",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "label_replace(-rate(opencas_core_errors_cache_total{cache_id=~\"$cache_id\", core_id=~\"$core_id\"}[$__rate_interval]), \"type\", \"cache errors\", \"\", \"\") or label_replace(rate(opencas_core_errors_core_total{cache_id=~\"$cache_id\", core_id=~\"$core_id\"}[$__rate_interval]), \"type\", \"core errors\", \"\", \"\")",
+              "legendFormat": "Cache {{cache_id}} Core {{core_id}} {{type}}",
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 91
+      },
+      "id": 700,
+      "title": "IO Classes",
+      "type": "row",
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "filterable": true
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Value"
+                },
+                "properties": [
+                  {
+                    "id": "custom.hidden",
+                    "value": true
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 24,
+            "x": 0,
+            "y": 92
+          },
+          "id": 60,
+          "options": {
+            "showHeader": true,
+            "sortBy": [
+              {
+                "displayName": "ioclass_id",
+                "desc": false
+              }
+            ]
+          },
+          "title": "IO Class Configuration",
+          "type": "table",
+          "targets": [
+            {
+              "expr": "opencas_ioclass_info{cache_id=~\"$cache_id\"}",
+              "legendFormat": "",
+              "refId": "A",
+              "format": "table",
+              "instant": true,
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              }
+            }
+          ],
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": {
+                "include": {
+                  "names": [
+                    "cache_id",
+                    "ioclass_id",
+                    "name",
+                    "mode",
+                    "priority"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "percentunit",
+              "min": -1,
+              "max": 1,
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 98
+          },
+          "id": 61,
+          "options": {
+            "tooltip": {
+              "mode": "multi"
+            },
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "calcs": [
+                "lastNotNull"
+              ]
+            }
+          },
+          "title": "IO Class Cache Usage",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "label_replace(opencas_ioclass_usage_clean_blocks{cache_id=~\"$cache_id\"} / on(cache_id) group_left() (opencas_cache_usage_occupancy_blocks{cache_id=~\"$cache_id\"} + opencas_cache_usage_free_blocks{cache_id=~\"$cache_id\"}), \"type\", \"clean\", \"\", \"\") or label_replace(-(opencas_ioclass_usage_dirty_blocks{cache_id=~\"$cache_id\"} / on(cache_id) group_left() (opencas_cache_usage_occupancy_blocks{cache_id=~\"$cache_id\"} + opencas_cache_usage_free_blocks{cache_id=~\"$cache_id\"})), \"type\", \"dirty\", \"\", \"\")",
+              "legendFormat": "Cache {{cache_id}} {{name}} ({{ioclass_id}}) {{type}}",
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              }
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "ops"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 105
+          },
+          "id": 62,
+          "options": {
+            "tooltip": {
+              "mode": "multi"
+            },
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "calcs": [
+                "lastNotNull"
+              ]
+            }
+          },
+          "title": "IO Class Request Rate",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "label_replace(-rate(opencas_ioclass_requests_read_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"reads\", \"\", \"\") or label_replace(rate(opencas_ioclass_requests_write_total{cache_id=~\"$cache_id\"}[$__rate_interval]), \"type\", \"writes\", \"\", \"\")",
+              "legendFormat": "Cache {{cache_id}} {{name}} ({{ioclass_id}}) {{type}}",
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              }
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "percentunit",
+              "min": -1,
+              "max": 1
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 112
+          },
+          "id": 64,
+          "options": {
+            "tooltip": {
+              "mode": "multi"
+            },
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "calcs": [
+                "lastNotNull"
+              ]
+            }
+          },
+          "title": "IO Class Hit Ratio",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "label_replace(-(opencas_ioclass_requests_read_hits_total{cache_id=~\"$cache_id\"} / (opencas_ioclass_requests_read_total{cache_id=~\"$cache_id\"} + (opencas_ioclass_requests_read_total{cache_id=~\"$cache_id\"} == bool 0))), \"type\", \"read\", \"\", \"\") or label_replace(opencas_ioclass_requests_write_hits_total{cache_id=~\"$cache_id\"} / (opencas_ioclass_requests_write_total{cache_id=~\"$cache_id\"} + (opencas_ioclass_requests_write_total{cache_id=~\"$cache_id\"} == bool 0)), \"type\", \"write\", \"\", \"\")",
+              "legendFormat": "Cache {{cache_id}} {{name}} ({{ioclass_id}}) {{type}}",
+              "refId": "A",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 38,
+  "tags": [
+    "opencas",
+    "storage",
+    "caching"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(opencas_cache_info, instance)",
+        "includeAll": false,
+        "multi": false,
+        "name": "nodename",
+        "options": [],
+        "query": {
+          "query": "label_values(opencas_cache_info, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "/([^:]+):.*/",
+        "type": "query",
+        "label": "Nodename"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(opencas_cache_info{instance=~\"$nodename:.*\"}, instance)",
+        "includeAll": false,
+        "multi": false,
+        "name": "node",
+        "options": [],
+        "query": {
+          "query": "label_values(opencas_cache_info{instance=~\"$nodename:.*\"}, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "type": "query",
+        "label": "Instance"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(opencas_cache_info{instance=~\"$node\"}, cache_id)",
+        "includeAll": true,
+        "multi": true,
+        "name": "cache_id",
+        "options": [],
+        "query": {
+          "query": "label_values(opencas_cache_info{instance=~\"$node\"}, cache_id)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "type": "query",
+        "label": "Cache ID"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values(opencas_core_info{instance=~\"$node\", cache_id=~\"$cache_id\"}, core_id)",
+        "includeAll": true,
+        "multi": true,
+        "name": "core_id",
+        "options": [],
+        "query": {
+          "query": "label_values(opencas_core_info{instance=~\"$node\", cache_id=~\"$cache_id\"}, core_id)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "type": "query",
+        "label": "Core ID"
+      }
+    ]
+  },
+  "refresh": "10s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Open CAS Linux",
+  "uid": "opencas-linux",
+  "version": 1
+}

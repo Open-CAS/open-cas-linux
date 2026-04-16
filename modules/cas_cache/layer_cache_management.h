@@ -122,6 +122,8 @@ int cache_mngt_get_core_info(struct kcas_core_info *info);
 
 void cache_mngt_wait_for_rq_finish(ocf_cache_t cache);
 
+int cache_mngt_read_lock_sync(ocf_cache_t cache);
+
 int cache_mngt_set_core_params(struct kcas_set_core_param *info);
 
 int cache_mngt_get_core_params(struct kcas_get_core_param *info);

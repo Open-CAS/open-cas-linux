@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2012-2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -8,7 +9,7 @@ PWD:=$(shell pwd)
 
 default: all
 
-DIRS:=modules casadm utils
+DIRS:=modules casadm utils extra
 
 .PHONY: default all clean distclean $(DIRS)
 

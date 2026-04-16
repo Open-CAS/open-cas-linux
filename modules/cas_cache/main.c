@@ -6,6 +6,7 @@
 */
 
 #include "cas_cache.h"
+#include "service_ui_netlink.h"
 
 /* Layer information. */
 MODULE_AUTHOR("Intel(R) Corporation");
@@ -95,11 +96,20 @@ static int __init cas_init_module(void)
 		goto error_init_device;
 	}
 
+	result = cas_nl_init();
+	if (result) {
+		printk(KERN_ERR OCF_PREFIX_SHORT
+				"Cannot initialize netlink interface\n");
+		goto error_init_netlink;
+	}
+
 	printk(KERN_INFO "%s Version %s (%s)::Module loaded successfully\n",
 		OCF_PREFIX_LONG, CAS_VERSION, CAS_KERNEL);
 
 	return 0;
 
+error_init_netlink:
+	cas_ctrl_device_deinit();
 error_init_device:
 	cas_cleanup_context();
 error_init_context:
@@ -114,6 +124,7 @@ module_init(cas_init_module);
 
 static void __exit cas_exit_module(void)
 {
+	cas_nl_deinit();
 	cas_ctrl_device_deinit();
 	cas_cleanup_context();
 	cas_deinit_disks();
