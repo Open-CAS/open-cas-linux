@@ -129,6 +129,9 @@ generate_header() {
 	FIRST=$(echo $CONFIG_FILES | tr ' ' '\n' | grep '1_')
 	SECOND=$(echo $CONFIG_FILES | tr ' ' '\n' | grep '2_')
 
+	echo "#ifndef __GENERATED_DEFINES_H__" >> $SCRIPTPATH/modules/generated_defines.h
+	echo "#define __GENERATED_DEFINES_H__" >> $SCRIPTPATH/modules/generated_defines.h
+
 	echo "Configuring OpenCAS"
 	for file in $FIRST; do
 		CONF=$(cat ${CONFIG_FILE} | grep $(basename $file) | cut -d' ' -f2)
@@ -139,6 +142,8 @@ generate_header() {
 		CONF=$(cat ${CONFIG_FILE} | grep $(basename $file) | cut -d' ' -f2)
 		source $file "apply" "$CONF" "$file"
 	done
+
+	echo "#endif /* __GENERATED_DEFINES_H__ */" >> $SCRIPTPATH/modules/generated_defines.h
 }
 
 if [ -z "$1" ]; then
