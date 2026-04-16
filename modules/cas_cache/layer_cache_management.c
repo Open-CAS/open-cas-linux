@@ -1228,7 +1228,7 @@ int cache_mngt_cache_check_device(struct kcas_cache_check_device *cmd_info)
 	}
 	bdev = cas_bdev_get_from_handle(bdev_handle);
 
-	result = cas_blk_open_volume_by_bdev(&volume, bdev);
+	result = cas_volume_open_by_bdev(&volume, bdev);
 	if (result)
 		goto out_bdev;
 
@@ -1240,7 +1240,7 @@ int cache_mngt_cache_check_device(struct kcas_cache_check_device *cmd_info)
 			&context);
 	wait_for_completion(&context.cmpl);
 
-	cas_blk_close_volume(volume);
+	cas_volume_close(volume);
 out_bdev:
 	cas_bdev_release(bdev_handle,
 			(CAS_BLK_MODE_EXCL | CAS_BLK_MODE_READ), holder);
@@ -2314,7 +2314,7 @@ static int _cache_mngt_probe_metadata(char *cache_path_name,
 	}
 	bdev = cas_bdev_get_from_handle(bdev_handle);
 
-	result = cas_blk_open_volume_by_bdev(&volume, bdev);
+	result = cas_volume_open_by_bdev(&volume, bdev);
 	if (result)
 		goto out_bdev;
 
@@ -2328,7 +2328,7 @@ static int _cache_mngt_probe_metadata(char *cache_path_name,
 			&context);
 	wait_for_completion(&context.cmpl);
 
-	cas_blk_close_volume(volume);
+	cas_volume_close(volume);
 out_bdev:
 	cas_bdev_release(bdev_handle,
 			(CAS_BLK_MODE_EXCL | CAS_BLK_MODE_READ), holder);

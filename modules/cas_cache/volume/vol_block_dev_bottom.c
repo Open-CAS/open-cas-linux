@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -385,4 +386,33 @@ int block_dev_init(void)
 		return ret;
 
 	return 0;
+}
+
+int cas_volume_open_by_bdev(ocf_volume_t *vol, struct block_device *bdev)
+{
+	struct bd_object *bdobj;
+	int ret;
+
+	ret = ocf_ctx_volume_create(cas_ctx, vol, NULL, BLOCK_DEVICE_VOLUME);
+	if (ret)
+		goto err;
+
+	bdobj = bd_object(*vol);
+
+	bdobj->btm_bd = bdev;
+	bdobj->opened_by_bdev = true;
+
+	ret = ocf_volume_open(*vol, NULL);
+	if (ret)
+		ocf_volume_destroy(*vol);
+
+err:
+	return ret;
+}
+
+void cas_volume_close(ocf_volume_t vol)
+{
+	ocf_volume_close(vol);
+	ocf_volume_deinit(vol);
+	env_free(vol);
 }
