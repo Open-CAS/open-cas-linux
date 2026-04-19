@@ -1,9 +1,10 @@
 /*
-* Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
-* Copyright(c) 2026 Unvertical
-* SPDX-License-Identifier: BSD-3-Clause
-*/
+ * Copyright(c) 2012-2022 Intel Corporation
+ * Copyright(c) 2024 Huawei Technologies
+ * Copyright(c) 2026 Unvertical
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/blkdev.h>
@@ -13,7 +14,7 @@
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
 #include <linux/blk-mq.h>
-#include "disk.h"
+#include "disk_priv.h"
 #include "debug.h"
 
 #define CAS_DISK_OPEN_MODE (CAS_BLK_MODE_READ | CAS_BLK_MODE_WRITE)
@@ -250,6 +251,7 @@ error_kstrdup:
 error_kmem:
 	return ERR_PTR(result);
 }
+EXPORT_SYMBOL(cas_disk_open);
 
 void cas_disk_get(struct cas_disk *dsk)
 {
@@ -260,6 +262,7 @@ void cas_disk_get(struct cas_disk *dsk)
 	dsk->refcount++;
 	mutex_unlock(&disk_global.lock);
 }
+EXPORT_SYMBOL(cas_disk_get);
 
 void cas_disk_put(struct cas_disk *dsk)
 {
@@ -284,6 +287,7 @@ void cas_disk_put(struct cas_disk *dsk)
 	kfree(dsk->path);
 	kmem_cache_free(disk_global.kmem_cache, dsk);
 }
+EXPORT_SYMBOL(cas_disk_put);
 
 struct block_device *cas_disk_get_blkdev(struct cas_disk *dsk)
 {
@@ -291,11 +295,13 @@ struct block_device *cas_disk_get_blkdev(struct cas_disk *dsk)
 	BUG_ON(!dsk->bdev_handle);
 	return cas_bdev_get_from_handle(dsk->bdev_handle);
 }
+EXPORT_SYMBOL(cas_disk_get_blkdev);
 
 struct gendisk *cas_disk_get_gendisk(struct cas_disk *dsk)
 {
 	return cas_disk_get_blkdev(dsk)->bd_disk;
 }
+EXPORT_SYMBOL(cas_disk_get_queue);
 
 struct request_queue *cas_disk_get_queue(struct cas_disk *dsk)
 {

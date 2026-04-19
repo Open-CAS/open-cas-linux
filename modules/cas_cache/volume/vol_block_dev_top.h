@@ -10,7 +10,7 @@
 
 #include "ocf/ocf.h"
 #include "../linux_kernel_version.h"
-#include "../exp_obj.h"
+#include "../../cas_bd/exp_obj.h"
 
 struct cas_priv_top {
 	struct cas_exp_obj *exp_obj;

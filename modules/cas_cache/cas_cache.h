@@ -22,8 +22,8 @@
 #include "context.h"
 #include <linux/kallsyms.h>
 #include <linux/idr.h>
-#include "disk.h"
-#include "exp_obj.h"
+#include "../cas_bd/disk.h"
+#include "../cas_bd/exp_obj.h"
 #include "volume/vol_block_dev_bottom.h"
 #include "volume/vol_block_dev_top.h"
 

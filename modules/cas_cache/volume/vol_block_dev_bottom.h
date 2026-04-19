@@ -8,7 +8,7 @@
 #ifndef __VOL_BLOCK_DEV_BOTTOM_H__
 #define __VOL_BLOCK_DEV_BOTTOM_H__
 
-#include "../disk.h"
+#include "../../cas_bd/disk.h"
 
 struct cas_priv_bottom {
 	struct cas_disk *dsk;

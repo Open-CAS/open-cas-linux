@@ -1,9 +1,10 @@
 /*
-* Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024-2025 Huawei Technologies
-* Copyright(c) 2026 Unvertical
-* SPDX-License-Identifier: BSD-3-Clause
-*/
+ * Copyright(c) 2012-2022 Intel Corporation
+ * Copyright(c) 2024-2025 Huawei Technologies
+ * Copyright(c) 2026 Unvertical
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 #include <linux/module.h>
 #include <linux/blkdev.h>
 #include <linux/slab.h>
@@ -12,8 +13,8 @@
 #include <linux/fs.h>
 #include <linux/vmalloc.h>
 
-#include "exp_obj.h"
-#include "disk.h"
+#include "exp_obj_priv.h"
+#include "disk_priv.h"
 #include "debug.h"
 
 #define CAS_DEV_MINORS 16
@@ -432,6 +433,7 @@ error_hide_parts:
 	return ERR_PTR(result);
 
 }
+EXPORT_SYMBOL(cas_exp_obj_create);
 
 int cas_exp_obj_dismantle(struct cas_exp_obj *exp_obj)
 {
@@ -450,6 +452,7 @@ int cas_exp_obj_dismantle(struct cas_exp_obj *exp_obj)
 
 	return 0;
 }
+EXPORT_SYMBOL(cas_exp_obj_dismantle);
 
 void cas_exp_obj_destroy(struct cas_exp_obj *exp_obj)
 {
@@ -465,6 +468,7 @@ void cas_exp_obj_destroy(struct cas_exp_obj *exp_obj)
 
 	module_put(owner);
 }
+EXPORT_SYMBOL(cas_exp_obj_destroy);
 
 int cas_exp_obj_lock(struct cas_exp_obj *exp_obj)
 {
@@ -482,6 +486,7 @@ int cas_exp_obj_lock(struct cas_exp_obj *exp_obj)
 	mutex_unlock(&exp_obj->openers_lock);
 	return result;
 }
+EXPORT_SYMBOL(cas_exp_obj_lock);
 
 int cas_exp_obj_unlock(struct cas_exp_obj *exp_obj)
 {
@@ -493,6 +498,7 @@ int cas_exp_obj_unlock(struct cas_exp_obj *exp_obj)
 
 	return 0;
 }
+EXPORT_SYMBOL(cas_exp_obj_unlock);
 
 void cas_exp_obj_set_priv(struct cas_exp_obj *exp_obj, void *priv)
 {
@@ -500,6 +506,7 @@ void cas_exp_obj_set_priv(struct cas_exp_obj *exp_obj, void *priv)
 
 	exp_obj->private = priv;
 }
+EXPORT_SYMBOL(cas_exp_obj_set_priv);
 
 void *cas_exp_obj_get_priv(struct cas_exp_obj *exp_obj)
 {
@@ -507,6 +514,7 @@ void *cas_exp_obj_get_priv(struct cas_exp_obj *exp_obj)
 
 	return exp_obj->private;
 }
+EXPORT_SYMBOL(cas_exp_obj_get_priv);
 
 struct request_queue *cas_exp_obj_get_queue(struct cas_exp_obj *exp_obj)
 {
@@ -514,6 +522,7 @@ struct request_queue *cas_exp_obj_get_queue(struct cas_exp_obj *exp_obj)
 
 	return exp_obj->queue;
 }
+EXPORT_SYMBOL(cas_exp_obj_get_queue);
 
 struct gendisk *cas_exp_obj_get_gendisk(struct cas_exp_obj *exp_obj)
 {
@@ -521,3 +530,4 @@ struct gendisk *cas_exp_obj_get_gendisk(struct cas_exp_obj *exp_obj)
 
 	return exp_obj->gd;
 }
+EXPORT_SYMBOL(cas_exp_obj_get_gendisk);

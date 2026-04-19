@@ -1,46 +1,17 @@
 /*
-* Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024-2025 Huawei Technologies
-* Copyright(c) 2026 Unvertical
-* SPDX-License-Identifier: BSD-3-Clause
-*/
-#ifndef __CASDISK_EXP_OBJ_H__
-#define __CASDISK_EXP_OBJ_H__
+ * Copyright(c) 2012-2022 Intel Corporation
+ * Copyright(c) 2024-2025 Huawei Technologies
+ * Copyright(c) 2026 Unvertical
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
-#include <linux/list.h>
-#include <linux/mutex.h>
-#include <linux/blk-mq.h>
+#ifndef __CAS_BD_EXP_OBJ_H__
+#define __CAS_BD_EXP_OBJ_H__
+
 #include "generated_defines.h"
 #include "disk.h"
 
-struct cas_exp_obj {
-	struct cas_disk *dsk;
-
-	struct gendisk *gd;
-	struct request_queue *queue;
-
-	struct block_device *locked_bd;
-
-	struct module *owner;
-
-	struct cas_exp_obj_ops *ops;
-
-	const char *dev_name;
-
-	struct mutex openers_lock;
-	unsigned int openers;
-	bool claimed;
-
-	int minor_slot;
-
-	struct blk_mq_tag_set tag_set;
-
-	void *private;
-};
-
-int __init cas_init_exp_objs(void);
-
-void cas_deinit_exp_objs(void);
+struct cas_exp_obj;
 
 struct cas_exp_obj_ops {
 	/**
