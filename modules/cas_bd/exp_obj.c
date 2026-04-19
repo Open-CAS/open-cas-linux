@@ -76,6 +76,19 @@ void cas_deinit_exp_objs(void)
 	unregister_blkdev(exp_obj_global.disk_major, "cas");
 }
 
+static void _cas_exp_obj_submit_bio_default(struct cas_exp_obj *exp_obj,
+		struct bio *bio)
+{
+	exp_obj->ops->submit_bio(exp_obj, bio);
+}
+
+static void _cas_exp_obj_submit_bio_pt(struct cas_exp_obj *exp_obj,
+		struct bio *bio)
+{
+	CAS_BIO_SET_DEV(bio, cas_disk_get_blkdev(exp_obj->dsk));
+	cas_submit_bio_noacct(bio);
+}
+
 static CAS_MAKE_REQ_RET_TYPE _cas_exp_obj_submit_bio(struct bio *bio)
 {
 	struct cas_exp_obj *exp_obj;
@@ -83,7 +96,7 @@ static CAS_MAKE_REQ_RET_TYPE _cas_exp_obj_submit_bio(struct bio *bio)
 	BUG_ON(!bio);
 	exp_obj = CAS_BIO_GET_GENDISK(bio)->private_data;
 
-	exp_obj->ops->submit_bio(exp_obj, bio);
+	READ_ONCE(exp_obj->submit_bio)(exp_obj, bio);
 
 	CAS_KRETURN(0);
 }
@@ -350,6 +363,7 @@ struct cas_exp_obj *cas_exp_obj_create(struct cas_disk *dsk,
 	exp_obj->owner = owner;
 	exp_obj->ops = ops;
 	exp_obj->private = priv;
+	exp_obj->submit_bio = _cas_exp_obj_submit_bio_default;
 
 	result = _cas_init_tag_set(exp_obj);
 	if (result) {
@@ -541,6 +555,30 @@ bool cas_exp_obj_is_frozen(struct cas_exp_obj *exp_obj)
 	return exp_obj->frozen;
 }
 EXPORT_SYMBOL(cas_exp_obj_is_frozen);
+
+void cas_exp_obj_set_passthrough(struct cas_exp_obj *exp_obj, bool pt)
+{
+	BUG_ON(!exp_obj);
+
+	if (pt) {
+		WRITE_ONCE(exp_obj->submit_bio,
+				_cas_exp_obj_submit_bio_pt);
+		exp_obj->passthrough = true;
+	} else {
+		WRITE_ONCE(exp_obj->submit_bio,
+				_cas_exp_obj_submit_bio_default);
+		exp_obj->passthrough = false;
+	}
+}
+EXPORT_SYMBOL(cas_exp_obj_set_passthrough);
+
+bool cas_exp_obj_is_passthrough(struct cas_exp_obj *exp_obj)
+{
+	BUG_ON(!exp_obj);
+
+	return exp_obj->passthrough;
+}
+EXPORT_SYMBOL(cas_exp_obj_is_passthrough);
 
 struct request_queue *cas_exp_obj_get_queue(struct cas_exp_obj *exp_obj)
 {

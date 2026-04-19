@@ -121,4 +121,18 @@ void cas_exp_obj_unfreeze_queue(struct cas_exp_obj *exp_obj);
  */
 bool cas_exp_obj_is_frozen(struct cas_exp_obj *exp_obj);
 
+/**
+ * @brief Switch exported object to/from pass-through mode
+ * @param exp_obj Pointer to a structure representing a front block device
+ * @param pt true to enable pass-through, false to restore original ops
+ */
+void cas_exp_obj_set_passthrough(struct cas_exp_obj *exp_obj, bool pt);
+
+/**
+ * @brief Check if exported object is in pass-through mode
+ * @param exp_obj Pointer to a structure representing a front block device
+ * @return true if in pass-through mode
+ */
+bool cas_exp_obj_is_passthrough(struct cas_exp_obj *exp_obj);
+
 #endif

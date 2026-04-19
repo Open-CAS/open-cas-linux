@@ -24,6 +24,8 @@ struct cas_exp_obj {
 
 	struct cas_exp_obj_ops *ops;
 
+	void (*submit_bio)(struct cas_exp_obj *exp_obj, struct bio *bio);
+
 	const char *dev_name;
 
 	struct mutex openers_lock;
@@ -35,6 +37,7 @@ struct cas_exp_obj {
 	struct blk_mq_tag_set tag_set;
 
 	bool frozen;
+	bool passthrough;
 
 	void *private;
 };
