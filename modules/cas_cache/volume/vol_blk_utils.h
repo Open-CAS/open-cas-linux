@@ -8,7 +8,6 @@
 #ifndef __VOL_BLK_UTILS_H__
 #define __VOL_BLK_UTILS_H__
 
-#include "obj_blk.h"
 #include "context.h"
 
 int cas_blk_identify_type(const char *path, uint8_t *type);

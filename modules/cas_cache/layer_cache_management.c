@@ -1317,8 +1317,7 @@ static int cache_mngt_update_core_uuid(ocf_cache_t cache, const char *core_name,
 				size_t name_len, ocf_uuid_t uuid)
 {
 	ocf_core_t core;
-	ocf_volume_t vol;
-	struct bd_object *bdvol;
+	struct cas_priv_bottom *priv_bottom;
 	int result;
 
 	if (ocf_core_get_by_name(cache, core_name, name_len, &core)) {
@@ -1332,10 +1331,9 @@ static int cache_mngt_update_core_uuid(ocf_cache_t cache, const char *core_name,
 	}
 
 	/* get bottom device volume for this core */
-	vol = ocf_core_get_volume(core);
-	bdvol = bd_object(vol);
+	priv_bottom = cas_get_priv_bottom(ocf_core_get_volume(core));
 
-	if (!cas_bdev_match(uuid->data, bdvol->btm_bd)) {
+	if (!cas_bdev_match(uuid->data, priv_bottom->btm_bd)) {
 		printk(KERN_ERR "UUID provided does not match target core device\n");
 		return -ENODEV;
 	}
@@ -1464,7 +1462,7 @@ int cache_mngt_add_core_to_cache(const char *cache_name, size_t name_len,
 			&add_context);
 	wait_for_completion(&add_context.cmpl);
 	if (result)
-		goto error_affter_lock;
+		goto error_after_lock;
 
 	result = kcas_core_create_exported_object(core);
 	if (result)
@@ -1493,7 +1491,7 @@ error_after_add_core:
 			&remove_context);
 	wait_for_completion(&remove_context.cmpl);
 
-error_affter_lock:
+error_after_lock:
 	ocf_mngt_cache_unlock(cache);
 	ocf_mngt_cache_put(cache);
 
@@ -2141,21 +2139,13 @@ err:
 static void init_instance_complete(struct _cache_mngt_attach_context *ctx,
 		ocf_cache_t cache)
 {
-	ocf_volume_t cache_obj;
-	struct bd_object *bd_cache_obj;
-	struct block_device *bdev;
-	//const char *name;
-
-	cache_obj = ocf_cache_get_volume(cache);
-	BUG_ON(!cache_obj);
-
-	bd_cache_obj = bd_object(cache_obj);
-	bdev = bd_cache_obj->btm_bd;
+	ocf_volume_t volume = ocf_cache_get_volume(cache);
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(volume);
+	struct block_device *bdev = priv_bottom->btm_bd;
 
 	/* If we deal with whole device, reread partitions */
 	if (cas_bdev_whole(bdev) == bdev)
 		cas_reread_partitions(bdev);
-
 }
 
 static void calculate_min_ram_size(ocf_cache_t cache,
@@ -2337,17 +2327,16 @@ out_bdev:
 
 static void volume_set_no_merges_flag_helper(ocf_cache_t cache)
 {
-	struct request_queue *cache_q;
-	struct bd_object *bvol;
+	ocf_volume_t volume = ocf_cache_get_volume(cache);
+	struct cas_priv_bottom *priv_bottom;
 	struct block_device *bd;
-	ocf_volume_t volume;
+	struct request_queue *cache_q;
 
-	volume = ocf_cache_get_volume(cache);
 	if (!volume)
 		return;
 
-	bvol = bd_object(volume);
-	bd = cas_disk_get_blkdev(bvol->dsk);
+	priv_bottom = cas_get_priv_bottom(volume);
+	bd = priv_bottom->btm_bd;
 	cache_q = bd->bd_disk->queue;
 
 	cas_cache_set_no_merges_flag(cache_q);
@@ -2355,14 +2344,11 @@ static void volume_set_no_merges_flag_helper(ocf_cache_t cache)
 
 static void _cache_save_device_properties(ocf_cache_t cache)
 {
-	struct block_device *bd;
-	struct bd_object *bvol;
-	struct request_queue *cache_q;
+	ocf_volume_t volume = ocf_cache_get_volume(cache);
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(volume);
+	struct block_device *bd = priv_bottom->btm_bd;
+	struct request_queue *cache_q = bd->bd_disk->queue;
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
-
-	bvol = bd_object(ocf_cache_get_volume(cache));
-	bd = cas_disk_get_blkdev(bvol->dsk);
-	cache_q = bd->bd_disk->queue;
 
 	cache_priv->device_properties.queue_limits = cache_q->limits;
 	cache_priv->device_properties.flush =
@@ -3614,8 +3600,7 @@ int cache_mngt_get_core_info(struct kcas_core_info *info)
 	ocf_cache_t cache;
 	ocf_core_t core;
 	const struct ocf_volume_uuid *uuid;
-	ocf_volume_t vol;
-	struct bd_object *bdvol;
+	struct cas_priv_top *priv_top;
 	int result;
 
 	result = mngt_get_cache_by_id(cas_ctx, info->cache_id, &cache);
@@ -3645,9 +3630,8 @@ int cache_mngt_get_core_info(struct kcas_core_info *info)
 
 	info->state = ocf_core_get_state(core);
 
-	vol = ocf_core_get_volume(core);
-	bdvol = bd_object(vol);
-	info->exp_obj_exists = bdvol->expobj_valid;
+	priv_top = cas_get_priv_top(core);
+	info->exp_obj_exists = priv_top->expobj_valid;
 
 unlock:
 	ocf_mngt_cache_read_unlock(cache);

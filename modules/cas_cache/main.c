@@ -7,6 +7,8 @@
 
 #include "cas_cache.h"
 #include "service_ui_netlink.h"
+#include "exp_obj.h"
+#include "disk.h"
 
 /* Layer information. */
 MODULE_AUTHOR("Intel(R) Corporation");
@@ -43,7 +45,6 @@ MODULE_PARM_DESC(seq_cut_off_mb,
 
 /* globals */
 ocf_ctx_t cas_ctx;
-struct cas_module cas_module;
 
 static int __init cas_init_module(void)
 {

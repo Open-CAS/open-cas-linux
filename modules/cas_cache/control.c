@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
 * Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #include <linux/cdev.h>
@@ -70,7 +71,7 @@ error_alloc_chrdev_region:
 	return result;
 }
 
-void __exit cas_ctrl_device_deinit(void)
+void cas_ctrl_device_deinit(void)
 {
 	struct cas_ctrl_device *ctrl = &_control_device;
 

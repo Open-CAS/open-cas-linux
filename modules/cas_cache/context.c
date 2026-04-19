@@ -12,6 +12,7 @@
 #include "utils/utils_gc.h"
 #include "utils/utils_mpool.h"
 #include "threads.h"
+#include "volume/vol_block_dev_bottom.h"
 #include <linux/kmemleak.h>
 
 struct env_mpool *cas_bvec_pool;

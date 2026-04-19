@@ -7,6 +7,7 @@
 
 #include "cas_cache.h"
 #include "vol_blk_utils.h"
+#include "vol_block_dev_bottom.h"
 
 static void cas_io_iter_advanced(struct bio_vec_iter *iter, uint32_t bytes)
 {
