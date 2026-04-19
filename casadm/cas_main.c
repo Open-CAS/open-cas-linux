@@ -58,6 +58,7 @@ struct command_args{
 	int update_path;
 	int detach;
 	int no_flush;
+	int pass_through;
 	const char* cache_device;
 	const char* core_device;
 	uint32_t params_type;
@@ -150,6 +151,8 @@ int command_handle_option(char *opt, const char **arg)
 		command_args_values.detach = true;
 	} else if (!strcmp(opt, "no-flush")) {
 		command_args_values.no_flush = true;
+	} else if (!strcmp(opt, "pass-through")) {
+		command_args_values.pass_through = true;
 	} else if (!strcmp(opt, "by-id-path")) {
 		command_args_values.by_id_path = true;
 	} else {
@@ -1776,6 +1779,8 @@ enum {
 	script_cmd_remove_core,
 	script_cmd_purge_cache,
 	script_cmd_purge_core,
+	script_cmd_connect_cache,
+	script_cmd_disconnect_cache,
 
 	script_cmd_max_id,
 
@@ -1789,6 +1794,7 @@ enum {
 	script_opt_update_path,
 	script_opt_detach,
 	script_opt_no_flush,
+	script_opt_pass_through,
 
 	script_opt_max_id,
 
@@ -1843,12 +1849,29 @@ static cli_option script_params_options[] = {
 			| (1 << script_opt_core_id),
 		.flags = CLI_COMMAND_HIDDEN,
 	},
+	[script_cmd_connect_cache] = {
+		.short_name = 0,
+		.long_name = "connect-cache",
+		.args_count = 0,
+		.arg = NULL,
+		.priv = (1 << script_opt_cache_device),
+		.flags = CLI_COMMAND_HIDDEN,
+	},
+	[script_cmd_disconnect_cache] = {
+		.short_name = 0,
+		.long_name = "disconnect-cache",
+		.args_count = 0,
+		.arg = NULL,
+		.priv = (1 << script_opt_cache_id),
+		.flags = CLI_COMMAND_HIDDEN,
+	},
 	[script_opt_cache_device] = {
 		.short_name = 0,
 		.long_name = "cache-device",
 		.args_count = 1,
 		.arg = "DEVICE",
-		.priv = (1 << script_cmd_check_cache_device),
+		.priv = (1 << script_cmd_check_cache_device)
+			| (1 << script_cmd_connect_cache),
 		.flags = CLI_OPTION_HIDDEN,
 	},
 	[script_opt_cache_id] = {
@@ -1859,7 +1882,8 @@ static cli_option script_params_options[] = {
 		.priv = (1 << script_cmd_remove_core)
 			| (1 << script_cmd_add_core)
 			| (1 << script_cmd_purge_cache)
-			| (1 << script_cmd_purge_core),
+			| (1 << script_cmd_purge_core)
+			| (1 << script_cmd_disconnect_cache),
 		.flags = (CLI_OPTION_RANGE_INT | CLI_OPTION_HIDDEN),
 		.min_value = OCF_CACHE_ID_MIN,
 		.max_value = OCF_CACHE_ID_MAX,
@@ -1913,7 +1937,16 @@ static cli_option script_params_options[] = {
 		.long_name = "no-flush",
 		.args_count = 0,
 		.arg = NULL,
-		.priv = (1 << script_cmd_remove_core),
+		.priv = (1 << script_cmd_remove_core)
+			| (1 << script_cmd_disconnect_cache),
+		.flags = CLI_OPTION_HIDDEN,
+	},
+	[script_opt_pass_through] = {
+		.short_name = 0,
+		.long_name = "pass-through",
+		.args_count = 0,
+		.arg = NULL,
+		.priv = (1 << script_cmd_disconnect_cache),
 		.flags = CLI_OPTION_HIDDEN,
 	},
 
@@ -2031,6 +2064,16 @@ int script_handle() {
 		return purge_core(
 				command_args_values.cache_id,
 				command_args_values.core_id
+				);
+	case script_cmd_connect_cache:
+		return connect_cache(
+				command_args_values.cache_device
+				);
+	case script_cmd_disconnect_cache:
+		return disconnect_cache(
+				command_args_values.cache_id,
+				command_args_values.pass_through,
+				command_args_values.no_flush
 				);
 	}
 

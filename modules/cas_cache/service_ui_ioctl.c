@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -414,6 +415,40 @@ long cas_service_ioctl_ctrl(struct file *filp, unsigned int cmd,
 
 		RETURN_CMD_RESULT(cmd_info, arg, retval);
 	}
+	case KCAS_IOCTL_CONNECT_CACHE: {
+		struct kcas_start_cache *cmd_info;
+		struct ocf_mngt_cache_config cfg;
+		struct ocf_mngt_cache_attach_config attach_cfg;
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		cmd_info->init_cache = CACHE_INIT_LOAD;
+
+		retval = cache_mngt_create_cache_cfg(&cfg, &attach_cfg, cmd_info);
+		if (retval)
+			RETURN_CMD_RESULT(cmd_info, arg, retval);
+
+		retval = cache_mngt_connect_cache(&cfg, &attach_cfg, cmd_info);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+
+	case KCAS_IOCTL_DISCONNECT_CACHE: {
+		struct kcas_stop_cache *cmd_info;
+		char cache_name[OCF_CACHE_NAME_SIZE];
+
+		GET_CMD_INFO(cmd_info, arg);
+
+		cache_name_from_id(cache_name, cmd_info->cache_id);
+
+		retval = cache_mngt_disconnect_cache(cache_name,
+				OCF_CACHE_NAME_SIZE,
+				cmd_info->pass_through,
+				!cmd_info->flush_data);
+
+		RETURN_CMD_RESULT(cmd_info, arg, retval);
+	}
+
 	case KCAS_IOCTL_STANDBY_DETACH: {
 		struct kcas_standby_detach *cmd_info;
 

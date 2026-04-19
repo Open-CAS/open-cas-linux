@@ -84,6 +84,8 @@ struct kcas_stop_cache {
 
 	uint8_t flush_data; /**< should data be flushed? */
 
+	uint8_t pass_through; /**< switch to pass-through on disconnect */
+
 	int ext_err_code;
 };
 
@@ -418,6 +420,8 @@ struct kcas_standby_activate
  *    41    *    KCAS_IOCTL_START_CACHE                     *    OK            *
  *    42    *    KCAS_IOCTL_DETACH_CACHE                    *    OK            *
  *    43    *    KCAS_IOCTL_ATTACH_CACHE                    *    OK            *
+ *    44    *    KCAS_IOCTL_DISCONNECT_CACHE                *    OK            *
+ *    45    *    KCAS_IOCTL_CONNECT_CACHE                   *    OK            *
  *******************************************************************************
  */
 
@@ -521,6 +525,12 @@ struct kcas_standby_activate
 
 /** Attach cache device */
 #define KCAS_IOCTL_ATTACH_CACHE _IOWR(KCAS_IOCTL_MAGIC, 43, struct kcas_start_cache)
+
+/** Disconnect cache - detach, switch to pass-through, stop */
+#define KCAS_IOCTL_DISCONNECT_CACHE _IOWR(KCAS_IOCTL_MAGIC, 44, struct kcas_stop_cache)
+
+/** Connect cache - load cache and reconnect existing pass-through exp_objs */
+#define KCAS_IOCTL_CONNECT_CACHE _IOWR(KCAS_IOCTL_MAGIC, 45, struct kcas_start_cache)
 
 /**
  * Extended kernel CAS error codes

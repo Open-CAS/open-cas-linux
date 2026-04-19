@@ -56,6 +56,13 @@ int cache_mngt_set_partitions(const char *cache_name, size_t name_len,
 
 int cache_mngt_detach_cache(const char *cache_name, size_t name_len);
 
+int cache_mngt_disconnect_cache(const char *cache_name, size_t name_len,
+		bool pass_through, bool no_flush);
+
+int cache_mngt_connect_cache(struct ocf_mngt_cache_config *cfg,
+		struct ocf_mngt_cache_attach_config *attach_cfg,
+		struct kcas_start_cache *cmd);
+
 int cache_mngt_attach_device(const char *cache_name, size_t name_len,
 		const char *device, struct ocf_mngt_cache_attach_config *attach_cfg);
 

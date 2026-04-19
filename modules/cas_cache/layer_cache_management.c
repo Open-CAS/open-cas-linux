@@ -3411,6 +3411,381 @@ put:
 	return status;
 }
 
+static void _cache_mngt_freeze_exp_objs(ocf_cache_t cache)
+{
+	ocf_core_t core;
+	struct cas_priv_top *priv_top;
+
+	ocf_core_for_each(core, cache, true) {
+		priv_top = cas_get_priv_top(core);
+		if (!priv_top->expobj_valid)
+			continue;
+		cas_exp_obj_freeze_queue(priv_top->exp_obj);
+	}
+}
+
+static void _cache_mngt_unfreeze_exp_objs(ocf_cache_t cache)
+{
+	ocf_core_t core;
+	struct cas_priv_top *priv_top;
+
+	ocf_core_for_each(core, cache, true) {
+		priv_top = cas_get_priv_top(core);
+		if (!priv_top->expobj_valid)
+			continue;
+		cas_exp_obj_unfreeze_queue(priv_top->exp_obj);
+	}
+}
+
+static void _cache_mngt_set_exp_objs_pt(ocf_cache_t cache)
+{
+	ocf_core_t core;
+	struct cas_priv_top *priv_top;
+
+	ocf_core_for_each(core, cache, true) {
+		priv_top = cas_get_priv_top(core);
+		if (!priv_top->expobj_valid)
+			continue;
+		cas_exp_obj_set_passthrough(priv_top->exp_obj, true);
+	}
+}
+
+static void _cache_mngt_clear_exp_objs_pt(ocf_cache_t cache)
+{
+	ocf_core_t core;
+	struct cas_priv_top *priv_top;
+
+	ocf_core_for_each(core, cache, true) {
+		priv_top = cas_get_priv_top(core);
+		if (!priv_top->expobj_valid)
+			continue;
+		cas_exp_obj_set_passthrough(priv_top->exp_obj, false);
+	}
+}
+
+static void _cache_mngt_deposit_exp_objs(ocf_cache_t cache)
+{
+	ocf_core_t core;
+
+	ocf_core_for_each(core, cache, true)
+		kcas_core_deposit_exported_object(core);
+}
+
+static void _cache_mngt_wait_for_io_finish(ocf_cache_t cache)
+{
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+	uint32_t cpus_no = num_online_cpus();
+	uint32_t i;
+	bool pending;
+
+	do {
+		pending = false;
+		for (i = 0; i < cpus_no; i++) {
+			if (ocf_queue_pending_io(cache_priv->io_queues[i])) {
+				pending = true;
+				break;
+			}
+		}
+		if (pending)
+			msleep(20);
+	} while (pending);
+}
+
+int cache_mngt_disconnect_cache(const char *cache_name, size_t name_len,
+		bool pass_through, bool no_flush)
+{
+	ocf_cache_t cache;
+	struct cache_priv *cache_priv;
+	struct _cache_mngt_stop_context *context;
+	int status = 0;
+
+	if (no_flush && pass_through)
+		return -OCF_ERR_INVAL;
+
+	status = ocf_mngt_cache_get_by_name(cas_ctx, cache_name,
+					name_len, &cache);
+	if (status)
+		return status;
+
+	if (ocf_cache_is_standby(cache)) {
+		ocf_mngt_cache_put(cache);
+		return -OCF_ERR_CACHE_STANDBY;
+	}
+
+	if (ocf_cache_is_incomplete(cache)) {
+		ocf_mngt_cache_put(cache);
+		return -OCF_ERR_CACHE_IN_INCOMPLETE_STATE;
+	}
+
+	cache_priv = ocf_cache_get_priv(cache);
+
+	/* Prevent new dirty data */
+	ocf_mngt_cache_set_no_dirty(cache, true);
+
+	if (!no_flush) {
+		/* Flush remaining dirty data */
+		if (ocf_cache_is_running(cache))
+			status = _cache_flush_with_lock(cache);
+		if (status)
+			goto err_flush;
+	}
+
+	status = _cache_mngt_lock_sync(cache);
+	if (status)
+		goto err_lock;
+
+	/*
+	 * Set passthrough and drain queues before waiting for IO and purging,
+	 * so no new cache IO can be submitted - cache must be empty on stop
+	 */
+	_cache_mngt_set_exp_objs_pt(cache);
+	_cache_mngt_freeze_exp_objs(cache);
+
+	if (pass_through) {
+		_cache_mngt_unfreeze_exp_objs(cache);
+
+		/* Wait for all I/Os submitted to the cache to complete */
+		_cache_mngt_wait_for_io_finish(cache);
+
+		/* Purge cache metadata */
+		status = _cache_mngt_cache_purge_sync(cache, NULL);
+		if (status)
+			goto err_pt_unfrozen;
+	}
+
+	context = cache_priv->stop_context;
+
+	context->finish_thread = cas_lazy_thread_create(exit_instance_finish,
+			context, "cas_%s_stop", cache_name);
+	if (IS_ERR(context->finish_thread)) {
+		status = PTR_ERR(context->finish_thread);
+		if (pass_through)
+			goto err_pt_unfrozen;
+		goto err_pt_frozen;
+	}
+
+	/* Release exp_objs to cas_bd */
+	_cache_mngt_deposit_exp_objs(cache);
+
+	/* OCF stop will unfreeze no_dirty automatically */
+	status = _cache_mngt_cache_stop_sync(cache);
+	if (status == -KCAS_ERR_WAITING_INTERRUPTED)
+		printk(KERN_WARNING "Waiting for cache stop interrupted. "
+				"Stop will finish asynchronously.\n");
+
+	return status;
+
+err_pt_frozen:
+	_cache_mngt_clear_exp_objs_pt(cache);
+	_cache_mngt_unfreeze_exp_objs(cache);
+	goto unlock;
+err_pt_unfrozen:
+	_cache_mngt_freeze_exp_objs(cache);
+	_cache_mngt_clear_exp_objs_pt(cache);
+	_cache_mngt_unfreeze_exp_objs(cache);
+unlock:
+	ocf_mngt_cache_unlock(cache);
+err_lock:
+err_flush:
+	ocf_mngt_cache_set_no_dirty(cache, false);
+	ocf_mngt_cache_put(cache);
+	return status;
+}
+
+static int _cache_mngt_reconnect_core_exp_objs(ocf_cache_t cache)
+{
+	ocf_core_t core;
+	ocf_volume_t volume;
+	struct cas_priv_bottom *priv_bottom;
+	struct cas_priv_top *priv_top;
+	int result = 0;
+
+	ocf_core_for_each(core, cache, true) {
+		volume = ocf_core_get_volume(core);
+		priv_bottom = cas_get_priv_bottom(volume);
+
+		result = kcas_core_claim_exported_object(core);
+		if (result) {
+			printk(KERN_ERR "Cannot claim exported object for %s.%s\n",
+					ocf_cache_get_name(cache),
+					ocf_core_get_name(core));
+			break;
+		}
+
+	}
+
+	if (result) {
+		ocf_core_for_each(core, cache, true) {
+			priv_top = cas_get_priv_top(core);
+			if (!priv_top)
+				break;
+
+			kcas_core_deposit_exported_object(core);
+		}
+
+		return result;
+	}
+
+	ocf_core_for_each(core, cache, true) {
+		priv_top = cas_get_priv_top(core);
+
+		if (!cas_exp_obj_is_frozen(priv_top->exp_obj))
+			cas_exp_obj_freeze_queue(priv_top->exp_obj);
+
+		cas_exp_obj_set_passthrough(priv_top->exp_obj, false);
+		cas_exp_obj_unfreeze_queue(priv_top->exp_obj);
+	}
+
+	return 0;
+}
+
+int cache_mngt_connect_cache(struct ocf_mngt_cache_config *cfg,
+		struct ocf_mngt_cache_attach_config *attach_cfg,
+		struct kcas_start_cache *cmd)
+{
+	struct _cache_mngt_attach_context *context;
+	ocf_cache_t cache;
+	struct cache_priv *cache_priv;
+	int result = 0, rollback_result = 0;
+	char cache_name_meta[OCF_CACHE_NAME_SIZE];
+	ocf_cache_mode_t cache_mode_meta;
+	ocf_cache_line_size_t cache_line_size_meta;
+
+	if (!try_module_get(THIS_MODULE)) {
+		ocf_volume_destroy(attach_cfg->device.volume);
+		return -KCAS_ERR_SYSTEM;
+	}
+
+	result = cache_mngt_check_bdev(&attach_cfg->device, false, false, NULL);
+	if (result) {
+		ocf_volume_destroy(attach_cfg->device.volume);
+		module_put(THIS_MODULE);
+		return result;
+	}
+
+	result = _cache_mngt_probe_metadata(cmd->cache_path_name,
+			cache_name_meta, &cache_mode_meta,
+			&cache_line_size_meta);
+	if (result) {
+		ocf_volume_destroy(attach_cfg->device.volume);
+		module_put(THIS_MODULE);
+		return result;
+	}
+
+	if (cache_id_from_name(&cmd->cache_id, cache_name_meta)) {
+		printk(KERN_ERR "Improper cache name format on %s.\n",
+				cmd->cache_path_name);
+		ocf_volume_destroy(attach_cfg->device.volume);
+		module_put(THIS_MODULE);
+		return -OCF_ERR_START_CACHE_FAIL;
+	}
+
+	strscpy(cfg->name, cache_name_meta, OCF_CACHE_NAME_SIZE);
+	cfg->cache_mode = cache_mode_meta;
+	cfg->cache_line_size = cache_line_size_meta;
+
+	context = kzalloc(sizeof(*context), GFP_KERNEL);
+	if (!context) {
+		ocf_volume_destroy(attach_cfg->device.volume);
+		module_put(THIS_MODULE);
+		return -ENOMEM;
+	}
+
+	context->rollback_thread = cas_lazy_thread_create(cache_start_rollback,
+			context, "cas_cache_rollback_complete");
+	if (IS_ERR(context->rollback_thread)) {
+		result = PTR_ERR(context->rollback_thread);
+		kfree(context);
+		ocf_volume_destroy(attach_cfg->device.volume);
+		module_put(THIS_MODULE);
+		return result;
+	}
+
+	strncpy(context->cache_path, cmd->cache_path_name, MAX_STR_LEN-1);
+	context->device_cfg = attach_cfg->device;
+	_cache_mngt_async_context_init(&context->async);
+
+	result = ocf_mngt_cache_start(cas_ctx, &cache, cfg, NULL);
+	if (result) {
+		cas_lazy_thread_stop(context->rollback_thread);
+		kfree(context);
+		ocf_volume_destroy(attach_cfg->device.volume);
+		module_put(THIS_MODULE);
+		return result;
+	}
+	context->cache = cache;
+
+	result = _cache_mngt_cache_priv_init(cache);
+	if (result)
+		goto err_deinit_config;
+	context->priv_inited = true;
+
+	result = _cache_mngt_start_queues(cache);
+	if (result)
+		goto err_deinit_config;
+
+	cache_priv = ocf_cache_get_priv(cache);
+	cache_priv->attach_context = context;
+
+	ocf_mngt_cache_load(cache, attach_cfg,
+			_cache_mngt_start_complete, context);
+
+	result = wait_for_completion_interruptible(&context->async.cmpl);
+	result = _cache_mngt_async_caller_set_result(&context->async, result);
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
+		return result;
+
+	if (result)
+		goto err;
+
+	_cache_mngt_log_cache_device_path(cache, context->cache_path);
+
+	result = cas_cls_init(cache);
+	if (result) {
+		context->ocf_start_error = result;
+		goto err;
+	}
+	context->cls_inited = true;
+
+	volume_set_no_merges_flag_helper(cache);
+	_cache_save_device_properties(cache);
+
+	result = _cache_mngt_reconnect_core_exp_objs(cache);
+	if (result) {
+		context->ocf_start_error = result;
+		goto err;
+	}
+
+	init_instance_complete(context, cache);
+
+	cas_lazy_thread_stop(context->rollback_thread);
+	kfree(context);
+	cache_priv->attach_context = NULL;
+
+	ocf_mngt_cache_unlock(cache);
+
+	return 0;
+
+err_deinit_config:
+	ocf_volume_destroy(attach_cfg->device.volume);
+err:
+	cmd->min_free_ram = context->min_free_ram;
+
+	_cache_mngt_async_context_reinit(&context->async);
+	ocf_mngt_cache_stop(cache, _cache_mngt_cache_stop_rollback_complete,
+			context);
+	rollback_result = wait_for_completion_interruptible(
+			&context->async.cmpl);
+
+	rollback_result = _cache_mngt_async_caller_set_result(&context->async,
+			rollback_result);
+
+	if (rollback_result != -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
+
+	return result;
+}
+
 struct cache_mngt_list_ctx {
 	struct kcas_cache_list *list;
 	int pos;

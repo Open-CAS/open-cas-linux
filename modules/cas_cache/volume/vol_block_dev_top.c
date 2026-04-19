@@ -7,6 +7,7 @@
 
 #include "cas_cache.h"
 #include "utils/cas_err.h"
+#include "../cas_bd/exp_obj_box.h"
 
 static void blkdev_set_bio_data(struct blk_data *data, struct bio *bio)
 {
@@ -529,7 +530,7 @@ static const char *get_core_id_string(ocf_core_t core)
 
 static int kcas_create_exported_object(struct cas_priv_top *priv_top,
 		struct cas_disk *dsk, const char *name, void *priv,
-		struct cas_exp_obj_ops *ops)
+		struct cas_exp_obj_ops *ops, bool claim)
 {
 	struct cas_exp_obj *exp_obj;
 	int result = 0;
@@ -542,7 +543,10 @@ static int kcas_create_exported_object(struct cas_priv_top *priv_top,
 		goto end;
 	}
 
-	exp_obj = cas_exp_obj_create(dsk, name, THIS_MODULE, ops, priv);
+	if (!claim)
+		exp_obj = cas_exp_obj_create(dsk, name, THIS_MODULE, ops, priv);
+	else
+		exp_obj = cas_exp_obj_box_claim(dsk, THIS_MODULE, ops, priv);
 	if (IS_ERR_OR_NULL(exp_obj)) {
 		destroy_workqueue(priv_top->expobj_wq);
 		result = PTR_ERR(exp_obj);
@@ -615,7 +619,7 @@ int kcas_core_create_exported_object(ocf_core_t core)
 	ocf_core_set_priv(core, priv_top);
 
 	result = kcas_create_exported_object(priv_top, priv_bottom->dsk,
-			dev_name, core, &kcas_core_exp_obj_ops);
+			dev_name, core, &kcas_core_exp_obj_ops, false);
 	if (result) {
 		ocf_core_set_priv(core, NULL);
 		vfree(priv_top);
@@ -640,6 +644,43 @@ int kcas_core_destroy_exported_object(ocf_core_t core)
 	return 0;
 }
 
+int kcas_core_deposit_exported_object(ocf_core_t core)
+{
+	struct cas_priv_top *priv_top = cas_get_priv_top(core);
+
+	cas_exp_obj_box_deposit(priv_top->exp_obj);
+
+	ocf_core_set_priv(core, NULL);
+	vfree(priv_top);
+
+	return 0;
+}
+
+int kcas_core_claim_exported_object(ocf_core_t core)
+{
+	struct cas_priv_top *priv_top;
+	ocf_volume_t volume = ocf_core_get_volume(core);
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(volume);
+	int result;
+
+	priv_top = vzalloc(sizeof(*priv_top));
+	if (!priv_top)
+		return -ENOMEM;
+
+	priv_top->front_volume = ocf_core_get_front_volume(core);
+	ocf_core_set_priv(core, priv_top);
+
+	result = kcas_create_exported_object(priv_top, priv_bottom->dsk,
+			NULL, core, &kcas_core_exp_obj_ops, true);
+	if (result) {
+		ocf_core_set_priv(core, NULL);
+		vfree(priv_top);
+		return result;
+	}
+
+	return 0;
+}
+
 int kcas_cache_create_exported_object(ocf_cache_t cache)
 {
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
@@ -654,7 +695,7 @@ int kcas_cache_create_exported_object(ocf_cache_t cache)
 	priv_top->front_volume = ocf_cache_get_front_volume(cache);
 
 	return kcas_create_exported_object(priv_top, priv_bottom->dsk, dev_name,
-			cache, &kcas_cache_exp_obj_ops);
+			cache, &kcas_cache_exp_obj_ops, false);
 }
 
 int kcas_cache_destroy_exported_object(ocf_cache_t cache)
