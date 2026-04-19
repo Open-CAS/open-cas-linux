@@ -89,6 +89,12 @@ static void _cas_exp_obj_submit_bio_pt(struct cas_exp_obj *exp_obj,
 	cas_submit_bio_noacct(bio);
 }
 
+static void _cas_exp_obj_submit_bio_error(struct cas_exp_obj *exp_obj,
+		struct bio *bio)
+{
+	bio_io_error(bio);
+}
+
 static CAS_MAKE_REQ_RET_TYPE _cas_exp_obj_submit_bio(struct bio *bio)
 {
 	struct cas_exp_obj *exp_obj;
@@ -595,3 +601,10 @@ struct gendisk *cas_exp_obj_get_gendisk(struct cas_exp_obj *exp_obj)
 	return exp_obj->gd;
 }
 EXPORT_SYMBOL(cas_exp_obj_get_gendisk);
+
+void cas_exp_obj_set_error(struct cas_exp_obj *exp_obj)
+{
+	BUG_ON(!exp_obj);
+
+	WRITE_ONCE(exp_obj->submit_bio, _cas_exp_obj_submit_bio_error);
+}

@@ -13,6 +13,8 @@
 #include "exp_obj.h"
 
 struct cas_exp_obj {
+	struct list_head list;
+
 	struct cas_disk *dsk;
 
 	struct gendisk *gd;
@@ -45,5 +47,7 @@ struct cas_exp_obj {
 int __init cas_init_exp_objs(void);
 
 void cas_deinit_exp_objs(void);
+
+void cas_exp_obj_set_error(struct cas_exp_obj *exp_obj);
 
 #endif
