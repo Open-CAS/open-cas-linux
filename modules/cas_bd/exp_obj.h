@@ -102,4 +102,23 @@ struct request_queue *cas_exp_obj_get_queue(struct cas_exp_obj *exp_obj);
  */
 struct gendisk *cas_exp_obj_get_gendisk(struct cas_exp_obj *exp_obj);
 
+/**
+ * @brief Freeze exported object queue
+ * @param exp_obj Pointer to a structure representing a front block device
+ */
+void cas_exp_obj_freeze_queue(struct cas_exp_obj *exp_obj);
+
+/**
+ * @brief Unfreeze exported object queue
+ * @param exp_obj Pointer to a structure representing a front block device
+ */
+void cas_exp_obj_unfreeze_queue(struct cas_exp_obj *exp_obj);
+
+/**
+ * @brief Check if exported object queue is frozen
+ * @param exp_obj Pointer to a structure representing a front block device
+ * @return true if frozen
+ */
+bool cas_exp_obj_is_frozen(struct cas_exp_obj *exp_obj);
+
 #endif

@@ -516,6 +516,32 @@ void *cas_exp_obj_get_priv(struct cas_exp_obj *exp_obj)
 }
 EXPORT_SYMBOL(cas_exp_obj_get_priv);
 
+void cas_exp_obj_freeze_queue(struct cas_exp_obj *exp_obj)
+{
+	BUG_ON(!exp_obj);
+
+	cas_blk_mq_freeze_queue(exp_obj->queue);
+	exp_obj->frozen = true;
+}
+EXPORT_SYMBOL(cas_exp_obj_freeze_queue);
+
+void cas_exp_obj_unfreeze_queue(struct cas_exp_obj *exp_obj)
+{
+	BUG_ON(!exp_obj);
+
+	exp_obj->frozen = false;
+	cas_blk_mq_unfreeze_queue(exp_obj->queue);
+}
+EXPORT_SYMBOL(cas_exp_obj_unfreeze_queue);
+
+bool cas_exp_obj_is_frozen(struct cas_exp_obj *exp_obj)
+{
+	BUG_ON(!exp_obj);
+
+	return exp_obj->frozen;
+}
+EXPORT_SYMBOL(cas_exp_obj_is_frozen);
+
 struct request_queue *cas_exp_obj_get_queue(struct cas_exp_obj *exp_obj)
 {
 	BUG_ON(!exp_obj);
