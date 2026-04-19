@@ -5,8 +5,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-VERSION_FILE := $(M)/../.metadata/cas_version
-BUILD_CONFIG_FILE := $(M)/../.metadata/cas_config
+METADATA_DIR ?= $(M)/../.metadata
+VERSION_FILE := $(METADATA_DIR)/cas_version
+BUILD_CONFIG_FILE := $(METADATA_DIR)/cas_config
 
 check_cflag=$(shell echo "" | \
 	gcc -c -xc ${1} -o /dev/null - 2>/dev/null; \
