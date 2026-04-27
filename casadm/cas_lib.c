@@ -322,7 +322,7 @@ static int validate_str_val_mapping_multi(const char* s,
 {
 	const char* p;
 	char* token;
-	char* delim;
+	const char* delim;
 	int value = 0;
 	int token_val;
 
