@@ -163,9 +163,11 @@ fi
 /lib/udev/rules.d/60-persistent-storage-cas.rules
 /sbin/casadm
 /sbin/casctl
+/usr/bin/opencas_exporter
 /usr/lib/systemd/system-shutdown/open-cas.shutdown
 /usr/lib/systemd/system/open-cas-shutdown.service
 /usr/lib/systemd/system/open-cas.service
+/usr/lib/systemd/system/opencas_exporter.service
 /usr/share/man/man5/opencas.conf.5.gz
 /usr/share/man/man8/casadm.8.gz
 /usr/share/man/man8/casctl.8.gz
@@ -181,6 +183,8 @@ fi
 
 
 %changelog
+* Tue Apr 28 2026 Qin Fandong <qinfandong@kylinos.cn> - 26.06-1
+- Add opencas_exporter
 * Mon Aug 25 2025 Rafal Stefanowski <rafal.stefanowski@huawei.com> - 25.03-1
 * Thu Aug 7 2025 Brian J. Murrell <brian@interlinx.bc.ca> - 25.03-1
 - Allow building RPM packages for different kernel versions
