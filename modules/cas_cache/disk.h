@@ -1,29 +1,35 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 #ifndef __CASDISK_DISK_H__
 #define __CASDISK_DISK_H__
 
-#include <linux/fs.h>
-#include <linux/blkdev.h>
-#include <linux/mutex.h>
-#include <linux/blk-mq.h>
-#include "cas_cache.h"
-
-struct cas_exp_obj;
+#include <linux/idr.h>
+#include "generated_defines.h"
 
 struct cas_disk {
-	char *path;
+	struct list_head list;
 
+	char *path;
 	cas_bdev_handle_t bdev_handle;
 
-	struct cas_exp_obj *exp_obj;
+	int refcount;
+	bool hidden;
+
+	int gd_flags;
+	int gd_minors;
 };
 
 int __init cas_init_disks(void);
+
 void cas_deinit_disks(void);
+
+int cas_disk_get_gd_flags(struct cas_disk *dsk);
+
+int cas_disk_hide_parts(struct cas_disk *dsk);
 
 /**
  * @brief Open block device
@@ -33,11 +39,17 @@ void cas_deinit_disks(void);
 struct cas_disk *cas_disk_open(const char *path);
 
 /**
+ * @brief Increment reference count of cas_disk
+ * @param dsk Pointer to cas_disk structure
+ */
+void cas_disk_get(struct cas_disk *dsk);
+
+/**
  * @brief Close block device and remove from cas
  * @param dsk Pointer to cas_disk structure related to block device
  *	which should be closed.
  */
-void cas_disk_close(struct cas_disk *dsk);
+void cas_disk_put(struct cas_disk *dsk);
 
 /**
  * @brief Get block_device structure of bottom block device

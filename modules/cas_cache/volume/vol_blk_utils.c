@@ -1,10 +1,13 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
 * Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
+#include "cas_cache.h"
 #include "vol_blk_utils.h"
+#include "vol_block_dev_bottom.h"
 
 static void cas_io_iter_advanced(struct bio_vec_iter *iter, uint32_t bytes)
 {
@@ -190,35 +193,6 @@ uint32_t cas_io_iter_zero(struct bio_vec_iter *dst, uint32_t bytes)
 	}
 
 	return zeroed;
-}
-
-int cas_blk_open_volume_by_bdev(ocf_volume_t *vol, struct block_device *bdev)
-{
-	struct bd_object *bdobj;
-	int ret;
-
-	ret = ocf_ctx_volume_create(cas_ctx, vol, NULL, BLOCK_DEVICE_VOLUME);
-	if (ret)
-		goto err;
-
-	bdobj = bd_object(*vol);
-
-	bdobj->btm_bd = bdev;
-	bdobj->opened_by_bdev = true;
-
-	ret = ocf_volume_open(*vol, NULL);
-	if (ret)
-		ocf_volume_destroy(*vol);
-
-err:
-	return ret;
-}
-
-void cas_blk_close_volume(ocf_volume_t vol)
-{
-	ocf_volume_close(vol);
-	ocf_volume_deinit(vol);
-	env_free(vol);
 }
 
 static int _cas_blk_identify_type(const char *path, uint8_t *type)

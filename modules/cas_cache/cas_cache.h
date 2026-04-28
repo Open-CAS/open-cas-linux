@@ -24,6 +24,8 @@
 #include <linux/idr.h>
 #include "disk.h"
 #include "exp_obj.h"
+#include "volume/vol_block_dev_bottom.h"
+#include "volume/vol_block_dev_top.h"
 
 #define CAS_KERN_EMERG KERN_EMERG OCF_PREFIX_SHORT
 #define CAS_KERN_ALERT KERN_ALERT OCF_PREFIX_SHORT
@@ -53,16 +55,6 @@ enum {
 /** \endcond */
 };
 
-struct cas_module {
-	int disk_major;
-	struct ida minor_ida;
-
-	struct kmem_cache *disk_cache;
-	struct kmem_cache *exp_obj_cache;
-};
-
-extern struct cas_module cas_module;
-
 struct cas_classifier;
 
 struct cache_priv {
@@ -72,6 +64,7 @@ struct cache_priv {
 	atomic_t flush_interrupt_enabled;
 	ocf_queue_t mngt_queue;
 	void *attach_context;
+	struct cas_priv_top priv_top;
 	bool cache_exp_obj_initialized;
 	struct {
 		struct queue_limits queue_limits;

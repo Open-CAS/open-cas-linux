@@ -1,11 +1,13 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include <linux/blkdev.h>
 #include "cas_cache.h"
+#include "vol_block_dev_bottom.h"
 
 #define CAS_DEBUG_IO 0
 
@@ -26,11 +28,11 @@
 
 static int block_dev_open_object(ocf_volume_t vol, void *volume_params)
 {
-	struct bd_object *bdobj = bd_object(vol);
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(vol);
 	const struct ocf_volume_uuid *uuid = ocf_volume_get_uuid(vol);
 	struct cas_disk *dsk;
 
-	if (bdobj->opened_by_bdev) {
+	if (priv_bottom->opened_by_bdev) {
 		/* Bdev has been set manually, so there is nothing to do. */
 		return 0;
 	}
@@ -45,34 +47,34 @@ static int block_dev_open_object(ocf_volume_t vol, void *volume_params)
 		return error;
 	}
 
-	bdobj->dsk = dsk;
-	bdobj->btm_bd = cas_disk_get_blkdev(dsk);
+	priv_bottom->dsk = dsk;
+	priv_bottom->btm_bd = cas_disk_get_blkdev(dsk);
 
 	return 0;
 }
 
 static void block_dev_close_object(ocf_volume_t vol)
 {
-	struct bd_object *bdobj = bd_object(vol);
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(vol);
 
-	if (bdobj->opened_by_bdev)
+	if (priv_bottom->opened_by_bdev)
 		return;
 
-	cas_disk_close(bdobj->dsk);
+	cas_disk_put(priv_bottom->dsk);
 }
 
 static unsigned int block_dev_get_max_io_size(ocf_volume_t vol)
 {
-	struct bd_object *bdobj = bd_object(vol);
-	struct block_device *bd = bdobj->btm_bd;
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(vol);
+	struct block_device *bd = priv_bottom->btm_bd;
 
 	return queue_max_sectors(bd->bd_disk->queue) << SECTOR_SHIFT;
 }
 
 static uint64_t block_dev_get_byte_length(ocf_volume_t vol)
 {
-	struct bd_object *bdobj = bd_object(vol);
-	struct block_device *bd = bdobj->btm_bd;
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(vol);
+	struct block_device *bd = priv_bottom->btm_bd;
 	uint64_t sector_length;
 
 	sector_length = (cas_bdev_whole(bd) == bd) ?
@@ -149,12 +151,13 @@ static void block_dev_forward_io(ocf_volume_t volume,
 		ocf_forward_token_t token, int dir, uint64_t addr,
 		uint64_t bytes, uint64_t offset)
 {
-	struct bd_object *bdobj = bd_object(volume);
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(volume);
 	struct blk_data *data = ocf_forward_get_data(token);
 	uint64_t flags = ocf_forward_get_flags(token);
 	int bio_dir = (dir == OCF_READ) ? READ : WRITE;
 	struct bio_vec_iter iter;
 	struct blk_plug plug;
+	struct bio *bio;
 	int error = 0;
 
 	CAS_DEBUG_PARAM("Address = %llu, bytes = %u\n", addr, bytes);
@@ -170,7 +173,7 @@ static void block_dev_forward_io(ocf_volume_t volume,
 		/* Still IO vectors to be sent */
 
 		/* Allocate BIO */
-		struct bio *bio = cas_bd_io_alloc_bio(bdobj->btm_bd, &iter);
+		bio = cas_bd_io_alloc_bio(priv_bottom->btm_bd, &iter);
 
 		if (!bio) {
 			error = -ENOMEM;
@@ -178,7 +181,7 @@ static void block_dev_forward_io(ocf_volume_t volume,
 		}
 
 		/* Setup BIO */
-		CAS_BIO_SET_DEV(bio, bdobj->btm_bd);
+		CAS_BIO_SET_DEV(bio, priv_bottom->btm_bd);
 		CAS_BIO_BISECTOR(bio) = addr / SECTOR_SIZE;
 		bio->bi_next = NULL;
 		bio->bi_private = (void *)token;
@@ -248,8 +251,8 @@ static void block_dev_forward_io(ocf_volume_t volume,
 static void block_dev_forward_flush(ocf_volume_t volume,
 		ocf_forward_token_t token)
 {
-	struct bd_object *bdobj = bd_object(volume);
-	struct request_queue *q = bdev_get_queue(bdobj->btm_bd);
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(volume);
+	struct request_queue *q = bdev_get_queue(priv_bottom->btm_bd);
 	struct bio *bio;
 
 	if (!q) {
@@ -264,14 +267,14 @@ static void block_dev_forward_flush(ocf_volume_t volume,
 		return;
 	}
 
-	bio = cas_bio_alloc(bdobj->btm_bd, GFP_NOIO, 0);
+	bio = cas_bio_alloc(priv_bottom->btm_bd, GFP_NOIO, 0);
 	if (!bio) {
 		CAS_PRINT_RL(KERN_ERR "Couldn't allocate memory for BIO\n");
 		ocf_forward_end(token, -OCF_ERR_NO_MEM);
 		return;
 	}
 
-	CAS_BIO_SET_DEV(bio, bdobj->btm_bd);
+	CAS_BIO_SET_DEV(bio, priv_bottom->btm_bd);
 	bio->bi_private = (void *)token;
 	bio->bi_end_io = CAS_REFER_BLOCK_CALLBACK(cas_bd_forward_end);
 
@@ -282,8 +285,9 @@ static void block_dev_forward_flush(ocf_volume_t volume,
 static void block_dev_forward_discard(ocf_volume_t volume,
 		ocf_forward_token_t token, uint64_t addr, uint64_t bytes)
 {
-	struct bd_object *bdobj = bd_object(volume);
-	struct request_queue *q = bdev_get_queue(bdobj->btm_bd);
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(volume);
+	struct block_device *bd = priv_bottom->btm_bd;
+	struct request_queue *q = bdev_get_queue(priv_bottom->btm_bd);
 	struct bio *bio;
 	int error = 0;
 
@@ -297,7 +301,7 @@ static void block_dev_forward_discard(ocf_volume_t volume,
 		return;
 	}
 
-	if (!cas_has_discard_support(bdobj->btm_bd)) {
+	if (!cas_has_discard_support(bd)) {
 		/* Discard is not supported by bottom device, send completion
 		 * to caller
 		 */
@@ -306,8 +310,7 @@ static void block_dev_forward_discard(ocf_volume_t volume,
 	}
 
 	granularity = max(q->limits.discard_granularity >> SECTOR_SHIFT, 1U);
-	alignment = (bdev_discard_alignment(bdobj->btm_bd) >> SECTOR_SHIFT)
-			% granularity;
+	alignment = (bdev_discard_alignment(bd) >> SECTOR_SHIFT) % granularity;
 	max_discard_sectors =
 		min(q->limits.max_discard_sectors, UINT_MAX >> SECTOR_SHIFT);
 	max_discard_sectors -= max_discard_sectors % granularity;
@@ -320,7 +323,7 @@ static void block_dev_forward_discard(ocf_volume_t volume,
 	start = addr >> SECTOR_SHIFT;
 
 	while (sects) {
-		bio = cas_bio_alloc(bdobj->btm_bd, GFP_NOIO, 1);
+		bio = cas_bio_alloc(bd, GFP_NOIO, 1);
 		if (!bio) {
 			CAS_PRINT_RL(CAS_KERN_ERR "Couldn't allocate memory for BIO\n");
 			error = -OCF_ERR_NO_MEM;
@@ -338,7 +341,7 @@ static void block_dev_forward_discard(ocf_volume_t volume,
 			bio_sects = end - start;
 		}
 
-		CAS_BIO_SET_DEV(bio, bdobj->btm_bd);
+		CAS_BIO_SET_DEV(bio, bd);
 		CAS_BIO_BISECTOR(bio) = start;
 		CAS_BIO_BISIZE(bio) = bio_sects << SECTOR_SHIFT;
 		bio->bi_next = NULL;
@@ -359,7 +362,7 @@ static void block_dev_forward_discard(ocf_volume_t volume,
 
 const struct ocf_volume_properties cas_object_blk_properties = {
 	.name = "Block_Device",
-	.volume_priv_size = sizeof(struct bd_object),
+	.volume_priv_size = sizeof(struct cas_priv_bottom),
 	.caps = {
 		.atomic_writes = 0, /* Atomic writes not supported */
 	},
@@ -385,4 +388,33 @@ int block_dev_init(void)
 		return ret;
 
 	return 0;
+}
+
+int cas_volume_open_by_bdev(ocf_volume_t *vol, struct block_device *bdev)
+{
+	struct cas_priv_bottom *priv_bottom;
+	int ret;
+
+	ret = ocf_ctx_volume_create(cas_ctx, vol, NULL, BLOCK_DEVICE_VOLUME);
+	if (ret)
+		goto err;
+
+	priv_bottom = cas_get_priv_bottom(*vol);
+
+	priv_bottom->btm_bd = bdev;
+	priv_bottom->opened_by_bdev = true;
+
+	ret = ocf_volume_open(*vol, NULL);
+	if (ret)
+		ocf_volume_destroy(*vol);
+
+err:
+	return ret;
+}
+
+void cas_volume_close(ocf_volume_t vol)
+{
+	ocf_volume_close(vol);
+	ocf_volume_deinit(vol);
+	env_free(vol);
 }

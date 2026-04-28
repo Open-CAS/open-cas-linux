@@ -1,18 +1,14 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
 #ifndef __VOL_BLK_UTILS_H__
 #define __VOL_BLK_UTILS_H__
 
-#include "obj_blk.h"
 #include "context.h"
-
-int cas_blk_open_volume_by_bdev(ocf_volume_t *vol,
-		struct block_device *bdev);
-void cas_blk_close_volume(ocf_volume_t vol);
 
 int cas_blk_identify_type(const char *path, uint8_t *type);
 

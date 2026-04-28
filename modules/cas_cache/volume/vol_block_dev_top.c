@@ -32,18 +32,18 @@ static void blkdev_set_bio_data(struct blk_data *data, struct bio *bio)
 #endif
 }
 
-static void blkdev_set_exported_object_flush_fua(ocf_core_t core)
+static void blkdev_set_exported_object_flush_fua(ocf_core_t core,
+		struct cas_exp_obj *exp_obj)
 {
 	ocf_cache_t cache = ocf_core_get_cache(core);
 	ocf_volume_t core_vol = ocf_core_get_volume(core);
-	struct bd_object *bd_core_vol;
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(core_vol);
 	struct request_queue *core_q, *exp_q;
 	bool flush, fua;
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
-	bd_core_vol = bd_object(core_vol);
 
-	core_q = cas_disk_get_queue(bd_core_vol->dsk);
-	exp_q = cas_exp_obj_get_queue(bd_core_vol->dsk);
+	core_q = cas_disk_get_queue(priv_bottom->dsk);
+	exp_q = cas_exp_obj_get_queue(exp_obj);
 
 	flush = (CAS_CHECK_QUEUE_FLUSH(core_q) ||
 			cache_priv->device_properties.flush);
@@ -82,34 +82,20 @@ static void blkdev_set_discard_properties(ocf_cache_t cache,
  * Map geometry of underlying (core) object geometry (sectors etc.)
  * to geometry of exported object.
  */
-static int blkdev_core_set_geometry(struct cas_disk *dsk, void *private)
+static int blkdev_core_set_geometry(struct cas_exp_obj *exp_obj)
 {
-	ocf_core_t core;
-	ocf_cache_t cache;
-	ocf_volume_t core_vol;
-	struct request_queue *core_q, *exp_q;
-	struct block_device *core_bd;
-	sector_t sectors;
-	const char *path;
-	struct cache_priv *cache_priv;
+	ocf_core_t core = cas_exp_obj_get_priv(exp_obj);
+	ocf_cache_t cache = ocf_core_get_cache(core);
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+	ocf_volume_t core_vol = ocf_core_get_volume(core);
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(core_vol);
+	struct block_device *core_bd = priv_bottom->btm_bd;
+	const char *path = ocf_volume_get_uuid(core_vol)->data;
+	struct request_queue *core_q = cas_disk_get_queue(priv_bottom->dsk);
+	struct request_queue *exp_q = cas_exp_obj_get_queue(exp_obj);
+	sector_t sectors = ocf_volume_get_length(core_vol) >> SECTOR_SHIFT;
 
-	BUG_ON(!private);
-	core = private;
-	cache = ocf_core_get_cache(core);
-	core_vol = ocf_core_get_volume(core);
-	cache_priv = ocf_cache_get_priv(cache);
-
-	path = ocf_volume_get_uuid(core_vol)->data;
-
-	core_bd = cas_disk_get_blkdev(dsk);
-	BUG_ON(!core_bd);
-
-	core_q = cas_bdev_whole(core_bd)->bd_disk->queue;
-	exp_q = cas_exp_obj_get_queue(dsk);
-
-	sectors = ocf_volume_get_length(core_vol) >> SECTOR_SHIFT;
-
-	set_capacity(cas_exp_obj_get_gendisk(dsk), sectors);
+	set_capacity(cas_exp_obj_get_gendisk(exp_obj), sectors);
 
 	cas_copy_queue_limits(exp_q, &cache_priv->device_properties.queue_limits,
 			core_q);
@@ -127,7 +113,7 @@ static int blkdev_core_set_geometry(struct cas_disk *dsk, void *private)
 	/* We don't want to receive splitted requests*/
 	CAS_SET_QUEUE_CHUNK_SECTORS(exp_q, 0);
 
-	blkdev_set_exported_object_flush_fua(core);
+	blkdev_set_exported_object_flush_fua(core, exp_obj);
 
 	blkdev_set_discard_properties(cache, exp_q, core_bd, sectors);
 
@@ -136,19 +122,17 @@ static int blkdev_core_set_geometry(struct cas_disk *dsk, void *private)
 	return 0;
 }
 
-static int blkdev_core_set_queue_limits(struct cas_disk *dsk, void *private,
+static int blkdev_core_set_queue_limits(struct cas_exp_obj *exp_obj,
 		cas_queue_limits_t *lim)
 {
-	ocf_core_t core = private;
+	ocf_core_t core = cas_exp_obj_get_priv(exp_obj);
 	ocf_cache_t cache = ocf_core_get_cache(core);
 	ocf_volume_t core_vol = ocf_core_get_volume(core);
-	struct bd_object *bd_core_vol;
-	struct request_queue *core_q;
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(core_vol);
+	struct request_queue *core_q = cas_disk_get_queue(priv_bottom->dsk);
 	bool flush, fua;
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 
-	bd_core_vol = bd_object(core_vol);
-	core_q = cas_disk_get_queue(bd_core_vol->dsk);
 
 	flush = (CAS_CHECK_QUEUE_FLUSH(core_q) ||
 			cache_priv->device_properties.flush);
@@ -168,8 +152,8 @@ static int blkdev_core_set_queue_limits(struct cas_disk *dsk, void *private,
 
 struct defer_bio_context {
 	struct work_struct io_work;
-	void (*cb)(struct bd_object *bvol, struct bio *bio);
-	struct bd_object *bvol;
+	void (*cb)(struct cas_priv_top *priv_top, struct bio *bio);
+	struct cas_priv_top *priv_top;
 	struct bio *bio;
 };
 
@@ -178,16 +162,16 @@ static void blkdev_defer_bio_work(struct work_struct *work)
 	struct defer_bio_context *context;
 
 	context = container_of(work, struct defer_bio_context, io_work);
-	context->cb(context->bvol, context->bio);
+	context->cb(context->priv_top, context->bio);
 	kfree(context);
 }
 
-static void blkdev_defer_bio(struct bd_object *bvol, struct bio *bio,
-		void (*cb)(struct bd_object *bvol, struct bio *bio))
+static void blkdev_defer_bio(struct cas_priv_top *priv_top, struct bio *bio,
+		void (*cb)(struct cas_priv_top *priv_top, struct bio *bio))
 {
 	struct defer_bio_context *context;
 
-	BUG_ON(!bvol->expobj_wq);
+	BUG_ON(!priv_top->expobj_wq);
 
 	context = kmalloc(sizeof(*context), GFP_ATOMIC);
 	if (!context) {
@@ -198,9 +182,9 @@ static void blkdev_defer_bio(struct bd_object *bvol, struct bio *bio,
 
 	context->cb = cb;
 	context->bio = bio;
-	context->bvol = bvol;
+	context->priv_top = priv_top;
 	INIT_WORK(&context->io_work, blkdev_defer_bio_work);
-	queue_work(bvol->expobj_wq, &context->io_work);
+	queue_work(priv_top->expobj_wq, &context->io_work);
 }
 
 static void blkdev_complete_data_master(struct blk_data *master, int error)
@@ -244,10 +228,10 @@ struct blkdev_data_master_ctx {
 	unsigned long long start_time;
 };
 
-static int blkdev_handle_data_single(struct bd_object *bvol, struct bio *bio,
-		struct blkdev_data_master_ctx *master_ctx)
+static int blkdev_handle_data_single(struct cas_priv_top *priv_top,
+		struct bio *bio, struct blkdev_data_master_ctx *master_ctx)
 {
-	ocf_cache_t cache = ocf_volume_get_cache(bvol->front_volume);
+	ocf_cache_t cache = ocf_volume_get_cache(priv_top->front_volume);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	ocf_queue_t queue;
 	ocf_io_t io;
@@ -265,7 +249,7 @@ static int blkdev_handle_data_single(struct bd_object *bvol, struct bio *bio,
 
 	blkdev_set_bio_data(data, bio);
 
-	io = ocf_volume_new_io(bvol->front_volume, queue,
+	io = ocf_volume_new_io(priv_top->front_volume, queue,
 			CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
 			CAS_BIO_BISIZE(bio), (bio_data_dir(bio) == READ) ?
 					OCF_READ : OCF_WRITE,
@@ -301,7 +285,7 @@ static int blkdev_handle_data_single(struct bd_object *bvol, struct bio *bio,
 	return 0;
 }
 
-static void blkdev_handle_data(struct bd_object *bvol, struct bio *bio)
+static void blkdev_handle_data(struct cas_priv_top *priv_top, struct bio *bio)
 {
 	const uint32_t max_io_sectors = (32*MiB) >> SECTOR_SHIFT;
 	const uint32_t align_sectors = (128*KiB) >> SECTOR_SHIFT;
@@ -334,7 +318,7 @@ static void blkdev_handle_data(struct bd_object *bvol, struct bio *bio)
 			sectors -= to_submit;
 		}
 
-		error = blkdev_handle_data_single(bvol, split, &master_ctx);
+		error = blkdev_handle_data_single(priv_top, split, &master_ctx);
 		if (error)
 			goto err;
 	}
@@ -362,16 +346,17 @@ static void blkdev_complete_discard(ocf_io_t io, void *priv1, void *priv2,
 	ocf_io_put(io);
 }
 
-static void blkdev_handle_discard(struct bd_object *bvol, struct bio *bio)
+static void blkdev_handle_discard(struct cas_priv_top *priv_top,
+		struct bio *bio)
 {
-	ocf_cache_t cache = ocf_volume_get_cache(bvol->front_volume);
+	ocf_cache_t cache = ocf_volume_get_cache(priv_top->front_volume);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	ocf_queue_t queue;
 	ocf_io_t io;
 
 	queue = cache_priv->io_queues[raw_smp_processor_id()];
 
-	io = ocf_volume_new_io(bvol->front_volume, queue,
+	io = ocf_volume_new_io(priv_top->front_volume, queue,
 			CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
 			CAS_BIO_BISIZE(bio), OCF_WRITE, 0, 0);
 	if (!io) {
@@ -386,19 +371,20 @@ static void blkdev_handle_discard(struct bd_object *bvol, struct bio *bio)
 	ocf_volume_submit_discard(io);
 }
 
-static void blkdev_handle_bio_noflush(struct bd_object *bvol, struct bio *bio)
+static void blkdev_handle_bio_noflush(struct cas_priv_top *priv_top,
+		struct bio *bio)
 {
 	if (CAS_IS_DISCARD(bio))
-		blkdev_handle_discard(bvol, bio);
+		blkdev_handle_discard(priv_top, bio);
 	else
-		blkdev_handle_data(bvol, bio);
+		blkdev_handle_data(priv_top, bio);
 }
 
 static void blkdev_complete_flush(ocf_io_t io, void *priv1, void *priv2,
 		int error)
 {
 	struct bio *bio = priv1;
-	struct bd_object *bvol = priv2;
+	struct cas_priv_top *priv_top = priv2;
 	int result = map_cas_err_to_generic(error);
 
 	ocf_io_put(io);
@@ -409,20 +395,20 @@ static void blkdev_complete_flush(ocf_io_t io, void *priv1, void *priv2,
 		return;
 	}
 
-	blkdev_defer_bio(bvol, bio, blkdev_handle_bio_noflush);
+	blkdev_defer_bio(priv_top, bio, blkdev_handle_bio_noflush);
 }
 
-static void blkdev_handle_flush(struct bd_object *bvol, struct bio *bio)
+static void blkdev_handle_flush(struct cas_priv_top *priv_top, struct bio *bio)
 {
-	ocf_cache_t cache = ocf_volume_get_cache(bvol->front_volume);
+	ocf_cache_t cache = ocf_volume_get_cache(priv_top->front_volume);
 	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 	ocf_queue_t queue;
 	ocf_io_t io;
 
 	queue = cache_priv->io_queues[raw_smp_processor_id()];
 
-	io = ocf_volume_new_io(bvol->front_volume, queue, 0, 0, OCF_WRITE, 0,
-			CAS_SET_FLUSH(0));
+	io = ocf_volume_new_io(priv_top->front_volume, queue, 0, 0,
+			OCF_WRITE, 0, CAS_SET_FLUSH(0));
 	if (!io) {
 		CAS_PRINT_RL(KERN_CRIT
 			"Out of memory. Ending IO processing.\n");
@@ -430,38 +416,33 @@ static void blkdev_handle_flush(struct bd_object *bvol, struct bio *bio)
 		return;
 	}
 
-	ocf_io_set_cmpl(io, bio, bvol, blkdev_complete_flush);
+	ocf_io_set_cmpl(io, bio, priv_top, blkdev_complete_flush);
 
 	ocf_volume_submit_flush(io);
 }
 
-static void blkdev_handle_bio(struct bd_object *bvol, struct bio *bio)
+static void blkdev_handle_bio(struct cas_priv_top *priv_top, struct bio *bio)
 {
 	if (CAS_IS_SET_FLUSH(CAS_BIO_OP_FLAGS(bio)))
-		blkdev_handle_flush(bvol, bio);
+		blkdev_handle_flush(priv_top, bio);
 	else
-		blkdev_handle_bio_noflush(bvol, bio);
+		blkdev_handle_bio_noflush(priv_top, bio);
 }
 
-static void blkdev_submit_bio(struct bd_object *bvol, struct bio *bio)
+static void blkdev_submit_bio(struct cas_priv_top *priv_top, struct bio *bio)
 {
 	if (in_interrupt())
-		blkdev_defer_bio(bvol, bio, blkdev_handle_bio);
+		blkdev_defer_bio(priv_top, bio, blkdev_handle_bio);
 	else
-		blkdev_handle_bio(bvol, bio);
+		blkdev_handle_bio(priv_top, bio);
 }
 
-static void blkdev_core_submit_bio(struct cas_disk *dsk,
-		struct bio *bio, void *private)
+static void blkdev_core_submit_bio(struct cas_exp_obj *exp_obj, struct bio *bio)
 {
-	ocf_core_t core = private;
-	struct bd_object *bvol;
+	ocf_core_t core = cas_exp_obj_get_priv(exp_obj);
+	struct cas_priv_top *priv_top = cas_get_priv_top(core);
 
-	BUG_ON(!core);
-
-	bvol = bd_object(ocf_core_get_volume(core));
-
-	blkdev_submit_bio(bvol, bio);
+	blkdev_submit_bio(priv_top, bio);
 }
 
 static struct cas_exp_obj_ops kcas_core_exp_obj_ops = {
@@ -470,30 +451,17 @@ static struct cas_exp_obj_ops kcas_core_exp_obj_ops = {
 	.submit_bio = blkdev_core_submit_bio,
 };
 
-static int blkdev_cache_set_geometry(struct cas_disk *dsk, void *private)
+static int blkdev_cache_set_geometry(struct cas_exp_obj *exp_obj)
 {
-	ocf_cache_t cache;
-	ocf_volume_t volume;
-	struct bd_object *bvol;
-	struct request_queue *cache_q, *exp_q;
-	struct block_device *bd;
-	sector_t sectors;
+	ocf_cache_t cache = cas_exp_obj_get_priv(exp_obj);
+	ocf_volume_t volume = ocf_cache_get_volume(cache);
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(volume);
+	struct block_device *bd = priv_bottom->btm_bd;
+	struct request_queue *cache_q = bd->bd_disk->queue;
+	struct request_queue *exp_q = cas_exp_obj_get_queue(exp_obj);
+	sector_t sectors = ocf_volume_get_length(volume) >> SECTOR_SHIFT;
 
-	BUG_ON(!private);
-	cache = private;
-	volume = ocf_cache_get_volume(cache);
-
-	bvol = bd_object(volume);
-
-	bd = cas_disk_get_blkdev(bvol->dsk);
-	BUG_ON(!bd);
-
-	cache_q = bd->bd_disk->queue;
-	exp_q = cas_exp_obj_get_queue(dsk);
-
-	sectors = ocf_volume_get_length(volume) >> SECTOR_SHIFT;
-
-	set_capacity(cas_exp_obj_get_gendisk(dsk), sectors);
+	set_capacity(cas_exp_obj_get_gendisk(exp_obj), sectors);
 
 	cas_copy_queue_limits(exp_q, &cache_q->limits, cache_q);
 	cas_cache_set_no_merges_flag(cache_q);
@@ -509,25 +477,14 @@ static int blkdev_cache_set_geometry(struct cas_disk *dsk, void *private)
 	return 0;
 }
 
-static int blkdev_cache_set_queue_limits(struct cas_disk *dsk, void *private,
+static int blkdev_cache_set_queue_limits(struct cas_exp_obj *exp_obj,
 		cas_queue_limits_t *lim)
 {
-	ocf_cache_t cache;
-	ocf_volume_t volume;
-	struct bd_object *bvol;
-	struct request_queue *cache_q;
-	struct block_device *bd;
-
-	BUG_ON(!private);
-	cache = private;
-	volume = ocf_cache_get_volume(cache);
-
-	bvol = bd_object(volume);
-
-	bd = cas_disk_get_blkdev(bvol->dsk);
-	BUG_ON(!bd);
-
-	cache_q = bd->bd_disk->queue;
+	ocf_cache_t cache = cas_exp_obj_get_priv(exp_obj);
+	ocf_volume_t volume = ocf_cache_get_volume(cache);
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(volume);
+	struct block_device *bd = priv_bottom->btm_bd;
+	struct request_queue *cache_q = bd->bd_disk->queue;
 
 	memset(lim, 0, sizeof(cas_queue_limits_t));
 
@@ -540,17 +497,13 @@ static int blkdev_cache_set_queue_limits(struct cas_disk *dsk, void *private,
 	return 0;
 }
 
-static void blkdev_cache_submit_bio(struct cas_disk *dsk,
-		struct bio *bio, void *private)
+static void blkdev_cache_submit_bio(struct cas_exp_obj *exp_obj,
+		struct bio *bio)
 {
-	ocf_cache_t cache = private;
-	struct bd_object *bvol;
+	ocf_cache_t cache = cas_exp_obj_get_priv(exp_obj);
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
 
-	BUG_ON(!cache);
-
-	bvol = bd_object(ocf_cache_get_volume(cache));
-
-	blkdev_submit_bio(bvol, bio);
+	blkdev_submit_bio(&cache_priv->priv_top, bio);
 }
 
 static struct cas_exp_obj_ops kcas_cache_exp_obj_ops = {
@@ -574,28 +527,30 @@ static const char *get_core_id_string(ocf_core_t core)
 	return ocf_core_get_name(core) + sizeof("core") - 1;
 }
 
-static int kcas_volume_create_exported_object(ocf_volume_t volume,
-		const char *name, void *priv, struct cas_exp_obj_ops *ops)
+static int kcas_create_exported_object(struct cas_priv_top *priv_top,
+		struct cas_disk *dsk, const char *name, void *priv,
+		struct cas_exp_obj_ops *ops)
 {
-	struct bd_object *bvol = bd_object(volume);
-	int result;
+	struct cas_exp_obj *exp_obj;
+	int result = 0;
 
-	bvol->expobj_wq = alloc_workqueue("expobj_wq_%s",
+	priv_top->expobj_wq = alloc_workqueue("expobj_wq_%s",
 			WQ_MEM_RECLAIM | WQ_HIGHPRI, 0,
 			name);
-	if (!bvol->expobj_wq) {
+	if (!priv_top->expobj_wq) {
 		result = -ENOMEM;
 		goto end;
 	}
 
-	result = cas_exp_obj_create(bvol->dsk, name,
-			THIS_MODULE, ops, priv);
-	if (result) {
-		destroy_workqueue(bvol->expobj_wq);
+	exp_obj = cas_exp_obj_create(dsk, name, THIS_MODULE, ops, priv);
+	if (IS_ERR_OR_NULL(exp_obj)) {
+		destroy_workqueue(priv_top->expobj_wq);
+		result = PTR_ERR(exp_obj);
 		goto end;
 	}
 
-	bvol->expobj_valid = true;
+	priv_top->exp_obj = exp_obj;
+	priv_top->expobj_valid = true;
 
 end:
 	if (result) {
@@ -605,39 +560,33 @@ end:
 	return result;
 }
 
-static int kcas_volume_destroy_exported_object(ocf_volume_t volume)
+static int kcas_volume_destroy_exported_object(struct cas_priv_top *priv_top)
 {
-	struct bd_object *bvol;
 	int result;
 
-	BUG_ON(!volume);
-
-	bvol = bd_object(volume);
-	BUG_ON(!bvol);
-
-	if (!bvol->expobj_valid)
+	if (!priv_top->expobj_valid)
 		return 0;
 
-	result = cas_exp_obj_lock(bvol->dsk);
+	result = cas_exp_obj_lock(priv_top->exp_obj);
 	if (result == -EBUSY)
 		return -KCAS_ERR_DEV_PENDING;
 	else if (result)
 		return result;
 
-	result = cas_exp_obj_destroy(bvol->dsk);
+	result = cas_exp_obj_dismantle(priv_top->exp_obj);
 	if (result)
 		goto err;
 
-	bvol->expobj_valid = false;
-	destroy_workqueue(bvol->expobj_wq);
+	priv_top->expobj_valid = false;
+	destroy_workqueue(priv_top->expobj_wq);
 
-	cas_exp_obj_unlock(bvol->dsk);
-	cas_exp_obj_cleanup(bvol->dsk);
+	cas_exp_obj_unlock(priv_top->exp_obj);
+	cas_exp_obj_destroy(priv_top->exp_obj);
 
 	return 0;
 
 err:
-	cas_exp_obj_unlock(bvol->dsk);
+	cas_exp_obj_unlock(priv_top->exp_obj);
 
 	return result;
 }
@@ -648,140 +597,145 @@ err:
 int kcas_core_create_exported_object(ocf_core_t core)
 {
 	ocf_cache_t cache = ocf_core_get_cache(core);
+	struct cas_priv_top *priv_top;
 	ocf_volume_t volume = ocf_core_get_volume(core);
-	struct bd_object *bvol = bd_object(volume);
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(volume);
 	char dev_name[DISK_NAME_LEN];
+	int result;
+
+	priv_top = vzalloc(sizeof(*priv_top));
+	if (!priv_top)
+		return -ENOMEM;
 
 	snprintf(dev_name, DISK_NAME_LEN, "cas%s-%s",
 			get_cache_id_string(cache),
 			get_core_id_string(core));
 
-	bvol->front_volume = ocf_core_get_front_volume(core);
+	priv_top->front_volume = ocf_core_get_front_volume(core);
+	ocf_core_set_priv(core, priv_top);
 
-	return kcas_volume_create_exported_object(volume, dev_name, core,
-			&kcas_core_exp_obj_ops);
+	result = kcas_create_exported_object(priv_top, priv_bottom->dsk,
+			dev_name, core, &kcas_core_exp_obj_ops);
+	if (result) {
+		ocf_core_set_priv(core, NULL);
+		vfree(priv_top);
+		return result;
+	}
+
+	return 0;
 }
 
 int kcas_core_destroy_exported_object(ocf_core_t core)
 {
-	ocf_volume_t volume = ocf_core_get_volume(core);
+	struct cas_priv_top *priv_top = cas_get_priv_top(core);
+	int result;
 
-	return kcas_volume_destroy_exported_object(volume);
+	result = kcas_volume_destroy_exported_object(priv_top);
+	if (result)
+		return result;
+
+	ocf_core_set_priv(core, NULL);
+	vfree(priv_top);
+
+	return 0;
 }
 
 int kcas_cache_create_exported_object(ocf_cache_t cache)
 {
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+	struct cas_priv_top *priv_top = &cache_priv->priv_top;
 	ocf_volume_t volume = ocf_cache_get_volume(cache);
-	struct bd_object *bvol = bd_object(volume);
+	struct cas_priv_bottom *priv_bottom = cas_get_priv_bottom(volume);
 	char dev_name[DISK_NAME_LEN];
 
 	snprintf(dev_name, DISK_NAME_LEN, "cas-cache-%s",
 			get_cache_id_string(cache));
 
-	bvol->front_volume = ocf_cache_get_front_volume(cache);
+	priv_top->front_volume = ocf_cache_get_front_volume(cache);
 
-	return kcas_volume_create_exported_object(volume, dev_name, cache,
-			&kcas_cache_exp_obj_ops);
+	return kcas_create_exported_object(priv_top, priv_bottom->dsk, dev_name,
+			cache, &kcas_cache_exp_obj_ops);
 }
 
 int kcas_cache_destroy_exported_object(ocf_cache_t cache)
 {
-	ocf_volume_t volume = ocf_cache_get_volume(cache);
+	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
+	struct cas_priv_top *priv_top = &cache_priv->priv_top;
 
-	return kcas_volume_destroy_exported_object(volume);
+	return kcas_volume_destroy_exported_object(priv_top);
 }
 
-static int kcas_core_lock_exported_object(ocf_core_t core)
+static char *_get_disk_name(struct cas_exp_obj *exp_obj)
 {
-	int result;
-	struct bd_object *bvol = bd_object(
-			ocf_core_get_volume(core));
-
-	if (!bvol->expobj_valid)
-		return 0;
-
-	result = cas_exp_obj_lock(bvol->dsk);
-
-	if (-EBUSY == result) {
-		printk(KERN_WARNING "Stopping %s failed - device in use\n",
-			cas_exp_obj_get_gendisk(bvol->dsk)->disk_name);
-		return -KCAS_ERR_DEV_PENDING;
-	} else if (result) {
-		printk(KERN_WARNING "Stopping %s failed - device unavailable\n",
-			cas_exp_obj_get_gendisk(bvol->dsk)->disk_name);
-		return -OCF_ERR_CORE_NOT_AVAIL;
-	}
-
-	bvol->expobj_locked = true;
-
-	return 0;
-}
-
-
-static void kcas_core_unlock_exported_object(ocf_core_t core)
-{
-	struct bd_object *bvol = bd_object(ocf_core_get_volume(core));
-
-	if (bvol->expobj_locked) {
-		cas_exp_obj_unlock(bvol->dsk);
-		bvol->expobj_locked = false;
-	}
-}
-
-static void kcas_core_stop_exported_object(ocf_core_t core)
-{
-	struct bd_object *bvol = bd_object(
-			ocf_core_get_volume(core));
-	int ret;
-
-	if (bvol->expobj_valid) {
-		BUG_ON(!bvol->expobj_locked);
-
-		printk(KERN_INFO "Stopping device %s\n",
-			cas_exp_obj_get_gendisk(bvol->dsk)->disk_name);
-
-		ret = cas_exp_obj_destroy(bvol->dsk);
-		if (!ret) {
-			bvol->expobj_valid = false;
-			destroy_workqueue(bvol->expobj_wq);
-		}
-	}
-
-	if (bvol->expobj_locked) {
-		cas_exp_obj_unlock(bvol->dsk);
-		bvol->expobj_locked = false;
-	}
-}
-
-static void kcas_core_cleanup_exported_object(ocf_core_t core)
-{
-	struct bd_object *bvol = bd_object(ocf_core_get_volume(core));
-
-	cas_exp_obj_cleanup(bvol->dsk);
+	return cas_exp_obj_get_gendisk(exp_obj)->disk_name;
 }
 
 int kcas_cache_destroy_all_core_exported_objects(ocf_cache_t cache)
 {
+	struct cas_priv_top *priv_top;
 	ocf_core_t core;
 	int result = 0;
 
 	/* Try lock exported objects */
 	ocf_core_for_each(core, cache, true) {
-		result = kcas_core_lock_exported_object(core);
-		if (result)
+		priv_top = cas_get_priv_top(core);
+
+		if (!priv_top->expobj_valid)
+			continue;
+
+		result = cas_exp_obj_lock(priv_top->exp_obj);
+		if (-EBUSY == result) {
+			printk(KERN_WARNING
+				"Stopping %s failed - device in use\n",
+				_get_disk_name(priv_top->exp_obj));
+			result = -KCAS_ERR_DEV_PENDING;
 			break;
+		} else if (result) {
+			printk(KERN_WARNING
+				"Stopping %s failed - device unavailable\n",
+				_get_disk_name(priv_top->exp_obj));
+			result = -OCF_ERR_CORE_NOT_AVAIL;
+			break;
+		}
+
+		priv_top->expobj_locked = true;
 	}
+
 	if (result) {
 		/* Failure, unlock already locked exported objects */
-		ocf_core_for_each(core, cache, true)
-			kcas_core_unlock_exported_object(core);
+		ocf_core_for_each(core, cache, true) {
+			priv_top = cas_get_priv_top(core);
+			if (priv_top->expobj_locked) {
+				cas_exp_obj_unlock(priv_top->exp_obj);
+				priv_top->expobj_locked = false;
+			}
+		}
 		return result;
 	}
 
-	ocf_core_for_each(core, cache, true)
-		kcas_core_stop_exported_object(core);
-	ocf_core_for_each(core, cache, true)
-		kcas_core_cleanup_exported_object(core);
+	ocf_core_for_each(core, cache, true) {
+		priv_top = cas_get_priv_top(core);
+		if (priv_top->expobj_valid) {
+			printk(KERN_INFO "Stopping device %s\n",
+				_get_disk_name(priv_top->exp_obj));
+
+			result = cas_exp_obj_dismantle(priv_top->exp_obj);
+			if (!result) {
+				priv_top->expobj_valid = false;
+				destroy_workqueue(priv_top->expobj_wq);
+			}
+		}
+
+		if (priv_top->expobj_locked) {
+			cas_exp_obj_unlock(priv_top->exp_obj);
+			priv_top->expobj_locked = false;
+		}
+	}
+
+	ocf_core_for_each(core, cache, true) {
+		priv_top = cas_get_priv_top(core);
+		cas_exp_obj_destroy(priv_top->exp_obj);
+	}
 
 	return 0;
 }
