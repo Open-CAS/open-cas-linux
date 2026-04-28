@@ -21,10 +21,12 @@ else
 	SYSTEMD_DIR=/lib/systemd/system
 endif
 
-install: all
+install: install_files
+	$(SYSTEMCTL) daemon-reload
+
+install_files: all
 	install -m 755 -D opencas_exporter $(DESTDIR)/usr/bin/opencas_exporter
 	install -m 644 -D opencas_exporter.service $(DESTDIR)$(SYSTEMD_DIR)/opencas_exporter.service
-	$(SYSTEMCTL) daemon-reload
 
 uninstall:
 	-$(SYSTEMCTL) disable --now opencas_exporter

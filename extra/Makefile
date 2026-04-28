@@ -5,7 +5,7 @@
 
 DIRS := prometheus
 
-all clean install uninstall:
+all clean install install_files uninstall:
 	@for dir in $(DIRS); do \
 		$(MAKE) -C $$dir $@; \
 	done
