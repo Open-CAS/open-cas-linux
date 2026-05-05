@@ -790,7 +790,8 @@ error_out:
  */
 struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool by_id_path)
 {
-	int core_id, cache_id, ret;
+	unsigned int core_id;
+	int cache_id, ret;
 	struct cache_device *cache;
 	struct core_device core;
 	cache_id = info->cache_id;
@@ -824,9 +825,11 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 	cache->promotion_policy = info->info.promotion_policy;
 	cache->size = info->info.cache_line_size;
 
-	for (cache->core_count = 0; cache->core_count < info->info.core_count; ++cache->core_count) {
-		core_id = info->core_id[cache->core_count];
-
+	cache->core_count = 0;
+	for (core_id = 0; cache->core_count < info->info.core_count; core_id++) {
+		core_id = core_id_bitmap_next(info->core_id_bitmap, core_id);
+		if (core_id == OCF_CORE_NUM)
+			break;
 		ret = get_core_device(cache_id, core_id, &core, by_id_path);
 		if (0 != ret) {
 			break;
@@ -834,6 +837,7 @@ struct cache_device *get_cache_device(const struct kcas_cache_info *info, bool b
 			memcpy_s(&cache->cores[cache->core_count],
 				sizeof(cache->cores[cache->core_count]),
 				&core, sizeof(core));
+			++cache->core_count;
 		}
 	}
 

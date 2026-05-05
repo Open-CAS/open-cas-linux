@@ -776,7 +776,7 @@ void *stats_printout(void *ctx)
 int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 		 unsigned int stats_filters, unsigned int output_format, bool by_id_path)
 {
-	int ctrl_fd, i;
+	int ctrl_fd;
 	int ret = SUCCESS;
 	struct kcas_cache_info cache_info;
 
@@ -831,12 +831,7 @@ int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
 
 	/* Check if core exists in cache */
 	if (core_id != OCF_CORE_ID_INVALID) {
-		for (i = 0; i < cache_info.info.core_count; ++i) {
-			if (core_id == cache_info.core_id[i]) {
-				break;
-			}
-		}
-		if (i == cache_info.info.core_count) {
+		if (!core_id_bitmap_test(cache_info.core_id_bitmap, core_id)) {
 			cas_printf(LOG_ERR, "No such core device in cache.\n");
 			ret = FAILURE;
 			goto cleanup;

@@ -3552,12 +3552,13 @@ int cache_mngt_get_info(struct kcas_cache_info *info)
 	}
 
 	/* Collect cores IDs */
+	memset(info->core_id_bitmap, 0, sizeof(info->core_id_bitmap));
 	for (i = 0, j = 0; j < info->info.core_count &&
 			i < OCF_CORE_NUM; i++) {
 		if (get_core_by_id(cache, i, &core))
 			continue;
 
-		info->core_id[j] = i;
+		set_bit(i, (unsigned long *)info->core_id_bitmap);
 		j++;
 	}
 
