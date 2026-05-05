@@ -348,6 +348,7 @@ struct cas_exp_obj *cas_exp_obj_create(struct cas_disk *dsk,
 	}
 	exp_obj->owner = owner;
 	exp_obj->ops = ops;
+	exp_obj->private = priv;
 
 	result = _cas_init_tag_set(exp_obj);
 	if (result) {
@@ -375,8 +376,6 @@ struct cas_exp_obj *cas_exp_obj_create(struct cas_disk *dsk,
 	BUG_ON(queue->queuedata);
 	queue->queuedata = exp_obj;
 	exp_obj->queue = queue;
-
-	exp_obj->private = priv;
 
 	_cas_init_queues(exp_obj);
 
