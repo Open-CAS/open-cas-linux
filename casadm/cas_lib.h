@@ -26,6 +26,32 @@
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
 
+static inline bool core_id_bitmap_test(const uint64_t *bitmap, unsigned int id)
+{
+	return (bitmap[id / 64] >> (id % 64)) & 1;
+}
+
+/* Returns the next set bit at position >= start, or OCF_CORE_NUM if none.
+ * Skips empty 64-bit words to stay O(set bits), not O(OCF_CORE_NUM). */
+static inline unsigned int core_id_bitmap_next(const uint64_t *bitmap,
+		unsigned int start)
+{
+	unsigned int n_words = DIV_ROUND_UP_STATIC(OCF_CORE_NUM, 64);
+	unsigned int word_idx = start / 64;
+	uint64_t w;
+
+	if (word_idx >= n_words)
+		return OCF_CORE_NUM;
+
+	w = bitmap[word_idx] & (~(uint64_t)0 << (start % 64));
+	while (!w) {
+		if (++word_idx >= n_words)
+			return OCF_CORE_NUM;
+		w = bitmap[word_idx];
+	}
+	return word_idx * 64 + __builtin_ctzll(w);
+}
+
 #define FAILURE 1		/**< default non-zero exit code. */
 #define INTERRUPTED 2		/**< if command is interrupted */
 #define SUCCESS 0		/**< 0 exit code from majority of our functions \

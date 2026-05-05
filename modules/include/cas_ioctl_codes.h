@@ -21,6 +21,8 @@
 #include <linux/limits.h>
 #include <linux/ioctl.h>
 
+#define DIV_ROUND_UP_STATIC(n, d) (((n) + (d) - 1) / (d))
+
 /**
  * Max path, string size
  */
@@ -178,9 +180,10 @@ struct kcas_cache_info {
 	char cache_path_name[MAX_STR_LEN];
 
 	/**
-	 * IDs of cores associated with this cache.
+	 * Bitmap of core IDs associated with this cache
 	 */
-	uint16_t core_id[OCF_CORE_NUM];
+	uint64_t core_id_bitmap[DIV_ROUND_UP_STATIC(OCF_CORE_NUM,
+			8 * sizeof(uint64_t))];
 
 	struct ocf_cache_info info;
 
