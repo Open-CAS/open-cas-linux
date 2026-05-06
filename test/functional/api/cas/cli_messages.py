@@ -88,7 +88,7 @@ stop_cache_errors = [
 
 get_stats_ioclass_id_not_configured = [r"IO class \d+ is not configured\."]
 
-get_stats_ioclass_id_out_of_range = [r"Invalid IO class id, must be in the range 0-32\."]
+get_stats_ioclass_id_out_of_range = [r"Invalid IO class id, must be in the range 0-33\."]
 
 remove_multilevel_core = [
     r"Error while removing core device \d+ from cache instance \d+",
@@ -240,7 +240,7 @@ illegal_io_class_invalid_id = [
 ]
 
 illegal_io_class_invalid_id_number = [
-    r"Invalid id, must be in the range 0-32\.\n"
+    r"Invalid id, must be in the range 0-33\.\n"
     r"Cannot parse configuration file - error in line 2 in column 1 \(IO class id\)\."
 ]
 
