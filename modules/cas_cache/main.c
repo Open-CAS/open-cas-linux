@@ -7,12 +7,12 @@
 
 #include "cas_cache.h"
 #include "service_ui_netlink.h"
-#include "exp_obj.h"
-#include "disk.h"
 
 /* Layer information. */
 MODULE_AUTHOR("Intel(R) Corporation");
+MODULE_AUTHOR("Unvertical");
 MODULE_LICENSE("Dual BSD/GPL");
+MODULE_DESCRIPTION("Open CAS cache module");
 MODULE_VERSION(CAS_VERSION);
 
 u32 max_writeback_queue_size = 65536;
@@ -75,19 +75,11 @@ static int __init cas_init_module(void)
 		return -EINVAL;
 	}
 
-	result = cas_init_exp_objs();
-	if (result)
-		return result;
-
-	result = cas_init_disks();
-	if (result)
-		goto error_init_disks;
-
 	result = cas_initialize_context();
 	if (result) {
 		printk(KERN_ERR OCF_PREFIX_SHORT
 				"Cannot initialize cache library\n");
-		goto error_init_context;
+		return result;
 	}
 
 	result = cas_ctrl_device_init();
@@ -113,10 +105,6 @@ error_init_netlink:
 	cas_ctrl_device_deinit();
 error_init_device:
 	cas_cleanup_context();
-error_init_context:
-	cas_deinit_disks();
-error_init_disks:
-	cas_deinit_exp_objs();
 
 	return result;
 }
@@ -128,8 +116,6 @@ static void __exit cas_exit_module(void)
 	cas_nl_deinit();
 	cas_ctrl_device_deinit();
 	cas_cleanup_context();
-	cas_deinit_disks();
-	cas_deinit_exp_objs();
 }
 
 module_exit(cas_exit_module);

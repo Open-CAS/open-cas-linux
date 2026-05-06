@@ -639,6 +639,33 @@ def detach_core(cache_id: int, core_id: int) -> Output:
     return output
 
 
+def disconnect_cache(
+    cache_id: int, pass_through: bool = False, no_flush: bool = False
+) -> Output:
+    output = TestRun.executor.run(
+        script_disconnect_cache_cmd(str(cache_id), pass_through=pass_through, no_flush=no_flush)
+    )
+    if output.exit_code != 0:
+        raise CmdException("Failed to disconnect cache.", output)
+    return output
+
+
+def connect_cache(cache_dev: Device) -> Cache:
+    from api.cas.casadm_parser import get_caches
+
+    caches_before = get_caches()
+    output = TestRun.executor.run(script_connect_cache_cmd(cache_dev.path))
+    if output.exit_code != 0:
+        raise CmdException("Failed to connect cache.", output)
+
+    caches_after = get_caches()
+    before_ids = {c.cache_id for c in caches_before}
+    new_cache = next(c for c in caches_after if c.cache_id not in before_ids)
+    cache = Cache(cache_id=new_cache.cache_id, device=new_cache.cache_device)
+    TestRun.dut.cache_list.append(cache)
+    return cache
+
+
 def remove_core_with_script_command(cache_id: int, core_id: int, no_flush: bool = False) -> Output:
     output = TestRun.executor.run(script_remove_core_cmd(str(cache_id), str(core_id), no_flush))
     if output.exit_code != 0:

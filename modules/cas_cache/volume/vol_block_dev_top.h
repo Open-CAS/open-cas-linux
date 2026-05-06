@@ -10,7 +10,7 @@
 
 #include "ocf/ocf.h"
 #include "../linux_kernel_version.h"
-#include "../exp_obj.h"
+#include "../../cas_bd/exp_obj.h"
 
 struct cas_priv_top {
 	struct cas_exp_obj *exp_obj;
@@ -35,6 +35,8 @@ static inline struct cas_priv_top *cas_get_priv_top(ocf_core_t core)
 
 int kcas_core_create_exported_object(ocf_core_t core);
 int kcas_core_destroy_exported_object(ocf_core_t core);
+int kcas_core_deposit_exported_object(ocf_core_t core);
+int kcas_core_claim_exported_object(ocf_core_t core);
 
 int kcas_cache_destroy_all_core_exported_objects(ocf_cache_t cache);
 

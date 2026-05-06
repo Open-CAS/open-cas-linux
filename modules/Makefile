@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2012-2022 Intel Corporation
 # Copyright(c) 2025 Huawei Technologies
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 # If $(M) is defined, we've been invoked from the
@@ -10,6 +11,7 @@ ifneq ($(M),)
 include $(M)/config.mk
 
 obj-y += cas_cache/
+obj-y += cas_bd/
 
 # Otherwise we were called directly from the command
 # line; invoke the kernel build system.
@@ -29,6 +31,7 @@ KERNEL_DIR ?= "/lib/modules/$(KERNEL_VERSION)/build"
 MODULES_DIR=/lib/modules/$(KERNEL_VERSION)/extra/block/opencas
 
 CACHE_MODULE = cas_cache
+DISK_MODULE = cas_bd
 
 DEPMOD:=$(shell which depmod)
 RMMOD :=$(shell which rmmod)
@@ -62,12 +65,15 @@ install: install_files
 install_files:
 	@echo "Installing Open-CAS modules"
 	@install -m 644 -D cas_cache/$(CACHE_MODULE).ko $(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko
+	@install -m 644 -D cas_bd/$(DISK_MODULE).ko $(DESTDIR)$(MODULES_DIR)/$(DISK_MODULE).ko
 
 uninstall:
 	@echo "Uninstalling Open-CAS modules"
 	$(call remove-module,$(CACHE_MODULE))
+	$(call remove-module,$(DISK_MODULE))
 
 	$(call remove-file,$(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko)
+	$(call remove-file,$(DESTDIR)$(MODULES_DIR)/$(DISK_MODULE).ko)
 	$(call remove-directory,$(DESTDIR)$(MODULES_DIR))
 
 	@$(DEPMOD)

@@ -1159,6 +1159,133 @@ int detach_cache(uint16_t cache_id)
 	return SUCCESS;
 }
 
+int disconnect_cache(uint16_t cache_id, int pass_through, int no_flush)
+{
+	int fd = 0;
+	struct kcas_stop_cache cmd = {};
+	int status;
+
+	if (no_flush && pass_through) {
+		cas_printf(LOG_ERR, "Pass-through mode requires cache flush "
+			"and purge to avoid stale data on reconnect. "
+			"--no-flush is not allowed with --pass-through.\n");
+		return FAILURE;
+	}
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	cmd.cache_id = cache_id;
+	cmd.pass_through = pass_through;
+	cmd.flush_data = !no_flush;
+
+	status = run_ioctl_interruptible_retry(
+			fd,
+			KCAS_IOCTL_DISCONNECT_CACHE,
+			&cmd,
+			"Disconnecting cache",
+			cache_id,
+			OCF_CORE_ID_INVALID);
+	close(fd);
+
+	if (status < 0) {
+		if (OCF_ERR_FLUSHING_INTERRUPTED == cmd.ext_err_code) {
+			cas_printf(LOG_ERR,
+				"You have interrupted disconnecting of cache %d. "
+				"CAS continues to operate normally.\n",
+				cache_id);
+			return INTERRUPTED;
+		} else if (OCF_ERR_WRITE_CACHE == cmd.ext_err_code) {
+			cas_printf(LOG_ERR,
+					"Disconnected cache %d with errors\n",
+					cache_id);
+			print_err(cmd.ext_err_code);
+			return FAILURE;
+		} else {
+			cas_printf(LOG_ERR,
+					"Error while disconnecting cache %d\n",
+					cache_id);
+			print_err(cmd.ext_err_code);
+			return FAILURE;
+		}
+	}
+
+	cas_printf(LOG_INFO, "Successfully disconnected cache %hu\n",
+			cache_id);
+
+	return SUCCESS;
+}
+
+int connect_cache(const char *cache_device)
+{
+	int fd = 0;
+	struct kcas_start_cache cmd = {};
+	int status;
+	double min_free_ram_gb;
+
+	fd = open_ctrl_device();
+	if (fd == -1)
+		return FAILURE;
+
+	status = _verify_and_parse_volume_path(
+			cmd.cache_path_name,
+			sizeof(cmd.cache_path_name),
+			cache_device,
+			MAX_STR_LEN);
+	if (status != SUCCESS) {
+		close(fd);
+		return FAILURE;
+	}
+
+	cmd.cache_id = OCF_CACHE_ID_INVALID;
+	cmd.init_cache = CACHE_INIT_LOAD;
+	cmd.caching_mode = ocf_cache_mode_none;
+	cmd.line_size = ocf_cache_line_size_none;
+	cmd.force = 0;
+
+	status = run_ioctl_interruptible_retry(
+			fd,
+			KCAS_IOCTL_CONNECT_CACHE,
+			&cmd,
+			"Connecting cache",
+			cmd.cache_id,
+			OCF_CORE_ID_INVALID);
+	if (status < 0) {
+		close(fd);
+
+		if (cmd.ext_err_code == OCF_ERR_NO_FREE_RAM) {
+			min_free_ram_gb = cmd.min_free_ram;
+			min_free_ram_gb /= GiB;
+
+			cas_printf(LOG_ERR, "Not enough free RAM.\n"
+					"You need at least %0.2fGB to "
+					"connect cache.\n",
+					min_free_ram_gb);
+			return FAILURE;
+		} else {
+			cas_printf(LOG_ERR, "Error connecting cache on %s\n",
+					cache_device);
+			if (FAILURE == check_cache_already_added(cache_device)) {
+				cas_printf(LOG_ERR,
+					"Cache device '%s' is already used as cache.\n",
+					cache_device);
+			} else {
+				print_err(cmd.ext_err_code);
+			}
+			return FAILURE;
+		}
+	}
+
+	check_cache_state_incomplete(cmd.cache_id, fd);
+	close(fd);
+
+	cas_printf(LOG_INFO, "Successfully connected cache %hu\n",
+			cmd.cache_id);
+
+	return SUCCESS;
+}
+
 int stop_cache(uint16_t cache_id, int flush)
 {
 	int fd = 0;

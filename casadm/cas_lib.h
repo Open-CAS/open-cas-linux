@@ -149,6 +149,9 @@ int stop_cache(uint16_t cache_id, int flush);
 int detach_cache(uint16_t cache_id);
 int attach_cache(uint16_t cache_id, const char *cache_device, int force);
 
+int disconnect_cache(uint16_t cache_id, int pass_through, int no_flush);
+int connect_cache(const char *cache_device);
+
 #ifdef WI_AVAILABLE
 #define CAS_CLI_HELP_START_CACHE_MODES "wt|wb|wa|pt|wi|wo"
 #define CAS_CLI_HELP_SET_CACHE_MODES "wt|wb|wa|pt|wi|wo"

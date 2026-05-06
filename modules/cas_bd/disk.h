@@ -1,35 +1,14 @@
 /*
-* Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024 Huawei Technologies
-* Copyright(c) 2026 Unvertical
-* SPDX-License-Identifier: BSD-3-Clause
-*/
-#ifndef __CASDISK_DISK_H__
-#define __CASDISK_DISK_H__
+ * Copyright(c) 2012-2022 Intel Corporation
+ * Copyright(c) 2024 Huawei Technologies
+ * Copyright(c) 2026 Unvertical
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 
-#include <linux/idr.h>
-#include "generated_defines.h"
+#ifndef __CAS_BD_DISK_H__
+#define __CAS_BD_DISK_H__
 
-struct cas_disk {
-	struct list_head list;
-
-	char *path;
-	cas_bdev_handle_t bdev_handle;
-
-	int refcount;
-	bool hidden;
-
-	int gd_flags;
-	int gd_minors;
-};
-
-int __init cas_init_disks(void);
-
-void cas_deinit_disks(void);
-
-int cas_disk_get_gd_flags(struct cas_disk *dsk);
-
-int cas_disk_hide_parts(struct cas_disk *dsk);
+struct cas_disk;
 
 /**
  * @brief Open block device

@@ -1,9 +1,10 @@
 /*
-* Copyright(c) 2012-2022 Intel Corporation
-* Copyright(c) 2024-2025 Huawei Technologies
-* Copyright(c) 2026 Unvertical
-* SPDX-License-Identifier: BSD-3-Clause
-*/
+ * Copyright(c) 2012-2022 Intel Corporation
+ * Copyright(c) 2024-2025 Huawei Technologies
+ * Copyright(c) 2026 Unvertical
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 #include <linux/module.h>
 #include <linux/blkdev.h>
 #include <linux/slab.h>
@@ -12,8 +13,8 @@
 #include <linux/fs.h>
 #include <linux/vmalloc.h>
 
-#include "exp_obj.h"
-#include "disk.h"
+#include "exp_obj_priv.h"
+#include "disk_priv.h"
 #include "debug.h"
 
 #define CAS_DEV_MINORS 16
@@ -75,6 +76,25 @@ void cas_deinit_exp_objs(void)
 	unregister_blkdev(exp_obj_global.disk_major, "cas");
 }
 
+static void _cas_exp_obj_submit_bio_default(struct cas_exp_obj *exp_obj,
+		struct bio *bio)
+{
+	exp_obj->ops->submit_bio(exp_obj, bio);
+}
+
+static void _cas_exp_obj_submit_bio_pt(struct cas_exp_obj *exp_obj,
+		struct bio *bio)
+{
+	CAS_BIO_SET_DEV(bio, cas_disk_get_blkdev(exp_obj->dsk));
+	cas_submit_bio_noacct(bio);
+}
+
+static void _cas_exp_obj_submit_bio_error(struct cas_exp_obj *exp_obj,
+		struct bio *bio)
+{
+	bio_io_error(bio);
+}
+
 static CAS_MAKE_REQ_RET_TYPE _cas_exp_obj_submit_bio(struct bio *bio)
 {
 	struct cas_exp_obj *exp_obj;
@@ -82,7 +102,7 @@ static CAS_MAKE_REQ_RET_TYPE _cas_exp_obj_submit_bio(struct bio *bio)
 	BUG_ON(!bio);
 	exp_obj = CAS_BIO_GET_GENDISK(bio)->private_data;
 
-	exp_obj->ops->submit_bio(exp_obj, bio);
+	READ_ONCE(exp_obj->submit_bio)(exp_obj, bio);
 
 	CAS_KRETURN(0);
 }
@@ -349,6 +369,7 @@ struct cas_exp_obj *cas_exp_obj_create(struct cas_disk *dsk,
 	exp_obj->owner = owner;
 	exp_obj->ops = ops;
 	exp_obj->private = priv;
+	exp_obj->submit_bio = _cas_exp_obj_submit_bio_default;
 
 	result = _cas_init_tag_set(exp_obj);
 	if (result) {
@@ -432,6 +453,7 @@ error_hide_parts:
 	return ERR_PTR(result);
 
 }
+EXPORT_SYMBOL(cas_exp_obj_create);
 
 int cas_exp_obj_dismantle(struct cas_exp_obj *exp_obj)
 {
@@ -450,6 +472,7 @@ int cas_exp_obj_dismantle(struct cas_exp_obj *exp_obj)
 
 	return 0;
 }
+EXPORT_SYMBOL(cas_exp_obj_dismantle);
 
 void cas_exp_obj_destroy(struct cas_exp_obj *exp_obj)
 {
@@ -465,6 +488,7 @@ void cas_exp_obj_destroy(struct cas_exp_obj *exp_obj)
 
 	module_put(owner);
 }
+EXPORT_SYMBOL(cas_exp_obj_destroy);
 
 int cas_exp_obj_lock(struct cas_exp_obj *exp_obj)
 {
@@ -482,6 +506,7 @@ int cas_exp_obj_lock(struct cas_exp_obj *exp_obj)
 	mutex_unlock(&exp_obj->openers_lock);
 	return result;
 }
+EXPORT_SYMBOL(cas_exp_obj_lock);
 
 int cas_exp_obj_unlock(struct cas_exp_obj *exp_obj)
 {
@@ -493,6 +518,7 @@ int cas_exp_obj_unlock(struct cas_exp_obj *exp_obj)
 
 	return 0;
 }
+EXPORT_SYMBOL(cas_exp_obj_unlock);
 
 void cas_exp_obj_set_priv(struct cas_exp_obj *exp_obj, void *priv)
 {
@@ -500,6 +526,7 @@ void cas_exp_obj_set_priv(struct cas_exp_obj *exp_obj, void *priv)
 
 	exp_obj->private = priv;
 }
+EXPORT_SYMBOL(cas_exp_obj_set_priv);
 
 void *cas_exp_obj_get_priv(struct cas_exp_obj *exp_obj)
 {
@@ -507,6 +534,57 @@ void *cas_exp_obj_get_priv(struct cas_exp_obj *exp_obj)
 
 	return exp_obj->private;
 }
+EXPORT_SYMBOL(cas_exp_obj_get_priv);
+
+void cas_exp_obj_freeze_queue(struct cas_exp_obj *exp_obj)
+{
+	BUG_ON(!exp_obj);
+
+	cas_blk_mq_freeze_queue(exp_obj->queue);
+	exp_obj->frozen = true;
+}
+EXPORT_SYMBOL(cas_exp_obj_freeze_queue);
+
+void cas_exp_obj_unfreeze_queue(struct cas_exp_obj *exp_obj)
+{
+	BUG_ON(!exp_obj);
+
+	exp_obj->frozen = false;
+	cas_blk_mq_unfreeze_queue(exp_obj->queue);
+}
+EXPORT_SYMBOL(cas_exp_obj_unfreeze_queue);
+
+bool cas_exp_obj_is_frozen(struct cas_exp_obj *exp_obj)
+{
+	BUG_ON(!exp_obj);
+
+	return exp_obj->frozen;
+}
+EXPORT_SYMBOL(cas_exp_obj_is_frozen);
+
+void cas_exp_obj_set_passthrough(struct cas_exp_obj *exp_obj, bool pt)
+{
+	BUG_ON(!exp_obj);
+
+	if (pt) {
+		WRITE_ONCE(exp_obj->submit_bio,
+				_cas_exp_obj_submit_bio_pt);
+		exp_obj->passthrough = true;
+	} else {
+		WRITE_ONCE(exp_obj->submit_bio,
+				_cas_exp_obj_submit_bio_default);
+		exp_obj->passthrough = false;
+	}
+}
+EXPORT_SYMBOL(cas_exp_obj_set_passthrough);
+
+bool cas_exp_obj_is_passthrough(struct cas_exp_obj *exp_obj)
+{
+	BUG_ON(!exp_obj);
+
+	return exp_obj->passthrough;
+}
+EXPORT_SYMBOL(cas_exp_obj_is_passthrough);
 
 struct request_queue *cas_exp_obj_get_queue(struct cas_exp_obj *exp_obj)
 {
@@ -514,10 +592,19 @@ struct request_queue *cas_exp_obj_get_queue(struct cas_exp_obj *exp_obj)
 
 	return exp_obj->queue;
 }
+EXPORT_SYMBOL(cas_exp_obj_get_queue);
 
 struct gendisk *cas_exp_obj_get_gendisk(struct cas_exp_obj *exp_obj)
 {
 	BUG_ON(!exp_obj);
 
 	return exp_obj->gd;
+}
+EXPORT_SYMBOL(cas_exp_obj_get_gendisk);
+
+void cas_exp_obj_set_error(struct cas_exp_obj *exp_obj)
+{
+	BUG_ON(!exp_obj);
+
+	WRITE_ONCE(exp_obj->submit_bio, _cas_exp_obj_submit_bio_error);
 }

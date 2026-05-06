@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -78,3 +79,78 @@ def test_purge(purge_target):
         if cache.get_statistics().usage_stats.occupancy.get_value() != 0:
             TestRun.fail(f"{cache.get_statistics().usage_stats.occupancy.get_value()}")
             TestRun.fail(f"Purge {purge_target} should invalidate all cache lines!")
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_disconnect_no_script():
+    """
+        title: Disconnect command requires --script
+        description: Verify that disconnect-cache fails without --script switch
+        pass_criteria:
+          - disconnect-cache without --script is rejected
+          - cache remains operational after the rejected command
+    """
+    with TestRun.step("Prepare devices"):
+        cache_device = TestRun.disks["cache"]
+        core_device = TestRun.disks["core"]
+
+        cache_device.create_partitions([Size(500, Unit.MebiByte)])
+        core_device.create_partitions([Size(500, Unit.MebiByte)])
+
+        cache_device = cache_device.partitions[0]
+        core_device = core_device.partitions[0]
+
+    with TestRun.step("Start cache and add core"):
+        cache = casadm.start_cache(cache_device, force=True)
+        casadm.add_core(cache, core_device)
+
+    with TestRun.step("Try to call disconnect-cache without `--script` switch"):
+        TestRun.executor.run_expect_fail(
+            f"casadm --disconnect-cache --cache-id {cache.cache_id}"
+        )
+
+    with TestRun.step("Verify cache is still running"):
+        from api.cas.casadm_parser import get_caches
+        if not any(c.cache_id == cache.cache_id for c in get_caches()):
+            TestRun.fail("Cache should remain running after rejected disconnect command.")
+
+    with TestRun.step("Stop cache"):
+        cache.stop()
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_connect_no_script():
+    """
+        title: Connect command requires --script
+        description: Verify that connect-cache fails without --script switch
+        pass_criteria:
+          - connect-cache without --script is rejected
+          - cache can still be connected and stopped properly afterwards
+    """
+    with TestRun.step("Prepare devices"):
+        cache_device = TestRun.disks["cache"]
+        core_device = TestRun.disks["core"]
+
+        cache_device.create_partitions([Size(500, Unit.MebiByte)])
+        core_device.create_partitions([Size(500, Unit.MebiByte)])
+
+        cache_device = cache_device.partitions[0]
+        core_device = core_device.partitions[0]
+
+    with TestRun.step("Start cache and add core"):
+        cache = casadm.start_cache(cache_device, force=True)
+        casadm.add_core(cache, core_device)
+
+    with TestRun.step("Disconnect cache"):
+        casadm.disconnect_cache(cache.cache_id)
+
+    with TestRun.step("Try to call connect-cache without `--script` switch"):
+        TestRun.executor.run_expect_fail(
+            f"casadm --connect-cache --cache-device {cache_device.path}"
+        )
+
+    with TestRun.step("Connect cache properly and stop it"):
+        cache = casadm.connect_cache(cache_device)
+        cache.stop()
