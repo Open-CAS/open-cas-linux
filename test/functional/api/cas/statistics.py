@@ -191,6 +191,7 @@ class CacheConfigStats:
         self.write_policy = stats_dict["Write Policy"]
         self.cleaning_policy = stats_dict["Cleaning Policy"]
         self.promotion_policy = stats_dict["Promotion Policy"]
+        self.prefetch_policy = stats_dict["Prefetch Policy"]
         self.cache_line_size = parse_value(
             value=stats_dict["Cache line size [KiB]"], unit_type=UnitType.kibibyte
         )
@@ -213,6 +214,7 @@ class CacheConfigStats:
         del stats_dict["Write Policy"]
         del stats_dict["Cleaning Policy"]
         del stats_dict["Promotion Policy"]
+        del stats_dict["Prefetch Policy"]
         del stats_dict["Cache line size [KiB]"]
         del stats_dict[footprint_key]
         del stats_dict["Dirty for [s]"]
@@ -231,6 +233,7 @@ class CacheConfigStats:
             f"Write Policy: {self.write_policy}\n"
             f"Cleaning Policy: {self.cleaning_policy}\n"
             f"Promotion Policy: {self.promotion_policy}\n"
+            f"Prefetch Policy: {self.prefetch_policy}\n"
             f"Cache line size: {self.cache_line_size}\n"
             f"Metadata memory footprint: {self.metadata_memory_footprint}\n"
             f"Dirty for: {self.dirty_for}\n"
@@ -250,6 +253,7 @@ class CacheConfigStats:
             and self.write_policy == other.write_policy
             and self.cleaning_policy == other.cleaning_policy
             and self.promotion_policy == other.promotion_policy
+            and self.prefetch_policy == other.prefetch_policy
             and self.cache_line_size == other.cache_line_size
             and self.metadata_memory_footprint == other.metadata_memory_footprint
             and self.dirty_for == other.dirty_for
@@ -474,6 +478,15 @@ class RequestStats:
         self.requests_serviced = parse_value(
             value=stats_dict[f"Serviced requests {unit}"], unit_type=unit
         )
+        self.prefetch_readahead = parse_value(
+            value=stats_dict[f"Prefetch: readahead {unit}"], unit_type=unit
+        )
+        self.cleaner = parse_value(
+            value=stats_dict[f"Cleaner {unit}"], unit_type=unit
+        )
+        self.requests_user = parse_value(
+            value=stats_dict[f"User requests {unit}"], unit_type=unit
+        )
         self.requests_total = parse_value(
             value=stats_dict[f"Total requests {unit}"], unit_type=unit
         )
@@ -488,6 +501,9 @@ class RequestStats:
             del stats_dict[f"Pass-Through reads {unit}"]
             del stats_dict[f"Pass-Through writes {unit}"]
             del stats_dict[f"Serviced requests {unit}"]
+            del stats_dict[f"Prefetch: readahead {unit}"]
+            del stats_dict[f"Cleaner {unit}"]
+            del stats_dict[f"User requests {unit}"]
             del stats_dict[f"Total requests {unit}"]
 
     def __str__(self):
@@ -498,6 +514,9 @@ class RequestStats:
             f"Pass-through reads: {self.pass_through_reads}\n"
             f"Pass-through writes: {self.pass_through_writes}\n"
             f"Serviced requests: {self.requests_serviced}\n"
+            f"Prefetch readahead: {self.prefetch_readahead}\n"
+            f"Cleaner: {self.cleaner}\n"
+            f"User requests: {self.requests_user}\n"
             f"Total requests: {self.requests_total}\n"
         )
 
@@ -510,6 +529,9 @@ class RequestStats:
             and self.pass_through_reads == other.pass_through_reads
             and self.pass_through_writes == other.pass_through_writes
             and self.requests_serviced == other.requests_serviced
+            and self.prefetch_readahead == other.prefetch_readahead
+            and self.cleaner == other.cleaner
+            and self.requests_user == other.requests_user
             and self.requests_total == other.requests_total
         )
 
@@ -522,6 +544,9 @@ class RequestStats:
         stats.pass_through_reads = self.pass_through_reads + other.pass_through_reads
         stats.pass_through_writes = self.pass_through_writes + other.pass_through_writes
         stats.requests_serviced = self.requests_serviced + other.requests_serviced
+        stats.prefetch_readahead = self.prefetch_readahead + other.prefetch_readahead
+        stats.cleaner = self.cleaner + other.cleaner
+        stats.requests_user = self.requests_user + other.requests_user
         stats.requests_total = self.requests_total + other.requests_total
         return stats
 
@@ -544,6 +569,9 @@ class RequestStats:
                 f"Pass-Through reads {unit}" : 0,
                 f"Pass-Through writes {unit}" : 0,
                 f"Serviced requests {unit}" : 0,
+                f"Prefetch: readahead {unit}" : 0,
+                f"Cleaner {unit}" : 0,
+                f"User requests {unit}" : 0,
                 f"Total requests {unit}" : 0,
                 })
         return cls(stats_dict, percentage_val)
@@ -613,11 +641,29 @@ class BlockStats:
             device="exported object",
         )
 
+        unit = UnitType.percentage if percentage_val else UnitType.block_4k
+        self.prefetch_core_reads_readahead = parse_value(
+            value=stats_dict[f"Prefetch core reads: readahead {unit}"], unit_type=unit
+        )
+        self.prefetch_cache_writes_readahead = parse_value(
+            value=stats_dict[f"Prefetch cache writes: readahead {unit}"], unit_type=unit
+        )
+        self.cleaner_cache_reads = parse_value(
+            value=stats_dict[f"Cleaner cache reads {unit}"], unit_type=unit
+        )
+        self.cleaner_core_writes = parse_value(
+            value=stats_dict[f"Cleaner core writes {unit}"], unit_type=unit
+        )
+
         for unit in [UnitType.percentage, UnitType.block_4k]:
             for device in ["core", "cache", "exported object"]:
                 del stats_dict[f"Reads from {device} {unit}"]
                 del stats_dict[f"Writes to {device} {unit}"]
                 del stats_dict[f"Total to/from {device} {unit}"]
+            del stats_dict[f"Prefetch core reads: readahead {unit}"]
+            del stats_dict[f"Prefetch cache writes: readahead {unit}"]
+            del stats_dict[f"Cleaner cache reads {unit}"]
+            del stats_dict[f"Cleaner core writes {unit}"]
 
     def __str__(self):
         return (
@@ -625,13 +671,23 @@ class BlockStats:
             f"Core(s):\n{self.core}"
             f"Cache:\n{self.cache}"
             f"Exported object(s):\n{self.exp_obj}"
+            f"Prefetch core reads (readahead): {self.prefetch_core_reads_readahead}\n"
+            f"Prefetch cache writes (readahead): {self.prefetch_cache_writes_readahead}\n"
+            f"Cleaner cache reads: {self.cleaner_cache_reads}\n"
+            f"Cleaner core writes: {self.cleaner_core_writes}\n"
         )
 
     def __eq__(self, other):
         if not other:
             return False
         return (
-            self.core == other.core and self.cache == other.cache and self.exp_obj == other.exp_obj
+            self.core == other.core
+            and self.cache == other.cache
+            and self.exp_obj == other.exp_obj
+            and self.prefetch_core_reads_readahead == other.prefetch_core_reads_readahead
+            and self.prefetch_cache_writes_readahead == other.prefetch_cache_writes_readahead
+            and self.cleaner_cache_reads == other.cleaner_cache_reads
+            and self.cleaner_core_writes == other.cleaner_core_writes
         )
 
     def __add__(self, other):
@@ -641,6 +697,14 @@ class BlockStats:
         stats.core = self.core + other.core
         stats.cache = self.cache + other.cache
         stats.exp_obj = self.exp_obj + other.exp_obj
+        stats.prefetch_core_reads_readahead = (
+            self.prefetch_core_reads_readahead + other.prefetch_core_reads_readahead
+        )
+        stats.prefetch_cache_writes_readahead = (
+            self.prefetch_cache_writes_readahead + other.prefetch_cache_writes_readahead
+        )
+        stats.cleaner_cache_reads = self.cleaner_cache_reads + other.cleaner_cache_reads
+        stats.cleaner_core_writes = self.cleaner_core_writes + other.cleaner_core_writes
         return stats
 
     def __iter__(self):
@@ -656,6 +720,12 @@ class BlockStats:
                     f"Writes to {device} {unit}" : 0,
                     f"Total to/from {device} {unit}" : 0,
                     })
+            stats_dict.update({
+                f"Prefetch core reads: readahead {unit}" : 0,
+                f"Prefetch cache writes: readahead {unit}" : 0,
+                f"Cleaner cache reads {unit}" : 0,
+                f"Cleaner core writes {unit}" : 0,
+                })
         return cls(stats_dict, percentage_val)
 
 

@@ -71,6 +71,12 @@ request_stats = [
     "Pass-Through writes [%]",
     "Serviced requests [Requests]",
     "Serviced requests [%]",
+    "Prefetch: readahead [Requests]",
+    "Prefetch: readahead [%]",
+    "Cleaner [Requests]",
+    "Cleaner [%]",
+    "User requests [Requests]",
+    "User requests [%]",
     "Total requests [Requests]",
     "Total requests [%]"
 ]
@@ -93,7 +99,15 @@ block_stats = [
     "Writes to exported object [4KiB Blocks]",
     "Writes to exported object [%]",
     "Total to/from exported object [4KiB Blocks]",
-    "Total to/from exported object [%]"
+    "Total to/from exported object [%]",
+    "Prefetch core reads: readahead [4KiB Blocks]",
+    "Prefetch core reads: readahead [%]",
+    "Prefetch cache writes: readahead [4KiB Blocks]",
+    "Prefetch cache writes: readahead [%]",
+    "Cleaner cache reads [4KiB Blocks]",
+    "Cleaner cache reads [%]",
+    "Cleaner core writes [4KiB Blocks]",
+    "Cleaner core writes [%]"
 ]
 
 error_stats = [

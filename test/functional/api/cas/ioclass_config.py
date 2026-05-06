@@ -20,7 +20,7 @@ from test_tools.os_tools import get_kernel_version
 
 default_config_file_path = TestRun.TEST_RUN_DATA_PATH + "/opencas_ioclass.conf"
 
-MAX_IO_CLASS_ID = 32
+MAX_IO_CLASS_ID = 33
 MAX_IO_CLASS_PRIORITY = 255
 DEFAULT_IO_CLASS_ID = 0
 DEFAULT_IO_CLASS_PRIORITY = 255
