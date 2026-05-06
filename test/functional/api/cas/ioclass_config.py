@@ -25,6 +25,8 @@ MAX_IO_CLASS_PRIORITY = 255
 DEFAULT_IO_CLASS_ID = 0
 DEFAULT_IO_CLASS_PRIORITY = 255
 DEFAULT_IO_CLASS_RULE = "unclassified"
+PREFETCH_IO_CLASS_ID = 33
+PREFETCH_IO_CLASS_RULE = "prefetch"
 MAX_CLASSIFICATION_DELAY = timedelta(seconds=6)
 IO_CLASS_CONFIG_HEADER = "IO class id,IO class name,Eviction priority,Allocation"
 
@@ -118,6 +120,10 @@ class IoClass:
         return IoClass(DEFAULT_IO_CLASS_ID, DEFAULT_IO_CLASS_RULE, priority, allocation)
 
     @staticmethod
+    def prefetch(priority=DEFAULT_IO_CLASS_PRIORITY, allocation="1.00"):
+        return IoClass(PREFETCH_IO_CLASS_ID, PREFETCH_IO_CLASS_RULE, priority, allocation)
+
+    @staticmethod
     def default_header_dict():
         return {
             "id": "IO class id",
@@ -140,9 +146,13 @@ class IoClass:
             IoClass.default(
                 priority=random.randint(0, max_priority),
                 allocation=f"{random.randint(0, 100) / 100:0.2f}",
-            )
+            ),
+            IoClass.prefetch(
+                priority=random.randint(0, max_priority),
+                allocation=f"{random.randint(0, 100) / 100:0.2f}",
+            ),
         ]
-        for i in range(1, count):
+        for i in range(1, count - 1):
             random_list.append(
                 IoClass(
                     i,
