@@ -479,3 +479,21 @@ def script_remove_core_cmd(cache_id: str, core_id: str, no_flush: bool = False) 
     if no_flush:
         command += " --no-flush"
     return casadm_bin + command
+
+
+def script_disconnect_cache_cmd(
+    cache_id: str, pass_through: bool = False, no_flush: bool = False
+) -> str:
+    command = " --script --disconnect-cache"
+    command += " --cache-id " + cache_id
+    if pass_through:
+        command += " --pass-through"
+    if no_flush:
+        command += " --no-flush"
+    return casadm_bin + command
+
+
+def script_connect_cache_cmd(cache_dev: str) -> str:
+    command = " --script --connect-cache"
+    command += " --cache-device " + cache_dev
+    return casadm_bin + command
