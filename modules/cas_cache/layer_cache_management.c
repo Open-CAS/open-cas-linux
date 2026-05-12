@@ -3471,24 +3471,38 @@ static void _cache_mngt_deposit_exp_objs(ocf_cache_t cache)
 		kcas_core_deposit_exported_object(core);
 }
 
-static void _cache_mngt_wait_for_io_finish(ocf_cache_t cache)
+static void _cache_mngt_cache_drain_complete(ocf_cache_t cache, void *priv,
+		int error)
 {
-	struct cache_priv *cache_priv = ocf_cache_get_priv(cache);
-	uint32_t cpus_no = num_online_cpus();
-	uint32_t i;
-	bool pending;
+	struct _cache_mngt_async_context *context = priv;
+	int result;
 
-	do {
-		pending = false;
-		for (i = 0; i < cpus_no; i++) {
-			if (ocf_queue_pending_io(cache_priv->io_queues[i])) {
-				pending = true;
-				break;
-			}
-		}
-		if (pending)
-			msleep(20);
-	} while (pending);
+	result = _cache_mngt_async_callee_set_result(context, error);
+
+	if (result == -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
+}
+
+static int _cache_mngt_cache_drain_sync(ocf_cache_t cache)
+{
+	int result;
+	struct _cache_mngt_async_context *context;
+
+	context = kmalloc(sizeof(*context), GFP_KERNEL);
+	if (!context)
+		return -ENOMEM;
+
+	_cache_mngt_async_context_init(context);
+
+	ocf_mngt_cache_drain(cache, _cache_mngt_cache_drain_complete, context);
+	result = wait_for_completion_interruptible(&context->cmpl);
+
+	result = _cache_mngt_async_caller_set_result(context, result);
+
+	if (result != -KCAS_ERR_WAITING_INTERRUPTED)
+		kfree(context);
+
+	return result;
 }
 
 int cache_mngt_disconnect_cache(const char *cache_name, size_t name_len,
@@ -3545,7 +3559,9 @@ int cache_mngt_disconnect_cache(const char *cache_name, size_t name_len,
 		_cache_mngt_unfreeze_exp_objs(cache);
 
 		/* Wait for all I/Os submitted to the cache to complete */
-		_cache_mngt_wait_for_io_finish(cache);
+		status = _cache_mngt_cache_drain_sync(cache);
+		if (status)
+			goto err_pt_unfrozen;
 
 		/* Purge cache metadata */
 		status = _cache_mngt_cache_purge_sync(cache, NULL);
