@@ -53,7 +53,7 @@ static int __init cas_bd_init_module(void)
 		goto error_sysfs;
 
 	printk(KERN_INFO "Open Cache Acceleration Software Linux"
-		" Version %s (%s)::Module cas_disk loaded successfully\n",
+		" Version %s (%s)::Module cas_bd loaded successfully\n",
 		CAS_VERSION, CAS_KERNEL);
 
 	return 0;
