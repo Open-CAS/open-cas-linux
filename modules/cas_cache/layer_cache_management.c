@@ -3411,6 +3411,50 @@ put:
 	return status;
 }
 
+struct cas_exp_obj_list {
+	struct cas_exp_obj **exp_objs;
+	int count;
+};
+
+static int _cache_mngt_capture_exp_objs(ocf_cache_t cache,
+		struct cas_exp_obj_list *list)
+{
+	ocf_core_t core;
+	struct cas_priv_top *priv_top;
+	int n = 0;
+
+	ocf_core_for_each(core, cache, true) {
+		priv_top = cas_get_priv_top(core);
+		if (priv_top->expobj_valid)
+			n++;
+	}
+
+	list->count = n;
+	list->exp_objs = NULL;
+	if (n == 0)
+		return 0;
+
+	list->exp_objs = kmalloc_array(n, sizeof(*list->exp_objs), GFP_KERNEL);
+	if (!list->exp_objs)
+		return -ENOMEM;
+
+	n = 0;
+	ocf_core_for_each(core, cache, true) {
+		priv_top = cas_get_priv_top(core);
+		if (priv_top->expobj_valid)
+			list->exp_objs[n++] = priv_top->exp_obj;
+	}
+
+	return 0;
+}
+
+static void _cache_mngt_release_exp_obj_list(struct cas_exp_obj_list *list)
+{
+	kfree(list->exp_objs);
+	list->exp_objs = NULL;
+	list->count = 0;
+}
+
 static void _cache_mngt_freeze_exp_objs(ocf_cache_t cache)
 {
 	ocf_core_t core;
@@ -3435,6 +3479,14 @@ static void _cache_mngt_unfreeze_exp_objs(ocf_cache_t cache)
 			continue;
 		cas_exp_obj_unfreeze_queue(priv_top->exp_obj);
 	}
+}
+
+static void _cache_mngt_unfreeze_exp_obj_list(struct cas_exp_obj_list *list)
+{
+	int i;
+
+	for (i = 0; i < list->count; i++)
+		cas_exp_obj_unfreeze_queue(list->exp_objs[i]);
 }
 
 static void _cache_mngt_set_exp_objs_pt(ocf_cache_t cache)
@@ -3511,6 +3563,7 @@ int cache_mngt_disconnect_cache(const char *cache_name, size_t name_len,
 	ocf_cache_t cache;
 	struct cache_priv *cache_priv;
 	struct _cache_mngt_stop_context *context;
+	struct cas_exp_obj_list exp_obj_list = { 0 };
 	int status = 0;
 
 	if (no_flush && pass_through)
@@ -3549,6 +3602,16 @@ int cache_mngt_disconnect_cache(const char *cache_name, size_t name_len,
 		goto err_lock;
 
 	/*
+	 * For pass-through, capture exp_obj pointers before deposit clears
+	 * core->priv_top so we can unfreeze the queues at the end.
+	 */
+	if (pass_through) {
+		status = _cache_mngt_capture_exp_objs(cache, &exp_obj_list);
+		if (status)
+			goto err_capture;
+	}
+
+	/*
 	 * Set passthrough and drain queues before waiting for IO and purging,
 	 * so no new cache IO can be submitted - cache must be empty on stop
 	 */
@@ -3556,17 +3619,15 @@ int cache_mngt_disconnect_cache(const char *cache_name, size_t name_len,
 	_cache_mngt_freeze_exp_objs(cache);
 
 	if (pass_through) {
-		_cache_mngt_unfreeze_exp_objs(cache);
-
 		/* Wait for all I/Os submitted to the cache to complete */
 		status = _cache_mngt_cache_drain_sync(cache);
 		if (status)
-			goto err_pt_unfrozen;
+			goto err_pt_frozen;
 
 		/* Purge cache metadata */
 		status = _cache_mngt_cache_purge_sync(cache, NULL);
 		if (status)
-			goto err_pt_unfrozen;
+			goto err_pt_frozen;
 	}
 
 	context = cache_priv->stop_context;
@@ -3575,8 +3636,6 @@ int cache_mngt_disconnect_cache(const char *cache_name, size_t name_len,
 			context, "cas_%s_stop", cache_name);
 	if (IS_ERR(context->finish_thread)) {
 		status = PTR_ERR(context->finish_thread);
-		if (pass_through)
-			goto err_pt_unfrozen;
 		goto err_pt_frozen;
 	}
 
@@ -3589,17 +3648,23 @@ int cache_mngt_disconnect_cache(const char *cache_name, size_t name_len,
 		printk(KERN_WARNING "Waiting for cache stop interrupted. "
 				"Stop will finish asynchronously.\n");
 
+	/*
+	 * Cache is gone; for pass-through release the exp_obj queues so the
+	 * deposited devices start serving I/O directly to cores.
+	 */
+	if (pass_through)
+		_cache_mngt_unfreeze_exp_obj_list(&exp_obj_list);
+	_cache_mngt_release_exp_obj_list(&exp_obj_list);
+
 	return status;
 
 err_pt_frozen:
 	_cache_mngt_clear_exp_objs_pt(cache);
 	_cache_mngt_unfreeze_exp_objs(cache);
-	goto unlock;
-err_pt_unfrozen:
-	_cache_mngt_freeze_exp_objs(cache);
-	_cache_mngt_clear_exp_objs_pt(cache);
-	_cache_mngt_unfreeze_exp_objs(cache);
-unlock:
+	_cache_mngt_release_exp_obj_list(&exp_obj_list);
+	ocf_mngt_cache_unlock(cache);
+	goto err_lock;
+err_capture:
 	ocf_mngt_cache_unlock(cache);
 err_lock:
 err_flush:
