@@ -4,14 +4,18 @@
 #
 
 import time
+from datetime import timedelta
 
 import pytest
 
 from api.cas import casadm
 from api.cas.cache_config import CacheMode
+from api.cas.cli import script_connect_cache_cmd, script_disconnect_cache_cmd
 from connection.utils.asynchronous import start_async_func
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
+from test_tools.fio.fio import Fio
+from test_tools.fio.fio_param import IoEngine, ReadWrite
 from test_tools.fs_tools import crc32sum
 from test_tools.os_tools import sync
 from type_def.size import Size, Unit
@@ -238,6 +242,168 @@ def test_disconnect_pt():
 
     with TestRun.step("Stop cache"):
         cache.stop()
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.parametrize("disconnect_mode", ["default", "no-flush", "pass-through"])
+def test_disconnect_stress(disconnect_mode):
+    """
+        title: Stress test of cache disconnect/connect under heavy IO
+        description: |
+            Run mixed random read/write fio workload on multiple cores while repeatedly
+            disconnecting and connecting the cache. Each disconnect/connect operation
+            must complete within a fixed timeout.
+        pass_criteria:
+          - All disconnect operations complete within the timeout.
+          - All connect operations complete within the timeout.
+    """
+    with TestRun.step("Prepare devices"):
+        cache_part, core_parts = _prepare_devices()
+
+    with TestRun.step(f"Start WB cache and add {NUM_CORES} cores"):
+        cache = casadm.start_cache(cache_part, cache_mode=CacheMode.WB, force=True)
+        cores = [cache.add_core(c) for c in core_parts]
+        cache_id = cache.cache_id
+
+    fio_pid = None
+    try:
+        with TestRun.step("Start asynchronous fio workload on all cores"):
+            fio = Fio().create_command()
+            fio.io_engine(IoEngine.libaio) \
+                .read_write(ReadWrite.randrw) \
+                .write_percentage(50) \
+                .io_depth(64) \
+                .direct() \
+                .time_based() \
+                .run_time(timedelta(hours=2)) \
+                .num_jobs(2)
+            for i, core in enumerate(cores):
+                for bs in [Size(4, Unit.KibiByte), Size(64, Unit.KibiByte),
+                           Size(1, Unit.MebiByte)]:
+                    bs_label = int(bs.get_value(Unit.KibiByte))
+                    job = fio.add_job(f"core{i}_bs{bs_label}k")
+                    job.target(core.path).block_size(bs)
+            fio_pid = fio.run_in_background()
+
+        op_timeout = timedelta(seconds=300)
+        pass_through = (disconnect_mode == "pass-through")
+        no_flush = (disconnect_mode == "no-flush")
+
+        with TestRun.step(f"Loop 100 disconnect ({disconnect_mode}) / connect iterations"):
+            for i in range(100):
+                TestRun.LOGGER.info(f"Stress iteration {i + 1}/100")
+                time.sleep(10)
+
+                output = TestRun.executor.run(
+                    script_disconnect_cache_cmd(
+                        str(cache_id), pass_through=pass_through, no_flush=no_flush
+                    ),
+                    timeout=op_timeout,
+                )
+                if output.exit_code != 0:
+                    TestRun.fail(
+                        f"Disconnect failed at iteration {i + 1} "
+                        f"(stderr: {output.stderr})"
+                    )
+
+                time.sleep(10)
+
+                output = TestRun.executor.run(
+                    script_connect_cache_cmd(cache_part.path),
+                    timeout=op_timeout,
+                )
+                if output.exit_code != 0:
+                    TestRun.fail(
+                        f"Connect failed at iteration {i + 1} "
+                        f"(stderr: {output.stderr})"
+                    )
+    finally:
+        with TestRun.step("Stop fio"):
+            if fio_pid is not None:
+                TestRun.executor.kill_process(fio_pid)
+
+        with TestRun.step("Stop cache"):
+            casadm.stop_all_caches()
+
+
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.parametrize("disconnect_mode", ["default", "no-flush", "pass-through"])
+@pytest.mark.parametrize("wait_seconds", [10, 30, 60, 120])
+def test_disconnect_wait(disconnect_mode, wait_seconds):
+    """
+        title: Disconnect cache and wait before reconnecting under IO
+        description: |
+            Run mixed random read/write fio workload on multiple cores, disconnect the
+            cache, wait a parametrized amount of time, then reconnect. Disconnect and
+            connect operations must each complete within a fixed timeout.
+        pass_criteria:
+          - Disconnect operation completes within the timeout.
+          - Connect operation completes within the timeout.
+    """
+    with TestRun.step("Prepare devices"):
+        cache_part, core_parts = _prepare_devices()
+
+    with TestRun.step(f"Start WB cache and add {NUM_CORES} cores"):
+        cache = casadm.start_cache(cache_part, cache_mode=CacheMode.WB, force=True)
+        cores = [cache.add_core(c) for c in core_parts]
+        cache_id = cache.cache_id
+
+    fio_pid = None
+    try:
+        with TestRun.step("Start asynchronous fio workload on all cores"):
+            fio = Fio().create_command()
+            fio.io_engine(IoEngine.libaio) \
+                .read_write(ReadWrite.randrw) \
+                .write_percentage(50) \
+                .io_depth(64) \
+                .direct() \
+                .time_based() \
+                .run_time(timedelta(hours=1)) \
+                .num_jobs(2)
+            for i, core in enumerate(cores):
+                for bs in [Size(4, Unit.KibiByte), Size(64, Unit.KibiByte),
+                           Size(1, Unit.MebiByte)]:
+                    bs_label = int(bs.get_value(Unit.KibiByte))
+                    job = fio.add_job(f"core{i}_bs{bs_label}k")
+                    job.target(core.path).block_size(bs)
+            fio_pid = fio.run_in_background()
+
+        op_timeout = timedelta(seconds=300)
+        pass_through = (disconnect_mode == "pass-through")
+        no_flush = (disconnect_mode == "no-flush")
+
+        with TestRun.step("Let fio warm up"):
+            time.sleep(10)
+
+        with TestRun.step(f"Disconnect cache ({disconnect_mode})"):
+            output = TestRun.executor.run(
+                script_disconnect_cache_cmd(
+                    str(cache_id), pass_through=pass_through, no_flush=no_flush
+                ),
+                timeout=op_timeout,
+            )
+            if output.exit_code != 0:
+                TestRun.fail(f"Disconnect failed (stderr: {output.stderr})")
+
+        with TestRun.step(f"Wait {wait_seconds}s before reconnect"):
+            time.sleep(wait_seconds)
+
+        with TestRun.step("Connect cache"):
+            output = TestRun.executor.run(
+                script_connect_cache_cmd(cache_part.path),
+                timeout=op_timeout,
+            )
+            if output.exit_code != 0:
+                TestRun.fail(f"Connect failed (stderr: {output.stderr})")
+    finally:
+        with TestRun.step("Stop fio"):
+            if fio_pid is not None:
+                TestRun.executor.kill_process(fio_pid)
+
+        with TestRun.step("Stop cache"):
+            casadm.stop_all_caches()
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.nand, DiskType.optane]))
