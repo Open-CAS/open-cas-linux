@@ -165,6 +165,8 @@ static int nl_resolve_family(struct nl_ctx *ctx, const char *name)
 	genl->version = 1;
 
 	nla = (struct nlattr *)((char *)buf + nlh->nlmsg_len);
+	if (strlen(name) + 1 > sizeof(buf) - nlh->nlmsg_len - NLA_HDRLEN)
+		return -EINVAL;
 	nla->nla_type = CTRL_ATTR_FAMILY_NAME;
 	nla->nla_len = NLA_HDRLEN + strlen(name) + 1;
 	memcpy(nla_data(nla), name, strlen(name) + 1);
