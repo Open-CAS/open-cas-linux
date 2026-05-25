@@ -30,9 +30,9 @@ latest major release line (currently 26.03.x).
 To download the latest Open CAS Linux release run following commands:
 
 ```
-wget https://github.com/Open-CAS/open-cas-linux/releases/download/v26.03.1/open-cas-linux-26.03.1.1031.release.tar.gz
-tar -xf open-cas-linux-26.03.1.1031.release.tar.gz
-cd open-cas-linux-26.03.1.1031.release/
+wget https://github.com/Open-CAS/open-cas-linux/releases/download/v26.03.2/open-cas-linux-26.03.2.1032.release.tar.gz
+tar -xf open-cas-linux-26.03.2.1032.release.tar.gz
+cd open-cas-linux-26.03.2.1032.release/
 ```
 
 Alternatively, if you want recent development (unstable) version, you can clone GitHub repository:
