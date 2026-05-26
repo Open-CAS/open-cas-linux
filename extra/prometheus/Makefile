@@ -38,4 +38,6 @@ clean:
 	rm -f opencas_exporter
 	$(MAKE) -C $(LIBOPENCAS_DIR) clean
 
-.PHONY: all install uninstall clean
+distclean: clean
+
+.PHONY: all install uninstall clean distclean

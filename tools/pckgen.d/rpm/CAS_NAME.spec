@@ -2,6 +2,7 @@
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2025 Huawei Technologies
 # Copyright(c) 2025 Brian J. Murrell
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -94,7 +95,7 @@ if [ $1 -eq 0 ]; then
     systemctl -q disable open-cas-shutdown
     systemctl -q disable open-cas
 
-    rm -rf /lib/opencas/{__pycache__,*.py[co]} &>/dev/null
+    rm -rf /usr/lib/opencas/{__pycache__,*.py[co]} &>/dev/null
 fi
 
 %postun
@@ -150,17 +151,17 @@ fi
 %license LICENSE
 %doc README.md
 %dir /etc/opencas/
-%dir /lib/opencas/
+%dir /usr/lib/opencas/
 %dir /var/lib/opencas
 %config /etc/opencas/opencas.conf
 /etc/opencas/ioclass-config.csv
 /etc/dracut.conf.d/opencas.conf
 /var/lib/opencas/cas_version
-/lib/opencas/casctl
-/lib/opencas/open-cas-loader.py
-/lib/opencas/opencas.py
-/lib/udev/rules.d/60-persistent-storage-cas-load.rules
-/lib/udev/rules.d/60-persistent-storage-cas.rules
+/usr/lib/opencas/casctl
+/usr/lib/opencas/open-cas-loader.py
+/usr/lib/opencas/opencas.py
+/usr/lib/udev/rules.d/60-persistent-storage-cas-load.rules
+/usr/lib/udev/rules.d/60-persistent-storage-cas.rules
 /sbin/casadm
 /sbin/casctl
 /usr/bin/opencas_exporter
@@ -172,9 +173,9 @@ fi
 /usr/share/man/man8/casadm.8.gz
 /usr/share/man/man8/casctl.8.gz
 %ghost /var/log/opencas.log
-%ghost /lib/opencas/opencas.pyc
-%ghost /lib/opencas/opencas.pyo
-%ghost /lib/opencas/__pycache__
+%ghost /usr/lib/opencas/opencas.pyc
+%ghost /usr/lib/opencas/opencas.pyo
+%ghost /usr/lib/opencas/__pycache__
 
 %files  modules_%{kver_filename}
 %defattr(644, root, root, 755)

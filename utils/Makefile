@@ -1,13 +1,14 @@
 #
 # Copyright(c) 2012-2022 Intel Corporation
 # Copyright(c) 2025 Huawei Technologies
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 include ../tools/helpers.mk
 
-CASCTL_DIR = /lib/opencas
-UDEVRULES_DIR = /lib/udev/rules.d
+CASCTL_DIR = /usr/lib/opencas
+UDEVRULES_DIR = /usr/lib/udev/rules.d
 METADATA_DIR:=$(PWD)/../.metadata
 UTILS_DIR:=$(PWD)/../utils
 UDEV:=$(shell which udevadm)
