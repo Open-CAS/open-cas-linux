@@ -5,9 +5,9 @@
 
 DIRS := prometheus
 
-all clean install install_files uninstall:
+all clean distclean install install_files uninstall:
 	@for dir in $(DIRS); do \
 		$(MAKE) -C $$dir $@; \
 	done
 
-.PHONY: all clean install uninstall
+.PHONY: all clean distclean install uninstall

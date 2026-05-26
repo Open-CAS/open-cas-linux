@@ -18,4 +18,6 @@ libopencas.o: libopencas.c libopencas.h
 clean:
 	rm -f *.o *.a
 
-.PHONY: all clean
+distclean: clean
+
+.PHONY: all clean distclean
