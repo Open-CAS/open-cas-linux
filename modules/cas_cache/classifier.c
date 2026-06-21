@@ -48,6 +48,8 @@ static cas_cls_eval_t _cas_cls_metadata_test(struct cas_classifier *cls,
 		struct cas_cls_condition *c, struct cas_cls_io *io,
 		ocf_part_id_t part_id)
 {
+	struct address_space *mapping;
+
 	if (!io->page)
 		return cas_cls_eval_no;
 
@@ -62,9 +64,10 @@ static cas_cls_eval_t _cas_cls_metadata_test(struct cas_classifier *cls,
 		return cas_cls_eval_yes;
 	}
 
-	if (!cas_page_mapping(io->page)) {
-		/* XFS case, page are allocated internally and do not
-		 * have references into inode
+	mapping = cas_page_mapping(io->page);
+	if (!mapping || !virt_addr_valid(mapping)) {
+		/* XFS case: page is allocated internally without a page
+		 * cache mapping.
 		 */
 		return cas_cls_eval_yes;
 	}
@@ -1282,6 +1285,9 @@ static void _cas_cls_get_bio_context(struct bio *bio,
 
 	mapping = cas_page_mapping(page);
 	if (!mapping)
+		return;
+
+	if (!virt_addr_valid(mapping))
 		return;
 
 	ctx->inode = mapping->host;
