@@ -38,6 +38,7 @@ struct cas_exp_obj *cas_exp_obj_box_claim(struct cas_disk *dsk,
 	list_for_each_entry(exp_obj, &box_list, list) {
 		if (exp_obj->dsk == dsk) {
 			list_del(&exp_obj->list);
+			module_put(exp_obj->owner);
 			exp_obj->owner = owner;
 			exp_obj->ops = ops;
 			exp_obj->private = priv;

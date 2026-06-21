@@ -166,6 +166,7 @@ def base_prepare(item):
                 unmount_cas_devices()
                 casadm.stop_all_caches()
                 casadm.remove_all_detached_cores()
+                delete_hanging_exp_objs()
             except Exception:
                 pass  # TODO: Reboot DUT if test is executed remotely
 
@@ -257,6 +258,7 @@ def pytest_runtest_teardown():
                 if installer.check_if_installed():
                     casadm.remove_all_detached_cores()
                     casadm.stop_all_caches()
+                    delete_hanging_exp_objs()
                     from api.cas.init_config import InitConfig
 
                     InitConfig.create_default_init_config()
@@ -308,6 +310,15 @@ def pytest_runtest_teardown():
                 TestRun.LOGGER.get_additional_logs()
     Log.destroy()
     TestRun.teardown()
+
+
+def delete_hanging_exp_objs():
+    sysfs_delete = "/sys/module/cas_bd/delete"
+    if TestRun.executor.run(f"test -e {sysfs_delete}").exit_code != 0:
+        return
+    output = TestRun.executor.run("ls /dev | grep '^cas' || true")
+    for name in output.stdout.split():
+        TestRun.executor.run(f"echo {name} > {sysfs_delete}")
 
 
 def unmount_cas_devices():
