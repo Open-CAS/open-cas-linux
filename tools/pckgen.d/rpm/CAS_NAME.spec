@@ -162,8 +162,8 @@ fi
 /usr/lib/opencas/opencas.py
 /usr/lib/udev/rules.d/60-persistent-storage-cas-load.rules
 /usr/lib/udev/rules.d/60-persistent-storage-cas.rules
-/sbin/casadm
-/sbin/casctl
+/usr/sbin/casadm
+/usr/sbin/casctl
 /usr/lib/systemd/system-shutdown/open-cas.shutdown
 /usr/lib/systemd/system/open-cas-shutdown.service
 /usr/lib/systemd/system/open-cas.service
