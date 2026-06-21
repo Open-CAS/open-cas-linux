@@ -1,7 +1,7 @@
 etc/
 usr/lib/opencas/
 usr/lib/udev/
-sbin/
+usr/sbin/
 var/
 utils/open-cas.shutdown usr/lib/systemd/system-shutdown/
 utils/open-cas.service usr/lib/systemd/system/
