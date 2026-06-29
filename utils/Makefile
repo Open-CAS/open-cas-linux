@@ -58,8 +58,8 @@ install_files:
 
 	@install -m 644 -D etc/dracut.conf.d/opencas.conf $(DESTDIR)/etc/dracut.conf.d/opencas.conf
 
-	@install -m 755 -d $(DESTDIR)/sbin
-	@ln -fs $(CASCTL_DIR)/casctl $(DESTDIR)/sbin/casctl
+	@install -m 755 -d $(DESTDIR)/usr/sbin
+	@ln -fs $(CASCTL_DIR)/casctl $(DESTDIR)/usr/sbin/casctl
 
 	@install -m 644 -D 60-persistent-storage-cas-load.rules $(DESTDIR)$(UDEVRULES_DIR)/60-persistent-storage-cas-load.rules
 	@install -m 644 -D 60-persistent-storage-cas.rules $(DESTDIR)$(UDEVRULES_DIR)/60-persistent-storage-cas.rules
@@ -88,7 +88,7 @@ uninstall:
 
 	$(call remove-file,$(DESTDIR)/etc/dracut.conf.d/opencas.conf)
 
-	$(call remove-file,$(DESTDIR)/sbin/casctl)
+	$(call remove-file,$(DESTDIR)/usr/sbin/casctl)
 
 	$(call remove-file,$(DESTDIR)/usr/share/man/man8/casctl.8.gz)
 
