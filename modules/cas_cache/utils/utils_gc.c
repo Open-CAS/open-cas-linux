@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -35,15 +36,20 @@ static void cas_garbage_collector(struct work_struct *w)
 
 void cas_vfree(const void *addr)
 {
-	struct cas_vfree_item *item = this_cpu_ptr(&cas_vfree_item);
+	struct cas_vfree_item *item;
+	int cpu;
 
 	if (!addr)
 		return;
 
 	atomic_inc(&freed);
 
+	cpu = get_cpu();
+	item = this_cpu_ptr(&cas_vfree_item);
 	if (llist_add((struct llist_node *)addr, &item->list))
 		schedule_work(&item->ws);
+	put_cpu();
+
 }
 
 void cas_garbage_collector_init(void)

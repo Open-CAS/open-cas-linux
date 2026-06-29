@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024-2025 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -95,9 +96,7 @@ static int _cas_cleaner_thread(void *data)
 
 		atomic_set(&info->kicked, 0);
 		init_completion(&info->sync_compl);
-		get_cpu();
-		queue = cache_priv->io_queues[smp_processor_id()];
-		put_cpu();
+		queue = cache_priv->io_queues[raw_smp_processor_id()];
 		ocf_cleaner_run(c, queue);
 		wait_for_completion(&info->sync_compl);
 

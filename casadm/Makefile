@@ -9,7 +9,7 @@ include ../tools/helpers.mk
 PWD:=$(shell pwd)
 MODULESDIR:=$(PWD)/../modules
 METADATA_DIR:=$(PWD)/../.metadata
-BINARY_PATH = /sbin
+BINARY_PATH = /usr/sbin
 
 VERSION_FILE := $(METADATA_DIR)/cas_version
 
