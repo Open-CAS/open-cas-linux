@@ -301,6 +301,21 @@ static int blkdev_handle_data_single(struct bd_object *bvol, struct bio *bio,
 	return 0;
 }
 
+static bool blkdev_bio_data_aligned(struct bd_object *bvol, struct bio *bio)
+{
+	struct request_queue *exp_q = cas_exp_obj_get_queue(bvol->dsk);
+	unsigned int mask = exp_q->limits.logical_block_size - 1;
+	struct bio_vec bvec;
+	struct bvec_iter iter;
+
+	bio_for_each_segment(bvec, bio, iter) {
+		if ((bvec.bv_offset | bvec.bv_len) & mask)
+			return false;
+	}
+
+	return true;
+}
+
 static void blkdev_handle_data(struct bd_object *bvol, struct bio *bio)
 {
 	const uint32_t max_io_sectors = (32*MiB) >> SECTOR_SHIFT;
@@ -317,6 +332,16 @@ static void blkdev_handle_data(struct bd_object *bvol, struct bio *bio)
 		CAS_PRINT_RL(KERN_ERR
 			"Not able to handle empty BIO, flags = "
 			CAS_BIO_OP_FLAGS_FORMAT "\n",  CAS_BIO_OP_FLAGS(bio));
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio),
+				CAS_ERRNO_TO_BLK_STS(-EINVAL));
+		return;
+	}
+
+	if (unlikely(!blkdev_bio_data_aligned(bvol, bio))) {
+		CAS_PRINT_RL(KERN_ERR
+			"Not able to handle BIO unaligned to logical block "
+			"size, flags = " CAS_BIO_OP_FLAGS_FORMAT "\n",
+			CAS_BIO_OP_FLAGS(bio));
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio),
 				CAS_ERRNO_TO_BLK_STS(-EINVAL));
 		return;
