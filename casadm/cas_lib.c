@@ -600,6 +600,15 @@ static int _is_by_id_path(const char* dev_path)
 			 strnlen_s(dev_by_id_dir, sizeof(dev_by_id_dir))));
 }
 
+/* Call this only AFTER normalizing path */
+static int _is_by_path_path(const char* dev_path)
+{
+	static const char dev_by_path_dir[] = "/dev/disk/by-path";
+
+	return (!strncmp(dev_path, dev_by_path_dir,
+			 strnlen_s(dev_by_path_dir, sizeof(dev_by_path_dir))));
+}
+
 int set_device_path(char *dest_path, size_t dest_len, const char *src_path, size_t src_len)
 {
 	char abs_dev_path[MAX_STR_LEN];
@@ -617,7 +626,7 @@ int set_device_path(char *dest_path, size_t dest_len, const char *src_path, size
 		return result ?: SUCCESS;
 	}
 
-	if (_is_by_id_path(abs_dev_path)) {
+	if (_is_by_id_path(abs_dev_path) || _is_by_path_path(abs_dev_path)) {
 		result = strncpy_s(dest_path, dest_len, abs_dev_path,
 		    strnlen_s(abs_dev_path, sizeof(abs_dev_path)));
 		if (!result)
@@ -626,7 +635,7 @@ int set_device_path(char *dest_path, size_t dest_len, const char *src_path, size
 			cas_printf(LOG_ERR, "Internal error copying device path\n");
 	}
 
-	cas_printf(LOG_ERR, "Please use correct by-id path to the device %s.\n",
+	cas_printf(LOG_ERR, "Please use correct by-id or by-path link to the device %s.\n",
 		   src_path);
 
 	return FAILURE;
