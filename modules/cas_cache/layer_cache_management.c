@@ -3238,8 +3238,12 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	 * this time, so we need to flush cache again after disabling
 	 * exported object. The second flush should be much faster.
 	*/
-	if (flush && ocf_cache_is_running(cache))
-		status = _cache_flush_with_lock(cache);
+	if (flush) {
+		if (ocf_cache_is_running(cache))
+			status = _cache_flush_with_lock(cache);
+		else if (ocf_mngt_cache_is_dirty(cache))
+			status = -ENODEV;
+	}
 	if (status)
 		goto put;
 
@@ -3275,9 +3279,14 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 	}
 
 	/* Flush cache again. This time we don't allow interruption. */
-	if (flush && ocf_cache_is_running(cache))
-		flush_status = _cache_mngt_cache_flush_uninterruptible(cache);
-	context->flush_status = flush_status;
+	if (flush) {
+		if (ocf_cache_is_running(cache)) {
+			flush_status =
+				_cache_mngt_cache_flush_uninterruptible(cache);
+		} else if (ocf_mngt_cache_is_dirty(cache)) {
+			flush_status = -ENODEV;
+		}
+	}
 
 	if (flush && !flush_status)
 		BUG_ON(ocf_mngt_cache_is_dirty(cache));
