@@ -14,6 +14,8 @@
 /* Kernel log prefix */
 #define CAS_CLS_LOG_PREFIX OCF_PREFIX_SHORT"[Classifier]"
 
+#define CAS_CLS_DIR_MAX_DEPTH 4096
+
 /* Production version logs */
 #define CAS_CLS_MSG(severity, format, ...) \
 	printk(severity CAS_CLS_LOG_PREFIX " " format, ##__VA_ARGS__);
@@ -372,32 +374,27 @@ static void _cas_cls_directory_resolve_work(struct work_struct *work)
 			msecs_to_jiffies(ctx->resolved ? 5000 : 1000));
 }
 
-/* Get unaliased dentry for given dir inode */
+/* Get unaliased dentry for given dir inode
+ *
+ * The caller MUST hold rcu_read_lock(). The returned dentry is NOT referenced
+ * and is only valid within the caller's RCU read-side critical section.
+ */
 static struct dentry *_cas_cls_dir_get_inode_dentry(struct inode *inode)
 {
 	struct dentry *d = NULL, *iter;
 	CAS_ALIAS_NODE_TYPE *pos; /* alias list current element */
 
-	if (CAS_DENTRY_LIST_EMPTY(&inode->i_dentry))
+	if (!S_ISREG(inode->i_mode))
 		return NULL;
 
-	spin_lock(&inode->i_lock);
-
-	if (S_ISDIR(inode->i_mode))
-		goto unlock;
-
-	CAS_INODE_FOR_EACH_DENTRY(pos, &inode->i_dentry) {
+	CAS_INODE_FOR_EACH_DENTRY_RCU(pos, &inode->i_dentry) {
 		iter = CAS_ALIAS_NODE_TO_DENTRY(pos);
-		spin_lock(&iter->d_lock);
-		if (!d_unhashed(iter))
+		if (!d_unhashed(iter)) {
 			d = iter;
-		spin_unlock(&iter->d_lock);
-		if (d)
 			break;
+		}
 	}
 
-unlock:
-	spin_unlock(&inode->i_lock);
 	return d;
 }
 
@@ -407,8 +404,10 @@ static cas_cls_eval_t _cas_cls_directory_test(
 		struct cas_cls_io *io, ocf_part_id_t part_id)
 {
 	struct cas_cls_directory *ctx;
-	struct inode *inode, *p_inode;
-	struct dentry *dentry, *p_dentry;
+	struct inode *inode, *d_ino;
+	struct dentry *dentry, *parent;
+	cas_cls_eval_t result = cas_cls_eval_no;
+	unsigned int depth;
 
 	ctx = c->context;
 	inode = io->inode;
@@ -416,34 +415,26 @@ static cas_cls_eval_t _cas_cls_directory_test(
 	if (!inode || !ctx->resolved)
 		return cas_cls_eval_no;
 
-	/* I/O target inode dentry */
-	dentry = _cas_cls_dir_get_inode_dentry(inode);
-	if (!dentry)
-		return cas_cls_eval_no;
+	rcu_read_lock();
 
 	/* Walk up directory tree starting from I/O destination
 	 * dir until current dir inode matches condition inode or top
 	 * directory is reached. */
-	while (inode) {
-		if (inode->i_ino == ctx->i_ino)
-			return cas_cls_eval_yes;
-		spin_lock(&dentry->d_lock);
-		p_dentry = dentry->d_parent;
-		if (!p_dentry) {
-			spin_unlock(&dentry->d_lock);
-			return cas_cls_eval_no;
+	dentry = _cas_cls_dir_get_inode_dentry(inode);
+	for (depth = 0; dentry && depth < CAS_CLS_DIR_MAX_DEPTH; depth++) {
+		d_ino = dentry->d_inode;
+		if (d_ino && d_ino->i_ino == ctx->i_ino) {
+			result = cas_cls_eval_yes;
+			break;
 		}
-		p_inode = p_dentry->d_inode;
-		spin_unlock(&dentry->d_lock);
-		if (p_inode != inode) {
-			inode = p_inode;
-			dentry = p_dentry;
-		} else {
-			inode = NULL;
-		}
+		parent = READ_ONCE(dentry->d_parent);
+		if (!parent || parent == dentry)
+			break;
+		dentry = parent;
 	}
 
-	return cas_cls_eval_no;
+	rcu_read_unlock();
+	return result;
 }
 
 /* Directory condition constructor */
@@ -561,6 +552,7 @@ static cas_cls_eval_t _cas_cls_extension_test(
 	struct dentry *dentry;
 	char *extension;
 	uint32_t len;
+	cas_cls_eval_t result = cas_cls_eval_no;
 
 	ctx = c->context;
 	inode = io->inode;
@@ -568,24 +560,31 @@ static cas_cls_eval_t _cas_cls_extension_test(
 	if (!inode)
 		return cas_cls_eval_no;
 
-	/* I/O target inode dentry */
+	rcu_read_lock();
+
 	dentry = _cas_cls_dir_get_inode_dentry(inode);
-	if (!dentry)
-		return cas_cls_eval_no;
+	if (dentry && dentry->d_name.name) {
+		extension = strrchr(dentry->d_name.name, '.');
+		if (!extension)
+			goto out;
 
-	extension = strrchr(dentry->d_name.name, '.');
-	if (!extension)
-		return cas_cls_eval_no;
+		/* First character of @extension is '.', which we don't
+		 * want to compare
+		 */
+		len = dentry->d_name.len -
+			(extension - (char *)dentry->d_name.name) - 1;
+		if (len != ctx->len)
+			goto out;
 
-	/* First character of @extension is '.', which we don't want to compare */
-	len = dentry->d_name.len - (extension - (char*)dentry->d_name.name) - 1;
-	if (len != ctx->len)
-		return cas_cls_eval_no;
+		if (strncmp(ctx->string, extension + 1, len) != 0)
+			goto out;
 
-	if (strncmp(ctx->string, extension + 1, len) == 0)
-		return cas_cls_eval_yes;
+		result = cas_cls_eval_yes;
+	}
 
-	return cas_cls_eval_no;
+out:
+	rcu_read_unlock();
+	return result;
 }
 
 /* File name prefix test function */
@@ -597,6 +596,7 @@ static cas_cls_eval_t _cas_cls_file_name_prefix_test(
 	struct inode *inode;
 	struct dentry *dentry;
 	uint32_t len;
+	cas_cls_eval_t result = cas_cls_eval_no;
 
 	ctx = c->context;
 	inode = io->inode;
@@ -604,23 +604,21 @@ static cas_cls_eval_t _cas_cls_file_name_prefix_test(
 	if (!inode)
 		return cas_cls_eval_no;
 
-	/* I/O target inode dentry */
+	rcu_read_lock();
+
 	dentry = _cas_cls_dir_get_inode_dentry(inode);
 
-	/* Check if dentry and its name is valid */
-	if (!dentry || !dentry->d_name.name)
-		return cas_cls_eval_no;
+	/* Check that the dentry and its name are valid, that the name is not
+	 * too short (we expect the full prefix in it), then compare.
+	 */
+	if (dentry && dentry->d_name.name && dentry->d_name.len >= ctx->len) {
+		len = min(ctx->len, dentry->d_name.len);
+		if (strncmp(dentry->d_name.name, ctx->string, len) == 0)
+			result = cas_cls_eval_yes;
+	}
 
-	/* Check if name is not too short, we expect full prefix in name */
-	if (dentry->d_name.len < ctx->len)
-		return cas_cls_eval_no;
-
-	/* Final string comparison check */
-	len = min(ctx->len, dentry->d_name.len);
-	if (strncmp(dentry->d_name.name, ctx->string, len) == 0)
-		return cas_cls_eval_yes;
-
-	return cas_cls_eval_no;
+	rcu_read_unlock();
+	return result;
 }
 
 /* LBA test function */
@@ -677,7 +675,7 @@ static cas_cls_eval_t _cas_cls_file_offset_test(
 		struct cas_cls_io *io, ocf_part_id_t part_id)
 {
 	struct inode *inode;
-	struct dentry *dentry;
+	bool has_dentry;
 	uint64_t offset;
 
 	inode = io->inode;
@@ -685,9 +683,11 @@ static cas_cls_eval_t _cas_cls_file_offset_test(
 	if (!inode)
 		return cas_cls_eval_no;
 
-	/* I/O target inode dentry */
-	dentry = _cas_cls_dir_get_inode_dentry(inode);
-	if (!dentry)
+	rcu_read_lock();
+	has_dentry = (_cas_cls_dir_get_inode_dentry(inode) != NULL);
+	rcu_read_unlock();
+
+	if (!has_dentry)
 		return cas_cls_eval_no;
 
 	offset = PAGE_SIZE * cas_page_index(io->page) +
