@@ -80,10 +80,10 @@ build_files_perms_exceptions = {
 }
 
 installed_files_perms_exceptions = {
-    "lib/opencas/casctl": 755,
-    "lib/opencas/open-cas-loader.py": 755,
-    "sbin/casadm": 755,
-    "sbin/casctl": 755,
+    "usr/lib/opencas/casctl": 755,
+    "usr/lib/opencas/open-cas-loader.py": 755,
+    "usr/sbin/casadm": 755,
+    "usr/sbin/casctl": 755,
     "usr/lib/systemd/system-shutdown/open-cas.shutdown": 755,
 }
 
