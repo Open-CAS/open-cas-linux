@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -254,9 +255,7 @@ static int blkdev_handle_data_single(struct bd_object *bvol, struct bio *bio,
 	uint64_t flags = CAS_BIO_OP_FLAGS(bio);
 	int ret;
 
-	get_cpu();
-	queue = cache_priv->io_queues[smp_processor_id()];
-	put_cpu();
+	queue = cache_priv->io_queues[raw_smp_processor_id()];
 
 	data = cas_alloc_blk_data(bio_segments(bio), GFP_NOIO);
 	if (!data) {
@@ -302,6 +301,21 @@ static int blkdev_handle_data_single(struct bd_object *bvol, struct bio *bio,
 	return 0;
 }
 
+static bool blkdev_bio_data_aligned(struct bd_object *bvol, struct bio *bio)
+{
+	struct request_queue *exp_q = cas_exp_obj_get_queue(bvol->dsk);
+	unsigned int mask = exp_q->limits.logical_block_size - 1;
+	struct bio_vec bvec;
+	struct bvec_iter iter;
+
+	bio_for_each_segment(bvec, bio, iter) {
+		if ((bvec.bv_offset | bvec.bv_len) & mask)
+			return false;
+	}
+
+	return true;
+}
+
 static void blkdev_handle_data(struct bd_object *bvol, struct bio *bio)
 {
 	const uint32_t max_io_sectors = (32*MiB) >> SECTOR_SHIFT;
@@ -318,6 +332,16 @@ static void blkdev_handle_data(struct bd_object *bvol, struct bio *bio)
 		CAS_PRINT_RL(KERN_ERR
 			"Not able to handle empty BIO, flags = "
 			CAS_BIO_OP_FLAGS_FORMAT "\n",  CAS_BIO_OP_FLAGS(bio));
+		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio),
+				CAS_ERRNO_TO_BLK_STS(-EINVAL));
+		return;
+	}
+
+	if (unlikely(!blkdev_bio_data_aligned(bvol, bio))) {
+		CAS_PRINT_RL(KERN_ERR
+			"Not able to handle BIO unaligned to logical block "
+			"size, flags = " CAS_BIO_OP_FLAGS_FORMAT "\n",
+			CAS_BIO_OP_FLAGS(bio));
 		CAS_BIO_ENDIO(bio, CAS_BIO_BISIZE(bio),
 				CAS_ERRNO_TO_BLK_STS(-EINVAL));
 		return;
@@ -370,9 +394,7 @@ static void blkdev_handle_discard(struct bd_object *bvol, struct bio *bio)
 	ocf_queue_t queue;
 	ocf_io_t io;
 
-	get_cpu();
-	queue = cache_priv->io_queues[smp_processor_id()];
-	put_cpu();
+	queue = cache_priv->io_queues[raw_smp_processor_id()];
 
 	io = ocf_volume_new_io(bvol->front_volume, queue,
 			CAS_BIO_BISECTOR(bio) << SECTOR_SHIFT,
@@ -422,9 +444,7 @@ static void blkdev_handle_flush(struct bd_object *bvol, struct bio *bio)
 	ocf_queue_t queue;
 	ocf_io_t io;
 
-	get_cpu();
-	queue = cache_priv->io_queues[smp_processor_id()];
-	put_cpu();
+	queue = cache_priv->io_queues[raw_smp_processor_id()];
 
 	io = ocf_volume_new_io(bvol->front_volume, queue, 0, 0, OCF_WRITE, 0,
 			CAS_SET_FLUSH(0));
