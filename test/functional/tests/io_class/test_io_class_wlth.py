@@ -66,9 +66,9 @@ def test_ioclass_wlth():
         cache.purge_cache()
         cache.reset_counters()
 
-    with TestRun.step("Trigger IO with a write life time hint"):
-        # Fio adds hints only to direct IO. Even if `write_hint` param isn't provided, direct IO
-        # has assigned a hint by default
+    with TestRun.step("Trigger IO without write life time hint"):
+        # Trigger the un-hinted IO first. On kernels that store the hint on the inode (>= 6.9),
+        # the hint persists on the /dev/cas1-1 inode until cleared with F_SET_RW_HINT.
         io_count = 12345
         io_size = Size(io_count, Unit.Blocks4096)
         bs = Size(1, Unit.Blocks4096)
@@ -78,14 +78,16 @@ def test_ioclass_wlth():
             .io_engine(IoEngine.libaio)
             .size(io_size)
             .block_size(bs)
-            .write_hint("long")
             .read_write(ReadWrite.write)
             .target(core.path)
-            .direct()
             .run()
         )
+        sync()
+        drop_caches()
 
-    with TestRun.step("Trigger IO without write life time hint"):
+    with TestRun.step("Trigger IO with a write life time hint"):
+        # Fio adds hints only to direct IO. Even if `write_hint` param isn't provided, direct IO
+        # has assigned a hint by default
         (
             Fio()
             .create_command()
@@ -93,12 +95,12 @@ def test_ioclass_wlth():
             .size(io_size)
             .offset(io_size)
             .block_size(bs)
+            .write_hint("long")
             .read_write(ReadWrite.write)
             .target(core.path)
+            .direct()
             .run()
         )
-        sync()
-        drop_caches()
 
     with TestRun.step("Check stats"):
         default_io_class_stats = core.get_io_class_statistics(io_class_id=0)

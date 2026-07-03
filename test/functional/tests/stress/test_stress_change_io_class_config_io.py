@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -91,7 +92,8 @@ async def test_stress_io_class_change_config_during_io_fs():
         - IO class configuration changes successfully
         - No IO errors
     """
-    cores_per_cache = len(list(Filesystem))
+    filesystems = Filesystem.regular()
+    cores_per_cache = len(filesystems)
 
     with TestRun.step("Prepare devices."):
         cache_device = TestRun.disks['cache']
@@ -111,7 +113,7 @@ async def test_stress_io_class_change_config_during_io_fs():
         generate_and_load_random_io_class_config(cache)
 
     with TestRun.step("Create different filesystem on each CAS device."):
-        for core, fs in zip(cores, Filesystem):
+        for core, fs in zip(cores, filesystems):
             core.create_filesystem(fs)
             core.mount(os.path.join("/mnt", fs.name))
 

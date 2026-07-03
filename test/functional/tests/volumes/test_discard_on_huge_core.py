@@ -54,6 +54,9 @@ def test_discard_on_huge_core():
     with TestRun.step("Check dmesg for RCU-sched stall."):
         check_for_rcu_sched_type_stall()
 
+    with TestRun.step("Stop cache."):
+        cache.stop()
+
     with TestRun.step("Unload scsi_debug module."):
         scsi_debug.unload()
 
