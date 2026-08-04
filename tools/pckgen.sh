@@ -28,14 +28,9 @@ DEB_CONTROL_FILES_DIR="$SCRIPT_BASE_DIR/${THIS%.*}.d/deb/debian"
 PACKAGE_MAINTAINER="Rafal Stefanowski <rafal.stefanowski@open-cas.com>"
 PACKAGE_DATE="$(date -R)"
 TEMP_TEMPLATE="opencas-${THIS}"
-RHEL_KERNEL_PKG_NAME="kernel"
+# Only used by --list-kernels; RPM modules build via DKMS on the target now.
 RHEL_KERNEL_DEVEL_PKG_NAME="kernel-devel"
-RHEL_LIBELF_PKG_NAME="elfutils-libelf-devel"
-RHEL_UTIL_PKG_NAME="util-linux"
-SUSE_KERNEL_PKG_NAME="kernel-default"
 SUSE_KERNEL_DEVEL_PKG_NAME="kernel-default-devel"
-SUSE_LIBELF_PKG_NAME="libelf-devel"
-SUSE_UTIL_PKG_NAME="util-linux-systemd"
 DEPENDENCIES=(git mktemp rsync sed)
 # Dependencies for particular packages creation:
 DEPENDENCIES_TAR=(tar)
@@ -50,7 +45,7 @@ SUBMODULES=(
 )
 
 # Unset all variables that may be checked for existence:
-unset ${!GENERATE_*} ARCHIVE_PREPARED DEBUG FAILED_DEPS KVER KVER_FULL LIST_KERNELS MOCK_CFG\
+unset ${!GENERATE_*} ARCHIVE_PREPARED DEBUG FAILED_DEPS KVER LIST_KERNELS MOCK_CFG WITH_EXPORTER\
       OUTPUT_DIR RPM_BUILT SOURCES_DIR SUBMODULES_MISSING TAR_CREATED
 
 
@@ -83,21 +78,20 @@ print_help() {
     echo "  -l, --list-kernels              instead of normal operation, just list available kernel"
     echo "                                  versions (local or within chosen --mock) and exit;"
     echo "                                  if --kernel-version is provided, list only matching versions"
-    echo "  -k, --kernel-version <KVER>     build packages for specific kernel version"
-    echo "                                  (RPM only; DEB uses DKMS to build modules during install);"
-    echo "                                  sources with headers for this kernel must be"
-    echo "                                  available in /lib/modules/, or if used with --mock"
-    echo "                                  specific kernel version will be installed automatically"
-    echo "                                  if available in repo"
+    echo "  -k, --kernel-version <KVER>     filter --list-kernels output to versions matching <KVER>;"
+    echo "                                  RPM kernel modules are built via DKMS on the target"
+    echo "                                  (like DEB), so this no longer selects a build kernel"
+    echo "                                  during RPM package generation"
     echo "                                  (NOTE: if given version matches more than one available"
     echo "                                  kernel, the newest one matching will be taken)"
     echo "  -m, --mock <MOCK_CFG>           use 'mock' to build RPMs in chrooted environment"
-    echo "                                  (RPM only; check 'mock' documentation for details);"
-    echo "                                  if --kernel-version is not provided, RPMs will be"
-    echo "                                  built with the default kernel for chosen config"
+    echo "                                  (RPM only; check 'mock' documentation for details)"
     echo "  -o, --output-dir <DIR>          put all created files in the given directory;"
     echo "                                  default: 'SOURCES_PATH/packages/'"
     echo "  -d, --debug                     include debug information and create debug packages"
+    echo "      --with-exporter             build the opencas_exporter (Prometheus) RPM subpackage"
+    echo "                                  (RPM only; pulls in golang + go module download; off by default)"
+    echo "      --without-exporter          explicitly skip the opencas_exporter subpackage"
     echo "  -c, --clean                     clean all temporary files and folders that"
     echo "                                  may have been left around if $THIS ended"
     echo "                                  unexpectedly in the previous run"
@@ -199,33 +193,6 @@ check_cas_version() {
     done
     if [ "$SUBMODULES_MISSING" ]; then
         error "There are missing submodules:\n${SUBMODULES_MISSING}\nUpdate submodules and try again!"
-    fi
-}
-
-check_kernel_version() {
-    if [ "$MOCK_CFG" ]; then
-        echo "--- Checking kernel version in mock environment '$MOCK_CFG'"
-
-        if is_suse; then
-            local KDEVEL_PKG="$SUSE_KERNEL_DEVEL_PKG_NAME"
-        else
-            local KDEVEL_PKG="$RHEL_KERNEL_DEVEL_PKG_NAME"
-        fi
-        KVER_FULL=$(mock -r "$MOCK_CFG" --dnf-cmd -- repoquery --quiet --available --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' "$KDEVEL_PKG" | grep "^${KVER:-[0-9]}" | sort -V | tail -n 1)
-        if [ ! "$KVER_FULL" ]; then
-            error "kernel version matching '${KVER:-any}' not found in '$MOCK_CFG'"
-        fi
-
-        echo -e "--- Building in mock environment '$MOCK_CFG' for kernel version: \e[33m$KVER_FULL\e[0m"
-    else
-        if [ "$KVER" ]; then
-            KVER_FULL=$(find /lib/modules/* -maxdepth 0 -type d -name "$KVER*" -printf "%f\n" | sort -V | tail -n 1)
-            if [ ! "$KVER_FULL" ]; then
-                error "kernel version matching '$KVER' not found in /lib/modules/"
-            fi
-        fi
-
-        echo -e "--- Building for kernel version: \e[33m${KVER_FULL:-$(uname -r)}\e[0m"
     fi
 }
 
@@ -407,46 +374,16 @@ rpm_spec_prepare() {
     sed -i "s/<CAS_HOMEPAGE>/${CAS_HOMEPAGE//\//\\/}/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     sed -i "s/<PACKAGE_MAINTAINER>/$PACKAGE_MAINTAINER/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
 
-    if [ "$KVER_FULL" ]; then
-        sed -i "s/<KVER>/$KVER_FULL/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
-    else
-        sed -i "s/<KVER>/%(uname -r)/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
-    fi
-
-    if is_suse; then
-        if [ "$MOCK_CFG" ]; then
-            # On SUSE kernel packages versions not necessarily corelate with the actual
-            # kernel version reported by uname (which is in fact the name of kernel
-            # sources directory). Since uname command doesn't work in mock environment
-            # (as it is just a chroot and it is reporting info from the host system),
-            # this workaround sets kernel directory to whatever exists in /lib/modules/
-            # counting on that there will be only one kernel sources installed.
-            # Odds are much more in favor of this scenario, than of the rare case of
-            # having a match between kernel package version and the actual kernel version.
-            sed -i "/export KERNEL_DIR/s/%{kver}/*/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
-        fi
-
-        sed -i "s/<KERNEL_PKG>/$SUSE_KERNEL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
-        sed -i "s/<KERNEL_DEVEL_PKG>/$SUSE_KERNEL_DEVEL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
-        sed -i "s/<LIBELF_PKG>/$SUSE_LIBELF_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
-        sed -i "s/<UTIL_PKG>/$SUSE_UTIL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
-    else
-        sed -i "s/<KERNEL_PKG>/$RHEL_KERNEL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
-        sed -i "s/<KERNEL_DEVEL_PKG>/$RHEL_KERNEL_DEVEL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
-        sed -i "s/<LIBELF_PKG>/$RHEL_LIBELF_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
-        sed -i "s/<UTIL_PKG>/$RHEL_UTIL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
-    fi
-
     if [ "$DEBUG" ]; then
         echo "---   Debug info will be included and debug packages created as well"
 
-        sed -i "s/<MAKE_BUILD>/%make_build DEBUG_PACKAGE=1/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        sed -i "s/<MAKE_BUILD>/make -C casadm DEBUG_PACKAGE=1/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         sed -i "/<DEBUG_PACKAGE>/d" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         if is_suse; then
             sed -i "/%prep/i %debug_package\n\n" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         fi
     else
-        sed -i "s/<MAKE_BUILD>/%make_build/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        sed -i "s/<MAKE_BUILD>/make -C casadm/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         sed -i "s/<DEBUG_PACKAGE>/%define debug_package %{nil}/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     fi
 
@@ -528,11 +465,11 @@ generate_rpm() {
 
     if [ "$MOCK_CFG" ]; then
         echo "--- Building binary RPM packages in mock environment '$MOCK_CFG'"
-        if ! (HOME="$TEMP_DIR"; rpmbuild -bs "$RPM_SPECS_DIR/$CAS_NAME.spec"); then
+        if ! (HOME="$TEMP_DIR"; rpmbuild -bs ${EXPORTER_OPT[@]} "$RPM_SPECS_DIR/$CAS_NAME.spec"); then
             error "couldn't create SRPM package for mock"
         fi
 
-        if ! mock -r $MOCK_CFG --no-clean --resultdir "$RPM_RPMS_DIR" "$RPM_SRPMS_DIR/$CAS_FILENAME"-*.src.rpm; then
+        if ! mock -r $MOCK_CFG --no-clean ${EXPORTER_OPT[@]} --resultdir "$RPM_RPMS_DIR" "$RPM_SRPMS_DIR/$CAS_FILENAME"-*.src.rpm; then
             error "couldn't create RPM packages in mock environment"
         fi
         rm -rf "$RPM_SRPMS_DIR"/*.src.rpm
@@ -545,7 +482,7 @@ generate_rpm() {
     else
         if [ ! "$GENERATE_SRPM" ] && [ "$GENERATE_RPM" ]; then
             echo "--- Building binary RPM packages"
-            (HOME="$TEMP_DIR"; rpmbuild -bb --target "$ARCH" "$RPM_SPECS_DIR/$CAS_NAME.spec")
+            (HOME="$TEMP_DIR"; rpmbuild -bb --target "$ARCH" ${EXPORTER_OPT[@]} "$RPM_SPECS_DIR/$CAS_NAME.spec")
             if [ $? -ne 0 ]; then
                 error "couldn't create RPM packages"
             fi
@@ -553,7 +490,7 @@ generate_rpm() {
         fi
         if [ "$GENERATE_SRPM" ] && [ ! "$GENERATE_RPM" ]; then
             echo "--- Building source SRPM package"
-            (HOME="$TEMP_DIR"; rpmbuild -bs "$RPM_SPECS_DIR/$CAS_NAME.spec")
+            (HOME="$TEMP_DIR"; rpmbuild -bs ${EXPORTER_OPT[@]} "$RPM_SPECS_DIR/$CAS_NAME.spec")
             if [ $? -ne 0 ]; then
                 error "couldn't create SRPM package"
             fi
@@ -561,7 +498,7 @@ generate_rpm() {
         fi
         if [ "$GENERATE_SRPM" ] && [ "$GENERATE_RPM" ]; then
             echo "--- Building source and binary RPM packages"
-            (HOME="$TEMP_DIR"; rpmbuild -ba --target "$ARCH" "$RPM_SPECS_DIR/$CAS_NAME.spec")
+            (HOME="$TEMP_DIR"; rpmbuild -ba --target "$ARCH" ${EXPORTER_OPT[@]} "$RPM_SPECS_DIR/$CAS_NAME.spec")
             if [ $? -ne 0 ]; then
                 error "couldn't create RPM packages"
             fi
@@ -673,6 +610,12 @@ while (( $# )); do
         --debug|-d)
             DEBUG="debug"
             ;;
+        --with-exporter)
+            WITH_EXPORTER="with"
+            ;;
+        --without-exporter)
+            WITH_EXPORTER="without"
+            ;;
         --clean|-c)
             clean_all
             exit 0
@@ -719,6 +662,17 @@ VERSION_FILE="$SOURCES_DIR/.metadata/cas_version"
 # CAS version generator location:
 CAS_VERSION_GEN="$SOURCES_DIR/tools/cas_version_gen.sh"
 
+# RPM bcond option for the optional opencas_exporter subpackage (see
+# %bcond_with exporter in the spec). --with-exporter / --without-exporter map
+# to rpmbuild's --with / --without; absent = spec default (off).
+if [ "$WITH_EXPORTER" == "with" ]; then
+    EXPORTER_OPT=(--with exporter)
+elif [ "$WITH_EXPORTER" == "without" ]; then
+    EXPORTER_OPT=(--without exporter)
+else
+    EXPORTER_OPT=()
+fi
+
 check_cas_version
 
 # CAS naming convention:
@@ -745,11 +699,14 @@ for package in ${!GENERATE_*}; do
 done
 echo -e "\n"
 
+# go is only needed on the host for non-mock builds; mock resolves golang in its chroot.
+if [ "$WITH_EXPORTER" == "with" ] && [ "$GENERATE_RPM" ] && [ ! "$MOCK_CFG" ]; then
+    DEPENDENCIES+=(go)
+fi
+
 check_dependencies
 [ "$MOCK_CFG" ] && mock_prepare
 [ "$LIST_KERNELS" ] && list_kernels
-# Only RPM packages are built for specific kernel version.
-[ "$GENERATE_RPM" ] && check_kernel_version
 create_dir "$OUTPUT_DIR"
 for package in ${!GENERATE_*}; do
     ${package,,}
