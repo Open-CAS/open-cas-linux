@@ -78,22 +78,24 @@ rm -f packages/*debug*
 dnf install ./packages/open-cas-linux*.rpm
 ```
 
-Kernel modules are built on the target via DKMS, so install the matching
-`kernel-devel-$(uname -r)` first — without it the package install fails at
-the dkms build step. Upgrading from pre-26.09 kmod packages is handled
-automatically (the old `open-cas-linux-modules_k*` package is removed
-post-transaction).
-
-Note: on an upgrade, if the dkms build fails (e.g. kernel API change, or
-kernel-devel not matching the running kernel), the old modules are removed
-in the same transaction and no new ones are built — the system is left
-without CAS modules. Recover by rolling back to the previous packages.
-
 __on DEB based systems:__
 ```
 make deb
 apt install ./packages/open-cas-linux*.deb
 ```
+
+Since 26.09 the RPM modules are built via DKMS (previously via per-kernel
+kmod packages), upgrading from a pre-26.09 kmod install is handled
+automatically — the old `open-cas-linux-modules_k*` package is removed
+post-transaction.
+
+Both RPM and DEB build the kernel modules on the target via DKMS, so install
+the matching kernel headers first (`kernel-devel-$(uname -r)` on RPM,
+`linux-headers-$(uname -r)` on DEB) — without them the install fails at the
+dkms build step. On an upgrade, if the dkms build fails (e.g. kernel API
+change, or headers not matching the running kernel), the old modules are
+removed in the same transaction and no new ones are built — the system is
+left without CAS modules. Recover by rolling back to the previous packages.
 
 Package generating script will inform you of any missing dependencies.
 You can find detailed instructions in the [Open CAS documentation](https://open-cas.github.io/guide_installing.html#creating-rpmdeb-packages)

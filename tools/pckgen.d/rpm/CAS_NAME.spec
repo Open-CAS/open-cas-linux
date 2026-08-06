@@ -11,9 +11,9 @@
 # It contains tags in form of <TAG> which are substituted with particular
 # values in the build time.
 #
-# Kernel modules are DKMS source, built on the target at install time (like
-# the DEB packaging), so the build host needs no kernel-devel. The
-# opencas_exporter is an optional subpackage (%%bcond_with exporter below).
+# Kernel modules are DKMS source, built on the target at install time, so
+# the build host needs no kernel-devel. The opencas_exporter is an optional
+# subpackage (%%bcond_with exporter below).
 
 
 %global __python %{__python3}
@@ -31,16 +31,13 @@ Group:         System
 License:       <CAS_LICENSE_NAME>
 URL:           <CAS_HOMEPAGE>
 Source0:       https://github.com/Open-CAS/<CAS_NAME>/releases/download/v%{version}/%{name}-%{version}.tar.gz
-Packager:      Qin Fandong <qinfandong@kylinos.cn>
+Packager:      秦凡东 <qinfandong@kylinos.cn>
 BuildRequires: coreutils
-BuildRequires: gawk
 BuildRequires: gcc
 BuildRequires: make
 %if %{with exporter}
 BuildRequires: golang
 %endif
-BuildRequires: procps
-BuildRequires: python3
 Requires:      %{name}-modules = %{version}-%{release}
 Requires:      python3
 Requires:      python3-PyYAML
@@ -118,7 +115,7 @@ rm -rf modules/.tmp_versions 2>/dev/null || :
 # Regenerate version metadata (no build timestamp) for the DKMS source tree.
 (cd tools/; ./cas_version_gen.sh)
 
-# Install DKMS source tree (mirrors the DEB modules source package layout).
+# Install DKMS source tree.
 DKMS_TREE=%{name}-modules-%{version}
 DKMS_ROOT="$RPM_BUILD_ROOT/usr/src/$DKMS_TREE"
 install -d -m 755 "$DKMS_ROOT" "$DKMS_ROOT/.metadata" "$DKMS_ROOT/tools"
@@ -251,11 +248,11 @@ fi
 
 
 %changelog
-* Wed Aug 05 2026 Qin Fandong <qinfandong@kylinos.cn> - 26.09-1
-- Build kernel modules via DKMS on the target system (like the DEB packaging)
+* Wed Aug 05 2026 秦凡东 <qinfandong@kylinos.cn> - 26.09-1
+- Build kernel modules via DKMS on the target system
 - Split opencas_exporter into a conditional subpackage (--with exporter)
 
-* Tue Apr 28 2026 Qin Fandong <qinfandong@kylinos.cn> - 26.06-1
+* Tue Apr 28 2026 秦凡东 <qinfandong@kylinos.cn> - 26.06-1
 - Add opencas_exporter
 
 * Mon Aug 25 2025 Rafal Stefanowski <rafal.stefanowski@huawei.com> - 25.03-1
