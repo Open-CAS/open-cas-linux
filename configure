@@ -25,7 +25,13 @@ check_util sed
 check_util make
 check_util gcc
 check_util lsblk
-check_util go
+# go is only needed to build the optional opencas_exporter (extra/prometheus),
+# which is off by default in the RPM spec (%bcond_with exporter) and not part
+# of the kernel-module DKMS build at all. Warn instead of failing so that a
+# DKMS target without go (or a modules-only build) can still run configure.
+if ! which go &>/dev/null; then
+	echo >&2 "Warning: 'go' not found (only needed for the optional opencas_exporter)"
+fi
 
 SCRIPTPATH=`dirname $0`
 SCRIPTPATH=`realpath $SCRIPTPATH`

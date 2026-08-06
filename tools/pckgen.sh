@@ -486,7 +486,7 @@ generate_rpm() {
             if [ $? -ne 0 ]; then
                 error "couldn't create RPM packages"
             fi
-            mv -ft "$OUTPUT_DIR" "$RPM_RPMS_DIR/$ARCH"/*
+            mv -ft "$OUTPUT_DIR" "$RPM_RPMS_DIR"/*/*.rpm
         fi
         if [ "$GENERATE_SRPM" ] && [ ! "$GENERATE_RPM" ]; then
             echo "--- Building source SRPM package"
@@ -503,7 +503,7 @@ generate_rpm() {
                 error "couldn't create RPM packages"
             fi
             mv -ft "$OUTPUT_DIR" "$RPM_SRPMS_DIR"/*
-            mv -ft "$OUTPUT_DIR" "$RPM_RPMS_DIR/$ARCH"/*
+            mv -ft "$OUTPUT_DIR" "$RPM_RPMS_DIR"/*/*.rpm
         fi
     fi
 

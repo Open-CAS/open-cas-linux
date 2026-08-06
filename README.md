@@ -78,6 +78,17 @@ rm -f packages/*debug*
 dnf install ./packages/open-cas-linux*.rpm
 ```
 
+Kernel modules are built on the target via DKMS, so install the matching
+`kernel-devel-$(uname -r)` first — without it the package install fails at
+the dkms build step. Upgrading from pre-26.09 kmod packages is handled
+automatically (the old `open-cas-linux-modules_k*` package is removed
+post-transaction).
+
+Note: on an upgrade, if the dkms build fails (e.g. kernel API change, or
+kernel-devel not matching the running kernel), the old modules are removed
+in the same transaction and no new ones are built — the system is left
+without CAS modules. Recover by rolling back to the previous packages.
+
 __on DEB based systems:__
 ```
 make deb
