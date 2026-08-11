@@ -6,6 +6,57 @@
 
 MISSING_TOOLS=0
 
+usage() {
+	cat <<-EOF
+	Usage: $0 [options] [config-file]
+
+	Probes the kernel the modules will be built against and generates
+	modules/generated_defines.h accordingly.
+
+	Options:
+	  --kernel-dir DIR        use the kernel headers in DIR, e.g.
+	                          /lib/modules/VERSION/build
+	                          (default: the running kernel's)
+	  -h, --help              print this message
+
+	If config-file is given, the kernel is not probed at all and the
+	configuration stored in that file is applied as is.
+
+	Whatever kernel is selected here must be the same one 'make' is later
+	pointed at, otherwise the generated header describes a different kernel
+	API than the one the modules are compiled against.
+	EOF
+}
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+	--kernel-dir)
+		if [ -z "$2" ]; then
+			echo >&2 "Error: '$1' requires an argument"
+			usage >&2
+			exit 1
+		fi
+		KERNEL_DIR_ARG="$2"
+		shift 2 ;;
+	-h|--help)
+		usage
+		exit 0 ;;
+	-*)
+		echo >&2 "Error: unknown option '$1'"
+		usage >&2
+		exit 1 ;;
+	*)
+		CONFIG_FILE_ARG="$1"
+		shift ;;
+	esac
+done
+
+# Assigned outright rather than defaulted from the environment: honouring
+# $KERNEL_DIR as well would leave two ways of saying the same thing, with no
+# way to tell which one was meant when they disagree.
+KERNEL_DIR="${KERNEL_DIR_ARG:-/lib/modules/$(uname -r)/build}"
+export KERNEL_DIR
+
 check_util() {
 	which $1 &> /dev/null
 	if [ $? -ne 0 ]
@@ -42,9 +93,9 @@ if [ "$SUBMODULES_MISSING" ]; then
 	MISSING_TOOLS=1
 fi
 
-if [ ! -e /lib/modules/$(uname -r)/build/ &> /dev/null ] && [ "$KERNEL_DIR" == "" ]
+if [ ! -d "$KERNEL_DIR" ]
 then
-	echo >&2 "Error: missing kernel headers and/or kernel devel"
+	echo >&2 "Error: missing kernel headers and/or kernel devel in '$KERNEL_DIR'"
 	MISSING_TOOLS=1
 fi
 
@@ -56,7 +107,7 @@ then
 fi
 
 if [ ! -f /usr/include/libelf.h ]; then
-	KERNEL_CONFIG=$(find /usr/src/ -type d -name "*$(uname -r)")/.config
+	KERNEL_CONFIG="$KERNEL_DIR/.config"
 	if [ -f "$KERNEL_CONFIG" ]; then
 		if grep ^CONFIG_UNWINDER_ORC=[Yy] "$KERNEL_CONFIG" &>/dev/null; then
 			echo "Error: CONFIG_UNWINDER_ORC=y option is set in your kernel,"\
@@ -96,7 +147,7 @@ generate_config() {
 	n_cores=$(nproc)
 
 	# Compile each test module in background
-	echo "Preparing configuration"
+	echo "Preparing configuration for kernel headers in $KERNEL_DIR"
 		for file in $CONFIG_FILES; do
 			# $1 - Action to be performed
 			# $2 - File with stored configuration
@@ -139,10 +190,10 @@ generate_header() {
 	done
 }
 
-if [ -z "$1" ]; then
+if [ -z "$CONFIG_FILE_ARG" ]; then
 	generate_config
 else
-	CONFIG_FILE=$(realpath $1)
+	CONFIG_FILE=$(realpath $CONFIG_FILE_ARG)
 	if [ $? -ne 0 ] ; then
 		echo "Invaild path to config file!"
 		exit 1
