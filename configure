@@ -144,6 +144,11 @@ FILES_COUNT=`echo $CONFIG_FILES | wc -w`
 
 CONFIG_FILE=$SCRIPTPATH/"config.out"
 
+# Name under which the probed kernel is stored in the config file, so that a
+# header generated from a saved config still states which kernel API it
+# describes - see generate_header() and modules/Makefile.
+KERNEL_DIR_TAG="CONFIGURED_KERNEL_DIR"
+
 generate_config() {
 	rm -f ${CONFIG_FILE}
 	touch ${CONFIG_FILE}
@@ -173,6 +178,8 @@ generate_config() {
 		grep "X" ${CONFIG_FILE} | cut -f1 -d ' '
 		exit 1
 	fi
+
+	echo "$KERNEL_DIR_TAG $(realpath "$KERNEL_DIR")" >> ${CONFIG_FILE}
 }
 
 generate_header() {
@@ -181,6 +188,12 @@ generate_header() {
 	FIRST=$(echo $CONFIG_FILES | tr ' ' '\n' | grep '1_')
 	SECOND=$(echo $CONFIG_FILES | tr ' ' '\n' | grep '2_')
 
+
+	CONFIGURED_KERNEL_DIR=$(grep "^$KERNEL_DIR_TAG " ${CONFIG_FILE} | cut -d' ' -f2-)
+	if [ -n "$CONFIGURED_KERNEL_DIR" ]; then
+		echo "#define CAS_CONFIGURED_KERNEL_DIR \"$CONFIGURED_KERNEL_DIR\"" \
+			>> $SCRIPTPATH/modules/generated_defines.h
+	fi
 	echo "Configuring OpenCAS"
 	for file in $FIRST; do
 		CONF=$(cat ${CONFIG_FILE} | grep $(basename $file) | cut -d' ' -f2)
