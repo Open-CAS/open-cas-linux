@@ -108,6 +108,9 @@ fi
 
 if [ ! -f /usr/include/libelf.h ]; then
 	KERNEL_CONFIG="$KERNEL_DIR/.config"
+	if [ ! -f "$KERNEL_CONFIG" ]; then
+		KERNEL_CONFIG="$KERNEL_DIR/include/config/auto.conf"
+	fi
 	if [ -f "$KERNEL_CONFIG" ]; then
 		if grep ^CONFIG_UNWINDER_ORC=[Yy] "$KERNEL_CONFIG" &>/dev/null; then
 			echo "Error: CONFIG_UNWINDER_ORC=y option is set in your kernel,"\
