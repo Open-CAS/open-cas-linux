@@ -3287,6 +3287,7 @@ int cache_mngt_exit_instance(const char *cache_name, size_t name_len, int flush)
 			flush_status = -ENODEV;
 		}
 	}
+	context->flush_status = flush_status;
 
 	if (flush && !flush_status)
 		BUG_ON(ocf_mngt_cache_is_dirty(cache));
