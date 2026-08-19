@@ -3,14 +3,14 @@
 [![Build Status](https://github.com/Open-CAS/open-cas-linux/actions/workflows/build-master.yml/badge.svg)](https://github.com/Open-CAS/open-cas-linux/actions/workflows/build-master.yml)
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
 
-Open CAS  accelerates Linux applications by caching active (hot) data to
+Open CAS accelerates Linux applications by caching active (hot) data to
 a local flash device inside servers. Open CAS implements caching at the
 server level, utilizing local high-performance flash media as the cache drive
 media inside the application server as close as possible to the CPU, thus
 reducing storage latency as much as possible.
 The Open Cache Acceleration Software installs into the GNU/Linux operating
 system itself, as a kernel module. The nature of the integration provides a
-cache solution that is transparent to users and  applications, and your
+cache solution that is transparent to users and applications, and your
 existing storage infrastructure. No storage migration effort or application
 changes are required.
 
@@ -71,18 +71,33 @@ you need to run `./configure` once again - this time it should succeed.
 Alternatively, you can generate RPM/DEB packages from downloaded sources and
 install those packages instead. To do so, simply run:
 
-__on RPM based systems:__
+**on RPM based systems:**
+
 ```
 make rpm
 rm -f packages/*debug*
 dnf install ./packages/open-cas-linux*.rpm
 ```
 
-__on DEB based systems:__
+**on DEB based systems:**
+
 ```
 make deb
 apt install ./packages/open-cas-linux*.deb
 ```
+
+Since 26.09 the RPM modules are built via DKMS (previously via per-kernel
+kmod packages), upgrading from a pre-26.09 kmod install is handled
+automatically — the old `open-cas-linux-modules_k*` package is removed
+post-transaction.
+
+Both RPM and DEB build the kernel modules on the target via DKMS, so install
+the matching kernel headers first (`kernel-devel-$(uname -r)` on RPM,
+`linux-headers-$(uname -r)` on DEB) — without them the install fails at the
+dkms build step. On an upgrade, if the dkms build fails (e.g. kernel API
+change, or headers not matching the running kernel), the old modules are
+removed in the same transaction and no new ones are built — the system is
+left without CAS modules. Recover by rolling back to the previous packages.
 
 Package generating script will inform you of any missing dependencies.
 You can find detailed instructions in the [Open CAS documentation](https://open-cas.github.io/guide_installing.html#creating-rpmdeb-packages)
@@ -104,9 +119,9 @@ Before running tests make sure you have a platform with at least 2 disks (one fo
 1. Go to test directory `cd test/functional`.
 1. Install dependencies with command `pip3 install -r requirements.txt`.
 1. Create DUT config. See example [here](test/functional/config/example_dut_config.yml).
-    a) Set disks params. You need at least two disks, of which at least one is an SSD drive.
-    b) For remote execution uncomment and set the `ip`, `user` and `password` fields.
-    c) For local execution just leave these fields commented.
+   a) Set disks params. You need at least two disks, of which at least one is an SSD drive.
+   b) For remote execution uncomment and set the `ip`, `user` and `password` fields.
+   c) For local execution just leave these fields commented.
 1. Run tests using command `pytest-3 --dut-config=<CONFIG>` where `<CONFIG>` is path to your config file, for example `pytest-3 --dut-config="config/dut_config.yml"`.
 
 ## Contributing
