@@ -76,7 +76,7 @@ This package contains only CAS kernel modules.
 
 %build
 export KERNEL_DIR=/lib/modules/%{kver}/build/
-./configure
+./configure --kernel-dir $KERNEL_DIR
 <MAKE_BUILD>
 
 
