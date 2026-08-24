@@ -46,8 +46,22 @@ else
 sync distsync:
 endif
 
-default: sync
+default: sync check_configured_kernel
 	cd $(KERNEL_DIR) && $(MAKE) M=$(PWD) modules
+
+# generated_defines.h describes the kernel API './configure' probed. Compiling
+# it against another kernel produces code for an API that kernel may not have,
+# so say so up front instead of failing with a wall of compiler errors.
+check_configured_kernel:
+	@configured=$$(sed -n 's/^#define CAS_CONFIGURED_KERNEL_DIR "\(.*\)"$$/\1/p' \
+		$(PWD)/generated_defines.h 2>/dev/null); \
+	building=$$(realpath $(KERNEL_DIR)); \
+	if [ -n "$$configured" ] && [ "$$configured" != "$$building" ]; then \
+		echo "ERROR: './configure' was run for the kernel in $$configured," >&2; \
+		echo "but the modules are being built against $$building." >&2; \
+		echo "Re-run './configure --kernel-dir $$building' first." >&2; \
+		exit 1; \
+	fi
 
 clean:
 	cd $(KERNEL_DIR) && make M=$(PWD) clean
@@ -80,6 +94,6 @@ uninstall:
 
 reinstall: uninstall install
 
-.PHONY: all default clean distclean sync distsync install uninstall
+.PHONY: all default check_configured_kernel clean distclean sync distsync install uninstall
 
 endif

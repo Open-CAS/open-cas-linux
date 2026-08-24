@@ -6,6 +6,10 @@ DEST_MODULE_LOCATION[0]="/<CAS_MODULES_DIR>"
 BUILT_MODULE_NAME[1]="cas_bd"
 BUILT_MODULE_LOCATION[1]="modules/cas_bd/"
 DEST_MODULE_LOCATION[1]="/<CAS_MODULES_DIR>"
-PRE_BUILD="./configure"
-MAKE[0]="make -j -C modules/ KERNEL_VERSION=$kernelver"
+# DKMS builds for a kernel that is not necessarily the running one, so the
+# kernel has to be spelled out for './configure' as well - left to itself it
+# probes the running kernel and generates a header for the wrong kernel API.
+DKMS_KERNEL_DIR="/lib/modules/$kernelver/build"
+PRE_BUILD="./configure --kernel-dir $DKMS_KERNEL_DIR"
+MAKE[0]="make -j -C modules/ KERNEL_VERSION=$kernelver KERNEL_DIR=$DKMS_KERNEL_DIR"
 AUTOINSTALL=yes
