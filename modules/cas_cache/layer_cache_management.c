@@ -1199,7 +1199,10 @@ static void cache_mngt_metadata_probe_end(void *priv, int error,
 		cmd_info->is_cache_device = false;
 		cmd_info->metadata_compatible = false;
 		*context->result = 0;
-	} else if (error == -OCF_ERR_METADATA_VER || error == 0) {
+	} else if (error == -OCF_ERR_METADATA_VER ||
+			error == -OCF_ERR_ADAPTER_MISMATCH ||
+			error == -OCF_ERR_ADAPTER_VER || error == 0) {
+		/* Metadata is present but this build cannot interpret it. */
 		cmd_info->is_cache_device = true;
 		cmd_info->metadata_compatible = !error;
 		cmd_info->clean_shutdown = status->clean_shutdown;
@@ -2270,6 +2273,13 @@ static void cache_mngt_probe_metadata_end(void *priv, int error,
 		goto err;
 	} else if (error == -OCF_ERR_METADATA_VER) {
 		printk(KERN_ERR "Cache metadata version mismatch\n");
+		goto err;
+	} else if (error == -OCF_ERR_ADAPTER_MISMATCH) {
+		printk(KERN_ERR "Cache metadata was created by a different "
+				"adapter\n");
+		goto err;
+	} else if (error == -OCF_ERR_ADAPTER_VER) {
+		printk(KERN_ERR "Cache metadata adapter version mismatch\n");
 		goto err;
 	} else if (error) {
 		printk(KERN_ERR "Failed to load cache metadata!\n");
