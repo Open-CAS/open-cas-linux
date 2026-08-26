@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2022 Intel Corporation
 * Copyright(c) 2024-2025 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -144,6 +145,18 @@ struct {
 	{
 		OCF_ERR_METADATA_VER,
 		"Metadata version mismatch"
+	},
+	{
+		OCF_ERR_BLOCK_MODE_MISMATCH,
+		"Metadata was created in a different block mode"
+	},
+	{
+		OCF_ERR_ADAPTER_MISMATCH,
+		"Metadata was created by a different adapter"
+	},
+	{
+		OCF_ERR_ADAPTER_VER,
+		"Adapter version mismatch"
 	},
 	{
 		OCF_ERR_NO_METADATA,
