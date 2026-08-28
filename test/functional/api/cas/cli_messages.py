@@ -12,9 +12,11 @@ from core.test_run import TestRun
 
 
 attach_not_enough_memory = [
-    r"Not enough free RAM\.\nYou need at least \d+.\d+GB to attach a device to cache "
-    r"with cache line size equal \d+kB.\n"
-    r"Try with greater cache line size\."
+    (
+        r"Not enough free RAM\.\nYou need at least \d+.\d+GB to attach a device to cache "
+        r"with cache line size equal \d+kB.\n"
+        r"Try with greater cache line size\."
+    )
 ]
 
 attach_with_existing_metadata = [
@@ -25,8 +27,10 @@ attach_with_existing_metadata = [
 ]
 
 load_inactive_core_missing = [
-    r"WARNING: Can not resolve path to core \d+ from cache \d+\. By-id path will be shown for that "
-    r"core\.",
+    (
+        r"WARNING: Can not resolve path to core \d+ from cache \d+\. By-id path will be shown for "
+        r"that core\."
+    ),
     r"WARNING: Cache is in incomplete state - at least one core is inactive",
 ]
 
@@ -138,8 +142,11 @@ try_add_core_sector_size_mismatch = [
 no_caches_running = [r"No caches running"]
 
 unavailable_device = [
-    r"Error while opening \'\S+\'exclusively\. This can be due to\n"
-    r"cache instance running on this device\. In such case please stop the cache and try again\."
+    (
+        r"Error while opening \'\S+\'exclusively\. This can be due to\n"
+        r"cache instance running on this device\. In such case please stop the cache and try "
+        r"again\."
+    )
 ]
 
 error_handling = [r"Error during options handling"]
@@ -147,17 +154,22 @@ error_handling = [r"Error during options handling"]
 no_cas_metadata = [r"Device \'\S+\' does not contain OpenCAS's metadata\."]
 
 cache_dirty_data = [
-    r"Cache instance contains dirty data\. Clearing metadata will result in loss of dirty data\.\n"
-    r"Please load cache instance and flush dirty data in order to preserve them on the core "
-    r"device\.\n"
-    r"Alternatively, if you wish to clear metadata anyway, please use \'--force\' option\."
+    (
+        r"Cache instance contains dirty data\. Clearing metadata will result in loss of dirty "
+        r"data\.\n"
+        r"Please load cache instance and flush dirty data in order to preserve them on the core "
+        r"device\.\n"
+        r"Alternatively, if you wish to clear metadata anyway, please use \'--force\' option\."
+    )
 ]
 
 cache_dirty_shutdown = [
-    r"Cache instance did not shut down cleanly\. It might contain dirty data\. \n"
-    r"Clearing metadata might result in loss of dirty data\. Please recover cache instance\n"
-    r"by loading it and flush dirty data in order to preserve them on the core device\.\n"
-    r"Alternatively, if you wish to clear metadata anyway, please use \'--force\' option\."
+    (
+        r"Cache instance did not shut down cleanly\. It might contain dirty data\. \n"
+        r"Clearing metadata might result in loss of dirty data\. Please recover cache instance\n"
+        r"by loading it and flush dirty data in order to preserve them on the core device\.\n"
+        r"Alternatively, if you wish to clear metadata anyway, please use \'--force\' option\."
+    )
 ]
 
 missing_param = [r"Option \'.+\' is missing"]
@@ -175,8 +187,10 @@ operation_forbidden_detached_cache = [
 ]
 
 set_cache_mode_detached_cache = [
-    r"Error while setting cache state for cache \d+\n"
-    r"The operation is not permitted while the cache is detached"
+    (
+        r"Error while setting cache state for cache \d+\n"
+        r"The operation is not permitted while the cache is detached"
+    )
 ]
 
 remove_core_detached_cache = [
@@ -188,8 +202,10 @@ mutually_exclusive_params_init = [
 ]
 
 mutually_exclusive_params_load = [
-    r"Use of \'load\' with \'force\', \'cache-id\' or \'cache-line-size\' simultaneously is "
-    r"forbidden."
+    (
+        r"Use of \'load\' with \'force\', \'cache-id\' or \'cache-line-size\' simultaneously is "
+        r"forbidden."
+    )
 ]
 
 activate_with_different_cache_id = [
@@ -209,9 +225,12 @@ activate_without_detach = [
 cache_line_size_mismatch = [r"Cache line size mismatch"]
 
 headerless_io_class_config = [
-    r'Cannot parse configuration file - unknown column "1"\.\n'
-    r"Failed to parse I/O classes configuration file header\. It is either malformed or missing\.\n"
-    r"Please consult Admin Guide to check how columns in configuration file should be named\."
+    (
+        r'Cannot parse configuration file - unknown column "1"\.\n'
+        r"Failed to parse I/O classes configuration file header\. It is either malformed or "
+        r"missing\.\n"
+        r"Please consult Admin Guide to check how columns in configuration file should be named\."
+    )
 ]
 
 illegal_io_class_config_L2C1 = [
@@ -219,8 +238,10 @@ illegal_io_class_config_L2C1 = [
 ]
 
 illegal_io_class_config_L2C2 = [
-    r"Empty or too long IO class name\n"
-    r"Cannot parse configuration file - error in line 2 in column 2 \(IO class name\)\."
+    (
+        r"Empty or too long IO class name\n"
+        r"Cannot parse configuration file - error in line 2 in column 2 \(IO class name\)\."
+    )
 ]
 
 illegal_io_class_config_L2C4 = [
@@ -230,28 +251,38 @@ illegal_io_class_config_L2C4 = [
 illegal_io_class_config_L2 = [r"Cannot parse configuration file - error in line 2\."]
 
 double_io_class_config = [
-    r"Double configuration for IO class id \d+\n"
-    r"Cannot parse configuration file - error in line \d+ in column \d+ \(IO class id\)\."
+    (
+        r"Double configuration for IO class id \d+\n"
+        r"Cannot parse configuration file - error in line \d+ in column \d+ \(IO class id\)\."
+    )
 ]
 
 illegal_io_class_invalid_id = [
-    r"Invalid id, must be a correct unsigned decimal integer\.\n"
-    r"Cannot parse configuration file - error in line 2 in column 1 \(IO class id\)\."
+    (
+        r"Invalid id, must be a correct unsigned decimal integer\.\n"
+        r"Cannot parse configuration file - error in line 2 in column 1 \(IO class id\)\."
+    )
 ]
 
 illegal_io_class_invalid_id_number = [
-    r"Invalid id, must be in the range 0-33\.\n"
-    r"Cannot parse configuration file - error in line 2 in column 1 \(IO class id\)\."
+    (
+        r"Invalid id, must be in the range 0-33\.\n"
+        r"Cannot parse configuration file - error in line 2 in column 1 \(IO class id\)\."
+    )
 ]
 
 illegal_io_class_invalid_priority = [
-    r"Invalid prio, must be a correct unsigned decimal integer\.\n"
-    r"Cannot parse configuration file - error in line 2 in column 3 \(Eviction priority\)"
+    (
+        r"Invalid prio, must be a correct unsigned decimal integer\.\n"
+        r"Cannot parse configuration file - error in line 2 in column 3 \(Eviction priority\)"
+    )
 ]
 
 illegal_io_class_invalid_priority_number = [
-    r"Invalid prio, must be in the range 0-255\.\n"
-    r"Cannot parse configuration file - error in line 2 in column 3 \(Eviction priority\)"
+    (
+        r"Invalid prio, must be in the range 0-255\.\n"
+        r"Cannot parse configuration file - error in line 2 in column 3 \(Eviction priority\)"
+    )
 ]
 
 illegal_io_class_invalid_allocation = [
@@ -263,17 +294,22 @@ illegal_io_class_invalid_allocation_number = [
 ]
 
 malformed_io_class_header = [
-    r"Cannot parse configuration file - unknown column \"value_template\"\.\n"
-    r"Failed to parse I/O classes configuration file header\. It is either malformed or missing\.\n"
-    r"Please consult Admin Guide to check how columns in configuration file should be named\."
+    (
+        r'Cannot parse configuration file - unknown column \"value_template\"\.\n'
+        r"Failed to parse I/O classes configuration file header\. It is either malformed or "
+        r"missing\.\n"
+        r"Please consult Admin Guide to check how columns in configuration file should be named\."
+    )
 ]
 
 unexpected_cls_option = [r"Option '--cache-line-size \(-x\)' is not allowed"]
 
 attach_not_enough_memory = [
-    r"Not enough free RAM\.\nYou need at least \d+.\d+GB to attach a device to cache "
-    r"with cache line size equal \d+kB.\n"
-    r"Try with greater cache line size\."
+    (
+        r"Not enough free RAM\.\nYou need at least \d+.\d+GB to attach a device to cache "
+        r"with cache line size equal \d+kB.\n"
+        r"Try with greater cache line size\."
+    )
 ]
 
 

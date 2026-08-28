@@ -305,12 +305,18 @@ def test_start_neg_cli_flags():
             )
 
         mutually_exclusive_cmd_load = [
-            f"{casadm_bin} --standby --load --cache-device {cache_device.path}"
-            f" --cache-id {cache_id}",
-            f"{casadm_bin} --standby --load --cache-device {cache_device.path}"
-            f" --cache-line-size {cache_line_size}",
-            f"{casadm_bin} --standby --load --cache-device {cache_device.path}"
-            f" --force"
+            (
+                f"{casadm_bin} --standby --load --cache-device {cache_device.path}"
+                f" --cache-id {cache_id}"
+            ),
+            (
+                f"{casadm_bin} --standby --load --cache-device {cache_device.path}"
+                f" --cache-line-size {cache_line_size}"
+            ),
+            (
+                f"{casadm_bin} --standby --load --cache-device {cache_device.path}"
+                f" --force"
+            )
         ]
 
         for cmd in mutually_exclusive_cmd_load:

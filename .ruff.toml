@@ -5,4 +5,6 @@ ignore = [
     "E402", # All module level imports should be at the top of the file. This means that there
             # should be no statements in between module level imports
     "F405", # Variable  may be undefined, or defined from star imports
+    "TRY002", # Create your own exception
+    "BLE001", # Do not catch blind exception
 ]
