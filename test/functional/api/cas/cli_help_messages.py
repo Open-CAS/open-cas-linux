@@ -40,16 +40,24 @@ start_cache_help = [
     r"Start new cache instance or load using metadata",
     r"Options that are valid with --start-cache \(-S\) are:",
     r"-d  --cache-device \<DEVICE\>          Caching device to be used",
-    r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\> "
-    r"\(if not provided, the first available number will be used\)",
-    r"-l  --load                           Load cache metadata from caching device "
-    r"\(DANGEROUS - see manual or Admin Guide for details\)",
+    (
+        r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\> "
+        r"\(if not provided, the first available number will be used\)"
+    ),
+    (
+        r"-l  --load                           Load cache metadata from caching device "
+        r"\(DANGEROUS - see manual or Admin Guide for details\)"
+    ),
     r"-f  --force                          Force the creation of cache instance",
-    r"-c  --cache-mode \<NAME\>              Set cache mode from available: \{wt|wb|wa|pt|wo\} "
-    r"Write-Through, Write-Back, Write-Around, Pass-Through, Write-Only; "
-    r"without this parameter Write-Through will be set by default",
-    r"-x  --cache-line-size \<NUMBER\>       Set cache line size in kibibytes: "
-    r"\{4,8,16,32,64\}\[KiB\] \(default: 4\)",
+    (
+        r"-c  --cache-mode \<NAME\>              Set cache mode from available: \{wt|wb|wa|pt|wo\} "
+        r"Write-Through, Write-Back, Write-Around, Pass-Through, Write-Only; "
+        r"without this parameter Write-Through will be set by default"
+    ),
+    (
+        r"-x  --cache-line-size \<NUMBER\>       Set cache line size in kibibytes: "
+        r"\{4,8,16,32,64\}\[KiB\] \(default: 4\)"
+    ),
 ]
 
 attach_cache_help = [
@@ -57,8 +65,10 @@ attach_cache_help = [
     r"Attach cache device",
     r"Options that are valid with --attach-cache are:",
     r"-d  --cache-device \<DEVICE\>          Caching device to be used",
-    r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\> "
-    r"\(if not provided, the first available number will be used\)",
+    (
+        r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\> "
+        r"\(if not provided, the first available number will be used\)"
+    ),
     r"-f  --force                          Force attaching the cache device",
 ]
 detach_cache_help = [
@@ -89,48 +99,79 @@ set_params_help = [
     r"cleaning-acp - Cleaning policy ACP parameters",
     r"Options that are valid with --set-param \(-X\) --name \(-n\) seq-cutoff are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "
-    r"instance",
+    (
+        r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "
+        r"instance"
+    ),
     r"-t  --threshold \<KiB\>                Sequential cutoff activation threshold \[KiB\]",
-    r"-p  --policy \<POLICY\>                Sequential cutoff policy\. Available policies: "
-    r"\{always|full|never\}",
-    r"    --promotion-count \<NUMBER\>       Sequential cutoff stream promotion request count "
-    r"threshold",
+    (
+        r"-p  --policy \<POLICY\>                Sequential cutoff policy\. Available policies: "
+        r"\{always|full|never\}"
+    ),
+    (
+        r"    --promotion-count \<NUMBER\>       Sequential cutoff stream promotion request count "
+        r"threshold"
+    ),
     r"Options that are valid with --set-param \(-X\) --name \(-n\) cleaning are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
-    r"-p  --policy \<POLICY\>                Cleaning policy type\. Available policy types: "
-    r"\{nop|alru|acp\}",
+    (
+        r"-p  --policy \<POLICY\>                Cleaning policy type\. Available policy types: "
+        r"\{nop|alru|acp\}"
+    ),
     r"Options that are valid with --set-param \(-X\) --name \(-n\) promotion are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
-    r"-p  --policy \<POLICY\>                Promotion policy type\. Available policy types: "
-    r"\{always|nhit\}",
+    (
+        r"-p  --policy \<POLICY\>                Promotion policy type\. Available policy types: "
+        r"\{always|nhit\}"
+    ),
     r"Options that are valid with --set-param \(-X\) --name \(-n\) promotion-nhit are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
-    r"-t  --threshold \<NUMBER\>             Number of requests for given core line after which "
-    r"NHIT policy allows insertion into cache \<2-1000\> \(default: 3\)",
-    r"-o  --trigger \<NUMBER\>               Cache occupancy value over which NHIT promotion "
-    r"is active \<0-100\>\[\%\] \(default: 80\%\)",
+    (
+        r"-t  --threshold \<NUMBER\>             Number of requests for given core line after "
+        r"which NHIT policy allows insertion into cache \<2-1000\> \(default: 3\)"
+    ),
+    (
+        r"-o  --trigger \<NUMBER\>               Cache occupancy value over which NHIT promotion "
+        r"is active \<0-100\>\[\%\] \(default: 80\%\)"
+    ),
     r"Options that are valid with --set-param \(-X\) --name \(-n\) cleaning-alru are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
-    r"-w  --wake-up \<NUMBER\>               Cleaning thread sleep time after an idle wake up "
-    r"\<0-3600\>\[s\] \(default: 20 s\)",
-    r"-s  --staleness-time \<NUMBER\>        Time that has to pass from the last write operation "
-    r"before a dirty cache block can be scheduled to be flushed \<1-3600\>\[s\] \(default: 120 s\)",
-    r"-b  --flush-max-buffers \<NUMBER\>     Number of dirty cache blocks to be flushed in one "
-    r"cleaning cycle \<1-10000\> \(default: 100\)",
-    r"-t  --activity-threshold \<NUMBER\>    Cache idle time before flushing thread can start "
-    r"\<0-1000000\>\[ms\] \(default: 10000 ms\)",
-    r"-d  --dirty-ratio-threshold \<NUMBER\> Dirty ratio of the cache device at which cleaning "
-    r"will be triggered \<0-100\>\[\%\] \(default: 100\%\)",
-    r"    --dirty-ratio-inertia \<NUMBER\>   Inertia for dirty ratio triggered cleaning - "
-    r"the trigger will be disabled after dirty ratio falls below "
-    r"\(threshold - inertia\) \<0-4095\>\[MiB\] \(default: 128 MiB\)",
+    (
+        r"-w  --wake-up \<NUMBER\>               Cleaning thread sleep time after an idle wake up "
+        r"\<0-3600\>\[s\] \(default: 20 s\)"
+    ),
+    (
+        r"-s  --staleness-time \<NUMBER\>        Time that has to pass from the last write "
+        r"operation before a dirty cache block can be scheduled to be flushed \<1-3600\>\[s\] "
+        r"\(default: 120 s\)"
+    ),
+    (
+        r"-b  --flush-max-buffers \<NUMBER\>     Number of dirty cache blocks to be flushed in one "
+        r"cleaning cycle \<1-10000\> \(default: 100\)"
+    ),
+    (
+        r"-t  --activity-threshold \<NUMBER\>    Cache idle time before flushing thread can start "
+        r"\<0-1000000\>\[ms\] \(default: 10000 ms\)"
+    ),
+    (
+        r"-d  --dirty-ratio-threshold \<NUMBER\> Dirty ratio of the cache device at which cleaning "
+        r"will be triggered \<0-100\>\[\%\] \(default: 100\%\)"
+    ),
+    (
+        r"    --dirty-ratio-inertia \<NUMBER\>   Inertia for dirty ratio triggered cleaning - "
+        r"the trigger will be disabled after dirty ratio falls below "
+        r"\(threshold - inertia\) \<0-4095\>\[MiB\] \(default: 128 MiB\)"
+    ),
     r"Options that are valid with --set-param \(-X\) --name \(-n\) cleaning-acp are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
-    r"-w  --wake-up \<NUMBER\>               Time between ACP cleaning thread iterations "
-    r"\<0-10000\>\[ms\] \(default: 10 ms\)",
-    r"-b  --flush-max-buffers \<NUMBER\>     Number of cache lines flushed in single ACP cleaning "
-    r"thread iteration \<1-10000\> \(default: 128\)",
+    (
+        r"-w  --wake-up \<NUMBER\>               Time between ACP cleaning thread iterations "
+        r"\<0-10000\>\[ms\] \(default: 10 ms\)"
+    ),
+    (
+        r"-b  --flush-max-buffers \<NUMBER\>     Number of cache lines flushed in single ACP "
+        r"cleaning thread iteration \<1-10000\> \(default: 128\)"
+    ),
 ]
 
 
@@ -146,8 +187,10 @@ get_params_help = [
     r"promotion-nhit - Promotion policy NHIT parameters",
     r"Options that are valid with --get-param \(-G\) --name \(-n\) seq-cutoff are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "
-    r"instance",
+    (
+        r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "
+        r"instance"
+    ),
     r"-o  --output-format \<FORMAT\>         Output format: \{table|csv\}",
     r"Options that are valid with --get-param \(-G\) --name \(-n\) cleaning are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
@@ -173,8 +216,10 @@ set_cache_mode_help = [
     r"Options that are valid with --set-cache-mode \(-Q\) are:",
     r"-c  --cache-mode \<NAME\>              Cache mode\. Available cache modes: \{wt|wb|wa|pt|wo\}",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
-    r"-f  --flush-cache \<yes|no\>           Flush all dirty data from cache before switching "
-    r"to new mode\. Option is required when switching from Write-Back or Write-Only mode",
+    (
+        r"-f  --flush-cache \<yes|no\>           Flush all dirty data from cache before switching "
+        r"to new mode\. Option is required when switching from Write-Back or Write-Only mode"
+    ),
 ]
 
 
@@ -183,8 +228,10 @@ add_core_help = [
     r"Add core device to cache instance",
     r"Options that are valid with --add-core \(-A\) are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "
-    r"instance",
+    (
+        r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "
+        r"instance"
+    ),
     r"-d  --core-device \<DEVICE\>           Path to core device",
 ]
 
@@ -193,8 +240,10 @@ remove_core_help = [
     r"Remove active core device from cache instance",
     r"Options that are valid with --remove-core \(-R\) are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "
-    r"instance",
+    (
+        r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "
+        r"instance"
+    ),
     r"-f  --force                          Force active core removal without data flush",
 ]
 
@@ -204,8 +253,10 @@ remove_inactive_help = [
     r"Remove inactive core device from cache instance",
     r"Options that are valid with --remove-inactive are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given "
-    r"cache instance",
+    (
+        r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given "
+        r"cache instance"
+    ),
     r"-f  --force                          Force dirty inactive core removal",
 ]
 
@@ -230,12 +281,16 @@ stats_help = [
     r"Print statistics for cache instance",
     r"Options that are valid with --stats \(-P\) are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \<ID\>                   Limit display of core-specific statistics to only ones "
-    r"pertaining to a specific core\. If this option is not given, casadm will display statistics "
-    r"pertaining to all cores assigned to given cache instance\.",
+    (
+        r"-j  --core-id \<ID\>                   Limit display of core-specific statistics to only "
+        r"ones pertaining to a specific core\. If this option is not given, casadm will display "
+        r"statistics pertaining to all cores assigned to given cache instance\."
+    ),
     r"-d  --io-class-id \[\<ID\>\]             Display per IO class statistics",
-    r"-f  --filter \<FILTER-SPEC\>           Apply filters from the following set: "
-    r"\{all, conf, usage, req, blk, err\}",
+    (
+        r"-f  --filter \<FILTER-SPEC\>           Apply filters from the following set: "
+        r"\{all, conf, usage, req, blk, err\}"
+    ),
     r"-o  --output-format \<FORMAT\>         Output format: \{table|csv\}",
     r"-b  --by-id-path                     Display by-id path to disks instead of short form /dev/sdx",
 ]
@@ -246,8 +301,10 @@ reset_counters_help = [
     r"Reset cache statistics for core device within cache instance",
     r"Options that are valid with --reset-counters \(-Z\) are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "
-    r"instance\. If not specified, statistics are reset for all cores in cache instance\.",
+    (
+        r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "
+        r"instance\. If not specified, statistics are reset for all cores in cache instance\."
+    ),
 ]
 
 flush_cache_help = [
@@ -255,8 +312,10 @@ flush_cache_help = [
     r"Flush all dirty data from the caching device to core devices",
     r"Options that are valid with --flush-cache \(-F\) are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
-    r"-j  --core-id \[\<ID\>\]                 Identifier of core \<0-4095\> within given cache "
-    r"instance",
+    (
+        r"-j  --core-id \[\<ID\>\]                 Identifier of core \<0-4095\> within given "
+        r"cache instance"
+    ),
 ]
 
 
