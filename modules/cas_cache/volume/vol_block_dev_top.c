@@ -286,10 +286,9 @@ static int blkdev_handle_data_single(struct cas_priv_top *priv_top,
 	return 0;
 }
 
-static bool blkdev_bio_data_aligned(struct cas_priv_top *priv_top,
-		struct bio *bio)
+static bool blkdev_bio_data_aligned(struct bio *bio)
 {
-	struct request_queue *exp_q = cas_exp_obj_get_queue(priv_top->exp_obj);
+	struct request_queue *exp_q = CAS_BIO_GET_DEV(bio)->queue;
 	unsigned int mask = exp_q->limits.logical_block_size - 1;
 	struct bio_vec bvec;
 	struct bvec_iter iter;
@@ -323,7 +322,7 @@ static void blkdev_handle_data(struct cas_priv_top *priv_top, struct bio *bio)
 		return;
 	}
 
-	if (unlikely(!blkdev_bio_data_aligned(priv_top, bio))) {
+	if (unlikely(!blkdev_bio_data_aligned(bio))) {
 		CAS_PRINT_RL(KERN_ERR
 			"Not able to handle BIO unaligned to logical block "
 			"size, flags = " CAS_BIO_OP_FLAGS_FORMAT "\n",
