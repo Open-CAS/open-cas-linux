@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -16,6 +17,7 @@ from api.cas.cache_config import (
     FlushParametersAlru,
     SeqCutOffParameters,
     SeqCutOffPolicy,
+    SeqDetectParameters,
     Time,
 )
 from core.test_run import TestRun
@@ -130,6 +132,102 @@ def test_set_get_seq_cutoff_params(cache_mode):
 
 
 @pytest.mark.parametrizex("cache_mode", CacheMode)
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_set_get_seq_detect_params(cache_mode):
+    """
+    title: Test for setting and reading sequence detector parameters.
+    description: |
+        Verify that it is possible to set and read all available sequence detector
+        parameters using casadm --set-param and --get-param options.
+    pass_criteria:
+      - All sequence detector parameters are set to given values.
+      - All sequence detector parameters displays proper values.
+    """
+
+    with TestRun.step("Partition cache and core devices"):
+        cache_dev = TestRun.disks["cache"]
+        cache_parts = [Size(1, Unit.GibiByte)] * caches_count
+        cache_dev.create_partitions(cache_parts)
+
+        core_dev = TestRun.disks["core"]
+        core_parts = [Size(2, Unit.GibiByte)] * cores_per_cache * caches_count
+        core_dev.create_partitions(core_parts)
+
+    with TestRun.step(
+        f"Start {caches_count} caches in {cache_mode} cache mode "
+        f"and add {cores_per_cache} cores per cache"
+    ):
+        caches = [
+            casadm.start_cache(part, cache_mode, force=True) for part in cache_dev.partitions
+        ]
+
+        cores = [
+            [
+                caches[i].add_core(
+                    core_dev.partitions[i * cores_per_cache + j]
+                ) for j in range(cores_per_cache)
+            ] for i in range(caches_count)
+        ]
+
+    with TestRun.step("Check sequence detector default parameters"):
+        default_seq_detect_params = SeqDetectParameters.default_seq_detect_params()
+        for i in range(caches_count):
+            for j in range(cores_per_cache):
+                check_seq_detect_parameters(cores[i][j], default_seq_detect_params)
+
+    with TestRun.step(
+        "Set new random values for sequence detector parameters for one core only"
+    ):
+        for check in range(number_of_checks):
+            random_seq_detect_params = new_seq_detect_parameters_random_values()
+            cores[0][0].set_seq_detect_parameters(random_seq_detect_params)
+
+            # Check changed parameters for first core:
+            check_seq_detect_parameters(cores[0][0], random_seq_detect_params)
+
+            # Check default parameters for other cores:
+            for j in range(1, cores_per_cache):
+                check_seq_detect_parameters(cores[0][j], default_seq_detect_params)
+            for i in range(1, caches_count):
+                for j in range(cores_per_cache):
+                    check_seq_detect_parameters(cores[i][j], default_seq_detect_params)
+
+    with TestRun.step(
+        "Set new random values for sequence detector parameters "
+        "for all cores within given cache instance"
+    ):
+        for check in range(number_of_checks):
+            random_seq_detect_params = new_seq_detect_parameters_random_values()
+            caches[0].set_seq_detect_parameters(random_seq_detect_params)
+
+            # Check changed parameters for first cache instance:
+            for j in range(cores_per_cache):
+                check_seq_detect_parameters(cores[0][j], random_seq_detect_params)
+
+            # Check default parameters for other cache instances:
+            for i in range(1, caches_count):
+                for j in range(cores_per_cache):
+                    check_seq_detect_parameters(cores[i][j], default_seq_detect_params)
+
+    with TestRun.step(
+        "Set new random values for sequence detector parameters for all cores"
+    ):
+        for check in range(number_of_checks):
+            seq_detect_params = []
+            for i in range(caches_count):
+                for j in range(cores_per_cache):
+                    random_seq_detect_params = new_seq_detect_parameters_random_values()
+                    seq_detect_params.append(random_seq_detect_params)
+                    cores[i][j].set_seq_detect_parameters(random_seq_detect_params)
+            for i in range(caches_count):
+                for j in range(cores_per_cache):
+                    check_seq_detect_parameters(
+                        cores[i][j], seq_detect_params[i * cores_per_cache + j]
+                    )
+
+
+@pytest.mark.parametrizex("cache_mode", CacheMode)
 @pytest.mark.parametrizex("cleaning_policy", [CleaningPolicy.alru, CleaningPolicy.acp])
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
@@ -237,7 +335,13 @@ def new_seq_cutoff_parameters_random_values():
     return SeqCutOffParameters(
         threshold=Size(random.randrange(1, 1000000), Unit.KibiByte),
         policy=random.choice(list(SeqCutOffPolicy)),
-        promotion_count=random.randrange(1, 65535)
+    )
+
+
+def new_seq_detect_parameters_random_values():
+    return SeqDetectParameters(
+        promotion_count=random.randrange(1, 65535),
+        promotion_threshold=Size(random.randrange(0, 1000000), Unit.KibiByte),
     )
 
 
@@ -300,14 +404,29 @@ def check_seq_cutoff_parameters(core, seq_cutoff_params):
             f"Policy is {current_seq_cutoff_params.policy}, "
             f"should be {seq_cutoff_params.policy}\n"
         )
-    if current_seq_cutoff_params.promotion_count != seq_cutoff_params.promotion_count:
-        failed_params += (
-            f"Promotion count is {current_seq_cutoff_params.promotion_count}, "
-            f"should be {seq_cutoff_params.promotion_count}\n"
-        )
     if failed_params:
         TestRun.LOGGER.error(
             f"Sequential cutoff parameters are not correct "
+            f"for {core.path}:\n{failed_params}"
+        )
+
+
+def check_seq_detect_parameters(core, seq_detect_params):
+    current_seq_detect_params = core.get_seq_detect_parameters()
+    failed_params = ""
+    if current_seq_detect_params.promotion_count != seq_detect_params.promotion_count:
+        failed_params += (
+            f"Promotion count is {current_seq_detect_params.promotion_count}, "
+            f"should be {seq_detect_params.promotion_count}\n"
+        )
+    if current_seq_detect_params.promotion_threshold != seq_detect_params.promotion_threshold:
+        failed_params += (
+            f"Promotion threshold is {current_seq_detect_params.promotion_threshold}, "
+            f"should be {seq_detect_params.promotion_threshold}\n"
+        )
+    if failed_params:
+        TestRun.LOGGER.error(
+            f"Sequence detector parameters are not correct "
             f"for {core.path}:\n{failed_params}"
         )
 

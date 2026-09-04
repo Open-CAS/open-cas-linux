@@ -17,6 +17,7 @@ from api.cas.cache_config import (
     FlushParametersAcp,
     SeqCutOffParameters,
     SeqCutOffPolicy,
+    SeqDetectParameters,
     PromotionPolicy,
     PromotionParametersNhit,
     CacheConfig,
@@ -175,7 +176,6 @@ class Cache:
             self.cache_id,
             threshold=seq_cutoff_param.threshold,
             policy=seq_cutoff_param.policy,
-            promotion_count=seq_cutoff_param.promotion_count,
         )
 
     def set_seq_cutoff_threshold(self, threshold: Size) -> Output:
@@ -183,6 +183,19 @@ class Cache:
 
     def set_seq_cutoff_policy(self, policy: SeqCutOffPolicy) -> Output:
         return casadm.set_param_cutoff(self.cache_id, threshold=None, policy=policy)
+
+    def set_seq_detect_parameters(self, seq_detect_param: SeqDetectParameters) -> Output:
+        return casadm.set_param_seq_detect(
+            self.cache_id,
+            promotion_count=seq_detect_param.promotion_count,
+            promotion_threshold=seq_detect_param.promotion_threshold,
+        )
+
+    def set_seq_detect_promotion_count(self, promotion_count: int) -> Output:
+        return casadm.set_param_seq_detect(self.cache_id, promotion_count=promotion_count)
+
+    def set_seq_detect_promotion_threshold(self, promotion_threshold: Size) -> Output:
+        return casadm.set_param_seq_detect(self.cache_id, promotion_threshold=promotion_threshold)
 
     def set_cleaning_policy(self, cleaning_policy: CleaningPolicy) -> Output:
         return casadm.set_param_cleaning(self.cache_id, cleaning_policy)

@@ -81,12 +81,19 @@ set_params_help = [
     r"Usage: casadm --set-param --name \<NAME\>",
     r"Set various runtime parameters",
     r"Valid values of NAME are:",
+    r"seq-detect - Sequence detector parameters",
     r"seq-cutoff - Sequential cutoff parameters",
     r"cleaning - Cleaning policy parameters",
     r"promotion - Promotion policy parameters",
     r"promotion-nhit - Promotion policy NHIT parameters",
     r"cleaning-alru - Cleaning policy ALRU parameters",
     r"cleaning-acp - Cleaning policy ACP parameters",
+    r"Options that are valid with --set-param \(-X\) --name \(-n\) seq-detect are:",
+    r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
+    r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "
+    r"instance",
+    r"    --promotion-count \<NUMBER\>       Sequence detector stream promotion request count",
+    r"    --promotion-threshold \<KiB\>      Sequence detector stream promotion threshold \[KiB\]",
     r"Options that are valid with --set-param \(-X\) --name \(-n\) seq-cutoff are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
     r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "
@@ -94,8 +101,6 @@ set_params_help = [
     r"-t  --threshold \<KiB\>                Sequential cutoff activation threshold \[KiB\]",
     r"-p  --policy \<POLICY\>                Sequential cutoff policy\. Available policies: "
     r"\{always|full|never\}",
-    r"    --promotion-count \<NUMBER\>       Sequential cutoff stream promotion request count "
-    r"threshold",
     r"Options that are valid with --set-param \(-X\) --name \(-n\) cleaning are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
     r"-p  --policy \<POLICY\>                Cleaning policy type\. Available policy types: "
@@ -138,12 +143,18 @@ get_params_help = [
     r"Usage: casadm --get-param --name \<NAME\>",
     r"Get various runtime parameters",
     r"Valid values of NAME are:",
+    r"seq-detect - Sequence detector parameters",
     r"seq-cutoff - Sequential cutoff parameters",
     r"cleaning - Cleaning policy parameters",
     r"cleaning-alru - Cleaning policy ALRU parameters",
     r"cleaning-acp - Cleaning policy ACP parameters",
     r"promotion - Promotion policy parameters",
     r"promotion-nhit - Promotion policy NHIT parameters",
+    r"Options that are valid with --get-param \(-G\) --name \(-n\) seq-detect are:",
+    r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
+    r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "
+    r"instance",
+    r"-o  --output-format \<FORMAT\>         Output format: \{table|csv\}",
     r"Options that are valid with --get-param \(-G\) --name \(-n\) seq-cutoff are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
     r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "

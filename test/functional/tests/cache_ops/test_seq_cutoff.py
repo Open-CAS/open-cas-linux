@@ -126,7 +126,7 @@ def test_seq_cutoff_multi_core(cache_mode, io_type, io_type_last, cache_line_siz
 
     with TestRun.step("Verify writes to cache count after I/O"):
         margins = [
-            min(block_size * (core.get_seq_cut_off_parameters().promotion_count - 1), threshold)
+            min(block_size * (core.get_seq_detect_parameters().promotion_count - 1), threshold)
             for core, threshold in zip(core_list[:-1], thresholds_list[:-1])
         ]
         margin = Size.zero()

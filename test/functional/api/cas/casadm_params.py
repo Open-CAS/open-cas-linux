@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -9,6 +10,7 @@ from enum import Enum
 
 class ParamName(Enum):
     seq_cutoff = "seq-cutoff"
+    seq_detect = "seq-detect"
     cleaning = "cleaning"
     cleaning_alru = "cleaning-alru"
     cleaning_acp = "cleaning-acp"

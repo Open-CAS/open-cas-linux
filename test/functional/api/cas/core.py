@@ -9,9 +9,13 @@ from datetime import timedelta
 from typing import List
 
 from api.cas import casadm
-from api.cas.cache_config import SeqCutOffParameters, SeqCutOffPolicy
+from api.cas.cache_config import SeqCutOffParameters, SeqCutOffPolicy, SeqDetectParameters
 from api.cas.casadm_params import StatsFilter
-from api.cas.casadm_parser import get_seq_cut_off_parameters, get_cas_devices_dict
+from api.cas.casadm_parser import (
+    get_seq_cut_off_parameters,
+    get_seq_detect_parameters,
+    get_cas_devices_dict,
+)
 from api.cas.core_config import CoreStatus
 from api.cas.statistics import CoreStats, CoreIoClassStats
 from core.test_run_utils import TestRun
@@ -107,6 +111,15 @@ class Core(Device):
     def get_seq_cut_off_threshold(self):
         return get_seq_cut_off_parameters(self.cache_id, self.core_id).threshold
 
+    def get_seq_detect_parameters(self):
+        return get_seq_detect_parameters(self.cache_id, self.core_id)
+
+    def get_seq_detect_promotion_count(self):
+        return get_seq_detect_parameters(self.cache_id, self.core_id).promotion_count
+
+    def get_seq_detect_promotion_threshold(self):
+        return get_seq_detect_parameters(self.cache_id, self.core_id).promotion_threshold
+
     def get_dirty_blocks(self):
         return self.get_statistics().usage_stats.dirty
 
@@ -141,7 +154,6 @@ class Core(Device):
             self.core_id,
             seq_cutoff_param.threshold,
             seq_cutoff_param.policy,
-            seq_cutoff_param.promotion_count,
         )
 
     def set_seq_cutoff_threshold(self, threshold: Size):
@@ -150,8 +162,23 @@ class Core(Device):
     def set_seq_cutoff_policy(self, policy: SeqCutOffPolicy):
         return casadm.set_param_cutoff(self.cache_id, self.core_id, policy=policy)
 
-    def set_seq_cutoff_promotion_count(self, promotion_count: int):
-        return casadm.set_param_cutoff(self.cache_id, self.core_id, promotion_count=promotion_count)
+    def set_seq_detect_parameters(self, seq_detect_param: SeqDetectParameters):
+        return casadm.set_param_seq_detect(
+            self.cache_id,
+            self.core_id,
+            seq_detect_param.promotion_count,
+            seq_detect_param.promotion_threshold,
+        )
+
+    def set_seq_detect_promotion_count(self, promotion_count: int):
+        return casadm.set_param_seq_detect(
+            self.cache_id, self.core_id, promotion_count=promotion_count
+        )
+
+    def set_seq_detect_promotion_threshold(self, promotion_threshold: Size):
+        return casadm.set_param_seq_detect(
+            self.cache_id, self.core_id, promotion_threshold=promotion_threshold
+        )
 
     def check_if_is_present_in_os(self, should_be_visible=True):
         device_in_system_message = "CAS device exists in OS."
