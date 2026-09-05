@@ -89,7 +89,6 @@ static void cas_nl_collect_core(ocf_cache_t cache, uint16_t core_id,
 		ocf_core_t core, struct cas_nl_core_dump *dst)
 {
 	const struct ocf_volume_uuid *uuid;
-	struct cas_priv_top *priv_top;
 	ocf_seq_cutoff_policy policy;
 
 	dst->id = core_id;
@@ -99,9 +98,7 @@ static void cas_nl_collect_core(ocf_cache_t cache, uint16_t core_id,
 
 	ocf_core_get_info(core, &dst->info);
 	dst->state = ocf_core_get_state(core);
-
-	priv_top = cas_get_priv_top(core);
-	dst->exp_obj_exists = priv_top->expobj_valid;
+	dst->exp_obj_exists = cas_core_exp_obj_exists(core);
 
 	ocf_stats_collect_core(core, &dst->usage, &dst->req,
 			&dst->blocks, &dst->errors);

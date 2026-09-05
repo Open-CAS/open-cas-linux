@@ -656,8 +656,13 @@ int kcas_core_create_exported_object(ocf_core_t core)
 
 int kcas_core_destroy_exported_object(ocf_core_t core)
 {
-	struct cas_priv_top *priv_top = cas_get_priv_top(core);
+	struct cas_priv_top *priv_top;
 	int result;
+
+	if (!cas_core_exp_obj_exists(core))
+		return 0;
+
+	priv_top = cas_get_priv_top(core);
 
 	result = kcas_volume_destroy_exported_object(priv_top);
 	if (result)
@@ -671,7 +676,12 @@ int kcas_core_destroy_exported_object(ocf_core_t core)
 
 int kcas_core_deposit_exported_object(ocf_core_t core)
 {
-	struct cas_priv_top *priv_top = cas_get_priv_top(core);
+	struct cas_priv_top *priv_top;
+
+	if (!cas_core_exp_obj_exists(core))
+		return 0;
+
+	priv_top = cas_get_priv_top(core);
 
 	cas_exp_obj_box_deposit(priv_top->exp_obj);
 
@@ -744,10 +754,10 @@ int kcas_cache_destroy_all_core_exported_objects(ocf_cache_t cache)
 
 	/* Try lock exported objects */
 	ocf_core_for_each(core, cache, true) {
-		priv_top = cas_get_priv_top(core);
-
-		if (!priv_top->expobj_valid)
+		if (!cas_core_exp_obj_exists(core))
 			continue;
+
+		priv_top = cas_get_priv_top(core);
 
 		result = cas_exp_obj_lock(priv_top->exp_obj);
 		if (-EBUSY == result) {
@@ -770,6 +780,9 @@ int kcas_cache_destroy_all_core_exported_objects(ocf_cache_t cache)
 	if (result) {
 		/* Failure, unlock already locked exported objects */
 		ocf_core_for_each(core, cache, true) {
+			if (!cas_core_exp_obj_exists(core))
+				continue;
+
 			priv_top = cas_get_priv_top(core);
 			if (priv_top->expobj_locked) {
 				cas_exp_obj_unlock(priv_top->exp_obj);
@@ -780,16 +793,18 @@ int kcas_cache_destroy_all_core_exported_objects(ocf_cache_t cache)
 	}
 
 	ocf_core_for_each(core, cache, true) {
-		priv_top = cas_get_priv_top(core);
-		if (priv_top->expobj_valid) {
-			printk(KERN_INFO "Stopping device %s\n",
-				_get_disk_name(priv_top->exp_obj));
+		if (!cas_core_exp_obj_exists(core))
+			continue;
 
-			result = cas_exp_obj_dismantle(priv_top->exp_obj);
-			if (!result) {
-				priv_top->expobj_valid = false;
-				destroy_workqueue(priv_top->expobj_wq);
-			}
+		priv_top = cas_get_priv_top(core);
+
+		printk(KERN_INFO "Stopping device %s\n",
+			_get_disk_name(priv_top->exp_obj));
+
+		result = cas_exp_obj_dismantle(priv_top->exp_obj);
+		if (!result) {
+			priv_top->expobj_valid = false;
+			destroy_workqueue(priv_top->expobj_wq);
 		}
 
 		if (priv_top->expobj_locked) {
@@ -800,6 +815,9 @@ int kcas_cache_destroy_all_core_exported_objects(ocf_cache_t cache)
 
 	ocf_core_for_each(core, cache, true) {
 		priv_top = cas_get_priv_top(core);
+		if (!priv_top)
+			continue;
+
 		cas_exp_obj_destroy(priv_top->exp_obj);
 	}
 
