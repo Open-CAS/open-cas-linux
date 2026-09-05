@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -89,17 +90,21 @@ def test_cleaning_policies_in_write_back(cleaning_policy: CleaningPolicy):
         fio.run()
         time.sleep(3)
 
-        core_writes_before_wait_for_cleaning = cache.get_statistics().block_stats.core.writes
+        cleaner_writes_before_wait_for_cleaning = (
+            cache.get_statistics().block_stats.cleaner_core_writes
+        )
 
     with TestRun.step(f"Wait {time_to_wait} seconds"):
         time.sleep(time_to_wait)
 
-    with TestRun.step("Check write statistics for core device"):
-        core_writes_after_wait_for_cleaning = cache.get_statistics().block_stats.core.writes
+    with TestRun.step("Check cleaner write statistics"):
+        cleaner_writes_after_wait_for_cleaning = (
+            cache.get_statistics().block_stats.cleaner_core_writes
+        )
         check_cleaning_policy_operation(
             cleaning_policy,
-            core_writes_before_wait_for_cleaning,
-            core_writes_after_wait_for_cleaning,
+            cleaner_writes_before_wait_for_cleaning,
+            cleaner_writes_after_wait_for_cleaning,
         )
 
 
@@ -160,17 +165,21 @@ def test_cleaning_policies_in_write_through(cleaning_policy):
 
     with TestRun.step("Change cache mode back to Write-Through"):
         cache.set_cache_mode(CacheMode.WT, flush=False)
-        core_writes_before_wait_for_cleaning = cache.get_statistics().block_stats.core.writes
+        cleaner_writes_before_wait_for_cleaning = (
+            cache.get_statistics().block_stats.cleaner_core_writes
+        )
 
     with TestRun.step(f"Wait {time_to_wait} seconds"):
         time.sleep(time_to_wait)
 
-    with TestRun.step("Check write statistics for core device"):
-        core_writes_after_wait_for_cleaning = cache.get_statistics().block_stats.core.writes
+    with TestRun.step("Check cleaner write statistics"):
+        cleaner_writes_after_wait_for_cleaning = (
+            cache.get_statistics().block_stats.cleaner_core_writes
+        )
         check_cleaning_policy_operation(
             cleaning_policy,
-            core_writes_before_wait_for_cleaning,
-            core_writes_after_wait_for_cleaning,
+            cleaner_writes_before_wait_for_cleaning,
+            cleaner_writes_after_wait_for_cleaning,
         )
 
 
@@ -250,40 +259,40 @@ def set_cleaning_policy_params(cache, cleaning_policy):
 
 def check_cleaning_policy_operation(
     cleaning_policy,
-    core_writes_before_wait_for_cleaning,
-    core_writes_after_wait_for_cleaning,
+    cleaner_writes_before_wait_for_cleaning,
+    cleaner_writes_after_wait_for_cleaning,
 ):
     match cleaning_policy:
         case CleaningPolicy.alru:
-            if core_writes_before_wait_for_cleaning != Size.zero():
+            if cleaner_writes_before_wait_for_cleaning != Size.zero():
                 TestRun.LOGGER.error(
                     "Cleaner process started to clean dirty data right after I/O! "
                     "According to ALRU parameters set in this test cleaner should "
                     "wait 10 seconds after I/O before cleaning dirty data"
                 )
-            if core_writes_after_wait_for_cleaning <= core_writes_before_wait_for_cleaning:
+            if cleaner_writes_after_wait_for_cleaning <= cleaner_writes_before_wait_for_cleaning:
                 TestRun.LOGGER.error(
                     "ALRU cleaning policy is not working properly! "
-                    "Core writes should increase in time while cleaning dirty data"
+                    "Cleaner core writes should increase in time while cleaning dirty data"
                 )
         case CleaningPolicy.nop:
             if (
-                core_writes_after_wait_for_cleaning != Size.zero()
-                    or core_writes_before_wait_for_cleaning != Size.zero()
+                cleaner_writes_after_wait_for_cleaning != Size.zero()
+                    or cleaner_writes_before_wait_for_cleaning != Size.zero()
             ):
                 TestRun.LOGGER.error(
                     "NOP cleaning policy is not working properly! "
-                    "There should be no core writes as there is no cleaning of dirty data"
+                    "There should be no cleaner core writes as there is no cleaning of dirty data"
                 )
         case CleaningPolicy.acp:
-            if core_writes_before_wait_for_cleaning == Size.zero():
+            if cleaner_writes_before_wait_for_cleaning == Size.zero():
                 TestRun.LOGGER.error(
                     "Cleaner process did not start cleaning dirty data right after I/O! "
                     "According to ACP policy cleaner should start "
                     "cleaning dirty data right after I/O"
                 )
-            if core_writes_after_wait_for_cleaning <= core_writes_before_wait_for_cleaning:
+            if cleaner_writes_after_wait_for_cleaning <= cleaner_writes_before_wait_for_cleaning:
                 TestRun.LOGGER.error(
                     "ACP cleaning policy is not working properly! "
-                    "Core writes should increase in time while cleaning dirty data"
+                    "Cleaner core writes should increase in time while cleaning dirty data"
                 )
