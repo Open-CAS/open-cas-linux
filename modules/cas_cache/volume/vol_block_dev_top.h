@@ -33,6 +33,13 @@ static inline struct cas_priv_top *cas_get_priv_top(ocf_core_t core)
 	return ocf_core_get_priv(core);
 }
 
+static inline bool cas_core_exp_obj_exists(ocf_core_t core)
+{
+	struct cas_priv_top *priv_top = cas_get_priv_top(core);
+
+	return priv_top ? priv_top->expobj_valid : false;
+}
+
 int kcas_core_create_exported_object(ocf_core_t core);
 int kcas_core_destroy_exported_object(ocf_core_t core);
 int kcas_core_deposit_exported_object(ocf_core_t core);

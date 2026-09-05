@@ -3444,8 +3444,7 @@ static int _cache_mngt_capture_exp_objs(ocf_cache_t cache,
 	int n = 0;
 
 	ocf_core_for_each(core, cache, true) {
-		priv_top = cas_get_priv_top(core);
-		if (priv_top->expobj_valid)
+		if (cas_core_exp_obj_exists(core))
 			n++;
 	}
 
@@ -3460,9 +3459,11 @@ static int _cache_mngt_capture_exp_objs(ocf_cache_t cache,
 
 	n = 0;
 	ocf_core_for_each(core, cache, true) {
+		if (!cas_core_exp_obj_exists(core))
+			continue;
+
 		priv_top = cas_get_priv_top(core);
-		if (priv_top->expobj_valid)
-			list->exp_objs[n++] = priv_top->exp_obj;
+		list->exp_objs[n++] = priv_top->exp_obj;
 	}
 
 	return 0;
@@ -3481,9 +3482,10 @@ static void _cache_mngt_freeze_exp_objs(ocf_cache_t cache)
 	struct cas_priv_top *priv_top;
 
 	ocf_core_for_each(core, cache, true) {
-		priv_top = cas_get_priv_top(core);
-		if (!priv_top->expobj_valid)
+		if (!cas_core_exp_obj_exists(core))
 			continue;
+
+		priv_top = cas_get_priv_top(core);
 		cas_exp_obj_freeze_queue(priv_top->exp_obj);
 	}
 }
@@ -3494,9 +3496,10 @@ static void _cache_mngt_unfreeze_exp_objs(ocf_cache_t cache)
 	struct cas_priv_top *priv_top;
 
 	ocf_core_for_each(core, cache, true) {
-		priv_top = cas_get_priv_top(core);
-		if (!priv_top->expobj_valid)
+		if (!cas_core_exp_obj_exists(core))
 			continue;
+
+		priv_top = cas_get_priv_top(core);
 		cas_exp_obj_unfreeze_queue(priv_top->exp_obj);
 	}
 }
@@ -3515,9 +3518,10 @@ static void _cache_mngt_set_exp_objs_pt(ocf_cache_t cache)
 	struct cas_priv_top *priv_top;
 
 	ocf_core_for_each(core, cache, true) {
-		priv_top = cas_get_priv_top(core);
-		if (!priv_top->expobj_valid)
+		if (!cas_core_exp_obj_exists(core))
 			continue;
+
+		priv_top = cas_get_priv_top(core);
 		cas_exp_obj_set_passthrough(priv_top->exp_obj, true);
 	}
 }
@@ -3528,9 +3532,10 @@ static void _cache_mngt_clear_exp_objs_pt(ocf_cache_t cache)
 	struct cas_priv_top *priv_top;
 
 	ocf_core_for_each(core, cache, true) {
-		priv_top = cas_get_priv_top(core);
-		if (!priv_top->expobj_valid)
+		if (!cas_core_exp_obj_exists(core))
 			continue;
+
+		priv_top = cas_get_priv_top(core);
 		cas_exp_obj_set_passthrough(priv_top->exp_obj, false);
 	}
 }
@@ -4077,7 +4082,6 @@ int cache_mngt_get_core_info(struct kcas_core_info *info)
 	ocf_cache_t cache;
 	ocf_core_t core;
 	const struct ocf_volume_uuid *uuid;
-	struct cas_priv_top *priv_top;
 	int result;
 
 	result = mngt_get_cache_by_id(cas_ctx, info->cache_id, &cache);
@@ -4106,9 +4110,7 @@ int cache_mngt_get_core_info(struct kcas_core_info *info)
 	}
 
 	info->state = ocf_core_get_state(core);
-
-	priv_top = cas_get_priv_top(core);
-	info->exp_obj_exists = priv_top->expobj_valid;
+	info->exp_obj_exists = cas_core_exp_obj_exists(core);
 
 unlock:
 	ocf_mngt_cache_read_unlock(cache);
