@@ -1,12 +1,13 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
 import pytest
 
-from api.cas import casadm, ioclass_config
+from api.cas import casadm
 from api.cas.ioclass_config import IoClass
 from core.test_run_utils import TestRun
 from storage_devices.disk import DiskTypeSet, DiskType, DiskTypeLowerThan
@@ -43,23 +44,15 @@ def test_io_class_preserve_configuration():
     with TestRun.step("Start cache."):
         cache = casadm.start_cache(cache_device, force=True)
 
-    with TestRun.step("Display IO class configuration – shall be only Unclassified IO class."):
-        default_io_class = [
-            IoClass(
-                ioclass_config.DEFAULT_IO_CLASS_ID,
-                ioclass_config.DEFAULT_IO_CLASS_RULE,
-                ioclass_config.DEFAULT_IO_CLASS_PRIORITY,
-                allocation="1.00",
-            )
-        ]
+    with TestRun.step("Display IO class configuration – shall be only default IO classes."):
         actual = cache.list_io_classes()
-        compare_io_classes_list(default_io_class, actual)
+        compare_io_classes_list(IoClass.default_list(), actual)
 
     with TestRun.step("Add core device."):
         cache.add_core(core_device)
 
     with TestRun.step(
-        "Create and load configuration file for 33 IO classes with random names, "
+        "Create and load configuration file for all IO classes with random names, "
         "allocation and priority values."
     ):
         generated_io_classes = generate_and_load_random_io_class_config(cache)

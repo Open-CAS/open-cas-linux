@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -26,7 +27,7 @@ def test_io_class_export_configuration():
     description: |
         Test CAS ability to create a properly formatted file with current IO class configuration
     pass_criteria:
-     - CAS default IO class configuration contains unclassified class only
+     - CAS default IO class configuration contains unclassified and prefetch classes only
      - CAS properly imports previously exported configuration
     """
     cache_mode = CacheMode.WB
@@ -34,9 +35,9 @@ def test_io_class_export_configuration():
     with TestRun.LOGGER.step("Test prepare"):
         cache, core = prepare(cache_mode)
         saved_config_path = "/tmp/opencas_saved.conf"
-        default_list = [IoClass.default()]
+        default_list = IoClass.default_list()
 
-    with TestRun.LOGGER.step("Check IO class configuration (should contain only default class)"):
+    with TestRun.LOGGER.step("Check IO class configuration (should contain only default classes)"):
         csv = casadm.list_io_classes(cache.cache_id, OutputFormat.csv).stdout
         if not IoClass.compare_ioclass_lists(IoClass.csv_to_list(csv), default_list):
             TestRun.LOGGER.error(
@@ -76,7 +77,7 @@ def test_io_class_export_configuration():
         cache = casadm.start_cache(cache.cache_device, force=True)
         casadm.add_core(cache, core.core_device)
 
-    with TestRun.LOGGER.step("Check IO class configuration (should contain only default class)"):
+    with TestRun.LOGGER.step("Check IO class configuration (should contain only default classes)"):
         csv = casadm.list_io_classes(cache.cache_id, OutputFormat.csv).stdout
         if not IoClass.compare_ioclass_lists(IoClass.csv_to_list(csv), default_list):
             TestRun.LOGGER.error(

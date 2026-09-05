@@ -316,7 +316,7 @@ def test_ioclass_metadata(filesystem):
         Udev.disable()
 
     with TestRun.step("Prepare and load IO class config file."):
-        ioclass_id = random.randint(1, ioclass_config.MAX_IO_CLASS_ID)
+        ioclass_id = random.randint(1, ioclass_config.MAX_USER_IO_CLASS_ID)
         # metadata IO class
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id,

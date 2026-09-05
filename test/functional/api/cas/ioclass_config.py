@@ -27,6 +27,7 @@ DEFAULT_IO_CLASS_PRIORITY = 255
 DEFAULT_IO_CLASS_RULE = "unclassified"
 PREFETCH_IO_CLASS_ID = 33
 PREFETCH_IO_CLASS_RULE = "prefetch"
+MAX_USER_IO_CLASS_ID = 32
 MAX_CLASSIFICATION_DELAY = timedelta(seconds=6)
 IO_CLASS_CONFIG_HEADER = "IO class id,IO class name,Eviction priority,Allocation"
 
@@ -90,8 +91,10 @@ class IoClass:
     @staticmethod
     def list_to_csv(ioclass_list: [], add_default_rule: bool = True):
         list_copy = ioclass_list[:]
-        if add_default_rule and not len([c for c in list_copy if c.id == 0]):
-            list_copy.insert(0, IoClass.default())
+        if add_default_rule:
+            for io_class in reversed(IoClass.default_list()):
+                if not len([c for c in list_copy if c.id == io_class.id]):
+                    list_copy.insert(0, io_class)
         list_copy.insert(0, IO_CLASS_CONFIG_HEADER)
         return "\n".join(str(c) for c in list_copy)
 
@@ -122,6 +125,10 @@ class IoClass:
     @staticmethod
     def prefetch(priority=DEFAULT_IO_CLASS_PRIORITY, allocation="1.00"):
         return IoClass(PREFETCH_IO_CLASS_ID, PREFETCH_IO_CLASS_RULE, priority, allocation)
+
+    @staticmethod
+    def default_list():
+        return [IoClass.default(), IoClass.prefetch()]
 
     @staticmethod
     def default_header_dict():
@@ -232,15 +239,13 @@ def create_ioclass_config(
         )
 
     if add_default_rule:
-        output = TestRun.executor.run(
-            f'echo "{DEFAULT_IO_CLASS_ID},{DEFAULT_IO_CLASS_RULE},{DEFAULT_IO_CLASS_PRIORITY},"'
-            + f'"1.00" >> {ioclass_config_path}'
-        )
-        if output.exit_code != 0:
-            raise Exception(
-                "Failed to create ioclass config file. "
-                + f"stdout: {output.stdout} \n stderr :{output.stderr}"
-            )
+        for io_class in IoClass.default_list():
+            output = TestRun.executor.run(f'echo "{io_class}" >> {ioclass_config_path}')
+            if output.exit_code != 0:
+                raise Exception(
+                    "Failed to create ioclass config file. "
+                    + f"stdout: {output.stdout} \n stderr :{output.stderr}"
+                )
 
 
 def remove_ioclass_config(ioclass_config_path: str = default_config_file_path):

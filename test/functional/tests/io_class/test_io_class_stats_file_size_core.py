@@ -61,7 +61,7 @@ def test_io_class_stats_file_size_core_fs(cache_mode: CacheMode, filesystem: Fil
     with TestRun.step("In default IO class configuration file set eviction priority=1 "
                       "and load it"):
         io_classes = prepare_io_classes(cache)
-        *file_size_based_io_classes, _ = io_classes
+        file_size_based_io_classes = get_file_size_based_io_classes(io_classes)
 
     with TestRun.step("Prepare file sizes for fio setup"):
         sizes = prepare_fio_sizes(file_size_based_io_classes)
@@ -122,7 +122,8 @@ def test_io_class_stats_file_size_core_direct(cache_mode: CacheMode):
     with TestRun.step("In default IO class configuration file set Eviction priority=1 "
                       "and load it for all caches"):
         io_classes = prepare_io_classes(cache)
-        *file_size_based_io_classes, io_class_direct = io_classes
+        file_size_based_io_classes = get_file_size_based_io_classes(io_classes)
+        io_class_direct = get_io_class_by_rule(io_classes, "direct")
 
     with TestRun.step("Prepare file sizes for fio setup"):
         sizes = prepare_fio_sizes(file_size_based_io_classes)
@@ -222,6 +223,18 @@ def prepare_io_classes(cache):
     cache.load_io_class(ioclass_config.default_config_file_path)
 
     return test_io_classes[1:]
+
+
+def get_file_size_based_io_classes(io_classes):
+    return [io_class for io_class in io_classes if io_class.rule.startswith("file_size")]
+
+
+def get_io_class_by_rule(io_classes, rule):
+    matching = [io_class for io_class in io_classes if io_class.rule.startswith(rule)]
+    if len(matching) != 1:
+        TestRun.fail(f"Expected exactly one IO class matching '{rule}' rule, "
+                     f"found {len(matching)}.")
+    return matching[0]
 
 
 def prepare_fio_sizes(file_size_based_io_classes):

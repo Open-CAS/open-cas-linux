@@ -77,7 +77,7 @@ def test_ioclass_directory_depth(filesystem):
         test_file_1.refresh_item()
 
     with TestRun.step("Load IO class config."):
-        ioclass_id = random.randint(1, ioclass_config.MAX_IO_CLASS_ID)
+        ioclass_id = random.randint(1, ioclass_config.MAX_USER_IO_CLASS_ID)
         # directory IO class
         ioclass_config.add_ioclass(
             ioclass_id=ioclass_id,
@@ -158,7 +158,7 @@ def test_ioclass_directory_file_operations(filesystem):
         Udev.disable()
 
     with TestRun.step("Create and load IO class config file."):
-        ioclass_id = random.randint(2, ioclass_config.MAX_IO_CLASS_ID)
+        ioclass_id = random.randint(2, ioclass_config.MAX_USER_IO_CLASS_ID)
         ioclass_config.add_ioclass(
             ioclass_id=1,
             eviction_priority=1,
@@ -315,7 +315,7 @@ def test_ioclass_directory_dir_operations(filesystem):
         Udev.disable()
 
     with TestRun.step("Create and load IO class config file."):
-        proper_ids = random.sample(range(1, ioclass_config.MAX_IO_CLASS_ID + 1), 2)
+        proper_ids = random.sample(range(1, ioclass_config.MAX_USER_IO_CLASS_ID + 1), 2)
         ioclass_id_1 = proper_ids[0]
         classified_dir_path_1 = f"{mountpoint}/dir_{ioclass_id_1}"
         ioclass_id_2 = proper_ids[1]
