@@ -22,13 +22,14 @@ void cas_exp_obj_box_deposit(struct cas_exp_obj *exp_obj);
 
 /**
  * @brief Claim exported object from the box by its underlying disk
+ * @param exp_obj Double pointer to exp_obj (out parameter)
  * @param dsk Pointer to cas_disk
  * @param owner Pointer to cas module
  * @param ops Pointer to structure with callback functions
  * @param priv Private data
- * @return Pointer to exp_obj on success, ERR_PTR on failure
+ * @return 0 if success, error code if failure
  */
-struct cas_exp_obj *cas_exp_obj_box_claim(struct cas_disk *dsk,
+int cas_exp_obj_box_claim(struct cas_exp_obj **exp_obj, struct cas_disk *dsk,
 		struct module *owner, struct cas_exp_obj_ops *ops, void *priv);
 
 #endif
