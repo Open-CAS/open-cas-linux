@@ -317,11 +317,11 @@ static const struct attribute_group device_attr_group = {
 	.name = "device",
 };
 
-struct cas_exp_obj *cas_exp_obj_create(struct cas_disk *dsk,
+int cas_exp_obj_create(struct cas_exp_obj **exp_obj, struct cas_disk *dsk,
 		const char *dev_name, struct module *owner,
 		struct cas_exp_obj_ops *ops, void *priv)
 {
-	struct cas_exp_obj *exp_obj;
+	struct cas_exp_obj *tmp_exp_obj;
 	struct request_queue *queue;
 	struct gendisk *gd;
 	cas_queue_limits_t queue_limits;
@@ -332,7 +332,7 @@ struct cas_exp_obj *cas_exp_obj_create(struct cas_disk *dsk,
 	BUG_ON(!ops);
 
 	if (strlen(dev_name) >= DISK_NAME_LEN)
-		return ERR_PTR(-EINVAL);
+		return -EINVAL;
 
 	result = _cas_exp_obj_check_path(dev_name);
 	if (result == -EEXIST) {
@@ -341,23 +341,23 @@ struct cas_exp_obj *cas_exp_obj_create(struct cas_disk *dsk,
 	}
 
 	if (result)
-		return ERR_PTR(result);
+		return result;
 
-	exp_obj = cas_exp_obj_alloc();
-	if (!exp_obj)
-		return ERR_PTR(-ENOMEM);
+	tmp_exp_obj = cas_exp_obj_alloc();
+	if (!tmp_exp_obj)
+		return -ENOMEM;
 
 	cas_disk_get(dsk);
-	exp_obj->dsk = dsk;
+	tmp_exp_obj->dsk = dsk;
 
 	result = cas_disk_hide_parts(dsk);
 	if (result)
 		goto error_hide_parts;
 
-	mutex_init(&exp_obj->openers_lock);
+	mutex_init(&tmp_exp_obj->openers_lock);
 
-	exp_obj->dev_name = kstrdup(dev_name, GFP_KERNEL);
-	if (!exp_obj->dev_name) {
+	tmp_exp_obj->dev_name = kstrdup(dev_name, GFP_KERNEL);
+	if (!tmp_exp_obj->dev_name) {
 		result = -ENOMEM;
 		goto error_kstrdup;
 	}
@@ -366,48 +366,49 @@ struct cas_exp_obj *cas_exp_obj_create(struct cas_disk *dsk,
 		result = -ENAVAIL;
 		goto error_module_get;
 	}
-	exp_obj->owner = owner;
-	exp_obj->ops = ops;
-	exp_obj->private = priv;
-	exp_obj->submit_bio = _cas_exp_obj_submit_bio_default;
+	tmp_exp_obj->owner = owner;
+	tmp_exp_obj->ops = ops;
+	tmp_exp_obj->private = priv;
+	tmp_exp_obj->submit_bio = _cas_exp_obj_submit_bio_default;
 
-	result = _cas_init_tag_set(exp_obj);
+	result = _cas_init_tag_set(tmp_exp_obj);
 	if (result) {
 		goto error_init_tag_set;
 	}
 
-	if (exp_obj->ops->set_queue_limits) {
-		result = exp_obj->ops->set_queue_limits(exp_obj, &queue_limits);
+	if (tmp_exp_obj->ops->set_queue_limits) {
+		result = tmp_exp_obj->ops->set_queue_limits(tmp_exp_obj,
+				&queue_limits);
 		if (result)
 			goto error_set_queue_limits;
 	}
 
-	result = cas_alloc_disk(&gd, &queue, &exp_obj->tag_set,
+	result = cas_alloc_disk(&gd, &queue, &tmp_exp_obj->tag_set,
 			&queue_limits);
 	if (result) {
 		goto error_alloc_mq_disk;
 	}
 
-	exp_obj->gd = gd;
+	tmp_exp_obj->gd = gd;
 
-	result = _cas_exp_obj_set_dev_t(exp_obj, gd);
+	result = _cas_exp_obj_set_dev_t(tmp_exp_obj, gd);
 	if (result)
 		goto error_exp_obj_set_dev_t;
 
 	BUG_ON(queue->queuedata);
-	queue->queuedata = exp_obj;
-	exp_obj->queue = queue;
+	queue->queuedata = tmp_exp_obj;
+	tmp_exp_obj->queue = queue;
 
-	_cas_init_queues(exp_obj);
+	_cas_init_queues(tmp_exp_obj);
 
 	gd->fops = &_cas_exp_obj_ops;
-	gd->private_data = exp_obj;
-	strscpy(gd->disk_name, exp_obj->dev_name, sizeof(gd->disk_name));
+	gd->private_data = tmp_exp_obj;
+	strscpy(gd->disk_name, tmp_exp_obj->dev_name, sizeof(gd->disk_name));
 
 	cas_blk_queue_make_request(queue, _cas_exp_obj_make_rq_fn);
 
-	if (exp_obj->ops->set_geometry) {
-		result = exp_obj->ops->set_geometry(exp_obj);
+	if (tmp_exp_obj->ops->set_geometry) {
+		result = tmp_exp_obj->ops->set_geometry(tmp_exp_obj);
 		if (result)
 			goto error_set_geometry;
 	}
@@ -420,37 +421,39 @@ struct cas_exp_obj *cas_exp_obj_create(struct cas_disk *dsk,
 	if (result)
 		goto error_sysfs;
 
-	result = bd_claim_by_disk(cas_disk_get_blkdev(dsk), exp_obj, gd);
+	result = bd_claim_by_disk(cas_disk_get_blkdev(dsk), tmp_exp_obj, gd);
 	if (result)
 		goto error_bd_claim;
 
-	return exp_obj;
+	*exp_obj = tmp_exp_obj;
+
+	return 0;
 
 
 error_bd_claim:
 	sysfs_remove_group(&disk_to_dev(gd)->kobj, &device_attr_group);
 error_sysfs:
-	del_gendisk(exp_obj->gd);
+	del_gendisk(tmp_exp_obj->gd);
 error_add_disk:
 error_set_geometry:
-	exp_obj->private = NULL;
-	_cas_exp_obj_clear_dev_t(exp_obj);
+	tmp_exp_obj->private = NULL;
+	_cas_exp_obj_clear_dev_t(tmp_exp_obj);
 error_exp_obj_set_dev_t:
 	cas_cleanup_disk(gd);
-	exp_obj->gd = NULL;
+	tmp_exp_obj->gd = NULL;
 error_alloc_mq_disk:
 error_set_queue_limits:
-	blk_mq_free_tag_set(&exp_obj->tag_set);
+	blk_mq_free_tag_set(&tmp_exp_obj->tag_set);
 error_init_tag_set:
 	module_put(owner);
-	exp_obj->owner = NULL;
+	tmp_exp_obj->owner = NULL;
 error_module_get:
-	kfree(exp_obj->dev_name);
+	kfree(tmp_exp_obj->dev_name);
 error_kstrdup:
 error_hide_parts:
-	cas_disk_put(exp_obj->dsk);
-	cas_exp_obj_free(exp_obj);
-	return ERR_PTR(result);
+	cas_disk_put(tmp_exp_obj->dsk);
+	cas_exp_obj_free(tmp_exp_obj);
+	return result;
 
 }
 EXPORT_SYMBOL(cas_exp_obj_create);

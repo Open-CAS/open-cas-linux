@@ -26,31 +26,32 @@ void cas_exp_obj_box_deposit(struct cas_exp_obj *exp_obj)
 }
 EXPORT_SYMBOL(cas_exp_obj_box_deposit);
 
-struct cas_exp_obj *cas_exp_obj_box_claim(struct cas_disk *dsk,
+int cas_exp_obj_box_claim(struct cas_exp_obj **exp_obj, struct cas_disk *dsk,
 		struct module *owner, struct cas_exp_obj_ops *ops, void *priv)
 {
-	struct cas_exp_obj *exp_obj;
+	struct cas_exp_obj *tmp_exp_obj;
 
 	if (!try_module_get(owner))
-		return ERR_PTR(-ENAVAIL);
+		return -ENAVAIL;
 
 	mutex_lock(&box_mutex);
-	list_for_each_entry(exp_obj, &box_list, list) {
-		if (exp_obj->dsk == dsk) {
-			list_del(&exp_obj->list);
-			module_put(exp_obj->owner);
-			exp_obj->owner = owner;
-			exp_obj->ops = ops;
-			exp_obj->private = priv;
+	list_for_each_entry(tmp_exp_obj, &box_list, list) {
+		if (tmp_exp_obj->dsk == dsk) {
+			list_del(&tmp_exp_obj->list);
+			module_put(tmp_exp_obj->owner);
+			tmp_exp_obj->owner = owner;
+			tmp_exp_obj->ops = ops;
+			tmp_exp_obj->private = priv;
 			mutex_unlock(&box_mutex);
-			return exp_obj;
+			*exp_obj = tmp_exp_obj;
+			return 0;
 		}
 	}
 	mutex_unlock(&box_mutex);
 
 	module_put(owner);
 
-	return ERR_PTR(-ENODEV);
+	return -ENODEV;
 }
 EXPORT_SYMBOL(cas_exp_obj_box_claim);
 

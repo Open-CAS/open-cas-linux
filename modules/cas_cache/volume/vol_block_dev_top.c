@@ -568,13 +568,15 @@ static int kcas_create_exported_object(struct cas_priv_top *priv_top,
 		goto end;
 	}
 
-	if (!claim)
-		exp_obj = cas_exp_obj_create(dsk, name, THIS_MODULE, ops, priv);
-	else
-		exp_obj = cas_exp_obj_box_claim(dsk, THIS_MODULE, ops, priv);
-	if (IS_ERR_OR_NULL(exp_obj)) {
+	if (!claim) {
+		result = cas_exp_obj_create(&exp_obj, dsk, name, THIS_MODULE,
+				ops, priv);
+	} else {
+		result = cas_exp_obj_box_claim(&exp_obj, dsk, THIS_MODULE,
+				ops, priv);
+	}
+	if (result) {
 		destroy_workqueue(priv_top->expobj_wq);
-		result = PTR_ERR(exp_obj);
 		goto end;
 	}
 

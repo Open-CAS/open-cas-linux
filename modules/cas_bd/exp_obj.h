@@ -35,14 +35,15 @@ struct cas_exp_obj_ops {
 
 /**
  * @brief Create exported object (top device)
+ * @param exp_obj Double pointer to exp_obj (out parameter)
  * @param dsk Pointer to a structure representing a backend block device
  * @param dev_name Name of exported object (top device)
  * @param owner Pointer to cas module
  * @param ops Pointer to structure with callback functions
  * @param priv Private data
- * @return Pointer to an exported object
+ * @return 0 if success, error code if failure
  */
-struct cas_exp_obj *cas_exp_obj_create(struct cas_disk *dsk,
+int cas_exp_obj_create(struct cas_exp_obj **exp_obj, struct cas_disk *dsk,
 		const char *dev_name, struct module *owner,
 		struct cas_exp_obj_ops *ops, void *priv);
 
