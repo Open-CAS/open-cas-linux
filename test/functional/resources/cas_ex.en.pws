@@ -13,6 +13,7 @@ NHIT
 NUM
 NVMe
 OCF
+Prefetch
 RHEL
 SLES
 SSD
@@ -46,6 +47,9 @@ nop
 nvme
 opencas
 param
+prefetch
+prefetching
+readahead
 req
 reseller
 resizing
