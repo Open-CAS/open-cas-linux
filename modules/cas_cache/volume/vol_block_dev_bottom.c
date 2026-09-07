@@ -60,7 +60,7 @@ static void block_dev_close_object(ocf_volume_t vol)
 	if (priv_bottom->opened_by_bdev)
 		return;
 
-	cas_disk_put(priv_bottom->dsk);
+	cas_disk_release(priv_bottom->dsk);
 }
 
 static unsigned int block_dev_get_max_io_size(ocf_volume_t vol)

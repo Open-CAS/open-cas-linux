@@ -17,6 +17,7 @@ struct cas_disk {
 	cas_bdev_handle_t bdev_handle;
 
 	int refcount;
+	bool claimed;
 	bool hidden;
 
 	int gd_flags;
