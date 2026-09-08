@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -16,7 +17,7 @@ from test_tools.fs_tools import Filesystem, create_directory
 from test_tools.os_tools import drop_caches, DropCachesMode, sync
 from test_tools.udev import Udev
 from type_def.size import Unit, Size
-from tests.io_class.io_class_common import prepare, mountpoint, ioclass_config_path
+from tests.io_class.io_class_common import prepare, mountpoint, ioclass_config_path, run_io_dir
 
 
 @pytest.mark.os_dependent
@@ -80,7 +81,7 @@ def test_ioclass_usage_sum():
 
     with TestRun.step("Trigger IO to each partition and verify stats"):
         for io_class in io_classes:
-            run_io_dir(io_class.dir_path, int(io_class.io_size / Unit.Blocks4096.get_value()))
+            run_io_dir(f"{io_class.dir_path}/tmp_file", io_class.io_size)
 
         verify_ioclass_usage_stats(cache, [i.id for i in io_classes])
 
@@ -91,7 +92,7 @@ def test_ioclass_usage_sum():
 
     with TestRun.step("Trigger IO to each partition for the second time and verify stats"):
         for io_class in io_classes:
-            run_io_dir(io_class.dir_path, int(io_class.io_size / Unit.Blocks4096.get_value()))
+            run_io_dir(f"{io_class.dir_path}/tmp_file", io_class.io_size)
 
         verify_ioclass_usage_stats(cache, [i.id for i in io_classes])
 
@@ -147,16 +148,3 @@ def add_io_class(class_id, eviction_prio, rule):
         rule=rule,
         ioclass_config_path=ioclass_config_path,
     )
-
-
-def run_io_dir(path, num_ios):
-    (
-        Dd()
-        .input("/dev/zero")
-        .output(f"{path}/tmp_file")
-        .count(num_ios)
-        .block_size(Size(1, Unit.Blocks4096))
-        .run()
-    )
-    sync()
-    drop_caches(DropCachesMode.ALL)

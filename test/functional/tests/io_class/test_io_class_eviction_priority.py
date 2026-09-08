@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -80,7 +81,7 @@ def test_io_class_eviction_priority():
         for io_class in io_classes[0:3]:
             run_io_dir(
                 f"{io_class.dir_path}/tmp_file",
-                int((io_class.max_occupancy * cache_size) / Unit.Blocks4096.get_value()),
+                io_class.max_occupancy * cache_size,
             )
 
     with TestRun.step("Check if each io class reached it's occupancy limit"):
@@ -112,9 +113,9 @@ def test_io_class_eviction_priority():
         target_io_class = io_classes[3]
         io_classes_to_evict = io_classes[:3][::-1]  # List is ordered by eviction priority
         io_classes_evicted = []
-        io_offset = 0
+        io_offset = Size.zero()
         for io_class in io_classes_to_evict:
-            io_size = int((io_class.max_occupancy * cache_size) / Unit.Blocks4096.get_value())
+            io_size = io_class.max_occupancy * cache_size
             run_io_dir(f"{target_io_class.dir_path}/tmp_file_{io_class.id}", io_size, io_offset)
             io_offset += io_size
             part_to_evict_end_occupancy = get_io_class_occupancy(cache, io_class.id, percent=True)

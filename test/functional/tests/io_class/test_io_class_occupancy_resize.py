@@ -96,7 +96,7 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
             )
 
     with TestRun.step("Perform IO with size equal to cache size"):
-        run_io_dir(f"{io_class.dir_path}/tmp_file", int(cache_size / Unit.Blocks4096.value))
+        run_io_dir(f"{io_class.dir_path}/tmp_file", cache_size)
 
     with TestRun.step("Check if the ioclass did not exceed specified occupancy"):
         actual_occupancy = get_io_class_occupancy(cache, io_class.id)
@@ -141,7 +141,7 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
         casadm.load_io_classes(cache_id=cache.cache_id, file=default_config_file_path)
 
     with TestRun.step("Perform IO with size equal to cache size"):
-        run_io_dir(f"{io_class.dir_path}/tmp_file", int(cache_size / Unit.Blocks4096.value))
+        run_io_dir(f"{io_class.dir_path}/tmp_file", cache_size)
 
     with TestRun.step("Check if the ioclass did not exceed specified occupancy"):
         actual_occupancy = get_io_class_occupancy(cache, io_class.id)

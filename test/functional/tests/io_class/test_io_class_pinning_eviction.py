@@ -96,7 +96,9 @@ def test_io_class_pinning_eviction():
     with TestRun.step("Trigger IO to pinned class directory"):
         run_io_dir(
             f"{pinned_io_class.dir_path}/tmp_file",
-            int((pinned_io_class.max_occupancy * cache_line_count) / Unit.Blocks4096.value),
+            pinned_io_class.max_occupancy * cache_size,
+            block_size=io_size,
+            dsync=True,
         )
         pinned_occupancy = get_io_class_occupancy(cache, pinned_io_class.id)
 
@@ -114,10 +116,7 @@ def test_io_class_pinning_eviction():
         "Trigger IO to the rest IoClasses directories and check if pinned class occupancy changes"
     ):
         for io_class in io_classes[1:]:
-            run_io_dir(
-                f"{io_class.dir_path}/tmp_file",
-                int((io_class.max_occupancy * cache_size) / Unit.Blocks4096.value),
-            )
+            run_io_dir(f"{io_class.dir_path}/tmp_file", io_class.max_occupancy * cache_size)
             after_op_occupancy = get_io_class_occupancy(cache, pinned_io_class.id)
             if pinned_occupancy != after_op_occupancy:
                 TestRun.fail(
@@ -191,7 +190,9 @@ def test_pinned_ioclasses_eviction():
     with TestRun.step("Trigger IO to first pinned class directory"):
         run_io_dir(
             f"{io_classes[0].dir_path}/tmp_file",
-            int((io_classes[0].max_occupancy * cache_size) / Unit.Blocks4096.value),
+            io_classes[0].max_occupancy * cache_size,
+            block_size=io_size,
+            dsync=True,
         )
         first_io_pinned_occupancy = get_io_class_occupancy(cache, io_classes[0].id)
 
@@ -206,10 +207,7 @@ def test_pinned_ioclasses_eviction():
             )
 
     with TestRun.step("Trigger IO to second pinned class directory"):
-        run_io_dir(
-            f"{io_classes[1].dir_path}/tmp_file",
-            int((io_classes[1].max_occupancy * cache_size) / Unit.Blocks4096.value),
-        )
+        run_io_dir(f"{io_classes[1].dir_path}/tmp_file", io_classes[1].max_occupancy * cache_size)
         after_op_occupancy = get_io_class_occupancy(cache, io_classes[0].id)
 
     with TestRun.step("Compare if occupancy has changed on smaller pinned class"):
