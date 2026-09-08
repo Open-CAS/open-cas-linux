@@ -12,12 +12,17 @@ from collections import namedtuple
 from api.cas import ioclass_config, casadm
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
-from test_tools.dd import Dd
 from test_tools.fs_tools import Filesystem, create_directory
 from test_tools.os_tools import drop_caches, DropCachesMode, sync
 from test_tools.udev import Udev
-from type_def.size import Unit, Size
-from tests.io_class.io_class_common import prepare, mountpoint, ioclass_config_path, run_io_dir
+from type_def.size import Size
+from tests.io_class.io_class_common import (
+    prepare,
+    mountpoint,
+    ioclass_config_path,
+    get_io_class_usage,
+    run_io_dir,
+)
 
 
 @pytest.mark.os_dependent
@@ -95,10 +100,6 @@ def test_ioclass_usage_sum():
             run_io_dir(f"{io_class.dir_path}/tmp_file", io_class.io_size)
 
         verify_ioclass_usage_stats(cache, [i.id for i in io_classes])
-
-
-def get_io_class_usage(cache, io_class_id):
-    return cache.get_io_class_statistics(io_class_id=io_class_id).usage_stats
 
 
 def verify_ioclass_usage_stats(cache, ioclasses_ids):
