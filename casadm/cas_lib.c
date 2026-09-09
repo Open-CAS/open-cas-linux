@@ -2518,6 +2518,18 @@ static inline int partition_get_line(CSVFILE *csv,
 		cas_printf(LOG_ERR, "IO class 0 must have the default name 'unclassified'\n");
 		return FAILURE;
 	}
+	if (OCF_IO_CLASS_PREFETCH == part_id &&
+			strcmp(name, OCF_IO_CLASS_PREFETCH_NAME)) {
+		cas_printf(LOG_ERR, "IO class %d must have the default name '%s'\n",
+				OCF_IO_CLASS_PREFETCH, OCF_IO_CLASS_PREFETCH_NAME);
+		return FAILURE;
+	}
+	if (OCF_IO_CLASS_PREFETCH != part_id &&
+			!strcmp(name, OCF_IO_CLASS_PREFETCH_NAME)) {
+		cas_printf(LOG_ERR, "The name '%s' is reserved for IO class %d\n",
+				OCF_IO_CLASS_PREFETCH_NAME, OCF_IO_CLASS_PREFETCH);
+		return FAILURE;
+	}
 
 	/* Validate Priority*/
 	*error_col = part_csv_coll_prio;
