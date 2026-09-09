@@ -164,11 +164,9 @@ fi
 /usr/lib/udev/rules.d/60-persistent-storage-cas.rules
 /usr/sbin/casadm
 /usr/sbin/casctl
-/usr/bin/opencas_exporter
 /usr/lib/systemd/system-shutdown/open-cas.shutdown
 /usr/lib/systemd/system/open-cas-shutdown.service
 /usr/lib/systemd/system/open-cas.service
-/usr/lib/systemd/system/opencas_exporter.service
 /usr/share/man/man5/opencas.conf.5.gz
 /usr/share/man/man8/casadm.8.gz
 /usr/share/man/man8/casctl.8.gz
