@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -244,7 +245,13 @@ def test_block_stats_read_miss(cache_mode: CacheMode):
 def get_expected_zero_stats(cache_mode: CacheMode, direction: OperationType):
     traits = CacheMode.get_traits(cache_mode)
 
-    stat_list = ["Reads from cache"]
+    stat_list = [
+        "Reads from cache",
+        "Prefetch core reads",
+        "Prefetch cache writes",
+        "Cleaner cache reads",
+        "Cleaner core writes",
+    ]
     if direction == OperationType.write:
         stat_list.append("Reads from core")
         stat_list.append("Reads from exported object")

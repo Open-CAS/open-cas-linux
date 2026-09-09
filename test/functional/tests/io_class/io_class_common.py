@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -107,15 +108,25 @@ def compare_io_classes_list(expected, actual):
         TestRun.LOGGER.error(f"Actual IO classes:\n{actual}")
 
 
-def run_io_dir(path, size_4k, offset=0):
+def run_io_dir(
+    path,
+    size: Size,
+    offset: Size = None,
+    block_size: Size = None,
+    dsync: bool = False,
+):
+    block_size = block_size or Size(1, Unit.Blocks4096)
+    offset = offset or Size.zero()
     dd = (
         Dd()
         .input("/dev/zero")
         .output(f"{path}")
-        .count(size_4k)
-        .block_size(Size(1, Unit.Blocks4096))
-        .seek(offset)
+        .count(int(size / block_size))
+        .block_size(block_size)
+        .seek(int(offset / block_size))
     )
+    if dsync:
+        dd.oflag("dsync")
     TestRun.LOGGER.info(f"{dd}")
     output = dd.run()
     if output.exit_code != 0:

@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -47,10 +48,12 @@ def test_clean_load():
         cache.set_cleaning_policy(CleaningPolicy.nop)
 
     with TestRun.step("Populate cache with dirty data."):
+        io_size = (cache.get_statistics().config_stats.cache_size * 0.8) / len(cores)
         fio = (
             Fio()
             .create_command()
-            .size(Size(1, Unit.GibiByte))
+            .offset(Size(1, Unit.MebiByte))
+            .size(io_size)
             .read_write(ReadWrite.randwrite)
             .io_engine(IoEngine.libaio)
             .block_size(Size(1, Unit.Blocks4096))

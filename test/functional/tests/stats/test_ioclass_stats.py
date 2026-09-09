@@ -150,10 +150,14 @@ def test_ioclass_stats_basic(random_cls):
 
     with TestRun.step("Try retrieving IO class stats for all allowed id values "
                       "and one out of range id"):
+        default_ids = [io_class.id for io_class in IoClass.default_list()]
         for class_id in range(ioclass_config.MAX_IO_CLASS_ID + 2):
             out_of_range = " out of range" if class_id > ioclass_config.MAX_IO_CLASS_ID else ""
             with TestRun.group(f"Checking{out_of_range} IO class id {class_id}..."):
-                expected = class_id == 0 or class_id in range(min_ioclass_id, max_ioclass_id)
+                expected = (
+                    class_id in default_ids
+                    or class_id in range(min_ioclass_id, max_ioclass_id)
+                )
                 try:
                     casadm.print_statistics(
                         cache_id=cache_id,

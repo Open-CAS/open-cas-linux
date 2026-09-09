@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -43,10 +44,13 @@ illegal_io_class_configurations = {
     "1,1,1,": cli_messages.illegal_io_class_config_L2C4,
     # 5 parameters
     "1,1,1,1,1": cli_messages.illegal_io_class_config_L2,
-    # Try to configure IO class ID as: string, negative value or 33
+    # Try to configure IO class ID as: string, negative value or 34
     "IllegalInput,Superblock,22,1": cli_messages.illegal_io_class_invalid_id,
     "-2,Superblock,22,1": cli_messages.illegal_io_class_invalid_id_number,
-    "33,Superblock,22,1": cli_messages.illegal_io_class_invalid_id_number,
+    "34,Superblock,22,1": cli_messages.illegal_io_class_invalid_id_number,
+    # Try to rename the reserved prefetch IO class or use its name for another IO class
+    "33,Superblock,22,1": cli_messages.illegal_io_class_prefetch_name,
+    "1,prefetch,22,1": cli_messages.illegal_io_class_reserved_prefetch_name,
     # Try to use semicolon, dots or new line as csv delimiters
     "1;1;1;1": cli_messages.illegal_io_class_config_L2,
     "1.1.1.1": cli_messages.illegal_io_class_config_L2,

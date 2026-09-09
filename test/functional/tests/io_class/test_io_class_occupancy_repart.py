@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -103,7 +104,7 @@ def test_ioclass_repart(io_class_size_multiplication):
         for i, io_class in enumerate(io_classes[0:3]):
             run_io_dir(
                 f"{mountpoint}/{i}",
-                int((io_class.max_occupancy * cache_size) / Unit.Blocks4096.get_value()),
+                io_class.max_occupancy * cache_size,
             )
 
         if not isclose(

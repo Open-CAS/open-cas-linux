@@ -261,12 +261,9 @@ class FlushParametersAcp:
 
 
 class SeqCutOffParameters:
-    def __init__(
-        self, policy: SeqCutOffPolicy = None, threshold: Size = None, promotion_count: int = None
-    ):
+    def __init__(self, policy: SeqCutOffPolicy = None, threshold: Size = None):
         self.policy = policy
         self.threshold = threshold
-        self.promotion_count = promotion_count
 
     def __eq__(self, other):
         def fill_default(p):
@@ -274,24 +271,47 @@ class SeqCutOffParameters:
             p = copy.copy(p)
             p.policy = p.policy or default.policy
             p.threshold = p.threshold or default.threshold
-            p.promotion_count = p.promotion_count or default.promotion_count
             return p
 
         a = fill_default(self)
         b = fill_default(other)
 
-        return (
-            a.policy == b.policy
-            and a.threshold == b.threshold
-            and a.promotion_count == b.promotion_count
-        )
+        return a.policy == b.policy and a.threshold == b.threshold
 
     @staticmethod
     def default_seq_cut_off_params():
         return SeqCutOffParameters(
             threshold=Size(1024, Unit.KibiByte),
             policy=SeqCutOffPolicy.full,
+        )
+
+
+class SeqDetectParameters:
+    def __init__(self, promotion_count: int = None, promotion_threshold: Size = None):
+        self.promotion_count = promotion_count
+        self.promotion_threshold = promotion_threshold
+
+    def __eq__(self, other):
+        def fill_default(p):
+            default = self.default_seq_detect_params()
+            p = copy.copy(p)
+            p.promotion_count = p.promotion_count or default.promotion_count
+            p.promotion_threshold = p.promotion_threshold or default.promotion_threshold
+            return p
+
+        a = fill_default(self)
+        b = fill_default(other)
+
+        return (
+            a.promotion_count == b.promotion_count
+            and a.promotion_threshold == b.promotion_threshold
+        )
+
+    @staticmethod
+    def default_seq_detect_params():
+        return SeqDetectParameters(
             promotion_count=8,
+            promotion_threshold=Size(1024, Unit.KibiByte),
         )
 
 

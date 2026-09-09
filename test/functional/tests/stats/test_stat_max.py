@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2020-2021 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -19,8 +20,8 @@ from test_tools.fio.fio_param import ReadWrite, IoEngine
 from test_tools.udev import Udev
 from type_def.size import Size, Unit
 
-cache_size = Size(1, Unit.GibiByte)
-core_size = Size(2, Unit.GibiByte)
+cache_size = Size(500, Unit.MebiByte)
+core_size = Size(1, Unit.GibiByte)
 io_size = Size(10, Unit.MebiByte)
 stat_filter = [StatsFilter.usage, StatsFilter.req, StatsFilter.blk]
 

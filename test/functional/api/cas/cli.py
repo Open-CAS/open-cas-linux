@@ -77,7 +77,6 @@ def set_param_cutoff_cmd(
     core_id: str = None,
     threshold: str = None,
     policy: str = None,
-    promotion_count: str = None,
     shortcut: bool = False,
 ) -> str:
     name = "seq-cutoff"
@@ -88,8 +87,24 @@ def set_param_cutoff_cmd(
         command += (" -t " if shortcut else " --threshold ") + threshold
     if policy:
         command += (" -p " if shortcut else " --policy ") + policy
+    return casadm_bin + command
+
+
+def set_param_seq_detect_cmd(
+    cache_id: str,
+    core_id: str = None,
+    promotion_count: str = None,
+    promotion_threshold: str = None,
+    shortcut: bool = False,
+) -> str:
+    name = "seq-detect"
+    command = _set_param_cmd(name=name, cache_id=cache_id, shortcut=shortcut)
+    if core_id:
+        command += (" -j " if shortcut else " --core-id ") + core_id
     if promotion_count:
         command += " --promotion-count " + promotion_count
+    if promotion_threshold:
+        command += " --promotion-threshold " + promotion_threshold
     return casadm_bin + command
 
 
@@ -178,6 +193,20 @@ def get_param_cutoff_cmd(
     cache_id: str, core_id: str, output_format: str = None, shortcut: bool = False
 ) -> str:
     name = "seq-cutoff"
+    command = _get_param_cmd(
+        name=name,
+        cache_id=cache_id,
+        output_format=output_format,
+        shortcut=shortcut,
+    )
+    command += (" -j " if shortcut else " --core-id ") + core_id
+    return casadm_bin + command
+
+
+def get_param_seq_detect_cmd(
+    cache_id: str, core_id: str, output_format: str = None, shortcut: bool = False
+) -> str:
+    name = "seq-detect"
     command = _get_param_cmd(
         name=name,
         cache_id=cache_id,

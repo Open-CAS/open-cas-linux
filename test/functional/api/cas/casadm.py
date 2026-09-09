@@ -150,24 +150,48 @@ def set_param_cutoff(
     core_id: int = None,
     threshold: Size = None,
     policy: SeqCutOffPolicy = None,
-    promotion_count: int = None,
     shortcut: bool = False,
 ) -> Output:
     _core_id = str(core_id) if core_id is not None else None
     _threshold = str(int(threshold.get_value(Unit.KibiByte))) if threshold else None
     _policy = policy.name if policy else None
-    _promotion_count = str(promotion_count) if promotion_count is not None else None
     command = set_param_cutoff_cmd(
         cache_id=str(cache_id),
         core_id=_core_id,
         threshold=_threshold,
         policy=_policy,
-        promotion_count=_promotion_count,
         shortcut=shortcut,
     )
     output = TestRun.executor.run(command)
     if output.exit_code != 0:
         raise CmdException("Error while setting sequential cut-off params.", output)
+    return output
+
+
+def set_param_seq_detect(
+    cache_id: int,
+    core_id: int = None,
+    promotion_count: int = None,
+    promotion_threshold: Size = None,
+    shortcut: bool = False,
+) -> Output:
+    _core_id = str(core_id) if core_id is not None else None
+    _promotion_count = str(promotion_count) if promotion_count is not None else None
+    _promotion_threshold = (
+        str(int(promotion_threshold.get_value(Unit.KibiByte)))
+        if promotion_threshold is not None
+        else None
+    )
+    command = set_param_seq_detect_cmd(
+        cache_id=str(cache_id),
+        core_id=_core_id,
+        promotion_count=_promotion_count,
+        promotion_threshold=_promotion_threshold,
+        shortcut=shortcut,
+    )
+    output = TestRun.executor.run(command)
+    if output.exit_code != 0:
+        raise CmdException("Error while setting sequence detector params.", output)
     return output
 
 
@@ -276,6 +300,23 @@ def get_param_cutoff(
     )
     if output.exit_code != 0:
         raise CmdException("Getting sequential cutoff params failed.", output)
+    return output
+
+
+def get_param_seq_detect(
+    cache_id: int, core_id: int, output_format: OutputFormat = None, shortcut: bool = False
+) -> Output:
+    _output_format = output_format.name if output_format else None
+    output = TestRun.executor.run(
+        get_param_seq_detect_cmd(
+            cache_id=str(cache_id),
+            core_id=str(core_id),
+            output_format=_output_format,
+            shortcut=shortcut,
+        )
+    )
+    if output.exit_code != 0:
+        raise CmdException("Getting sequence detector params failed.", output)
     return output
 
 

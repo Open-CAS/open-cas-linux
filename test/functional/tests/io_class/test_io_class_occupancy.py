@@ -112,8 +112,8 @@ def test_io_class_occupancy_directory_write(io_size_multiplication, cache_mode):
             for i in tmp_io_class_list:
                 original_occupancies[i.id] = get_io_class_occupancy(cache, i.id)
 
-            io_count = get_io_count(io_class, cache_size, cache_line_size, io_size_multiplication)
-            run_io_dir(f"{io_class.dir_path}/tmp_file", io_count)
+            io_size = get_io_size(io_class, cache_size, cache_line_size, io_size_multiplication)
+            run_io_dir(f"{io_class.dir_path}/tmp_file", io_size)
 
             actual_occupancy = get_io_class_occupancy(cache, io_class.id)
             expected_occupancy = io_class.max_occupancy * cache_size
@@ -130,10 +130,10 @@ def test_io_class_occupancy_directory_write(io_size_multiplication, cache_mode):
 
             for i in tmp_io_class_list:
                 actual_occupancy = get_io_class_occupancy(cache, i.id)
-                io_count = get_io_count(i, cache_size, cache_line_size, io_size_multiplication)
+                io_size = get_io_size(i, cache_size, cache_line_size, io_size_multiplication)
                 if (
                     original_occupancies[i.id] != actual_occupancy
-                    and io_count * Unit.Blocks4096.get_value() < actual_occupancy.value
+                    and io_size < actual_occupancy
                 ):
                     TestRun.LOGGER.error(
                         f"Occupancy for ioclass {i.id} should not change "
@@ -206,7 +206,7 @@ def test_io_class_occupancy_directory_read(io_size_multiplication):
         f"max io_class occupancy for future read"
     ):
         for io_class in io_classes:
-            io_size = get_io_count(io_class, cache_size, cache_line_size, io_size_multiplication)
+            io_size = get_io_size(io_class, cache_size, cache_line_size, io_size_multiplication)
             run_io_dir(f"{io_class.dir_path}/tmp_file", io_size)
 
     with TestRun.step("Remove old ioclass config"):
@@ -264,10 +264,10 @@ def test_io_class_occupancy_directory_read(io_size_multiplication):
 
             for i in tmp_io_class_list:
                 actual_occupancy = get_io_class_occupancy(cache, i.id)
-                io_count = get_io_count(i, cache_size, cache_line_size, io_size_multiplication)
+                io_size = get_io_size(i, cache_size, cache_line_size, io_size_multiplication)
                 if (
                     original_occupancies[i.id] != actual_occupancy
-                    and io_count * Unit.Blocks4096.get_value() < actual_occupancy.value
+                    and io_size < actual_occupancy
                 ):
                     TestRun.LOGGER.error(
                         f"Occupancy for ioclass {i.id} should not change "
@@ -392,7 +392,7 @@ def test_ioclass_occupancy_sum_cache():
         for io_class in io_classes:
             run_io_dir(
                 f"{io_class.dir_path}/tmp_file",
-                int((io_class.max_occupancy * cache_size) / Unit.Blocks4096.get_value()),
+                io_class.max_occupancy * cache_size,
             )
 
     with TestRun.step("Verify stats after IO"):
@@ -431,7 +431,7 @@ def test_ioclass_occupancy_sum_cache():
             )
 
 
-def get_io_count(io_class, cache_size, cls, io_size_multiplication):
+def get_io_size(io_class, cache_size, cls, io_size_multiplication):
     data_size = io_class.max_occupancy * cache_size * io_size_multiplication
     # total io size needs to be aligned to cache line size
-    return data_size.align_down(cls.value.value) // Size(1, Unit.Blocks4096)
+    return data_size.align_down(cls.value.value)

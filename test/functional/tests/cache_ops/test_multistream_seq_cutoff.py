@@ -71,7 +71,7 @@ def test_multistream_seq_cutoff_functional(streams_number, threshold):
     ):
         core.set_seq_cutoff_policy(SeqCutOffPolicy.always)
         core.set_seq_cutoff_threshold(threshold)
-        core.set_seq_cutoff_promotion_count(1)
+        core.set_seq_detect_promotion_count(1)
         core.reset_counters()
 
     with TestRun.step(

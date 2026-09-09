@@ -244,6 +244,16 @@ illegal_io_class_invalid_id_number = [
     r"Cannot parse configuration file - error in line 2 in column 1 \(IO class id\)\."
 ]
 
+illegal_io_class_prefetch_name = [
+    r"IO class 33 must have the default name 'prefetch'\n"
+    r"Cannot parse configuration file - error in line 2 in column 2 \(IO class name\)\."
+]
+
+illegal_io_class_reserved_prefetch_name = [
+    r"The name 'prefetch' is reserved for IO class 33\n"
+    r"Cannot parse configuration file - error in line 2 in column 2 \(IO class name\)\."
+]
+
 illegal_io_class_invalid_priority = [
     r"Invalid prio, must be a correct unsigned decimal integer\.\n"
     r"Cannot parse configuration file - error in line 2 in column 3 \(Eviction priority\)"

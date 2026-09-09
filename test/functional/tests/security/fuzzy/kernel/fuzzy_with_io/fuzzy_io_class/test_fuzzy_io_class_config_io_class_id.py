@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -16,7 +17,7 @@ from api.cas.cache_config import (
     UseIoScheduler,
 )
 from api.cas.cli import load_io_classes_cmd
-from api.cas.ioclass_config import IoClass, Operator
+from api.cas.ioclass_config import IoClass, Operator, MAX_USER_IO_CLASS_ID
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from test_tools.peach_fuzzer.peach_fuzzer import PeachFuzzer
@@ -116,4 +117,4 @@ def __is_valid(parameter):
     except ValueError:
         return False
     # io class with id 0 already exists so minimum is id 1
-    return 1 <= value <= 32
+    return 1 <= value <= MAX_USER_IO_CLASS_ID

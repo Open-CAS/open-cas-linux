@@ -1,5 +1,6 @@
 #
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -11,6 +12,7 @@ from api.cas.cache_config import (
     CacheMode,
     SeqCutOffParameters,
     SeqCutOffPolicy,
+    SeqDetectParameters,
     CleaningPolicy,
     FlushParametersAlru,
     PromotionParametersNhit,
@@ -307,6 +309,7 @@ def set_param(
     cache_to_set_param = random.choice(attached_cache_list)
     set_param_list = [
         cache_to_set_param.set_seq_cutoff_parameters,
+        cache_to_set_param.set_seq_detect_parameters,
         cache_to_set_param.set_cleaning_policy,
         cache_to_set_param.set_params_alru,
         cache_to_set_param.set_params_acp,
@@ -316,15 +319,13 @@ def set_param(
     param_to_set = random.choice(set_param_list)
     match param_to_set:
         case cache_to_set_param.set_seq_cutoff_parameters:
+            random_threshold = Size(random.randint(1, 4194181))
+            random_policy = random.choice(list(SeqCutOffPolicy))
+            random_seqcutoff_params = SeqCutOffParameters(
+                threshold=random_threshold,
+                policy=random_policy,
+            )
             if random.choice([True, False]):
-                random_threshold = Size(random.randint(1, 4194181))
-                random_policy = random.choice(list(SeqCutOffPolicy))
-                random_promotion_count = random.randint(1, 65535)
-                random_seqcutoff_params = SeqCutOffParameters(
-                    threshold=random_threshold,
-                    policy=random_policy,
-                    promotion_count=random_promotion_count,
-                )
                 cache_to_set_param.set_seq_cutoff_parameters(random_seqcutoff_params)
                 return (
                     f"Changed seq-cutoff params on cache {cache_to_set_param.cache_id} to:\n"
@@ -336,21 +337,39 @@ def set_param(
                 if not core_list:
                     return None
                 random_core = random.choice(core_list)
-                random_threshold = Size(random.randint(1, 4194181))
-                random_policy = random.choice(list(SeqCutOffPolicy))
-                random_promotion_count = random.randint(1, 65535)
-                random_seqcutoff_params = SeqCutOffParameters(
-                    threshold=random_threshold,
-                    policy=random_policy,
-                    promotion_count=random_promotion_count,
-                )
                 random_core.set_seq_cutoff_parameters(random_seqcutoff_params)
                 return (
                     f"Changed seq-cutoff params on cache {cache_to_set_param.cache_id}-core "
                     f"{random_core.core_id} to:\n"
                     f"Threshold: {str(random_threshold)}\n"
                     f"Policy: {str(random_policy)}\n"
+                )
+
+        case cache_to_set_param.set_seq_detect_parameters:
+            random_promotion_count = random.randint(1, 65535)
+            random_promotion_threshold = Size(random.randint(0, 4194181), Unit.KibiByte)
+            random_seq_detect_params = SeqDetectParameters(
+                promotion_count=random_promotion_count,
+                promotion_threshold=random_promotion_threshold,
+            )
+            if random.choice([True, False]):
+                cache_to_set_param.set_seq_detect_parameters(random_seq_detect_params)
+                return (
+                    f"Changed seq-detect params on cache {cache_to_set_param.cache_id} to:\n"
                     f"Promotion count: {str(random_promotion_count)}\n"
+                    f"Promotion threshold: {str(random_promotion_threshold)}\n"
+                )
+            else:
+                core_list = cache_to_set_param.get_cores()
+                if not core_list:
+                    return None
+                random_core = random.choice(core_list)
+                random_core.set_seq_detect_parameters(random_seq_detect_params)
+                return (
+                    f"Changed seq-detect params on cache {cache_to_set_param.cache_id}-core "
+                    f"{random_core.core_id} to:\n"
+                    f"Promotion count: {str(random_promotion_count)}\n"
+                    f"Promotion threshold: {str(random_promotion_threshold)}\n"
                 )
 
         case cache_to_set_param.set_cleaning_policy:

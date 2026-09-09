@@ -40,7 +40,7 @@ def test_io_class_eviction_pinned_after_unpin():
     """
     with TestRun.step("Prepare CAS devices"):
         cache, cores = prepare(cores_number=2, cache_size=cache_size, core_size=core_size)
-        cache_line_count = cache.get_statistics().config_stats.cache_size
+        usable_cache_size = cache.get_statistics().config_stats.cache_size
 
     with TestRun.step("Add IoClasses for cores"):
         IoclassConfig = namedtuple("IoclassConfig", "id eviction_prio max_occupancy core")
@@ -60,7 +60,7 @@ def test_io_class_eviction_pinned_after_unpin():
             )
 
     with TestRun.step("Run IO on pinned IO class"):
-        run_io_dir(f"{pinned_io_class.core.path}", int(cache_line_count / Unit.Blocks4096.value))
+        run_io_dir(f"{pinned_io_class.core.path}", usable_cache_size)
         occupancy_after = get_io_class_occupancy(cache, pinned_io_class.id, percent=True)
 
     with TestRun.step("Unpin ioclass to and set its priority to be lower than second IO class"):
@@ -68,7 +68,7 @@ def test_io_class_eviction_pinned_after_unpin():
         _add_and_load_io_classes(cache.cache_id, io_classes)
 
     with TestRun.step("Run dd on second io ioclass "):
-        run_io_dir(f"{io_classes[1].core.path}", int(cache_line_count / Unit.Blocks4096.value))
+        run_io_dir(f"{io_classes[1].core.path}", usable_cache_size)
 
     with TestRun.step("Check if data from 'was pinned' IO class was evicted"):
         occupancy_after_change = get_io_class_occupancy(cache, pinned_io_class.id, percent=True)

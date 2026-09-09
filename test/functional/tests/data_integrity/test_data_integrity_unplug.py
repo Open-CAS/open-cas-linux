@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -17,6 +18,7 @@ from api.cas.cache_config import CacheMode, CleaningPolicy, CacheModeTrait, Cach
 from core.test_run import TestRun
 from storage_devices.disk import DiskType, DiskTypeSet, DiskTypeLowerThan
 from storage_devices.ramdisk import RamDisk
+from test_tools.dd import Dd
 from test_tools.fio.fio import Fio
 from test_tools.fio.fio_param import ReadWrite
 from connection.utils.asynchronous import start_async_func
@@ -194,9 +196,13 @@ def get_data_name(job, block, io):
 
 
 def write_device(path):
-    command = (
-        f"dd if=/dev/urandom bs={int(block_size.value)} count={job_workset_blocks} of={path} "
-        "oflag=direct"
+    command = str(
+        Dd()
+        .input("/dev/urandom")
+        .output(path)
+        .block_size(block_size)
+        .count(total_workset_blocks)
+        .oflag("direct")
     )
     TestRun.executor.run_expect_success(command)
 
@@ -290,9 +296,17 @@ def prepare_base_fio():
 
 
 def read_device_md5s(path):
+    dd = str(
+        Dd()
+        .input(path)
+        .block_size(block_size)
+        .count(1)
+        .skip("$i")
+        .iflag("direct")
+    )
     result = TestRun.executor.run_expect_success(
-        f"for i in 0 `seq {total_workset_blocks - 1}`; do dd if={path} bs={block_size.value} "
-        "count=1 skip=$i iflag=direct 2> /dev/null | md5sum; done | cut -d ' ' -f 1"
+        f"for i in 0 `seq {total_workset_blocks - 1}`; do {dd} 2> /dev/null | md5sum; "
+        "done | cut -d ' ' -f 1"
     ).stdout.splitlines()
     return split_per_job(result)
 

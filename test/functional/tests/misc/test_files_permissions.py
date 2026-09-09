@@ -77,9 +77,11 @@ repo_files_perms_exceptions = {
 
 build_files_perms_exceptions = {
     "casadm/casadm": 755,
+    "extra/prometheus/opencas_exporter": 755,
 }
 
 installed_files_perms_exceptions = {
+    "usr/bin/opencas_exporter": 755,
     "usr/lib/opencas/casctl": 755,
     "usr/lib/opencas/open-cas-loader.py": 755,
     "usr/sbin/casadm": 755,
