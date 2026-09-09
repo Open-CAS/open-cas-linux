@@ -208,6 +208,12 @@ struct cas_disk *cas_disk_open(const char *path)
 	mutex_lock(&disk_global.lock);
 	dsk = cas_disk_lookup(path);
 	if (dsk) {
+		if (dsk->claimed) {
+			mutex_unlock(&disk_global.lock);
+			CAS_DEBUG_ERROR("Disk already in use");
+			return ERR_PTR(-EBUSY);
+		}
+		dsk->claimed = true;
 		dsk->refcount++;
 		mutex_unlock(&disk_global.lock);
 		return dsk;
@@ -235,6 +241,7 @@ struct cas_disk *cas_disk_open(const char *path)
 	}
 
 	dsk->refcount = 1;
+	dsk->claimed = true;
 
 	mutex_lock(&disk_global.lock);
 	list_add_tail(&dsk->list, &disk_global.disks);
@@ -252,6 +259,19 @@ error_kmem:
 	return ERR_PTR(result);
 }
 EXPORT_SYMBOL(cas_disk_open);
+
+void cas_disk_release(struct cas_disk *dsk)
+{
+	BUG_ON(!dsk);
+
+	mutex_lock(&disk_global.lock);
+	BUG_ON(!dsk->claimed);
+	dsk->claimed = false;
+	mutex_unlock(&disk_global.lock);
+
+	cas_disk_put(dsk);
+}
+EXPORT_SYMBOL(cas_disk_release);
 
 void cas_disk_get(struct cas_disk *dsk)
 {
