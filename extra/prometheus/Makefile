@@ -3,9 +3,16 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+-include ../../.metadata/cas_config
+
 LIBOPENCAS_DIR := $(CURDIR)/../../libopencas
 
-all: opencas_exporter
+# The exporter uses netlink interface. Build it only if netlink is enabled.
+ifeq ($(WITH_NETLINK),1)
+EXPORTER := opencas_exporter
+endif
+
+all: $(EXPORTER)
 
 $(LIBOPENCAS_DIR)/libopencas.a:
 	$(MAKE) -C $(LIBOPENCAS_DIR)
@@ -22,11 +29,15 @@ else
 endif
 
 install: install_files
+ifdef EXPORTER
 	$(SYSTEMCTL) daemon-reload
+endif
 
 install_files: all
+ifdef EXPORTER
 	install -m 755 -D opencas_exporter $(DESTDIR)/usr/bin/opencas_exporter
 	install -m 644 -D opencas_exporter.service $(DESTDIR)$(SYSTEMD_DIR)/opencas_exporter.service
+endif
 
 uninstall:
 	-$(SYSTEMCTL) disable --now opencas_exporter
@@ -40,4 +51,4 @@ clean:
 
 distclean: clean
 
-.PHONY: all install uninstall clean distclean
+.PHONY: all install install_files uninstall clean distclean

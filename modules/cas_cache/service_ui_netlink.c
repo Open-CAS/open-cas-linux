@@ -5,6 +5,11 @@
 
 #include "cas_cache.h"
 #include "service_ui_netlink.h"
+
+/* NOTE: This feature is still experimental and disabled by default. */
+
+#ifdef CAS_NETLINK
+
 #include <cas_netlink.h>
 
 #include <linux/overflow.h>
@@ -852,3 +857,16 @@ void cas_nl_deinit(void)
 {
 	genl_unregister_family(&cas_nl_family);
 }
+
+#else /* CAS_NETLINK */
+
+int cas_nl_init(void)
+{
+	return 0;
+}
+
+void cas_nl_deinit(void)
+{
+}
+
+#endif /* CAS_NETLINK */

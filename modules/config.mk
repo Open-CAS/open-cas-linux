@@ -6,12 +6,14 @@
 #
 
 VERSION_FILE := $(M)/../.metadata/cas_version
+BUILD_CONFIG_FILE := $(M)/../.metadata/cas_config
 
 check_cflag=$(shell echo "" | \
 	gcc -c -xc ${1} -o /dev/null - 2>/dev/null; \
 	if [ $$? -eq 0 ]; then echo 1; else echo 0; fi; )
 
 -include $(VERSION_FILE)
+-include $(BUILD_CONFIG_FILE)
 ccflags-y += -DCAS_VERSION_MAIN=$(CAS_VERSION_MAIN)
 ccflags-y += -DCAS_VERSION_MAJOR=$(CAS_VERSION_MAJOR)
 ccflags-y += -DCAS_VERSION_MINOR=$(CAS_VERSION_MINOR)
@@ -21,6 +23,10 @@ ccflags-y += -I$(M)
 ccflags-y += -I$(M)/cas_cache
 ccflags-y += -I$(M)/include
 ccflags-y += -DCAS_KERNEL=\"$(KERNELRELEASE)\"
+
+ifeq ($(WITH_NETLINK),1)
+ccflags-y += -DCAS_NETLINK
+endif
 
 check_header=$(shell echo "\#include <${1}>" | \
 	gcc -c -xc -o /dev/null - 2>/dev/null; \
