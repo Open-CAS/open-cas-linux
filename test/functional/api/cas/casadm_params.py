@@ -14,6 +14,8 @@ class ParamName(Enum):
     cleaning = "cleaning"
     cleaning_alru = "cleaning-alru"
     cleaning_acp = "cleaning-acp"
+    prefetch = "prefetch"
+    prefetch_readahead = "prefetch-readahead"
     promotion = "promotion"
     promotion_nhit = "promotion-nhit"
 

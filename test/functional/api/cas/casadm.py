@@ -13,6 +13,7 @@ from api.cas.cache_config import (
     SeqCutOffPolicy,
     CleaningPolicy,
     KernelParameters,
+    PrefetchPolicy,
     PromotionPolicy,
 )
 from api.cas.casadm_params import OutputFormat, StatsFilter
@@ -195,6 +196,29 @@ def set_param_seq_detect(
     return output
 
 
+def set_param_prefetch(cache_id: int, policy: PrefetchPolicy, shortcut: bool = False) -> Output:
+    output = TestRun.executor.run(
+        set_param_prefetch_cmd(cache_id=str(cache_id), policy=str(policy), shortcut=shortcut)
+    )
+    if output.exit_code != 0:
+        raise CmdException("Error while setting prefetch policy.", output)
+    return output
+
+
+def set_param_prefetch_readahead(
+    cache_id: int, threshold: Size = None, shortcut: bool = False
+) -> Output:
+    _threshold = str(int(threshold.get_value(Unit.KibiByte))) if threshold is not None else None
+    output = TestRun.executor.run(
+        set_param_prefetch_readahead_cmd(
+            cache_id=str(cache_id), threshold=_threshold, shortcut=shortcut
+        )
+    )
+    if output.exit_code != 0:
+        raise CmdException("Error while setting readahead prefetch policy parameters.", output)
+    return output
+
+
 def set_param_cleaning(cache_id: int, policy: CleaningPolicy, shortcut: bool = False) -> Output:
     output = TestRun.executor.run(
         set_param_cleaning_cmd(cache_id=str(cache_id), policy=policy.name, shortcut=shortcut)
@@ -317,6 +341,34 @@ def get_param_seq_detect(
     )
     if output.exit_code != 0:
         raise CmdException("Getting sequence detector params failed.", output)
+    return output
+
+
+def get_param_prefetch(
+    cache_id: int, output_format: OutputFormat = None, shortcut: bool = False
+) -> Output:
+    _output_format = output_format.name if output_format else None
+    output = TestRun.executor.run(
+        get_param_prefetch_cmd(
+            cache_id=str(cache_id), output_format=_output_format, shortcut=shortcut
+        )
+    )
+    if output.exit_code != 0:
+        raise CmdException("Getting prefetch policy failed.", output)
+    return output
+
+
+def get_param_prefetch_readahead(
+    cache_id: int, output_format: OutputFormat = None, shortcut: bool = False
+) -> Output:
+    _output_format = output_format.name if output_format else None
+    output = TestRun.executor.run(
+        get_param_prefetch_readahead_cmd(
+            cache_id=str(cache_id), output_format=_output_format, shortcut=shortcut
+        )
+    )
+    if output.exit_code != 0:
+        raise CmdException("Getting readahead prefetch policy params failed.", output)
     return output
 
 

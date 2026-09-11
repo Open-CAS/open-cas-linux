@@ -7,4 +7,4 @@
    - name: Hint
      attributes:
        name: ValidValues
-       value: 'cleaning-alru;cleaning-acp;promotion;promotion-nhit;seq-cutoff;'
+       value: 'cleaning-alru;cleaning-acp;prefetch;prefetch-readahead;promotion;promotion-nhit;seq-cutoff;seq-detect;'

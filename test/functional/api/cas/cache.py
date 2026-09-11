@@ -18,13 +18,16 @@ from api.cas.cache_config import (
     SeqCutOffParameters,
     SeqCutOffPolicy,
     SeqDetectParameters,
+    PrefetchPolicy,
+    PrefetchParametersReadahead,
     PromotionPolicy,
     PromotionParametersNhit,
     CacheConfig,
 )
 from api.cas.casadm_params import StatsFilter
 from api.cas.casadm_parser import (get_cas_devices_dict, get_cores, get_flush_parameters_alru,
-                                   get_flush_parameters_acp, get_io_class_list)
+                                   get_flush_parameters_acp, get_io_class_list,
+                                   get_prefetch_policy, get_prefetch_parameters_readahead)
 from api.cas.core import Core
 from api.cas.dmesg import get_metadata_size_on_device
 from api.cas.statistics import CacheStats, CacheIoClassStats
@@ -107,6 +110,12 @@ class Cache:
 
     def get_flush_parameters_alru(self) -> FlushParametersAlru:
         return get_flush_parameters_alru(self.cache_id)
+
+    def get_prefetch_policy(self) -> PrefetchPolicy:
+        return get_prefetch_policy(self.cache_id)
+
+    def get_prefetch_parameters_readahead(self) -> PrefetchParametersReadahead:
+        return get_prefetch_parameters_readahead(self.cache_id)
 
     def get_flush_parameters_acp(self) -> FlushParametersAcp:
         return get_flush_parameters_acp(self.cache_id)
@@ -228,6 +237,17 @@ class Cache:
                 if alru_params.dirty_ratio_inertia
                 else None
             ),
+        )
+
+    def set_prefetch_policy(self, policy: PrefetchPolicy) -> Output:
+        return casadm.set_param_prefetch(self.cache_id, policy)
+
+    def set_params_prefetch_readahead(
+        self, readahead_params: PrefetchParametersReadahead
+    ) -> Output:
+        return casadm.set_param_prefetch_readahead(
+            self.cache_id,
+            threshold=readahead_params.threshold,
         )
 
     def set_promotion_policy(self, policy: PromotionPolicy) -> Output:

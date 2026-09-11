@@ -119,6 +119,38 @@ class PromotionPolicy(Enum):
         return self.value
 
 
+class PrefetchPolicy(IntFlag):
+    none = 0
+    readahead = 1
+    DEFAULT = none
+
+    @classmethod
+    def from_name(cls, name):
+        policy = cls.none
+        for policy_name in name.strip().split(","):
+            policy_name = policy_name.strip()
+            if policy_name == cls.none.name:
+                continue
+            if policy_name not in cls.__members__:
+                raise ValueError(f"{policy_name} is not a valid prefetch policy name")
+            policy |= cls[policy_name]
+
+        return policy
+
+    @classmethod
+    def all_policies(cls):
+        policy = cls.none
+        for member in cls:
+            policy |= member
+
+        return policy
+
+    def __str__(self):
+        enabled = [member.name for member in PrefetchPolicy if member.value and member in self]
+
+        return ",".join(enabled) if enabled else PrefetchPolicy.none.name
+
+
 class CacheStatus(Enum):
     not_running = "not running"
     running = "running"
@@ -346,6 +378,35 @@ class PromotionParametersNhit:
         nhit_params.threshold = 3
         nhit_params.trigger = 80
         return nhit_params
+
+
+class PrefetchParametersReadahead:
+    def __init__(self, threshold: Size = None):
+        self.threshold = threshold
+
+    def __eq__(self, other):
+        def fill_default(p):
+            default = self.default_readahead_params()
+            p = copy.copy(p)
+            p.threshold = p.threshold if p.threshold is not None else default.threshold
+            return p
+
+        a = fill_default(self)
+        b = fill_default(other)
+
+        return a.threshold == b.threshold
+
+    @staticmethod
+    def readahead_params_range():
+        readahead_params = PrefetchParametersReadahead()
+        readahead_params.threshold = (0, 4194303)
+        return readahead_params
+
+    @staticmethod
+    def default_readahead_params():
+        readahead_params = PrefetchParametersReadahead()
+        readahead_params.threshold = Size(64, Unit.KibiByte)
+        return readahead_params
 
 
 # Specify how IO requests unaligned to 4KiB should be handled
