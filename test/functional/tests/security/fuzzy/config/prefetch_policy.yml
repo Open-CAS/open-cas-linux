@@ -1,0 +1,10 @@
+- name: String
+  attributes:
+    name: PrefetchPolicy
+    value: 'readahead'
+    mutable: 'true'
+  children:
+   - name: Hint
+     attributes:
+       name: ValidValues
+       value: 'readahead;none'
