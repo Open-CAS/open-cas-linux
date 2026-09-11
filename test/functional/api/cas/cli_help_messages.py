@@ -83,6 +83,8 @@ set_params_help = [
     r"Valid values of NAME are:",
     r"seq-detect - Sequence detector parameters",
     r"seq-cutoff - Sequential cutoff parameters",
+    r"prefetch - Prefetch policy parameters",
+    r"prefetch-readahead - Prefetch readahead parameters",
     r"cleaning - Cleaning policy parameters",
     r"promotion - Promotion policy parameters",
     r"promotion-nhit - Promotion policy NHIT parameters",
@@ -101,6 +103,14 @@ set_params_help = [
     r"-t  --threshold \<KiB\>                Sequential cutoff activation threshold \[KiB\]",
     r"-p  --policy \<POLICY\>                Sequential cutoff policy\. Available policies: "
     r"\{always|full|never\}",
+    r"Options that are valid with --set-param \(-X\) --name \(-n\) prefetch are:",
+    r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
+    r"-p  --policy \<POLICY\>                Prefetch policy\. Comma-separated list of: "
+    r"\{readahead|none\}",
+    r"Options that are valid with --set-param \(-X\) --name \(-n\) prefetch-readahead are:",
+    r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
+    r"-t  --threshold \<KiB\>                Readahead threshold - minimum sequential stream "
+    r"bytes before prefetching \[KiB\]",
     r"Options that are valid with --set-param \(-X\) --name \(-n\) cleaning are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
     r"-p  --policy \<POLICY\>                Cleaning policy type\. Available policy types: "
@@ -145,6 +155,8 @@ get_params_help = [
     r"Valid values of NAME are:",
     r"seq-detect - Sequence detector parameters",
     r"seq-cutoff - Sequential cutoff parameters",
+    r"prefetch - Prefetch policy parameters",
+    r"prefetch-readahead - Prefetch readahead parameters",
     r"cleaning - Cleaning policy parameters",
     r"cleaning-alru - Cleaning policy ALRU parameters",
     r"cleaning-acp - Cleaning policy ACP parameters",
@@ -159,6 +171,12 @@ get_params_help = [
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
     r"-j  --core-id \<ID\>                   Identifier of core \<0-4095\> within given cache "
     r"instance",
+    r"-o  --output-format \<FORMAT\>         Output format: \{table|csv\}",
+    r"Options that are valid with --get-param \(-G\) --name \(-n\) prefetch are:",
+    r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
+    r"-o  --output-format \<FORMAT\>         Output format: \{table|csv\}",
+    r"Options that are valid with --get-param \(-G\) --name \(-n\) prefetch-readahead are:",
+    r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",
     r"-o  --output-format \<FORMAT\>         Output format: \{table|csv\}",
     r"Options that are valid with --get-param \(-G\) --name \(-n\) cleaning are:",
     r"-i  --cache-id \<ID\>                  Identifier of cache instance \<1-16384\>",

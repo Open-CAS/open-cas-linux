@@ -201,6 +201,29 @@ def get_flush_parameters_acp(cache_id: int):
     return flush_parameters
 
 
+def get_prefetch_policy(cache_id: int) -> PrefetchPolicy:
+    casadm_output = casadm.get_param_prefetch(
+        cache_id, casadm.OutputFormat.csv
+    ).stdout.splitlines()
+    for line in casadm_output:
+        if "Prefetch policy" in line:
+            # policy mask is printed as a comma separated list of policy names
+            return PrefetchPolicy.from_name(line.split(",", 1)[1])
+
+    raise ValueError("Prefetch policy not found in casadm output")
+
+
+def get_prefetch_parameters_readahead(cache_id: int):
+    casadm_output = casadm.get_param_prefetch_readahead(
+        cache_id, casadm.OutputFormat.csv
+    ).stdout.splitlines()
+    readahead_params = PrefetchParametersReadahead()
+    for line in casadm_output:
+        if "Readahead threshold" in line:
+            readahead_params.threshold = Size(int(line.split(",")[1]), Unit.KibiByte)
+    return readahead_params
+
+
 def get_seq_cut_off_parameters(cache_id: int, core_id: int):
     casadm_output = casadm.get_param_cutoff(
         cache_id, core_id, casadm.OutputFormat.csv

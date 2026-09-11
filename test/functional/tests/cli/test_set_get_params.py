@@ -15,6 +15,8 @@ from api.cas.cache_config import (
     CleaningPolicy,
     FlushParametersAcp,
     FlushParametersAlru,
+    PrefetchParametersReadahead,
+    PrefetchPolicy,
     SeqCutOffParameters,
     SeqCutOffPolicy,
     SeqDetectParameters,
@@ -331,6 +333,113 @@ def test_set_get_cleaning_params(cache_mode, cleaning_policy):
                 )
 
 
+@pytest.mark.parametrizex("cache_mode", CacheMode)
+@pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
+@pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+def test_set_get_prefetch_params(cache_mode):
+    """
+    title: Test for setting and reading prefetch parameters.
+    description: |
+        Verify that it is possible to set and read all available prefetch
+        parameters using casadm --set-param and --get-param options.
+    pass_criteria:
+      - All prefetch parameters are set to given values.
+      - All prefetch parameters displays proper values.
+    """
+
+    with TestRun.step("Partition cache and core devices"):
+        cache_dev = TestRun.disks["cache"]
+        cache_parts = [Size(1, Unit.GibiByte)] * caches_count
+        cache_dev.create_partitions(cache_parts)
+
+        core_dev = TestRun.disks["core"]
+        core_parts = [Size(2, Unit.GibiByte)] * cores_per_cache * caches_count
+        core_dev.create_partitions(core_parts)
+
+    with TestRun.step(
+        f"Start {caches_count} caches in {cache_mode} cache mode "
+        f"and add {cores_per_cache} cores per cache"
+    ):
+        caches = [
+            casadm.start_cache(part, cache_mode, force=True) for part in cache_dev.partitions
+        ]
+
+        for i in range(caches_count):
+            for j in range(cores_per_cache):
+                caches[i].add_core(core_dev.partitions[i * cores_per_cache + j])
+
+    with TestRun.step("Check prefetch default parameters"):
+        default_prefetch_policy = PrefetchPolicy.DEFAULT
+        default_readahead_params = PrefetchParametersReadahead.default_readahead_params()
+        for i in range(caches_count):
+            check_prefetch_policy(caches[i], default_prefetch_policy)
+            check_readahead_parameters(caches[i], default_readahead_params)
+
+    with TestRun.step("Set every prefetch policy combination for one cache instance"):
+        for prefetch_policy in all_prefetch_policies():
+            caches[0].set_prefetch_policy(prefetch_policy)
+
+            # Check changed policy for first cache instance:
+            check_prefetch_policy(caches[0], prefetch_policy)
+
+            # Check default policy for other cache instances:
+            for i in range(1, caches_count):
+                check_prefetch_policy(caches[i], default_prefetch_policy)
+
+    with TestRun.step("Set different prefetch policies for all cache instances"):
+        prefetch_policies = all_prefetch_policies()
+        cache_policies = [
+            prefetch_policies[i % len(prefetch_policies)] for i in range(caches_count)
+        ]
+        for i in range(caches_count):
+            caches[i].set_prefetch_policy(cache_policies[i])
+        for i in range(caches_count):
+            check_prefetch_policy(caches[i], cache_policies[i])
+
+    with TestRun.step(
+        "Set new random values for readahead prefetch policy parameters for one cache instance"
+    ):
+        for check in range(number_of_checks):
+            random_readahead_params = new_readahead_parameters_random_values()
+            caches[0].set_params_prefetch_readahead(random_readahead_params)
+
+            # Check changed parameters for first cache instance:
+            check_readahead_parameters(caches[0], random_readahead_params)
+
+            # Check default parameters for other cache instances:
+            for i in range(1, caches_count):
+                check_readahead_parameters(caches[i], default_readahead_params)
+
+    with TestRun.step(
+        "Set new random values for readahead prefetch policy parameters for all cache instances"
+    ):
+        for check in range(number_of_checks):
+            readahead_params = []
+            for i in range(caches_count):
+                random_readahead_params = new_readahead_parameters_random_values()
+                readahead_params.append(random_readahead_params)
+                caches[i].set_params_prefetch_readahead(random_readahead_params)
+            for i in range(caches_count):
+                check_readahead_parameters(caches[i], readahead_params[i])
+
+
+def all_prefetch_policies():
+    policies = [PrefetchPolicy.none]
+    for policy in PrefetchPolicy:
+        if not policy.value:
+            continue
+        policies += [combination | policy for combination in policies]
+
+    return policies
+
+
+def new_readahead_parameters_random_values():
+    readahead_params_range = PrefetchParametersReadahead.readahead_params_range()
+    return PrefetchParametersReadahead(
+        threshold=Size(random.randint(*readahead_params_range.threshold), Unit.KibiByte),
+    )
+
+
 def new_seq_cutoff_parameters_random_values():
     return SeqCutOffParameters(
         threshold=Size(random.randrange(1, 1000000), Unit.KibiByte),
@@ -488,3 +597,23 @@ def check_cleaning_parameters(cache, cleaning_policy, cleaning_params):
                 f"ACP cleaning policy parameters are not correct "
                 f"for cache nr {cache.cache_id}:\n{failed_params}"
             )
+
+
+def check_prefetch_policy(cache, prefetch_policy):
+    current_prefetch_policy = cache.get_prefetch_policy()
+    if current_prefetch_policy != prefetch_policy:
+        TestRun.LOGGER.error(
+            f"Prefetch policy for cache nr {cache.cache_id} "
+            f"is {current_prefetch_policy}, should be {prefetch_policy}"
+        )
+
+
+def check_readahead_parameters(cache, readahead_params):
+    current_readahead_params = cache.get_prefetch_parameters_readahead()
+    if current_readahead_params.threshold != readahead_params.threshold:
+        TestRun.LOGGER.error(
+            f"Readahead prefetch policy parameters are not correct "
+            f"for cache nr {cache.cache_id}:\n"
+            f"Threshold is {current_readahead_params.threshold}, "
+            f"should be {readahead_params.threshold}\n"
+        )

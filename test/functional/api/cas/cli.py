@@ -67,7 +67,7 @@ def stop_cmd(cache_id: str, no_data_flush: bool = False, shortcut: bool = False)
 
 
 def _set_param_cmd(name: str, cache_id: str, shortcut: bool = False) -> str:
-    command = (" X -n" if shortcut else " --set-param --name ") + name
+    command = (" -X -n" if shortcut else " --set-param --name ") + name
     command += (" -i " if shortcut else " --cache-id ") + cache_id
     return command
 
@@ -124,6 +124,23 @@ def set_param_promotion_nhit_cmd(
         command += (" -t " if shortcut else " --threshold ") + threshold
     if trigger is not None:
         command += (" -o " if shortcut else " --trigger ") + trigger
+    return casadm_bin + command
+
+
+def set_param_prefetch_cmd(cache_id: str, policy: str, shortcut: bool = False) -> str:
+    name = "prefetch"
+    command = _set_param_cmd(name=name, cache_id=cache_id, shortcut=shortcut)
+    command += (" -p " if shortcut else " --policy ") + policy
+    return casadm_bin + command
+
+
+def set_param_prefetch_readahead_cmd(
+    cache_id: str, threshold: str = None, shortcut: bool = False
+) -> str:
+    name = "prefetch-readahead"
+    command = _set_param_cmd(name=name, cache_id=cache_id, shortcut=shortcut)
+    if threshold is not None:
+        command += (" -t " if shortcut else " --threshold ") + threshold
     return casadm_bin + command
 
 
@@ -239,6 +256,26 @@ def get_param_promotion_nhit_cmd(
         cache_id=cache_id,
         output_format=output_format,
         shortcut=shortcut,
+    )
+    return casadm_bin + command
+
+
+def get_param_prefetch_cmd(
+    cache_id: str, output_format: str = None, shortcut: bool = False
+) -> str:
+    name = "prefetch"
+    command = _get_param_cmd(
+        name=name, cache_id=cache_id, output_format=output_format, shortcut=shortcut
+    )
+    return casadm_bin + command
+
+
+def get_param_prefetch_readahead_cmd(
+    cache_id: str, output_format: str = None, shortcut: bool = False
+) -> str:
+    name = "prefetch-readahead"
+    command = _get_param_cmd(
+        name=name, cache_id=cache_id, output_format=output_format, shortcut=shortcut
     )
     return casadm_bin + command
 
