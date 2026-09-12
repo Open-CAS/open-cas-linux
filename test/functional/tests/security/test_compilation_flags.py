@@ -1,16 +1,17 @@
 #
 # Copyright(c) 2019-2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import os
 import posixpath
 import re
 import pytest
 
 from core.test_run import TestRun
-from test_tools.fs_tools import Permissions, PermissionsUsers, PermissionSign
-from test_utils.filesystem.fs_item import FsItem
+from test_tools.fs_tools import Permissions, PermissionsUsers, PermissionSign, chmod
 
 
 @pytest.mark.os_dependent
@@ -26,11 +27,17 @@ def test_checksec():
     """
 
     with TestRun.step("Prepare checksec script"):
-        checksec_path = posixpath.join(
-            TestRun.usr.working_dir, "test/functional/test-framework/scripts/checksec.sh"
+        # Copy the script from the controller instead of using the copy of the repository in the
+        # working directory, as the test framework submodule may not be checked out on the DUT.
+        TestRun.executor.rsync_to(
+            os.path.join(
+                TestRun.usr.repo_dir, "test", "functional", "test-framework", "scripts",
+                "checksec.sh"
+            ),
+            f"{TestRun.usr.working_dir}/",
         )
-        checksec = FsItem(checksec_path)
-        checksec.chmod(Permissions.x, PermissionsUsers.u, PermissionSign.add)
+        checksec_path = posixpath.join(TestRun.usr.working_dir, "checksec.sh")
+        chmod(checksec_path, Permissions.x, PermissionsUsers.u, PermissionSign.add)
 
     with TestRun.step("Check casadm compilation flags"):
         casadm_binary = "/sbin/casadm"
