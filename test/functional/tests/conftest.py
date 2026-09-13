@@ -155,6 +155,7 @@ def base_prepare(item):
     with TestRun.LOGGER.step("Cleanup before test"):
         TestRun.executor.run("pkill --signal=SIGKILL fsck")
         Udev.enable()
+        Udev.settle()
         kill_all_io(graceful=False)
         DeviceMapper.remove_all()
 
@@ -252,6 +253,7 @@ def pytest_runtest_teardown():
                 if not TestRun.executor.is_active():
                     TestRun.executor.wait_for_connection()
                 Udev.enable()
+                Udev.settle()
                 kill_all_io(graceful=False)
                 unmount_cas_devices()
 
