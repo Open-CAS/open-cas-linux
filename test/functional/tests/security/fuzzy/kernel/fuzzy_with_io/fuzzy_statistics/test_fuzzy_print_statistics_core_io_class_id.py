@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -64,6 +65,9 @@ def test_fuzzy_print_statistics_core_io_class_id(
             mount_point=mount_point,
         )
         casadm.load_io_classes(cache_id=cache.cache_id, file="/etc/opencas/ioclass-config.csv")
+        valid_values = [b""] + [
+            str(io_class.id).encode("ascii") for io_class in cache.list_io_classes()
+        ]
 
     with TestRun.step("Run fio in background"):
         fio = get_basic_workload(mount_point)
@@ -72,7 +76,6 @@ def test_fuzzy_print_statistics_core_io_class_id(
             raise Exception("Fio is not running.")
 
     with TestRun.step("Prepare PeachFuzzer"):
-        valid_values = [b"", b"0", b"1"] + [str(x).encode("ascii") for x in range(11, 23)]
         PeachFuzzer.generate_config(get_fuzz_config("io_class_id.yml"))
         base_cmd = print_statistics_cmd(
             cache_id=str(core.cache_id),
