@@ -2,6 +2,7 @@
 
 [![Build Status](https://github.com/Open-CAS/open-cas-linux/actions/workflows/build-master.yml/badge.svg)](https://github.com/Open-CAS/open-cas-linux/actions/workflows/build-master.yml)
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
+[![Maintained by Unvertical](https://img.shields.io/badge/maintained%20by-Unvertical-0b5fff)](https://unvertical.com/)
 
 Open CAS  accelerates Linux applications by caching active (hot) data to
 a local flash device inside servers. Open CAS implements caching at the
@@ -14,10 +15,10 @@ cache solution that is transparent to users and  applications, and your
 existing storage infrastructure. No storage migration effort or application
 changes are required.
 
-Open CAS is distributed on BSD-3-Clause license (see
-https://opensource.org/licenses/BSD-3-Clause for full license texts).
+## Support
 
-Open CAS uses Safe string library (safeclib) that is MIT licensed.
+Open CAS Linux is developed and maintained by **[Unvertical](https://unvertical.com/)**, founded by the project's core maintainers.  
+For professional support, consulting and custom development, please [contact us](https://unvertical.com/#contact).
 
 ## Installation
 
@@ -111,10 +112,20 @@ Before running tests make sure you have a platform with at least 2 disks (one fo
 
 ## Contributing
 
-Feel like making Open CAS Linux better? Don't hesitate to submit a pull request!
-You can find more information about our contribution process
-[here](https://open-cas.github.io/contributing.html).
+All the development activities of this project take place on this GitHub repository. For more information about contributing, please refer to our [documentation](https://open-cas.github.io/contributing.html).
+
+## License
+
+Open CAS is distributed on BSD-3-Clause license (see
+https://opensource.org/licenses/BSD-3-Clause for full license text).
+
+Open CAS uses Safe string library (safeclib) that is MIT licensed.
 
 ## Maintainers
 
-The maintainer of this project is [Robert Baldyga](https://github.com/robertbaldyga) [\<robert.baldyga@open-cas.com\>](mailto:robert.baldyga@open-cas.com).
+Open CAS is maintained by [Unvertical](https://unvertical.com/).
+
+The lead maintainer is [Robert Baldyga](https://github.com/robertbaldyga).
+
+You can get in touch with the maintainers by submitting a [GitHub issue](https://github.com/Open-CAS/open-cas-linux/issues).  
+Alternatively you can write at [robert.baldyga@open-cas.com](mailto:robert.baldyga@open-cas.com).
