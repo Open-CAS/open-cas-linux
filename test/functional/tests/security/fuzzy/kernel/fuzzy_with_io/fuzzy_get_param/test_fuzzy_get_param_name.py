@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -29,6 +30,9 @@ from tests.security.fuzzy.kernel.fuzzy_with_io.common.common import (
     get_basic_workload,
     mount_point,
 )
+
+# 'seq-cutoff' and 'seq-detect' are core parameters, so they require core-id
+core_param_names = [str(ParamName.seq_cutoff), str(ParamName.seq_detect)]
 
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
@@ -83,8 +87,8 @@ def test_fuzzy_get_param_name(cache_mode, cache_line_size, unaligned_io, use_io_
 
             param = parameter.decode("ascii", "ignore").rstrip()
             cmd = base_cmd
-            # for name seq-cutoff there is additional parameter required (core-id)
-            if param == str(ParamName.seq_cutoff):
+            # core parameters require an additional parameter (core-id)
+            if param in core_param_names:
                 cmd += f" --core-id {core.core_id}"
 
             cmd = cmd.replace("{param}", param)
