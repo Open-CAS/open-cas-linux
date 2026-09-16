@@ -148,7 +148,7 @@ fi
 
 %files
 %defattr(-, root, root, 755)
-%license LICENSE
+%license LICENSE.md
 %doc README.md
 %dir /etc/opencas/
 %dir /usr/lib/opencas/
@@ -177,7 +177,7 @@ fi
 
 %files  modules_%{kver_filename}
 %defattr(644, root, root, 755)
-%license LICENSE
+%license LICENSE.md
 /lib/modules/%{kver}
 
 

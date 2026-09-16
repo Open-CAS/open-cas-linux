@@ -7,5 +7,5 @@
 ./configure.d/* usr/src/<CAS_NAME>-modules-<CAS_VERSION>/configure.d/
 ./configure usr/src/<CAS_NAME>-modules-<CAS_VERSION>/
 ./Makefile usr/src/<CAS_NAME>-modules-<CAS_VERSION>/
-./LICENSE usr/src/<CAS_NAME>-modules-<CAS_VERSION>/
+./LICENSE.md usr/src/<CAS_NAME>-modules-<CAS_VERSION>/
 ./version usr/src/<CAS_NAME>-modules-<CAS_VERSION>/

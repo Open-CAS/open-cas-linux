@@ -1,7 +1,7 @@
 # Open CAS Linux
 
 [![Build Status](https://github.com/Open-CAS/open-cas-linux/actions/workflows/build-master.yml/badge.svg)](https://github.com/Open-CAS/open-cas-linux/actions/workflows/build-master.yml)
-[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE.md)
 [![Maintained by Unvertical](https://img.shields.io/badge/maintained%20by-Unvertical-0b5fff)](https://unvertical.com/)
 
 Open CAS  accelerates Linux applications by caching active (hot) data to
@@ -116,8 +116,7 @@ All the development activities of this project take place on this GitHub reposit
 
 ## License
 
-Open CAS is distributed on BSD-3-Clause license (see
-https://opensource.org/licenses/BSD-3-Clause for full license text).
+Open CAS is distributed on [BSD-3-Clause license](LICENSE.md).
 
 Open CAS uses Safe string library (safeclib) that is MIT licensed.
 
