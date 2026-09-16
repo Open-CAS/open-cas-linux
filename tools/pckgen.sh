@@ -469,7 +469,8 @@ deb_control_files_prepare() {
     rename_templates "$DEB_SOURCES_DIR/debian/"
 
     # Parsing the CAS license file to fit Debian copyright file format
-    sed '${/^$/d}' "$CAS_LICENSE" > "$TEMP_DIR/LICENSE.deb.tmp"
+    # (strip the Markdown heading and any blank lines preceding the text)
+    sed -e '/^# /d' -e '/./,$!d' -e '${/^$/d}' "$CAS_LICENSE" > "$TEMP_DIR/LICENSE.deb.tmp"
     sed -i 's/^$/./' "$TEMP_DIR/LICENSE.deb.tmp"
     rm -f "$TEMP_DIR/LICENSE.deb"
     while read -r line; do
@@ -704,7 +705,7 @@ create_temp
 
 ### Variables that relates on arguments passed to this script:
 
-CAS_LICENSE="$SOURCES_DIR/LICENSE"
+CAS_LICENSE="$SOURCES_DIR/LICENSE.md"
 # By default all created packages will be put in:
 : ${OUTPUT_DIR:="$SOURCES_DIR/packages"}
 # RPM building directories:
