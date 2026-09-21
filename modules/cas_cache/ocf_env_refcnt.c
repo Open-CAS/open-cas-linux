@@ -69,8 +69,8 @@ int env_refcnt_init(struct env_refcnt *rc, const char *name, size_t name_len)
 		return -OCF_ERR_NO_MEM;
 
 	init_waitqueue_head(&rc->notify.notify_wait_queue);
-	rc->notify.notify_work_queue = alloc_workqueue("refcnt_%s", 0,
-			0, rc->name);
+	rc->notify.notify_work_queue = alloc_workqueue("refcnt_%s",
+			CAS_WQ_PERCPU, 0, rc->name);
 
 	if (!rc->notify.notify_work_queue) {
 		result = -OCF_ERR_NO_MEM;

@@ -561,7 +561,7 @@ static int kcas_create_exported_object(struct cas_priv_top *priv_top,
 	int result = 0;
 
 	priv_top->expobj_wq = alloc_workqueue("expobj_wq_%s",
-			WQ_MEM_RECLAIM | WQ_HIGHPRI, 0,
+			WQ_MEM_RECLAIM | WQ_HIGHPRI | CAS_WQ_PERCPU, 0,
 			name);
 	if (!priv_top->expobj_wq) {
 		result = -ENOMEM;
