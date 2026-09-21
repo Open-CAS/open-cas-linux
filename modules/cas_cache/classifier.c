@@ -219,7 +219,7 @@ static int _cas_cls_string_ctr(struct cas_classifier *cls,
 	if (!ctx)
 		return -ENOMEM;
 
-	strncpy(ctx->string, data, MAX_STRING_SPECIFIER_LEN);
+	strscpy(ctx->string, data, MAX_STRING_SPECIFIER_LEN);
 	ctx->len = len;
 
 	c->context = ctx;
