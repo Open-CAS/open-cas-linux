@@ -274,7 +274,38 @@ for kver in $(ls /lib/modules 2>/dev/null | grep -vxF "$(uname -r)"); do
     dkms install -m %{name}-modules -v %{version} -k "$kver" || :
 done
 
+# kmod->dkms upgrade orphans the old open-cas-linux-modules_k<kernelver>
+# (name varies per kernel, can't Obsoletes). Can't rpm -e inside this
+# transaction (rpmdb lock), so a detached worker (setsid) waits for the PM
+# (dnf/zypper/yum) to exit, then rpm -e --nodeps --noscripts the orphans
+# (--noscripts: old %preun fails on archived .ko; --nodeps: orphan has no
+# deps) + deletes stale weak-updates symlinks. Guarded (no-op on fresh).
+# Giving up the prebuilt modules is only safe once DKMS has modules of its own
+# in place. A failed build above exits this scriptlet before the worker is even
+# started, and the worker checks the state again for itself - between the two,
+# a build that did not produce anything cannot end up taking the modules the
+# system is currently using with it.
+if [ -n "$(rpm -qa "open-cas-linux-modules_k*" 2>/dev/null)" ]; then
+    ( setsid sh -c '
+        while pgrep -x dnf >/dev/null 2>&1 || pgrep -x zypper >/dev/null 2>&1 || pgrep -x yum >/dev/null 2>&1; do sleep 3; done
+        dkms status -m %{name}-modules -v %{version} -k "$(uname -r)" 2>/dev/null | grep -q ": installed" || exit 0
+        rpm -e --nodeps --noscripts $(rpm -qa "open-cas-linux-modules_k*") >/dev/null 2>&1 || :
+        # --noscripts skipped the old %postun (weak-modules --remove-modules),
+        # so clean up after it: drop its dangling weak-updates/block/opencas
+        # symlinks and rebuild the module index, which still lists the files
+        # just removed and would otherwise break modprobe and dracut.
+        find /lib/modules -type l -path "*/weak-updates/block/opencas/*" -delete 2>/dev/null || :
+        for kver in $(ls /lib/modules 2>/dev/null); do
+            [ -e "/lib/modules/$kver/modules.dep" ] || continue
+            depmod -a "$kver" 2>/dev/null || :
+        done
+    ' </dev/null >/dev/null 2>&1 ) &
+fi
+
 %preun modules
+# Drop dkms's archived old-kmod .ko (original_module) before `dkms remove`
+# so it doesn't restore them as orphans (the old kmod package is gone).
+rm -rf /var/lib/dkms/%{name}-modules/original_module 2>/dev/null || :
 dkms remove  -m %{name}-modules -v %{version} --all --rpm_safe_upgrade || :
 # dkms weak-links the built modules into kABI-compatible kernels it did not
 # build for (/lib/modules/<kver>/weak-updates/), and `dkms remove` drops the
@@ -286,6 +317,7 @@ for kver in $(ls /lib/modules 2>/dev/null); do
     [ -e "/lib/modules/$kver/modules.dep" ] || continue
     depmod -a "$kver" 2>/dev/null || :
 done
+
 %endif
 
 
