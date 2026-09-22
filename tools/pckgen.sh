@@ -52,6 +52,7 @@ SUBMODULES=(
 
 # Unset all variables that may be checked for existence:
 unset ${!GENERATE_*} ARCHIVE_PREPARED DEBUG FAILED_DEPS KVER KVER_FULL LIST_KERNELS MOCK_CFG\
+      WITH_DKMS\
       OUTPUT_DIR RPM_BUILT SOURCES_DIR SUBMODULES_MISSING TAR_CREATED
 
 
@@ -99,6 +100,12 @@ print_help() {
     echo "  -o, --output-dir <DIR>          put all created files in the given directory;"
     echo "                                  default: 'SOURCES_PATH/packages/'"
     echo "  -d, --debug                     include debug information and create debug packages"
+    echo "      --with-dkms                 ship the kernel modules as DKMS sources built on the"
+    echo "                                  target at install time, instead of modules prebuilt"
+    echo "                                  for one kernel (RPM only; DEB always uses DKMS);"
+    echo "                                  the build host then needs no kernel-devel and"
+    echo "                                  --kernel-version does not apply"
+    echo "      --without-dkms              explicitly build modules prebuilt for one kernel"
     echo "  -c, --clean                     clean all temporary files and folders that"
     echo "                                  may have been left around if $THIS ended"
     echo "                                  unexpectedly in the previous run"
@@ -442,12 +449,14 @@ rpm_spec_prepare() {
         echo "---   Debug info will be included and debug packages created as well"
 
         sed -i "s/<MAKE_BUILD>/%make_build DEBUG_PACKAGE=1/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        sed -i "s/<MAKE_BUILD_CASADM>/make -C casadm DEBUG_PACKAGE=1/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         sed -i "/<DEBUG_PACKAGE>/d" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         if is_suse; then
             sed -i "/%prep/i %debug_package\n\n" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         fi
     else
         sed -i "s/<MAKE_BUILD>/%make_build/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        sed -i "s/<MAKE_BUILD_CASADM>/make -C casadm/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         sed -i "s/<DEBUG_PACKAGE>/%define debug_package %{nil}/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     fi
 
@@ -530,11 +539,11 @@ generate_rpm() {
 
     if [ "$MOCK_CFG" ]; then
         echo "--- Building binary RPM packages in mock environment '$MOCK_CFG'"
-        if ! (HOME="$TEMP_DIR"; rpmbuild -bs "$RPM_SPECS_DIR/$CAS_NAME.spec"); then
+        if ! (HOME="$TEMP_DIR"; rpmbuild -bs ${RPM_BCOND_OPTS[@]} "$RPM_SPECS_DIR/$CAS_NAME.spec"); then
             error "couldn't create SRPM package for mock"
         fi
 
-        if ! mock -r $MOCK_CFG --no-clean --resultdir "$RPM_RPMS_DIR" "$RPM_SRPMS_DIR/$CAS_FILENAME"-*.src.rpm; then
+        if ! mock -r $MOCK_CFG --no-clean ${RPM_BCOND_OPTS[@]} --resultdir "$RPM_RPMS_DIR" "$RPM_SRPMS_DIR/$CAS_FILENAME"-*.src.rpm; then
             error "couldn't create RPM packages in mock environment"
         fi
         rm -rf "$RPM_SRPMS_DIR"/*.src.rpm
@@ -547,15 +556,15 @@ generate_rpm() {
     else
         if [ ! "$GENERATE_SRPM" ] && [ "$GENERATE_RPM" ]; then
             echo "--- Building binary RPM packages"
-            (HOME="$TEMP_DIR"; rpmbuild -bb --target "$ARCH" "$RPM_SPECS_DIR/$CAS_NAME.spec")
+            (HOME="$TEMP_DIR"; rpmbuild -bb --target "$ARCH" ${RPM_BCOND_OPTS[@]} "$RPM_SPECS_DIR/$CAS_NAME.spec")
             if [ $? -ne 0 ]; then
                 error "couldn't create RPM packages"
             fi
-            mv -ft "$OUTPUT_DIR" "$RPM_RPMS_DIR/$ARCH"/*
+            mv -ft "$OUTPUT_DIR" "$RPM_RPMS_DIR"/*/*.rpm
         fi
         if [ "$GENERATE_SRPM" ] && [ ! "$GENERATE_RPM" ]; then
             echo "--- Building source SRPM package"
-            (HOME="$TEMP_DIR"; rpmbuild -bs "$RPM_SPECS_DIR/$CAS_NAME.spec")
+            (HOME="$TEMP_DIR"; rpmbuild -bs ${RPM_BCOND_OPTS[@]} "$RPM_SPECS_DIR/$CAS_NAME.spec")
             if [ $? -ne 0 ]; then
                 error "couldn't create SRPM package"
             fi
@@ -563,12 +572,12 @@ generate_rpm() {
         fi
         if [ "$GENERATE_SRPM" ] && [ "$GENERATE_RPM" ]; then
             echo "--- Building source and binary RPM packages"
-            (HOME="$TEMP_DIR"; rpmbuild -ba --target "$ARCH" "$RPM_SPECS_DIR/$CAS_NAME.spec")
+            (HOME="$TEMP_DIR"; rpmbuild -ba --target "$ARCH" ${RPM_BCOND_OPTS[@]} "$RPM_SPECS_DIR/$CAS_NAME.spec")
             if [ $? -ne 0 ]; then
                 error "couldn't create RPM packages"
             fi
             mv -ft "$OUTPUT_DIR" "$RPM_SRPMS_DIR"/*
-            mv -ft "$OUTPUT_DIR" "$RPM_RPMS_DIR/$ARCH"/*
+            mv -ft "$OUTPUT_DIR" "$RPM_RPMS_DIR"/*/*.rpm
         fi
     fi
 
@@ -675,6 +684,12 @@ while (( $# )); do
         --debug|-d)
             DEBUG="debug"
             ;;
+        --with-dkms)
+            WITH_DKMS="with"
+            ;;
+        --without-dkms)
+            WITH_DKMS="without"
+            ;;
         --clean|-c)
             clean_all
             exit 0
@@ -721,6 +736,16 @@ VERSION_FILE="$SOURCES_DIR/.metadata/cas_version"
 # CAS version generator location:
 CAS_VERSION_GEN="$SOURCES_DIR/tools/cas_version_gen.sh"
 
+# RPM build conditional selecting the DKMS packaging mode (see %bcond_with
+# dkms in the spec). --with-dkms/--without-dkms map onto rpmbuild's
+# --with/--without; passing neither leaves the spec default (off).
+RPM_BCOND_OPTS=()
+if [ "$WITH_DKMS" == "with" ]; then
+    RPM_BCOND_OPTS+=(--with dkms)
+elif [ "$WITH_DKMS" == "without" ]; then
+    RPM_BCOND_OPTS+=(--without dkms)
+fi
+
 check_cas_version
 
 # CAS naming convention:
@@ -750,8 +775,9 @@ echo -e "\n"
 check_dependencies
 [ "$MOCK_CFG" ] && mock_prepare
 [ "$LIST_KERNELS" ] && list_kernels
-# Only RPM packages are built for specific kernel version.
-[ "$GENERATE_RPM" ] && check_kernel_version
+# Only RPM packages with prebuilt modules are built for a specific kernel
+# version; with --with-dkms they are built on the target instead.
+[ "$GENERATE_RPM" ] && [ "$WITH_DKMS" != "with" ] && check_kernel_version
 create_dir "$OUTPUT_DIR"
 for package in ${!GENERATE_*}; do
     ${package,,}

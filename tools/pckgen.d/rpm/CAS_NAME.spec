@@ -11,16 +11,32 @@
 # It contains tags in form of <TAG> which are substituted with particular
 # values in the build time.
 #
+# The kernel modules can be packaged in two ways, selected with the 'dkms'
+# build conditional:
+#
+#   (default)              modules prebuilt for one specific kernel, shipped
+#                          in a <CAS_NAME>-modules_k<kernel version> subpackage.
+#                          The build host needs the matching kernel-devel.
+#
+#   rpmbuild --with dkms   the module sources, shipped as a DKMS source tree
+#                          and built on the target at install time. It requires
+#                          DKMS support on the target node.
 
 
 %global __python %{__python3}
 <DEBUG_PACKAGE>
+# Ship the kernel modules as DKMS sources built on the target instead of
+# modules prebuilt for a single kernel. Off by default. Enable with:
+#   rpmbuild --with dkms   (or: ./tools/pckgen.sh rpm --with-dkms)
+%bcond_with dkms
+%if %{without dkms}
 %define kver <KVER>
 # Following define takes kernel version, cuts everything after (and including)
 # second hyphen (-), and then cuts the architecture (including 'noarch') part.
 # It's the only package version variant that is accepted by RPM spec.
 %define kver_pkg %{expand:%(kpkg="%{kver}"; for i in $(seq 2 $(grep -o '-' <<<$kpkg | grep -c .)); do kpkg="${kpkg%%-*}"; done; kpkg="${kpkg%%.$(uname -m)}"; echo "${kpkg%%.noarch}")}
 %define kver_filename k%{expand:%(echo "%{kver}" | sed -r "y/-/_/;")}
+%endif
 
 
 Name:          <CAS_NAME>
@@ -38,6 +54,7 @@ BuildRequires: gcc
 BuildRequires: make
 BuildRequires: procps
 BuildRequires: python3
+%if %{without dkms}
 # Allow using different version of kernel-headers package (some distros requires it).
 BuildRequires: kernel-headers
 BuildRequires: <KERNEL_PKG> = %{kver_pkg}
@@ -45,6 +62,9 @@ BuildRequires: <KERNEL_DEVEL_PKG> = %{kver_pkg}
 BuildRequires: <LIBELF_PKG>
 BuildRequires: <UTIL_PKG>
 Requires:      <CAS_NAME>-modules-%{version}
+%else
+Requires:      %{name}-modules = %{version}-%{release}
+%endif
 Requires:      python3
 Requires:      python3-PyYAML
 Requires:      sed
@@ -57,6 +77,7 @@ This package contains tools and utilities for managing CAS and monitor
 running cache instances.
 
 
+%if %{without dkms}
 %package    modules_%{kver_filename}
 Summary:    Open Cache Acceleration Software kernel modules
 Group:      System
@@ -68,6 +89,21 @@ encompassing block caching software libraries, adapters, tools and more.
 The main goal of this cache acceleration software is to accelerate a
 backend block device(s) by utilizing a higher performance device(s).
 This package contains only CAS kernel modules.
+%else
+%package modules
+Summary:    Open Cache Acceleration Software kernel modules (DKMS source)
+Group:      System
+BuildArch:  noarch
+Requires:   dkms
+%description modules
+Open Cache Acceleration Software (Open CAS) is an open source project
+encompassing block caching software libraries, adapters, tools and more.
+The main goal of this cache acceleration software is to accelerate a
+backend block device(s) by utilizing a higher performance device(s).
+This package contains the DKMS source tree for the CAS kernel modules.
+The modules are compiled and installed on the target system by DKMS for
+the kernels installed there, so no prebuilt kernel modules are shipped here.
+%endif
 
 
 %prep
@@ -75,14 +111,76 @@ This package contains only CAS kernel modules.
 
 
 %build
+%if %{without dkms}
 export KERNEL_DIR=/lib/modules/%{kver}/build/
 ./configure --kernel-dir $KERNEL_DIR
 <MAKE_BUILD>
+%else
+# Only userspace is built here. Kernel modules are built on the target via DKMS.
+(cd tools/; ./cas_version_gen.sh build)
+make -C utils
+<MAKE_BUILD_CASADM>
+%endif
 
 
 %install
 rm -rf $RPM_BUILD_ROOT
+
+%if %{without dkms}
 /usr/bin/make install_files DESTDIR=$RPM_BUILD_ROOT KERNEL_VERSION=%{kver}
+%else
+# Install userspace before scrubbing the DKMS source tree below.
+(cd casadm; make install_files DESTDIR="$RPM_BUILD_ROOT")
+(cd utils;  make install_files DESTDIR="$RPM_BUILD_ROOT")
+
+# Scrub build artifacts so the DKMS tree ships source-only: distsync reverses
+# the OCF header sync into modules/, utils clean drops manpages, find strips
+# any stray kernel build objects.
+make -C modules distsync
+make -C utils clean
+find modules -type f \( -name '*.ko' -o -name '*.o' -o -name '*.cmd' \
+    -o -name '*.mod.c' -o -name '*.mod' -o -name 'modules.order' \
+    -o -name 'modules.builtin' \) -delete 2>/dev/null || :
+rm -rf modules/.tmp_versions 2>/dev/null || :
+
+# Regenerate version metadata (no build timestamp) for the DKMS source tree.
+(cd tools/; ./cas_version_gen.sh)
+
+# Install DKMS source tree.
+DKMS_TREE=%{name}-modules-%{version}
+DKMS_ROOT="$RPM_BUILD_ROOT/usr/src/$DKMS_TREE"
+install -d -m 755 "$DKMS_ROOT" "$DKMS_ROOT/.metadata" "$DKMS_ROOT/tools"
+cp -a .metadata/*                       "$DKMS_ROOT/.metadata/"  2>/dev/null || :
+cp -a modules                           "$DKMS_ROOT/"
+cp -a ocf                               "$DKMS_ROOT/"
+cp -a utils                             "$DKMS_ROOT/"
+cp -a tools/cas_version_gen.sh tools/helpers.mk "$DKMS_ROOT/tools/"
+cp -a configure.d                       "$DKMS_ROOT/"            2>/dev/null || :
+cp -a configure Makefile LICENSE.md version "$DKMS_ROOT/"
+
+# dkms.conf: <CAS_NAME>/<CAS_VERSION>/<CAS_MODULES_DIR> are substituted by
+# pckgen.sh; $kernelver is a DKMS var (literal via the quoted heredoc).
+# No -j here: dkms prepends "make -j<ncpu> ..." (get_num_cpus), and a later
+# bare "-j" would win (last -j = unlimited) and clobber the nproc count.
+# DKMS builds for a kernel that is not necessarily the running one, so the
+# kernel has to be spelled out for './configure' as well - left to itself it
+# probes the running kernel and generates a header for the wrong kernel API,
+# which 'make' then refuses to build against.
+cat > "$DKMS_ROOT/dkms.conf" <<'EOF'
+PACKAGE_NAME="<CAS_NAME>-modules"
+PACKAGE_VERSION="<CAS_VERSION>"
+BUILT_MODULE_NAME[0]="cas_cache"
+BUILT_MODULE_LOCATION[0]="modules/cas_cache/"
+DEST_MODULE_LOCATION[0]="/<CAS_MODULES_DIR>"
+BUILT_MODULE_NAME[1]="cas_bd"
+BUILT_MODULE_LOCATION[1]="modules/cas_bd/"
+DEST_MODULE_LOCATION[1]="/<CAS_MODULES_DIR>"
+DKMS_KERNEL_DIR="/lib/modules/$kernelver/build"
+PRE_BUILD="./configure --kernel-dir $DKMS_KERNEL_DIR"
+MAKE[0]="make -C modules/ KERNEL_VERSION=$kernelver KERNEL_DIR=$DKMS_KERNEL_DIR"
+AUTOINSTALL=yes
+EOF
+%endif
 
 
 %post
@@ -104,6 +202,7 @@ if [ $1 -eq 0 ]; then
 fi
 
 
+%if %{without dkms}
 %post modules_%{kver_filename}
 depmod
 . /etc/os-release
@@ -144,6 +243,35 @@ if [ $1 -eq 0 ]; then
     fi
     depmod
 fi
+%else
+%post modules
+# Register the DKMS tree. --rpm_safe_upgrade keeps the add+remove pair safe
+# across RPM upgrades (dkms(8); also on %preun remove). || : — dkms add
+# returns 3 on re-add (reinstall), not a real failure.
+dkms add     -m %{name}-modules -v %{version} --rpm_safe_upgrade || :
+# Build for the running kernel. No || : — fail visibly if kernel-devel is
+# missing (dkms returns 0 for "already installed", so reinstalls still work).
+dkms install -m %{name}-modules -v %{version} -k "$(uname -r)" || exit 1
+# Best-effort build for other installed kernels (skip those without
+# kernel-devel) so a fallback kernel isn't left without modules.
+for kver in $(ls /lib/modules 2>/dev/null | grep -vxF "$(uname -r)"); do
+    [ -d "/lib/modules/$kver/build" ] || continue
+    dkms install -m %{name}-modules -v %{version} -k "$kver" || :
+done
+
+%preun modules
+dkms remove  -m %{name}-modules -v %{version} --all --rpm_safe_upgrade || :
+# dkms weak-links the built modules into kABI-compatible kernels it did not
+# build for (/lib/modules/<kver>/weak-updates/), and `dkms remove` drops the
+# built modules while leaving those symlinks behind. Dangling ones break
+# dracut ("installkernel failed in module kernel-modules-extra"), which would
+# outlive the package, so clear them and refresh the dependency lists.
+find /lib/modules -path "*/weak-updates/*" -name "cas_*.ko*" -xtype l -delete 2>/dev/null || :
+for kver in $(ls /lib/modules 2>/dev/null); do
+    [ -e "/lib/modules/$kver/modules.dep" ] || continue
+    depmod -a "$kver" 2>/dev/null || :
+done
+%endif
 
 
 %files
@@ -175,14 +303,22 @@ fi
 %ghost /usr/lib/opencas/opencas.pyo
 %ghost /usr/lib/opencas/__pycache__
 
+%if %{without dkms}
 %files  modules_%{kver_filename}
 %defattr(644, root, root, 755)
 %license LICENSE.md
 /lib/modules/%{kver}
+%else
+%files modules
+%defattr(-, root, root, 755)
+/usr/src/%{name}-modules-%{version}/
+%endif
 
 
 %changelog
-* Tue Apr 28 2026 Qin Fandong <qinfandong@kylinos.cn> - 26.06-1
+* Wed Aug 05 2026 秦凡东 <qinfandong@kylinos.cn> - 26.09-1
+- Add an option to ship the kernel modules as DKMS sources (--with dkms)
+* Tue Apr 28 2026 秦凡东 <qinfandong@kylinos.cn> - 26.06-1
 - Add opencas_exporter
 * Mon Aug 25 2025 Rafal Stefanowski <rafal.stefanowski@huawei.com> - 25.03-1
 * Thu Aug 7 2025 Brian J. Murrell <brian@interlinx.bc.ca> - 25.03-1

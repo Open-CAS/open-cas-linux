@@ -80,7 +80,15 @@ rm -f packages/*debug*
 dnf install ./packages/open-cas-linux*.rpm
 ```
 
-**on DEB based systems:**
+**on RPM based systems (with DKMS):**
+
+```
+make rpm-dkms
+rm -f packages/*debug*
+dnf install ./packages/open-cas-linux*.rpm
+```
+
+**on DEB based systems (with DKMS):**
 
 ```
 make deb
