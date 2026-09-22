@@ -96,8 +96,12 @@ uninstall:
 	$(call remove-file,$(DESTDIR)$(UDEVRULES_DIR)/60-persistent-storage-cas.rules)
 	@$(UDEV) control --reload-rules
 
-	@$(SYSTEMCTL) -q disable open-cas-shutdown
-	@$(SYSTEMCTL) -q disable open-cas
+	@if [ -f $(DESTDIR)$(SYSTEMD_DIR)/open-cas-shutdown.service ]; then \
+		$(SYSTEMCTL) -q disable open-cas-shutdown; \
+	fi
+	@if [ -f $(DESTDIR)$(SYSTEMD_DIR)/open-cas.service ]; then \
+		$(SYSTEMCTL) -q disable open-cas; \
+	fi
 	@$(SYSTEMCTL) daemon-reload
 
 	$(call remove-file,$(DESTDIR)$(SYSTEMD_DIR)/open-cas-shutdown.service)
