@@ -40,10 +40,13 @@ ifdef EXPORTER
 endif
 
 uninstall:
-	-$(SYSTEMCTL) disable --now opencas_exporter
-	rm -f $(DESTDIR)/usr/bin/opencas_exporter
-	rm -f $(DESTDIR)$(SYSTEMD_DIR)/opencas_exporter.service
-	$(SYSTEMCTL) daemon-reload
+	@if [ -f $(DESTDIR)$(SYSTEMD_DIR)/opencas_exporter.service ]; then \
+		echo "Uninstalling Open-CAS Prometheus exporter"; \
+		$(SYSTEMCTL) disable --now opencas_exporter; \
+		rm -f $(DESTDIR)$(SYSTEMD_DIR)/opencas_exporter.service; \
+		$(SYSTEMCTL) daemon-reload; \
+	fi
+	@rm -f $(DESTDIR)/usr/bin/opencas_exporter
 
 clean:
 	rm -f opencas_exporter
