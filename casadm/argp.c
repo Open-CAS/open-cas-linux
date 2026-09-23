@@ -1,6 +1,7 @@
 /*
 * Copyright(c) 2012-2021 Intel Corporation
 * Copyright(c) 2024-2025 Huawei Technologies
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -337,12 +338,12 @@ void print_help(const app *app_values, const cli_command *commands)
 	if (app_values->man != NULL) {
 		cas_printf(LOG_INFO,
 			   "For more information, please refer to manual, Admin Guide (man %s)\n"
-			   "or go to support page <https://open-cas.github.io>.\n",
+			   "or go to support page <https://open-cas.com>.\n",
 			   app_values->man);
 	} else {
 		cas_printf(LOG_INFO,
 			   "For more information, please refer to manual, Admin Guide\n"
-			   "or go to support page <https://open-cas.github.io>.\n");
+			   "or go to support page <https://open-cas.com>.\n");
 	}
 }
 

@@ -65,7 +65,7 @@ you need to run `./configure` once again - this time it should succeed.
 > NOTE: If after installing CAS, your system boots into emergency mode due to the
 > **"Failed to start opencas initialization service."** error, you need to force SELinux
 > relabelling in permissive mode on your filesystem.\
-> Refer to the [Open CAS documentation](https://open-cas.github.io/guide_running.html#rebooting-power-cycling-and-open-cas-linux-autostart) for details.
+> Refer to the [Open CAS documentation](https://open-cas.com/open-cas-linux/running/#rebooting-power-cycling-and-open-cas-linux-autostart) for details.
 
 ### RPM/DEB install
 
@@ -86,17 +86,17 @@ apt install ./packages/open-cas-linux*.deb
 ```
 
 Package generating script will inform you of any missing dependencies.
-You can find detailed instructions in the [Open CAS documentation](https://open-cas.github.io/guide_installing.html#creating-rpmdeb-packages)
+You can find detailed instructions in the [Open CAS documentation](https://open-cas.com/open-cas-linux/installing/#creating-rpmdeb-packages)
 
 ## Getting Started
 
 To quickly deploy Open CAS Linux in your system please follow the instructions
-available [here](https://open-cas.github.io/getting_started_open_cas_linux.html).
+available [here](https://open-cas.com/open-cas-linux/quick-start/).
 
 ## Documentation
 
 The complete documentation for Open CAS Linux is available in the
-[Open CAS Linux Administration Guide](https://open-cas.github.io/guide_introduction.html).
+[Open CAS Linux Administration Guide](https://open-cas.com/open-cas-linux/introduction/).
 
 ## Running Tests
 
@@ -112,7 +112,7 @@ Before running tests make sure you have a platform with at least 2 disks (one fo
 
 ## Contributing
 
-All the development activities of this project take place on this GitHub repository. For more information about contributing, please refer to our [documentation](https://open-cas.github.io/contributing.html).
+All the development activities of this project take place on this GitHub repository. For more information about contributing, please refer to our [documentation](https://open-cas.com/contributing/).
 
 ## License
 
@@ -128,3 +128,8 @@ The lead maintainer is [Robert Baldyga](https://github.com/robertbaldyga).
 
 You can get in touch with the maintainers by submitting a [GitHub issue](https://github.com/Open-CAS/open-cas-linux/issues).  
 Alternatively you can write at [robert.baldyga@open-cas.com](mailto:robert.baldyga@open-cas.com).
+
+## Security
+
+To report a potential security vulnerability please follow the instructions
+[here](https://unvertical.com/security/).

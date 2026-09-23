@@ -3,6 +3,7 @@
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2025 Huawei Technologies
 # Copyright(c) 2025 Brian J. Murrell
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -15,7 +16,7 @@
 
 
 CAS_NAME="open-cas-linux"
-CAS_HOMEPAGE="https://open-cas.github.io"
+CAS_HOMEPAGE="https://open-cas.com"
 CAS_GIT="https://github.com/Open-CAS/open-cas-linux.git"
 CAS_LICENSE_NAME="BSD-3-Clause"
 CAS_MODULES_DIR="extra/block/opencas"
@@ -25,7 +26,7 @@ ARCH="$(uname -m)"
 SCRIPT_BASE_DIR=$(dirname $(realpath "$0"))
 RPM_SPEC_FILE="$SCRIPT_BASE_DIR/${THIS%.*}.d/rpm/CAS_NAME.spec"
 DEB_CONTROL_FILES_DIR="$SCRIPT_BASE_DIR/${THIS%.*}.d/deb/debian"
-PACKAGE_MAINTAINER="Rafal Stefanowski <rafal.stefanowski@open-cas.com>"
+PACKAGE_MAINTAINER="Robert Baldyga <robert.baldyga@open-cas.com>"
 PACKAGE_DATE="$(date -R)"
 TEMP_TEMPLATE="opencas-${THIS}"
 RHEL_KERNEL_PKG_NAME="kernel"

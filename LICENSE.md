@@ -1,7 +1,7 @@
 # BSD 3-Clause License
 
 Copyright(c) 2019-2022 Intel Corporation  
-Copyright(c) 2013-2025 Huawei Technologies  
+Copyright(c) 2023-2025 Huawei Technologies  
 Copyright(c)      2026 Unvertical
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:

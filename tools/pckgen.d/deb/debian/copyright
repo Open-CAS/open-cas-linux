@@ -1,7 +1,10 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: Intel Corporation
+Upstream-Name: <CAS_NAME>
+Upstream-Contact: <PACKAGE_MAINTAINER>
 Source: <CAS_GIT>
 
 Files: *
-Copyright: 2019-<YEAR> Intel Corporation
+Copyright: 2019-2022 Intel Corporation
+           2023-2025 Huawei Technologies
+           2026-<YEAR> Unvertical
 License: <CAS_LICENSE_NAME>
