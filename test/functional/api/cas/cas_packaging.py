@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2022 Intel Corporation
 # Copyright(c) 2024-2025 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -48,8 +49,11 @@ class _Rpm(RpmSet):
         debug: bool = False,
         arch: str = "",
         source: bool = False,
+        dkms: bool = False,
     ):
-        TestRun.LOGGER.info("Creating Open CAS RPM packages")
+        TestRun.LOGGER.info(
+            f"Creating Open CAS RPM packages ({'DKMS' if dkms else 'prebuilt'} modules)"
+        )
 
         self.packages_dir = (
             packages_dir or self.packages_dir or os.path.join(sources_dir, "packages")
@@ -62,6 +66,7 @@ class _Rpm(RpmSet):
             debug,
             arch,
             source,
+            dkms,
         )
 
 
@@ -115,6 +120,7 @@ def create_packages(
     debug: bool = False,
     arch: str = "",
     source: bool = False,
+    dkms: bool = False,
 ):
     pckgen = os.path.join(sources_dir, "tools", "pckgen.sh")
 
@@ -125,6 +131,8 @@ def create_packages(
         opts += f" --arch {arch}"
     if source:
         opts += f" {'srpm' if package_type.lower() == 'rpm' else 'dsc'}"
+    if dkms:
+        opts += " --with-dkms"
 
     packages_before = get_packages_list(package_type, packages_dir)
     TestRun.executor.run_expect_success(f"{pckgen} {opts} {sources_dir}")
