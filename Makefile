@@ -18,6 +18,7 @@ all $(MAKECMDGOALS): $(DIRS)
 $(DIRS):
 ifneq ($(MAKECMDGOALS),archives)
 ifneq ($(MAKECMDGOALS),rpm)
+ifneq ($(MAKECMDGOALS),rpm-dkms)
 ifneq ($(MAKECMDGOALS),srpm)
 ifneq ($(MAKECMDGOALS),deb)
 ifneq ($(MAKECMDGOALS),dsc)
@@ -29,12 +30,16 @@ endif
 endif
 endif
 endif
+endif
 
 archives:
 	@tools/pckgen.sh $(PWD) tar zip
 
 rpm:
 	@tools/pckgen.sh $(PWD) rpm --debug
+
+rpm-dkms:
+	@tools/pckgen.sh $(PWD) rpm --debug --with-dkms
 
 srpm:
 	@tools/pckgen.sh $(PWD) srpm
