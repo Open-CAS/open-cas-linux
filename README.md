@@ -128,3 +128,8 @@ The lead maintainer is [Robert Baldyga](https://github.com/robertbaldyga).
 
 You can get in touch with the maintainers by submitting a [GitHub issue](https://github.com/Open-CAS/open-cas-linux/issues).  
 Alternatively you can write at [robert.baldyga@open-cas.com](mailto:robert.baldyga@open-cas.com).
+
+## Security
+
+To report a potential security vulnerability please follow the instructions
+[here](https://unvertical.com/security/).
