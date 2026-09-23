@@ -61,10 +61,12 @@ BuildRequires: <KERNEL_PKG> = %{kver_pkg}
 BuildRequires: <KERNEL_DEVEL_PKG> = %{kver_pkg}
 BuildRequires: <LIBELF_PKG>
 BuildRequires: <UTIL_PKG>
-Requires:      <CAS_NAME>-modules-%{version}
-%else
-Requires:      %{name}-modules = %{version}-%{release}
 %endif
+# Required by name-and-version rather than as a package, because either module
+# package can satisfy it. Switching between them then keeps the requirement
+# satisfied inside the one transaction, instead of the erasure of the outgoing
+# one taking these tools with it.
+Requires:      <CAS_NAME>-modules-%{version}
 Requires:      python3
 Requires:      python3-PyYAML
 Requires:      sed
@@ -83,6 +85,13 @@ Summary:    Open Cache Acceleration Software kernel modules
 Group:      System
 Requires:   kmod
 Provides:   <CAS_NAME>-modules-%{version}
+# The two ways of shipping the modules are alternatives, not one superseding
+# the other, so they are mutually exclusive rather than obsoleting: installing
+# either over the other has to be an explicit choice (dnf --allowerasing / dnf
+# swap) and not something the solver does on its own during an upgrade. rpm
+# applies this in both directions, so naming the DKMS package here is enough -
+# the prebuilt package cannot be named, its name carries the kernel version.
+Conflicts:  <CAS_NAME>-modules
 %description    modules_%{kver_filename}
 Open Cache Acceleration Software (Open CAS) is an open source project
 encompassing block caching software libraries, adapters, tools and more.
@@ -95,6 +104,7 @@ Summary:    Open Cache Acceleration Software kernel modules (DKMS source)
 Group:      System
 BuildArch:  noarch
 Requires:   dkms
+Provides:   <CAS_NAME>-modules-%{version}
 %description modules
 Open Cache Acceleration Software (Open CAS) is an open source project
 encompassing block caching software libraries, adapters, tools and more.
@@ -244,10 +254,15 @@ if [ $1 -eq 0 ]; then
     depmod
 fi
 %else
-%post modules
-# Register the DKMS tree. --rpm_safe_upgrade keeps the add+remove pair safe
-# across RPM upgrades (dkms(8); also on %preun remove). || : — dkms add
-# returns 3 on re-add (reinstall), not a real failure.
+%posttrans modules
+# In %posttrans rather than %post: when this replaces the prebuilt package in
+# one transaction, that package is erased between the two, and dkms refuses to
+# overwrite a module already installed at the same version - so in %post its
+# modules would still be in the way, and the erase would then take away the
+# ones dkms declined to replace.
+# --rpm_safe_upgrade keeps the add+remove pair safe across RPM upgrades
+# (dkms(8); also on %preun remove). || : — dkms add returns 3 on re-add
+# (reinstall), not a real failure.
 dkms add     -m %{name}-modules -v %{version} --rpm_safe_upgrade || :
 # Build for the running kernel. No || : — fail visibly if kernel-devel is
 # missing (dkms returns 0 for "already installed", so reinstalls still work).
