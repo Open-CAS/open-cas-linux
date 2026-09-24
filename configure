@@ -204,8 +204,8 @@ generate_config() {
 generate_header() {
 	rm -f $SCRIPTPATH/modules/generated_defines.h
 	# Configs starting with '1_' have to be put as first in header
-	FIRST=$(echo $CONFIG_FILES | tr ' ' '\n' | grep '1_')
-	SECOND=$(echo $CONFIG_FILES | tr ' ' '\n' | grep '2_')
+	FIRST=$(echo $CONFIG_FILES | tr ' ' '\n' | grep '/1_[^/]*$')
+	SECOND=$(echo $CONFIG_FILES | tr ' ' '\n' | grep '/2_[^/]*$')
 
 	echo "#ifndef __GENERATED_DEFINES_H__" >> $SCRIPTPATH/modules/generated_defines.h
 	echo "#define __GENERATED_DEFINES_H__" >> $SCRIPTPATH/modules/generated_defines.h
