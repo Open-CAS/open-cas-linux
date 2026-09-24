@@ -1,0 +1,25 @@
+#!/bin/sh
+#
+# Copyright(c) 2026 Unvertical
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+set -e
+
+case "$1" in
+    remove)
+        # debhelper keeps the enablement symlinks until purge, so that a
+        # reinstall restores the previous state. That is harmless for Wants=,
+        # but open-cas.service is RequiredBy= local-fs.target, and a Requires=
+        # symlink to a unit that no longer exists makes local-fs.target fail to
+        # start. Drop the symlinks along with their state - a reinstall then
+        # enables the services the same way a fresh install does.
+        if [ -x /usr/bin/deb-systemd-helper ]; then
+            deb-systemd-helper purge open-cas.service open-cas-shutdown.service >/dev/null || true
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0
