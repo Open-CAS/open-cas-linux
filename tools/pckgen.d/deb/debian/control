@@ -20,11 +20,12 @@ Description: Open Cache Acceleration Software
  running cache instances (no kernel modules).
 
 Package: <CAS_NAME>-modules
-Architecture: any
-Depends: ${misc:Depends}, debhelper (>= 9), dkms
-Description: Open Cache Acceleration Software kernel modules (${kver})
+Architecture: all
+Depends: ${misc:Depends}, dkms
+Description: Open Cache Acceleration Software kernel modules (DKMS)
  Open Cache Acceleration Software (Open CAS) is an open source project
  encompassing block caching software libraries, adapters, tools and more.
  The main goal of this cache acceleration software is to accelerate a
  backend block device(s) by utilizing a higher performance device(s).
- This package contains only CAS kernel modules.
+ This package contains the CAS kernel modules source code, built by DKMS
+ for every installed kernel.

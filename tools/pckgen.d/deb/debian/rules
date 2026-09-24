@@ -2,6 +2,7 @@
 #
 # Copyright(c) 2020-2022 Intel Corporation
 # Copyright(c) 2025 Huawei Technologies
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -35,6 +36,3 @@ override_dh_strip:
 	<DEBUG_PACKAGE>
 
 override_dh_missing:
-
-override_dh_gencontrol:
-	dh_gencontrol -- -Vkver="$(shell uname -r)"
