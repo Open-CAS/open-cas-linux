@@ -1,0 +1,19 @@
+#!/bin/sh
+#
+# Copyright(c) 2026 Unvertical
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+set -e
+
+case "$1" in
+    remove)
+        # Python writes the bytecode cache of casctl's modules next to them.
+        # dpkg knows nothing of it and would leave /usr/lib/opencas behind.
+        rm -rf /usr/lib/opencas/__pycache__
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0
