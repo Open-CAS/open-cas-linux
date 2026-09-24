@@ -157,7 +157,7 @@ cat > $BUILD_CONFIG_FILE <<-EOF
 	WITH_NETLINK=${WITH_NETLINK:-0}
 	EOF
 
-CONFIG_FILES=`ls $SCRIPTPATH/configure.d/*.conf | sort`
+CONFIG_FILES=`ls $SCRIPTPATH/configure.d/*.conf | LC_ALL=C sort`
 FILES_COUNT=`echo $CONFIG_FILES | wc -w`
 
 CONFIG_FILE=$SCRIPTPATH/"config.out"
@@ -197,6 +197,7 @@ generate_config() {
 		exit 1
 	fi
 
+	LC_ALL=C sort -o ${CONFIG_FILE} ${CONFIG_FILE}
 	echo "$KERNEL_DIR_TAG $(realpath "$KERNEL_DIR")" >> ${CONFIG_FILE}
 }
 
