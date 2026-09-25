@@ -222,12 +222,30 @@ def stale_module_links():
     return [line.strip() for line in output.stdout.splitlines() if line.strip()]
 
 
+def service_links():
+    output = TestRun.executor.run(
+        "find /etc/systemd/system -name 'open-cas*.service' 2>/dev/null"
+    )
+    return [line.strip() for line in output.stdout.splitlines() if line.strip()]
+
+
+def local_fs_target_starts():
+    """open-cas.service is RequiredBy local-fs.target, so a dangling link breaks it."""
+    return TestRun.executor.run("systemctl start local-fs.target").exit_code == 0
+
+
 def purge_cas():
     """Leave no CAS packages, modules, DKMS registration or stale links behind."""
     TestRun.executor.run("rmmod cas_cache; rmmod cas_bd")
     TestRun.executor.run(
         f"rpm --query --all | grep '^{main_package}' | "
         f"xargs --no-run-if-empty rpm --erase --nodeps --noscripts"
+    )
+    # --noscripts skips %preun, which would disable the services; a dangling
+    # open-cas.service link fails local-fs.target and leaves / read-only on boot
+    TestRun.executor.run(
+        "find /etc/systemd/system -name 'open-cas*.service' -delete; "
+        "systemctl daemon-reload"
     )
     TestRun.executor.run(
         "dkms status 2>/dev/null | cut -d, -f1 | tr -d ' ' | while IFS=/ read -r m v; do "
@@ -340,6 +358,7 @@ def test_rpm_packaging_install_uninstall(mode):
       - packages install and the CAS modules load
       - uninstalling removes every package, module and DKMS registration
       - no stale module links remain and the initramfs can still be rebuilt
+      - no service links remain and local-fs.target still starts
     """
 
     with TestRun.step("Prepare sources and clean the DUT"):
@@ -377,6 +396,12 @@ def test_rpm_packaging_install_uninstall(mode):
 
         if stale_module_links():
             TestRun.fail(f"Stale module links left behind: {stale_module_links()}")
+
+        if service_links():
+            TestRun.fail(f"Service links left behind: {service_links()}")
+
+        if not local_fs_target_starts():
+            TestRun.fail("local-fs.target does not start after uninstall")
 
         if not initramfs_rebuild_works():
             TestRun.fail("Initramfs could not be rebuilt after uninstall")
