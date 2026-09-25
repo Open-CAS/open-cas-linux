@@ -10,7 +10,7 @@ Vcs-Git: <CAS_GIT>
 Package: <CAS_NAME>
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, python3, python3-yaml,
- <CAS_NAME>-modules (= <CAS_VERSION>-1)
+ <CAS_NAME>-dkms (= <CAS_VERSION>-1)
 Description: Open Cache Acceleration Software
  Open Cache Acceleration Software (Open CAS) is an open source project
  encompassing block caching software libraries, adapters, tools and more.
@@ -19,9 +19,14 @@ Description: Open Cache Acceleration Software
  This package contains tools and utilities for managing CAS and monitor
  running cache instances (no kernel modules).
 
-Package: <CAS_NAME>-modules
+Package: <CAS_NAME>-dkms
 Architecture: all
 Depends: ${misc:Depends}, dkms
+# Releases up to 26.03 shipped the same DKMS modules as <CAS_NAME>-modules.
+# Left installed next to this package it would keep its own copy of the
+# modules registered in DKMS, so it has to go rather than just be upgraded.
+Conflicts: <CAS_NAME>-modules
+Replaces: <CAS_NAME>-modules
 Description: Open Cache Acceleration Software kernel modules (DKMS)
  Open Cache Acceleration Software (Open CAS) is an open source project
  encompassing block caching software libraries, adapters, tools and more.

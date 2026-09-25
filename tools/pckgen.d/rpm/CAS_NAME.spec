@@ -91,7 +91,7 @@ Provides:   <CAS_NAME>-modules-%{version}
 # swap) and not something the solver does on its own during an upgrade. rpm
 # applies this in both directions, so naming the DKMS package here is enough -
 # the prebuilt package cannot be named, its name carries the kernel version.
-Conflicts:  <CAS_NAME>-modules
+Conflicts:  <CAS_NAME>-dkms
 %description    modules_%{kver_filename}
 Open Cache Acceleration Software (Open CAS) is an open source project
 encompassing block caching software libraries, adapters, tools and more.
@@ -99,13 +99,13 @@ The main goal of this cache acceleration software is to accelerate a
 backend block device(s) by utilizing a higher performance device(s).
 This package contains only CAS kernel modules.
 %else
-%package modules
+%package dkms
 Summary:    Open Cache Acceleration Software kernel modules (DKMS source)
 Group:      System
 BuildArch:  noarch
 Requires:   dkms
 Provides:   <CAS_NAME>-modules-%{version}
-%description modules
+%description dkms
 Open Cache Acceleration Software (Open CAS) is an open source project
 encompassing block caching software libraries, adapters, tools and more.
 The main goal of this cache acceleration software is to accelerate a
@@ -157,7 +157,7 @@ rm -rf modules/.tmp_versions 2>/dev/null || :
 (cd tools/; ./cas_version_gen.sh)
 
 # Install DKMS source tree.
-DKMS_TREE=%{name}-modules-%{version}
+DKMS_TREE=%{name}-%{version}
 DKMS_ROOT="$RPM_BUILD_ROOT/usr/src/$DKMS_TREE"
 install -d -m 755 "$DKMS_ROOT" "$DKMS_ROOT/.metadata" "$DKMS_ROOT/tools"
 cp -a .metadata/*                       "$DKMS_ROOT/.metadata/"  2>/dev/null || :
@@ -177,7 +177,7 @@ cp -a configure Makefile LICENSE.md version "$DKMS_ROOT/"
 # probes the running kernel and generates a header for the wrong kernel API,
 # which 'make' then refuses to build against.
 cat > "$DKMS_ROOT/dkms.conf" <<'EOF'
-PACKAGE_NAME="<CAS_NAME>-modules"
+PACKAGE_NAME="<CAS_NAME>"
 PACKAGE_VERSION="<CAS_VERSION>"
 BUILT_MODULE_NAME[0]="cas_cache"
 BUILT_MODULE_LOCATION[0]="modules/cas_cache/"
@@ -254,7 +254,7 @@ if [ $1 -eq 0 ]; then
     depmod
 fi
 %else
-%posttrans modules
+%posttrans dkms
 # In %posttrans rather than %post: when this replaces the prebuilt package in
 # one transaction, that package is erased between the two, and dkms refuses to
 # overwrite a module already installed at the same version - so in %post its
@@ -263,15 +263,15 @@ fi
 # --rpm_safe_upgrade keeps the add+remove pair safe across RPM upgrades
 # (dkms(8); also on %preun remove). || : — dkms add returns 3 on re-add
 # (reinstall), not a real failure.
-dkms add     -m %{name}-modules -v %{version} --rpm_safe_upgrade || :
+dkms add     -m %{name} -v %{version} --rpm_safe_upgrade || :
 # Build for the running kernel. No || : — fail visibly if kernel-devel is
 # missing (dkms returns 0 for "already installed", so reinstalls still work).
-dkms install -m %{name}-modules -v %{version} -k "$(uname -r)" || exit 1
+dkms install -m %{name} -v %{version} -k "$(uname -r)" || exit 1
 # Best-effort build for other installed kernels (skip those without
 # kernel-devel) so a fallback kernel isn't left without modules.
 for kver in $(ls /lib/modules 2>/dev/null | grep -vxF "$(uname -r)"); do
     [ -d "/lib/modules/$kver/build" ] || continue
-    dkms install -m %{name}-modules -v %{version} -k "$kver" || :
+    dkms install -m %{name} -v %{version} -k "$kver" || :
 done
 
 # kmod->dkms upgrade orphans the old open-cas-linux-modules_k<kernelver>
@@ -288,7 +288,7 @@ done
 if [ -n "$(rpm -qa "open-cas-linux-modules_k*" 2>/dev/null)" ]; then
     ( setsid sh -c '
         while pgrep -x dnf >/dev/null 2>&1 || pgrep -x zypper >/dev/null 2>&1 || pgrep -x yum >/dev/null 2>&1; do sleep 3; done
-        dkms status -m %{name}-modules -v %{version} -k "$(uname -r)" 2>/dev/null | grep -q ": installed" || exit 0
+        dkms status -m %{name} -v %{version} -k "$(uname -r)" 2>/dev/null | grep -q ": installed" || exit 0
         rpm -e --nodeps --noscripts $(rpm -qa "open-cas-linux-modules_k*") >/dev/null 2>&1 || :
         # --noscripts skipped the old %postun (weak-modules --remove-modules),
         # so clean up after it: drop its dangling weak-updates/block/opencas
@@ -302,11 +302,11 @@ if [ -n "$(rpm -qa "open-cas-linux-modules_k*" 2>/dev/null)" ]; then
     ' </dev/null >/dev/null 2>&1 ) &
 fi
 
-%preun modules
+%preun dkms
 # Drop dkms's archived old-kmod .ko (original_module) before `dkms remove`
 # so it doesn't restore them as orphans (the old kmod package is gone).
-rm -rf /var/lib/dkms/%{name}-modules/original_module 2>/dev/null || :
-dkms remove  -m %{name}-modules -v %{version} --all --rpm_safe_upgrade || :
+rm -rf /var/lib/dkms/%{name}/original_module 2>/dev/null || :
+dkms remove  -m %{name} -v %{version} --all --rpm_safe_upgrade || :
 # dkms weak-links the built modules into kABI-compatible kernels it did not
 # build for (/lib/modules/<kver>/weak-updates/), and `dkms remove` drops the
 # built modules while leaving those symlinks behind. Dangling ones break
@@ -356,9 +356,9 @@ done
 %license LICENSE.md
 /lib/modules/%{kver}
 %else
-%files modules
+%files dkms
 %defattr(-, root, root, 755)
-/usr/src/%{name}-modules-%{version}/
+/usr/src/%{name}-%{version}/
 %endif
 
 

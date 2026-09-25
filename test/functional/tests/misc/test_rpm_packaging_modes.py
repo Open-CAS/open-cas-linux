@@ -25,8 +25,10 @@ packages_cache_root = "/var/tmp/cas_packaging_test"
 packaging_inputs = ["version", "Makefile", "tools/pckgen.sh", "tools/pckgen.d/rpm/CAS_NAME.spec"]
 
 main_package = "open-cas-linux"
-dkms_modules_package = "open-cas-linux-modules"
+dkms_modules_package = "open-cas-linux-dkms"
 prebuilt_modules_package_glob = "open-cas-linux-modules_k*"
+# DKMS registers the sources under the project name, not the package name
+dkms_module = main_package
 
 # A version that is newer than whatever the sources are at. CAS majors follow
 # the release month (03, 06, 09, 12), so 13 stays ahead of any release of the
@@ -152,18 +154,18 @@ def packages_of(variant: str, kind: str = "all"):
     packages = [p for p in build_variant(variant) if "debug" not in os.path.basename(p)]
 
     if kind == "modules":
-        return [p for p in packages if "-modules" in os.path.basename(p)]
+        return [p for p in packages if modules_package_re.match(os.path.basename(p))]
     if kind == "main":
-        return [p for p in packages if "-modules" not in os.path.basename(p)]
+        return [p for p in packages if not modules_package_re.match(os.path.basename(p))]
     return packages
 
 
-# The prebuilt modules package is named after the kernel it was built for, so
-# its name starts with the DKMS package's name - anchor on what follows to tell
-# the three packages apart instead of matching substrings.
+# All three package names start with the tools package's name - anchor on
+# what follows to tell them apart instead of matching substrings.
 tools_package_re = re.compile(rf"^{main_package}-\d")
 dkms_modules_re = re.compile(rf"^{dkms_modules_package}-\d")
-prebuilt_modules_re = re.compile(rf"^{dkms_modules_package}_k")
+prebuilt_modules_re = re.compile(rf"^{prebuilt_modules_package_glob[:-1]}")
+modules_package_re = re.compile(rf"{dkms_modules_re.pattern}|{prebuilt_modules_re.pattern}")
 
 
 def installed_cas_packages():
@@ -251,8 +253,8 @@ def purge_cas():
         "dkms status 2>/dev/null | cut -d, -f1 | tr -d ' ' | while IFS=/ read -r m v; do "
         "[ -n \"$m\" ] && dkms remove -m \"$m\" -v \"$v\" --all; done"
     )
-    remove(f"/var/lib/dkms/{dkms_modules_package}", recursive=True, force=True, ignore_errors=True)
-    TestRun.executor.run(f"rm -rf /usr/src/{dkms_modules_package}-*")
+    remove(f"/var/lib/dkms/{dkms_module}", recursive=True, force=True, ignore_errors=True)
+    TestRun.executor.run(f"rm -rf /usr/src/{dkms_module}-*")
     TestRun.executor.run(
         r"find /lib/modules \( -name 'cas_*.ko*' -o -path '*block/opencas*' \) -delete"
     )
@@ -682,7 +684,7 @@ def test_rpm_packaging_migration_keeps_modules_when_dkms_build_fails():
         ).stdout.strip()
 
         removed = TestRun.executor.run(
-            f'dkms status -m {dkms_modules_package} -v {version} -k "$(uname -r)" '
+            f'dkms status -m {dkms_module} -v {version} -k "$(uname -r)" '
             f'2>/dev/null | grep -q ": installed"'
         ).exit_code == 0
 
