@@ -22,7 +22,11 @@ packages_root = "/var/tmp/cas_deb_packaging_test"
 built_sets = {}
 
 main_package = "open-cas-linux"
-modules_package = "open-cas-linux-modules"
+modules_package = "open-cas-linux-dkms"
+# DKMS registers the sources under the project name, not the package name
+dkms_module = main_package
+# What the DKMS package was called, and registered in DKMS as, up to 26.03
+legacy_modules_package = "open-cas-linux-modules"
 cas_services = ["open-cas.service", "open-cas-shutdown.service"]
 
 # A version that is newer than whatever the sources are at. CAS majors follow
@@ -182,7 +186,7 @@ def dkms_status():
 
 def dkms_installed_kernels(version: str):
     """Kernels DKMS reports the given version of the CAS modules installed for."""
-    output = TestRun.executor.run(f"dkms status -m {modules_package} -v {version} 2>/dev/null")
+    output = TestRun.executor.run(f"dkms status -m {dkms_module} -v {version} 2>/dev/null")
     return sorted(
         match.group(1)
         for match in re.finditer(r"^[^,]+,\s*([^,]+),[^:]*:\s*installed", output.stdout, re.M)
@@ -243,13 +247,13 @@ def check_modules_for_all_kernels(version: str):
 
     other_versions = [
         line for line in dkms_status().splitlines()
-        if line.startswith(f"{modules_package}/") and f"/{version}," not in line
+        if line.startswith(f"{dkms_module}/") and f"/{version}," not in line
     ]
     if other_versions:
         TestRun.fail(f"Other CAS versions are still registered in DKMS:\n{other_versions}")
 
     stale_sources = TestRun.executor.run(
-        f"ls -d /usr/src/{modules_package}-* | grep -v -- '-{version}$'"
+        f"ls -d /usr/src/{dkms_module}-* | grep -v -- '-{version}$'"
     ).stdout.strip()
     if stale_sources:
         TestRun.fail(f"Sources of other CAS versions are left behind:\n{stale_sources}")
@@ -271,11 +275,11 @@ def check_nothing_left_behind(purged: bool):
     if leftover_modules:
         TestRun.fail(f"CAS modules left on disk:\n{leftover_modules}")
 
-    if f"{modules_package}/" in dkms_status():
+    if f"{dkms_module}/" in dkms_status():
         TestRun.fail(f"CAS modules still registered in DKMS:\n{dkms_status()}")
 
     leftover_paths = TestRun.executor.run(
-        f"ls -d /usr/src/{modules_package}-* /var/lib/dkms/{modules_package} "
+        f"ls -d /usr/src/{dkms_module}-* /var/lib/dkms/{dkms_module} "
         f"/usr/lib/opencas /var/lib/opencas 2>/dev/null"
     ).stdout.strip()
     if leftover_paths:
@@ -314,12 +318,14 @@ def purge_cas():
         f"dpkg-query --show --showformat='${{Package}}\\n' '{main_package}*' 2>/dev/null | "
         f"xargs --no-run-if-empty dpkg --purge --force-depends --force-remove-reinstreq"
     )
-    TestRun.executor.run(
-        f"dkms status -m {modules_package} 2>/dev/null | cut -d, -f1 | cut -d: -f1 | sort -u | "
-        f"while IFS=/ read -r m v; do [ -n \"$v\" ] && dkms remove -m \"$m\" -v \"$v\" --all; done"
-    )
-    remove(f"/var/lib/dkms/{modules_package}", recursive=True, force=True, ignore_errors=True)
-    TestRun.executor.run(f"rm -rf /usr/src/{modules_package}-* /usr/lib/opencas /var/lib/opencas")
+    for module in (dkms_module, legacy_modules_package):
+        TestRun.executor.run(
+            f"dkms status -m {module} 2>/dev/null | cut -d, -f1 | cut -d: -f1 | sort -u | "
+            f"while IFS=/ read -r m v; do [ -n \"$v\" ] && dkms remove -m \"$m\" -v \"$v\" --all; done"
+        )
+        remove(f"/var/lib/dkms/{module}", recursive=True, force=True, ignore_errors=True)
+    # the glob covers the sources of both module names
+    TestRun.executor.run(f"rm -rf /usr/src/{dkms_module}-* /usr/lib/opencas /var/lib/opencas")
     TestRun.executor.run(
         r"find /lib/modules \( -name 'cas_*.ko*' -o -path '*block/opencas*' \) -delete"
     )
@@ -413,6 +419,15 @@ def test_deb_packaging_build():
                 f"Modules package does not depend on dkms: {package_field(modules, 'Depends')}"
             )
 
+        # the package the DKMS sources were shipped in before has to be taken
+        # out, or its copy of the modules would stay registered in DKMS
+        for field in ["Conflicts", "Replaces"]:
+            if legacy_modules_package not in package_field(modules, field):
+                TestRun.fail(
+                    f"Modules package should list {legacy_modules_package} in {field}: "
+                    f"{package_field(modules, field) or 'none'}"
+                )
+
     with TestRun.step("Check the tools package contents"):
         tools_files = package_files(tools)
         for expected in ["/usr/sbin/casadm", "/usr/sbin/casctl", "/etc/opencas/opencas.conf"]:
@@ -423,7 +438,7 @@ def test_deb_packaging_build():
 
     with TestRun.step("Check the modules package contents"):
         modules_files = package_files(modules)
-        sources_dir = f"/usr/src/{modules_package}-{version}"
+        sources_dir = f"/usr/src/{dkms_module}-{version}"
 
         outside = [f for f in modules_files
                    if f.startswith("/usr/src/") and f != "/usr/src/"
@@ -769,7 +784,7 @@ def test_deb_packaging_dkms_builds_for_new_kernel():
     with TestRun.step(f"Remove the modules of {kernel} from DKMS"):
         TestRun.executor.run("rmmod cas_cache; rmmod cas_bd")
         TestRun.executor.run_expect_success(
-            f"dkms remove -m {modules_package} -v {version} -k {kernel}"
+            f"dkms remove -m {dkms_module} -v {version} -k {kernel}"
         )
         if kernel in dkms_installed_kernels(version) or module_version_on_disk(kernel):
             TestRun.fail(f"Modules for {kernel} are still installed:\n{dkms_status()}")
