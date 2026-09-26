@@ -122,7 +122,14 @@ the kernels installed there, so no prebuilt kernel modules are shipped here.
 
 %build
 %if %{without dkms}
-export KERNEL_DIR=/lib/modules/%{kver}/build/
+if [ -e /lib/modules/%{kver}/build/Makefile ]; then
+    export KERNEL_DIR=/lib/modules/%{kver}/build/
+elif [ -e /usr/src/kernels/%{kver}/Makefile ]; then
+    export KERNEL_DIR=/usr/src/kernels/%{kver}/
+else
+    echo "Kernel build tree for %{kver} not found" >&2
+    exit 1
+fi
 ./configure --kernel-dir $KERNEL_DIR
 <MAKE_BUILD>
 %else
