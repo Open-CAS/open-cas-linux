@@ -221,7 +221,7 @@ fi
 
 %if %{without dkms}
 %post modules_%{kver_filename}
-depmod
+depmod -a %{kver}
 . /etc/os-release
 # Determine the exact location of installed modules to add them to weak-modules
 for file in $(rpm -ql $(rpm -qa | grep <CAS_NAME>-modules)); do
@@ -258,7 +258,10 @@ if [ $1 -eq 0 ]; then
         rm -f /var/run/rpm-<CAS_NAME>-modules
         printf "%s\n" "${modules[@]}" | weak-modules --no-initramfs --remove-modules
     fi
-    depmod
+    # The kernel package may have been uninstalled before Open CAS RPM
+    if [ -e /lib/modules/%{kver}/modules.dep ]; then
+        depmod -a %{kver}
+    fi
 fi
 %else
 %posttrans dkms
