@@ -29,7 +29,6 @@ DEB_CONTROL_FILES_DIR="$SCRIPT_BASE_DIR/${THIS%.*}.d/deb/debian"
 PACKAGE_MAINTAINER="Robert Baldyga <robert.baldyga@open-cas.com>"
 PACKAGE_DATE="$(date -R)"
 TEMP_TEMPLATE="opencas-${THIS}"
-RHEL_KERNEL_PKG_NAME="kernel"
 RHEL_KERNEL_DEVEL_PKG_NAME="kernel-devel"
 RHEL_LIBELF_PKG_NAME="elfutils-libelf-devel"
 RHEL_UTIL_PKG_NAME="util-linux"
@@ -87,8 +86,8 @@ print_help() {
     echo "                                  if --kernel-version is provided, list only matching versions"
     echo "  -k, --kernel-version <KVER>     build packages for specific kernel version"
     echo "                                  (RPM only; DEB uses DKMS to build modules during install);"
-    echo "                                  sources with headers for this kernel must be"
-    echo "                                  available in /lib/modules/, or if used with --mock"
+    echo "                                  sources with headers for this kernel must be available"
+    echo "                                  in /lib/modules/ or /usr/src/kernels/, or if used with --mock"
     echo "                                  specific kernel version will be installed automatically"
     echo "                                  if available in repo"
     echo "                                  (NOTE: if given version matches more than one available"
@@ -227,9 +226,9 @@ check_kernel_version() {
         echo -e "--- Building in mock environment '$MOCK_CFG' for kernel version: \e[33m$KVER_FULL\e[0m"
     else
         if [ "$KVER" ]; then
-            KVER_FULL=$(find /lib/modules/* -maxdepth 0 -type d -name "$KVER*" -printf "%f\n" | sort -V | tail -n 1)
+            KVER_FULL=$(find /lib/modules/* /usr/src/kernels/* -maxdepth 0 -type d -name "$KVER*" -printf "%f\n" 2>/dev/null | sort -V | tail -n 1)
             if [ ! "$KVER_FULL" ]; then
-                error "kernel version matching '$KVER' not found in /lib/modules/"
+                error "kernel version matching '$KVER' not found in /lib/modules/ nor /usr/src/kernels/"
             fi
         fi
 
@@ -308,7 +307,7 @@ list_kernels() {
     else
         echo "--- Listing available local kernel versions"
 
-        local KVER_LIST=$(find /lib/modules/* -maxdepth 0 -type d ${KVER:+-name "$KVER*"} -printf "%f\n" | sort -V)
+        local KVER_LIST=$(find /lib/modules/* /usr/src/kernels/* -maxdepth 0 -type d ${KVER:+-name "$KVER*"} -printf "%f\n" 2>/dev/null | sort -uV)
     fi
 
     echo -e "\nAvailable kernel versions${MOCK_CFG:+ in '$MOCK_CFG'}${KVER:+ matching '$KVER'}:\n${KVER_LIST[@]}"
@@ -431,7 +430,7 @@ rpm_spec_prepare() {
             # counting on that there will be only one kernel sources installed.
             # Odds are much more in favor of this scenario, than of the rare case of
             # having a match between kernel package version and the actual kernel version.
-            sed -i "/export KERNEL_DIR/s/%{kver}/*/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+            sed -i "/^%build/,/--kernel-dir/s/%{kver}/*/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         fi
 
         sed -i "s/<KERNEL_PKG>/$SUSE_KERNEL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
@@ -439,7 +438,7 @@ rpm_spec_prepare() {
         sed -i "s/<LIBELF_PKG>/$SUSE_LIBELF_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         sed -i "s/<UTIL_PKG>/$SUSE_UTIL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
     else
-        sed -i "s/<KERNEL_PKG>/$RHEL_KERNEL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
+        sed -i "/^BuildRequires: <KERNEL_PKG>/d" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         sed -i "s/<KERNEL_DEVEL_PKG>/$RHEL_KERNEL_DEVEL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         sed -i "s/<LIBELF_PKG>/$RHEL_LIBELF_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
         sed -i "s/<UTIL_PKG>/$RHEL_UTIL_PKG_NAME/g" "$RPM_SPECS_DIR/$CAS_NAME.spec"
