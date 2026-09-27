@@ -42,6 +42,20 @@ static inline void env_free(const void *ptr)
 	kfree(ptr);
 }
 
+/*
+ * Try a physically contiguous allocation first and fall back to vmalloc()
+ * if that fails.
+ */
+static inline void *env_kvzalloc(size_t size, int flags)
+{
+	return cas_kvzalloc(size, flags);
+}
+
+static inline void env_kvfree(const void *ptr)
+{
+	kvfree(ptr);
+}
+
 static inline void *env_vmalloc_flags(size_t size, int flags)
 {
 	return cas_vmalloc(size, flags | __GFP_HIGHMEM);
