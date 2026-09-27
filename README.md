@@ -17,8 +17,8 @@ changes are required.
 
 ## Support
 
-Open CAS Linux is developed and maintained by **[Unvertical](https://unvertical.com/)**, founded by the project's core maintainers.  
-For professional support, consulting and custom development, please [contact us](https://unvertical.com/contact/).
+Open CAS is developed and maintained by **Unvertical**, a company founded by the project's core maintainers.  
+For official packages, professional support, consulting and more, please visit [our website](https://unvertical.com/#opencas).
 
 ## Installation
 
