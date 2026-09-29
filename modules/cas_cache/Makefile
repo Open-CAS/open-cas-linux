@@ -6,5 +6,5 @@ include $(M)/config.mk
 
 obj-m := cas_cache.o
 
-cas_cache-c    = $(shell find $(M)/cas_cache -name \*.c)
+cas_cache-c    = $(shell find $(M)/cas_cache -name \*.c ! -name \*.mod.c)
 cas_cache-objs = $(patsubst $(M)/cas_cache/%.c,%.o,$(cas_cache-c))
