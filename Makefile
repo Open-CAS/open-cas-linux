@@ -22,9 +22,11 @@ ifneq ($(MAKECMDGOALS),rpm-dkms)
 ifneq ($(MAKECMDGOALS),srpm)
 ifneq ($(MAKECMDGOALS),deb)
 ifneq ($(MAKECMDGOALS),dsc)
+ifneq ($(MAKECMDGOALS),upgrade)
 	cd $@ && $(MAKE) $(MAKECMDGOALS)
 casadm: modules
 	cd $@ && $(MAKE) $(MAKECMDGOALS)
+endif
 endif
 endif
 endif
@@ -49,3 +51,26 @@ deb:
 
 dsc:
 	@tools/pckgen.sh $(PWD) dsc
+
+# In-flight upgrade: replace the installed release with this one and swap
+# the running cas_cache for the fallback one built against the loaded cas_bd.
+# The new cas_bd is loaded after reboot.
+UPGRADE_DIR = $(PWD)/.upgrade
+
+upgrade:
+	@cd modules && $(MAKE) upgrade_check
+	@trap 'udevadm control --start-exec-queue' EXIT; \
+	trap 'exit 1' INT TERM HUP; \
+	set -e; \
+	udevadm control --stop-exec-queue; \
+	(cd modules && $(MAKE) upgrade_unload); \
+	rm -rf $(UPGRADE_DIR); \
+	(cd modules && $(MAKE) upgrade_preserve UPGRADE_DIR=$(UPGRADE_DIR)); \
+	(cd utils && $(MAKE) upgrade_preserve UPGRADE_DIR=$(UPGRADE_DIR)); \
+	(cd modules && $(MAKE) uninstall_files); \
+	for dir in casadm utils extra; do (cd $$dir && $(MAKE) uninstall); done; \
+	(cd modules && $(MAKE) install_files); \
+	for dir in casadm utils extra; do (cd $$dir && $(MAKE) install); done; \
+	(cd utils && $(MAKE) upgrade_restore UPGRADE_DIR=$(UPGRADE_DIR)); \
+	(cd modules && $(MAKE) upgrade_load UPGRADE_DIR=$(UPGRADE_DIR)); \
+	rm -rf $(UPGRADE_DIR)

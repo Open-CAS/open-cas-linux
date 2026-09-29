@@ -108,4 +108,25 @@ uninstall:
 	$(call remove-file,$(DESTDIR)$(SYSTEMD_DIR)/open-cas.service)
 	$(call remove-file,$(DESTDIR)$(SYSTEMD_DIR)/../system-shutdown/open-cas.shutdown)
 
-.PHONY: install uninstall clean distclean
+# Steps of the in-flight upgrade, driven by 'make upgrade' in the top
+# directory. User configuration is preserved across uninstall/install;
+# this is the place to migrate it if the format ever changes.
+CONFIG_FILES = /etc/opencas/opencas.conf /etc/opencas/ioclass-config.csv
+
+upgrade_preserve:
+	@echo "Preserving Open-CAS configuration"
+	@for file in $(CONFIG_FILES); do \
+		if [ -f $$file ]; then \
+			install -m 644 -D $$file $(UPGRADE_DIR)$$file || exit 1; \
+		fi; \
+	done
+
+upgrade_restore:
+	@echo "Restoring Open-CAS configuration"
+	@for file in $(CONFIG_FILES); do \
+		if [ -f $(UPGRADE_DIR)$$file ]; then \
+			install -m 644 -D $(UPGRADE_DIR)$$file $$file || exit 1; \
+		fi; \
+	done
+
+.PHONY: install uninstall clean distclean upgrade_preserve upgrade_restore
