@@ -7,5 +7,5 @@ include $(M)/config.mk
 
 obj-m := cas_bd.o
 
-cas_bd-c    = $(shell find $(M)/cas_bd -name \*.c)
+cas_bd-c    = $(shell find $(M)/cas_bd -name \*.c ! -name \*.mod.c)
 cas_bd-objs = $(patsubst $(M)/cas_bd/%.c,%.o,$(cas_bd-c))
