@@ -70,10 +70,9 @@ distclean: clean distsync
 
 install: install_files
 	@$(DEPMOD)
-	@$(MODPROBE) $(CACHE_MODULE) || ( \
-		echo "See dmesg for more information" >&2 && \
-		rm -f $(DESTDIR)$(MODULES_DIR)/$(CACHE_MODULE).ko && exit 1 \
-		)
+	@$(MODPROBE) $(CACHE_MODULE) || { \
+		echo "See dmesg for more information" >&2; exit 1; \
+	}
 
 
 install_files:
