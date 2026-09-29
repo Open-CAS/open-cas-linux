@@ -24,14 +24,14 @@ For official packages, professional support, consulting and more, please visit [
 
 We recommend using the latest version, which contains all the important fixes
 and performance improvements. Bugfix releases are guaranteed only for the
-latest major release line (currently 26.03.x).
+latest major release line (currently 26.09.x).
 
 To download the latest Open CAS Linux release run following commands:
 
 ```
-wget https://github.com/Open-CAS/open-cas-linux/releases/download/v26.03.4/open-cas-linux-26.03.4.1040.release.tar.gz
-tar xf open-cas-linux-26.03.4.1040.release.tar.gz
-cd open-cas-linux-26.03.4.1040.release/
+wget https://github.com/Open-CAS/open-cas-linux/releases/download/v26.09/open-cas-linux-26.09.0.1102.release.tar.gz
+tar xf open-cas-linux-26.09.0.1102.release.tar.gz
+cd open-cas-linux-26.09.0.1102.release/
 ```
 
 Alternatively, if you want recent development (unstable) version, you can clone GitHub repository:
