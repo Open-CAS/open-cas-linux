@@ -7,6 +7,7 @@
 
 import os
 import posixpath
+import re
 import sys
 import traceback
 from datetime import timedelta
@@ -37,6 +38,9 @@ from test_utils.common.singleton import Singleton
 from storage_devices.lvm import Lvm, LvmConfiguration
 from storage_devices.disk import Disk
 from storage_devices.drbd import Drbd
+
+cas_log_path = "/var/log/opencas.log"
+cas_log_test_part_path = posixpath.join(TestRun.TEST_RUN_DATA_PATH, "opencas.log")
 
 
 def pytest_addoption(parser):
@@ -106,7 +110,7 @@ def pytest_runtest_setup(item):
 
         dut_config["plugins_dir"] = os.path.join(os.path.dirname(__file__), "..", "lib")
         dut_config["opt_plugins"] = {"test_wrapper": {}, "serial_log": {}, "power_control": {}}
-        dut_config["extra_logs"] = {"cas": "/var/log/opencas.log"}
+        dut_config["extra_logs"] = {"cas": cas_log_test_part_path}
 
         try:
             TestRun.prepare(item, dut_config)
@@ -129,6 +133,9 @@ def pytest_runtest_setup(item):
             )
 
         TestRun.LOGGER.print_test_identifier_to_logs()
+        TestRun.executor.run(
+            f"echo '{TestRun.LOGGER.unique_test_identifier}' >> {cas_log_path}"
+        )
 
         TestRun.usr = Opencas(
             repo_dir=os.path.join(os.path.dirname(__file__), "..", "..", ".."),
@@ -308,6 +315,11 @@ def pytest_runtest_teardown():
                         dut.ip if dut.ip is not None else dut.config.get("host"),
                     ),
                     exist_ok=True,
+                )
+                # opencas.log is never rotated, so collect only this test's part of it
+                test_identifier = re.escape(TestRun.LOGGER.unique_test_identifier)
+                TestRun.executor.run(
+                    f"awk '/{test_identifier}/,0' {cas_log_path} > {cas_log_test_part_path}"
                 )
                 TestRun.LOGGER.get_additional_logs()
     Log.destroy()
