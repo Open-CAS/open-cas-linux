@@ -92,10 +92,12 @@ def get_io_class_usage(cache, io_class_id, percent=False):
     ).usage_stats
 
 
-def generate_and_load_random_io_class_config(cache):
+def generate_and_load_random_io_class_config(cache, keep_classification=False):
     random_list = IoClass.generate_random_ioclass_list(ioclass_config.MAX_IO_CLASS_ID + 1)
     IoClass.save_list_to_config_file(random_list, add_default_rule=False)
-    cache.load_io_class(ioclass_config.default_config_file_path)
+    cache.load_io_class(
+        ioclass_config.default_config_file_path, keep_classification=keep_classification
+    )
     return random_list
 
 

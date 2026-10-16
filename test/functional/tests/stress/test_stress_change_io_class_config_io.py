@@ -27,12 +27,14 @@ from tests.io_class.io_class_common import generate_and_load_random_io_class_con
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
-def test_stress_io_class_change_config_during_io_raw():
+@pytest.mark.parametrize("keep_classification", [False, True])
+def test_stress_io_class_change_config_during_io_raw(keep_classification):
     """
     title: Set up IO class configuration from file during IO - stress.
     description: |
         Check Open CAS ability to change IO class configuration during running IO
-        on small cache and core devices.
+        on small cache and core devices, with and without reclassification of
+        cached data.
     pass_criteria:
         - No system crash
         - IO class configuration changes successfully
@@ -61,11 +63,12 @@ def test_stress_io_class_change_config_during_io_raw():
         fio_task = start_async_func(run_io, cores, True)
 
     with TestRun.step("In two-second time interval change IO class configuration "
-                      "(using random values in allowed range) and cache mode "
-                      "(between all supported). Check if Open CAS configuration has changed."):
+                      "(using random values in allowed range, dropping random IO classes) "
+                      "and cache mode (between all supported). Check if Open CAS "
+                      "configuration has changed."):
         change_mode_thread = threading.Thread(target=change_cache_mode, args=[cache, fio_task])
         change_io_class_thread = threading.Thread(target=change_io_class_config,
-                                                  args=[cache, fio_task])
+                                                  args=[cache, fio_task, keep_classification])
         change_mode_thread.start()
         sleep(1)
         change_io_class_thread.start()
@@ -80,13 +83,15 @@ def test_stress_io_class_change_config_during_io_raw():
 
 @pytest.mark.require_disk("cache", DiskTypeSet([DiskType.optane, DiskType.nand]))
 @pytest.mark.require_disk("core", DiskTypeLowerThan("cache"))
+@pytest.mark.parametrize("keep_classification", [False, True])
 @pytest.mark.asyncio
-async def test_stress_io_class_change_config_during_io_fs():
+async def test_stress_io_class_change_config_during_io_fs(keep_classification):
     """
     title: Set up IO class configuration from file for filesystems during IO - stress.
     description: |
         Check Intel CAS ability to change IO class configuration for different filesystems
-        during running IO on small cache and core devices.
+        during running IO on small cache and core devices, with and without
+        reclassification of cached data.
     pass_criteria:
         - No system crash
         - IO class configuration changes successfully
@@ -121,11 +126,12 @@ async def test_stress_io_class_change_config_during_io_fs():
         fio_task = start_async_func(run_io, cores)
 
     with TestRun.step("In two-second time interval change IO class configuration "
-                      "(using random values in allowed range) and cache mode "
-                      "(between all supported). Check if Open CAS configuration has changed."):
+                      "(using random values in allowed range, dropping random IO classes) "
+                      "and cache mode (between all supported). Check if Open CAS "
+                      "configuration has changed."):
         change_mode_thread = threading.Thread(target=change_cache_mode, args=[cache, fio_task])
         change_io_class_thread = threading.Thread(target=change_io_class_config,
-                                                  args=[cache, fio_task])
+                                                  args=[cache, fio_task, keep_classification])
         change_mode_thread.start()
         sleep(1)
         change_io_class_thread.start()
@@ -148,10 +154,12 @@ def change_cache_mode(cache, fio_task):
         cache.set_cache_mode(new_cache_mode, False)
 
 
-def change_io_class_config(cache, fio_task):
+def change_io_class_config(cache, fio_task, keep_classification):
     while fio_task.done() is False:
         sleep(2)
-        generated_io_classes = generate_and_load_random_io_class_config(cache)
+        generated_io_classes = generate_and_load_random_io_class_config(
+            cache, keep_classification=keep_classification
+        )
         loaded_io_classes = cache.list_io_classes()
         if not IoClass.compare_ioclass_lists(generated_io_classes, loaded_io_classes):
             TestRun.LOGGER.error("IO classes not changed correctly.")
