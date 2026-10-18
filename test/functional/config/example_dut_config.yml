@@ -1,9 +1,11 @@
 # DUT type should be either "local" or "ssh"
-# if ssh is selected, then ip and user fields are required and you have to make sure you have
-# enabled SSH key-based authentication to the machine with given ip address
+# if ssh is selected, then host field is required and you have to make sure you have
+# enabled SSH key-based authentication to the machine with given host. The host is
+# resolved through the controller's SSH config and /etc/hosts. If user is not given,
+# the one from SSH config is used.
 type: "local"
 
-# ip: "x.x.x.x"
+# host: "dut1"
 # user: "example_user"
 
 # env: "HTTPS_PROXY=myproxy.example:12345"

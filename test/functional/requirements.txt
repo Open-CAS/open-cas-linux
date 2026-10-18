@@ -1,7 +1,6 @@
 pytest>=7.0,<=7.4.4
 multimethod>=1.1
 paramiko>=2.7.2
-IPy>=1.00
 aenum>=2.2.1
 packaging>=20.3
 typing>=3.7.4.1

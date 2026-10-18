@@ -78,8 +78,8 @@ def pytest_runtest_setup(item):
     # There should be dut config file added to config package and
     # pytest should be executed with option --dut-config=conf_name'.
     #
-    # 'ip' field should be filled with valid IP string to use remote ssh executor
-    # or it should be commented out when user want to execute tests on local machine
+    # 'type' should be 'ssh' with 'host' field filled to use remote ssh executor
+    # or 'local' when user want to execute tests on local machine
     #
     # User can also have own test wrapper, which runs test prepare, cleanup, etc.
     # Then it should be placed in plugins package
@@ -109,7 +109,7 @@ def pytest_runtest_setup(item):
             )
 
         dut_config["plugins_dir"] = os.path.join(os.path.dirname(__file__), "..", "lib")
-        dut_config["opt_plugins"] = {"test_wrapper": {}, "serial_log": {}, "power_control": {}}
+        dut_config["opt_plugins"] = {"test_wrapper": {}, "serial_monitor": {}, "power_control": {}}
         dut_config["extra_logs"] = {"cas": cas_log_test_part_path}
 
         try:
@@ -309,12 +309,7 @@ def pytest_runtest_teardown():
         with TestRun.use_dut(dut):
             if TestRun.executor:
                 os.makedirs(
-                    os.path.join(
-                        TestRun.LOGGER.base_dir,
-                        "dut_info",
-                        dut.ip if dut.ip is not None else dut.config.get("host"),
-                    ),
-                    exist_ok=True,
+                    os.path.join(TestRun.LOGGER.base_dir, "dut_info", dut.name), exist_ok=True
                 )
                 # opencas.log is never rotated, so collect only this test's part of it
                 test_identifier = re.escape(TestRun.LOGGER.unique_test_identifier)
