@@ -568,6 +568,14 @@ Identifier of cache instance <1-16384>.
 .B -f, --file <FILE>
 Configuration file containing IO class definition.
 
+.TP
+.B -k, --keep-classification
+Keep classification of data cached in IO classes present in the new
+configuration. By default data of all the IO classes is moved to the
+unclassified IO class and gets classified again on next access. Data of IO
+classes removed from the configuration is reclassified regardless of this
+option.
+
 .SH Options that are valid with --io-class --list (-C -L) are:
 .TP
 .B -i, --cache-id <ID>

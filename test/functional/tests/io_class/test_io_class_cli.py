@@ -47,7 +47,7 @@ def test_io_class_export_configuration():
             )
 
     with TestRun.LOGGER.step(
-        "Create and load configuration file for 33 IO classes "
+        "Create and load random configuration file for up to 33 IO classes "
         "with random names, allocation and priority values"
     ):
         random_list = IoClass.generate_random_ioclass_list(33)

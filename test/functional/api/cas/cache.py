@@ -1,6 +1,7 @@
 #
 # Copyright(c) 2019-2021 Intel Corporation
 # Copyright(c) 2024-2026 Huawei Technologies Co., Ltd.
+# Copyright(c) 2026 Unvertical
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
@@ -174,8 +175,10 @@ class Cache:
     def set_cache_mode(self, cache_mode: CacheMode, flush=None) -> Output:
         return casadm.set_cache_mode(cache_mode, self.cache_id, flush)
 
-    def load_io_class(self, file_path: str) -> Output:
-        return casadm.load_io_classes(self.cache_id, file_path)
+    def load_io_class(self, file_path: str, keep_classification: bool = False) -> Output:
+        return casadm.load_io_classes(
+            self.cache_id, file_path, keep_classification=keep_classification
+        )
 
     def list_io_classes(self) -> list:
         return get_io_class_list(self.cache_id)

@@ -411,10 +411,14 @@ def flush_core_cmd(cache_id: str, core_id: str, shortcut: bool = False) -> str:
     return casadm_bin + command
 
 
-def load_io_classes_cmd(cache_id: str, file: str, shortcut: bool = False) -> str:
+def load_io_classes_cmd(
+    cache_id: str, file: str, shortcut: bool = False, keep_classification: bool = False
+) -> str:
     command = " -C -C" if shortcut else " --io-class --load-config"
     command += (" -i " if shortcut else " --cache-id ") + cache_id
     command += (" -f " if shortcut else " --file ") + file
+    if keep_classification:
+        command += (" -k" if shortcut else " --keep-classification")
     return casadm_bin + command
 
 

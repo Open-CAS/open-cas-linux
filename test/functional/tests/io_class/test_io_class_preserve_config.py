@@ -52,7 +52,7 @@ def test_io_class_preserve_configuration():
         cache.add_core(core_device)
 
     with TestRun.step(
-        "Create and load configuration file for all IO classes with random names, "
+        "Create and load random configuration file with random names, "
         "allocation and priority values."
     ):
         generated_io_classes = generate_and_load_random_io_class_config(cache)

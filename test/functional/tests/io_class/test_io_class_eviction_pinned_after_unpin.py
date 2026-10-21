@@ -65,7 +65,7 @@ def test_io_class_eviction_pinned_after_unpin():
 
     with TestRun.step("Unpin ioclass to and set its priority to be lower than second IO class"):
         io_classes = [IoclassConfig(1, 11, 1, cores[0]), IoclassConfig(2, 10, 1, cores[1])]
-        _add_and_load_io_classes(cache.cache_id, io_classes)
+        _add_and_load_io_classes(cache.cache_id, io_classes, keep_classification=True)
 
     with TestRun.step("Run dd on second io ioclass "):
         run_io_dir(f"{io_classes[1].core.path}", usable_cache_size)
@@ -89,7 +89,7 @@ def _refresh_cache(cache):
     cache.reset_counters()
 
 
-def _add_and_load_io_classes(cache_id, io_classes: list):
+def _add_and_load_io_classes(cache_id, io_classes: list, keep_classification=False):
     ioclass_config.remove_ioclass_config()
     ioclass_config.create_ioclass_config(False)
 
@@ -102,7 +102,11 @@ def _add_and_load_io_classes(cache_id, io_classes: list):
             ioclass_config_path=ioclass_config.default_config_file_path,
         )
 
-    casadm.load_io_classes(cache_id=cache_id, file=default_config_file_path)
+    casadm.load_io_classes(
+        cache_id=cache_id,
+        file=default_config_file_path,
+        keep_classification=keep_classification,
+    )
 
 
 def prepare(cores_number=1, cache_size=Size(10, Unit.GibiByte), core_size=Size(5, Unit.GibiByte)):

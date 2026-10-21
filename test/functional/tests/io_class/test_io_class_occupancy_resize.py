@@ -138,7 +138,11 @@ def test_ioclass_resize(cache_line_size, new_occupancy):
             f"{io_class.max_occupancy:0.2f}",
         )
 
-        casadm.load_io_classes(cache_id=cache.cache_id, file=default_config_file_path)
+        casadm.load_io_classes(
+            cache_id=cache.cache_id,
+            file=default_config_file_path,
+            keep_classification=True,
+        )
 
     with TestRun.step("Perform IO with size equal to cache size"):
         run_io_dir(f"{io_class.dir_path}/tmp_file", cache_size)

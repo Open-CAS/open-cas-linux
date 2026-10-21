@@ -258,6 +258,9 @@ struct kcas_io_classes {
 	/** Cache ID */
 	uint16_t cache_id;
 
+	/** Reclassify data of all IO classes, not only of the removed ones */
+	bool repart_all;
+
 	int ext_err_code;
 
 	/** IO class info */
