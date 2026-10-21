@@ -86,7 +86,9 @@ def pytest_runtest_setup(item):
 
     test_name = item.name.split("[")[0]
     TestRun.LOGGER = create_log(item.config.getoption("--log-path"), test_name)
-    TestRun.LOGGER.unique_test_identifier = f"TEST__{item.name}__random_seed_{TestRun.random_seed}"
+    TestRun.LOGGER.unique_test_identifier = (
+        f"TEST__{item.name}__{os.path.basename(TestRun.LOGGER.base_dir)}"
+    )
 
     duts = item.config.getoption("--dut-config")
     required_duts = next(item.iter_markers(name="multidut"), None)
