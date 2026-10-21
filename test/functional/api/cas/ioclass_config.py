@@ -160,6 +160,8 @@ class IoClass:
             ),
         ]
         for i in range(1, count - 1):
+            if random.choice([True, False]):
+                continue
             random_list.append(
                 IoClass(
                     i,

@@ -307,15 +307,17 @@ def test_ioclass_stats_sections_cache(stat_filter, random_cls):
                 validate_statistics(statistics, stat_filter)
 
     with TestRun.step("Load random IO class configuration for each cache"):
+        io_class_ids = {}
         for cache in caches:
             random_list = IoClass.generate_random_ioclass_list(ioclass_config.MAX_IO_CLASS_ID + 1)
             IoClass.save_list_to_config_file(random_list, add_default_rule=False)
             cache.load_io_class(ioclass_config.default_config_file_path)
+            io_class_ids[cache.cache_id] = [io_class.id for io_class in random_list]
 
     with TestRun.group("Random IO class config statistics"):
         for cache in caches:
             with TestRun.step(f"Cache {cache.cache_id}"):
-                for class_id in range(ioclass_config.MAX_IO_CLASS_ID + 1):
+                for class_id in io_class_ids[cache.cache_id]:
                     statistics = get_stats_dict(
                             filter=[stat_filter], cache_id=cache.cache_id, io_class_id=class_id)
                     validate_statistics(statistics, stat_filter)
@@ -348,16 +350,18 @@ def test_ioclass_stats_sections_core(stat_filter, random_cls):
                     validate_statistics(statistics, stat_filter)
 
     with TestRun.step("Load random IO class configuration for each cache"):
+        io_class_ids = {}
         for cache in caches:
             random_list = IoClass.generate_random_ioclass_list(ioclass_config.MAX_IO_CLASS_ID + 1)
             IoClass.save_list_to_config_file(random_list, add_default_rule=False)
             cache.load_io_class(ioclass_config.default_config_file_path)
+            io_class_ids[cache.cache_id] = [io_class.id for io_class in random_list]
 
     with TestRun.group("Random IO class config statistics"):
         for cache in caches:
             for core in cache.get_cores():
                 with TestRun.step(f"Core {core.cache_id}-{core.core_id}"):
-                    for class_id in range(ioclass_config.MAX_IO_CLASS_ID + 1):
+                    for class_id in io_class_ids[cache.cache_id]:
                         statistics = get_stats_dict(
                                 [stat_filter], core.cache_id, core.core_id, class_id)
                         validate_statistics(statistics, stat_filter)
