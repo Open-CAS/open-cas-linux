@@ -117,13 +117,13 @@ static CAS_MAKE_REQ_RET_TYPE _cas_exp_obj_make_rq_fn(struct request_queue *q,
 
 static int _cas_exp_obj_allocate_minor_slot(void)
 {
-	return ida_alloc_max(&exp_obj_global.minor_ida,
+	return cas_ida_alloc_max(&exp_obj_global.minor_ida,
 			CAS_MINOR_SLOT_MAX, GFP_KERNEL);
 }
 
 static void _cas_exp_obj_free_minor_slot(int slot)
 {
-	ida_free(&exp_obj_global.minor_ida, slot);
+	cas_ida_free(&exp_obj_global.minor_ida, slot);
 }
 
 static int _cas_exp_obj_set_dev_t(struct cas_exp_obj *exp_obj,
@@ -301,7 +301,7 @@ static ssize_t device_attr_serial_show(struct device *dev,
 	struct gendisk *gd = dev_to_disk(dev);
 	struct cas_exp_obj *exp_obj = gd->private_data;
 
-	return sysfs_emit(buf, "opencas-%s", exp_obj->dev_name);
+	return cas_sysfs_emit(buf, "opencas-%s", exp_obj->dev_name);
 }
 
 static struct device_attribute device_attr_serial =
