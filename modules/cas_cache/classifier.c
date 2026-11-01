@@ -58,7 +58,7 @@ static cas_cls_eval_t _cas_cls_metadata_test(struct cas_classifier *cls,
 	if (PageAnon(io->page))
 		return cas_cls_eval_no;
 
-	if (PageSlab(io->page)) {
+	if (PageSlab(compound_head(io->page))) {
 		/* A filesystem issues IO on pages that does not belongs
 		 * to the file page cache. It means that it is a
 		 * part of metadata
@@ -1280,7 +1280,7 @@ static void _cas_cls_get_bio_context(struct bio *bio,
 	if (PageAnon(page))
 		return;
 
-	if (PageSlab(page))
+	if (PageSlab(compound_head(page)))
 		return;
 
 	mapping = cas_page_mapping(page);
