@@ -333,9 +333,11 @@ static void _cas_cls_directory_resolve(struct cas_classifier *cls,
 	int error;
 	int o_res;
 	unsigned long o_ino;
+	const struct super_block *o_sb;
 
 	o_res = ctx->resolved;
 	o_ino = ctx->i_ino;
+	o_sb = ctx->i_sb;
 
 	error = kern_path(ctx->pathname, LOOKUP_FOLLOW, &path);
 	if (error) {
@@ -349,13 +351,14 @@ static void _cas_cls_directory_resolve(struct cas_classifier *cls,
 
 	inode = path.dentry->d_inode;
 	ctx->i_ino = inode->i_ino;
+	ctx->i_sb = inode->i_sb;
 	ctx->resolved = 1;
 	path_put(&path);
 
 	if (!o_res) {
 		CAS_CLS_DEBUG_MSG("Resolved %s to inode: %lu\n", ctx->pathname,
 				ctx->i_ino);
-	} else if (o_ino != ctx->i_ino) {
+	} else if (o_ino != ctx->i_ino || o_sb != ctx->i_sb) {
 		CAS_CLS_DEBUG_MSG("Changed inode resolution for %s: %lu => %lu"
 				"\n", ctx->pathname, o_ino, ctx->i_ino);
 	}
@@ -423,7 +426,8 @@ static cas_cls_eval_t _cas_cls_directory_test(
 	dentry = _cas_cls_dir_get_inode_dentry(inode);
 	for (depth = 0; dentry && depth < CAS_CLS_DIR_MAX_DEPTH; depth++) {
 		d_ino = dentry->d_inode;
-		if (d_ino && d_ino->i_ino == ctx->i_ino) {
+		if (d_ino && d_ino->i_ino == ctx->i_ino &&
+				d_ino->i_sb == ctx->i_sb) {
 			result = cas_cls_eval_yes;
 			break;
 		}
