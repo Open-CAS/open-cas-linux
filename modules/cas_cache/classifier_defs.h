@@ -1,5 +1,6 @@
 /*
 * Copyright(c) 2019-2021 Intel Corporation
+* Copyright(c) 2026 Unvertical
 * SPDX-License-Identifier: BSD-3-Clause
 */
 
@@ -139,6 +140,9 @@ struct cas_cls_directory {
 
 	/* Resolved inode */
 	unsigned long i_ino;
+
+	/* Superblock of resolved inode */
+	const struct super_block *i_sb;
 
 	/* Back pointer to classifier context */
 	struct cas_classifier *cls;
